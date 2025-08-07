@@ -735,6 +735,10 @@ function App() {
       // Backward compatibility
       ingredients: editableRecipe.ingredients.filter(i => i.trim()),
       instructions: editableRecipe.instructions.filter(i => i.trim()),
+      // Use edited timing and yield values
+      prep_time: editableRecipe.prep_time,
+      cook_time: editableRecipe.cook_time,
+      recipe_yield: editableRecipe.recipe_yield
     };
     try {
       const res = await fetch(`${API_URL}/recipe/${editingRecipe.id}`, {
@@ -846,12 +850,20 @@ function App() {
     const recipeIngredients = recipe.recipeIngredient || recipe.ingredients || [];
     const recipeInstructions = recipe.recipeInstructions || recipe.instructions || [];
     
+    // Handle instructions that might be objects with text property
+    const processedInstructions = Array.isArray(recipeInstructions) 
+      ? recipeInstructions.map(inst => typeof inst === 'string' ? inst : inst.text || '')
+      : [];
+    
     setEditableRecipe({
       name: recipe.name,
       description: recipe.description || '',
       ingredients: Array.isArray(recipeIngredients) ? [...recipeIngredients] : [],
-      instructions: Array.isArray(recipeInstructions) ? [...recipeInstructions] : [],
-      image: recipe.image || recipe.image_url || ''
+      instructions: processedInstructions,
+      image: recipe.image || recipe.image_url || '',
+      prep_time: recipe.prep_time || recipe.prepTime,
+      cook_time: recipe.cook_time || recipe.cookTime,
+      recipe_yield: recipe.recipe_yield || recipe.recipeYield || recipe.yield
     });
     setIsEditingRecipe(true);
     setSelectedImage(null);
@@ -1289,6 +1301,41 @@ function App() {
                           + Add Instruction
                         </button>
                       </div>
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Prep Time (minutes)</h4>
+                      <input 
+                        type="number" 
+                        value={editableRecipe.prep_time || ''} 
+                        onChange={e => setEditableRecipe({...editableRecipe, prep_time: e.target.value ? parseInt(e.target.value) : null})}
+                        className="preview-edit-input"
+                        placeholder="Prep time in minutes"
+                        min="0"
+                      />
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Cook Time (minutes)</h4>
+                      <input 
+                        type="number" 
+                        value={editableRecipe.cook_time || ''} 
+                        onChange={e => setEditableRecipe({...editableRecipe, cook_time: e.target.value ? parseInt(e.target.value) : null})}
+                        className="preview-edit-input"
+                        placeholder="Cook time in minutes"
+                        min="0"
+                      />
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Yield</h4>
+                      <input 
+                        type="text" 
+                        value={editableRecipe.recipe_yield || ''} 
+                        onChange={e => setEditableRecipe({...editableRecipe, recipe_yield: e.target.value})}
+                        className="preview-edit-input"
+                        placeholder="e.g., 4 servings, 1 loaf"
+                      />
                     </div>
                     
                     <div className="recipe-preview-section">
