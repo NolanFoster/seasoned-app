@@ -1326,45 +1326,148 @@ function App() {
                   </div>
                 </>
               ) : (
-                // Add Mode - keeping the original simpler format
+                // Add Mode - updated to match edit panel format
                 <>
-                  <input 
-                    type="text" 
-                    placeholder="Name" 
-                    value={name} 
-                    onChange={e => setName(e.target.value)} 
-                  />
-                  <textarea 
-                    placeholder="Description" 
-                    value={description} 
-                    onChange={e => setDescription(e.target.value)} 
-                  />
-                  <textarea 
-                    placeholder="Ingredients (one per line)" 
-                    value={ingredients} 
-                    onChange={e => setIngredients(e.target.value)} 
-                  />
-                  <textarea 
-                    placeholder="Instructions (one per line)" 
-                    value={instructions} 
-                    onChange={e => setInstructions(e.target.value)} 
-                  />
-                  
-                  <div className="image-upload">
-                    <label htmlFor="image-input-add" className="image-upload-label">
-                      {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
-                    </label>
-                    <input
-                      id="image-input-add"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      style={{ display: 'none' }}
-                    />
+                  <div className="recipe-preview-content">
+                    <div className="recipe-preview-section">
+                      <h4>Recipe Name</h4>
+                      <input 
+                        type="text" 
+                        value={name} 
+                        onChange={e => setName(e.target.value)}
+                        className="preview-edit-input"
+                        placeholder="Enter recipe name"
+                      />
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Description</h4>
+                      <textarea 
+                        value={description} 
+                        onChange={e => setDescription(e.target.value)}
+                        className="preview-edit-textarea"
+                        placeholder="Recipe description..."
+                      />
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Ingredients</h4>
+                      <div className="ingredients-edit-container">
+                        {ingredients.split('\n').filter(i => i.trim()).map((ingredient, index) => (
+                          <div key={index} className="ingredient-edit-row">
+                            <input 
+                              type="text" 
+                              value={ingredient} 
+                              onChange={e => {
+                                const lines = ingredients.split('\n');
+                                lines[index] = e.target.value;
+                                setIngredients(lines.join('\n'));
+                              }}
+                              className="preview-edit-input ingredient-input"
+                            />
+                            <button 
+                              onClick={() => {
+                                const lines = ingredients.split('\n').filter((_, i) => i !== index);
+                                setIngredients(lines.join('\n'));
+                              }}
+                              className="remove-ingredient-btn"
+                              title="Remove ingredient"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        {ingredients.split('\n').filter(i => i.trim()).length === 0 && (
+                          <div className="ingredient-edit-row">
+                            <input 
+                              type="text" 
+                              value="" 
+                              onChange={e => setIngredients(e.target.value)}
+                              className="preview-edit-input ingredient-input"
+                              placeholder="Add first ingredient"
+                            />
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setIngredients(ingredients + (ingredients ? '\n' : ''));
+                          }}
+                          className="add-ingredient-btn"
+                        >
+                          + Add Ingredient
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Instructions</h4>
+                      <div className="instructions-edit-container">
+                        {instructions.split('\n').filter(i => i.trim()).map((instruction, index) => (
+                          <div key={index} className="instruction-edit-row">
+                            <textarea 
+                              value={instruction} 
+                              onChange={e => {
+                                const lines = instructions.split('\n');
+                                lines[index] = e.target.value;
+                                setInstructions(lines.join('\n'));
+                              }}
+                              className="preview-edit-textarea instruction-textarea"
+                              placeholder={`Step ${index + 1}`}
+                            />
+                            <button 
+                              onClick={() => {
+                                const lines = instructions.split('\n').filter((_, i) => i !== index);
+                                setInstructions(lines.join('\n'));
+                              }}
+                              className="remove-instruction-btn"
+                              title="Remove instruction"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        {instructions.split('\n').filter(i => i.trim()).length === 0 && (
+                          <div className="instruction-edit-row">
+                            <textarea 
+                              value="" 
+                              onChange={e => setInstructions(e.target.value)}
+                              className="preview-edit-textarea instruction-textarea"
+                              placeholder="Step 1"
+                            />
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setInstructions(instructions + (instructions ? '\n' : ''));
+                          }}
+                          className="add-instruction-btn"
+                        >
+                          + Add Instruction
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Recipe Image</h4>
+                      <div className="image-upload">
+                        <label htmlFor="image-input-add" className="image-upload-label">
+                          {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
+                        </label>
+                        <input
+                          id="image-input-add"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          style={{ display: 'none' }}
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="form-actions">
-                    <button onClick={addRecipe} className="add-btn">Add Recipe</button>
+                    <button onClick={addRecipe} className="add-btn">
+                      + Add Recipe
+                    </button>
                   </div>
                 </>
               )}
