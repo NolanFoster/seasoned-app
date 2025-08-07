@@ -426,7 +426,9 @@ async function updateRecipe(env, id, recipeData) {
     recipeYield, recipeCategory, recipeCuisine, keywords, recipeIngredient, 
     recipeInstructions, nutrition, aggregateRating, video, source_url,
     // Backward compatibility fields
-    ingredients, instructions, image_url
+    ingredients, instructions, image_url,
+    // Snake case fields from frontend
+    prep_time, cook_time, recipe_yield
   } = recipeData;
   
   // Use new schema fields if available, fall back to old fields for backward compatibility
@@ -435,10 +437,10 @@ async function updateRecipe(env, id, recipeData) {
   const finalImage = image || image_url || '';
   const finalAuthor = author || '';
   const finalDatePublished = datePublished || '';
-  const finalPrepTime = prepTime || '';
-  const finalCookTime = cookTime || '';
+  const finalPrepTime = prepTime || prep_time || '';
+  const finalCookTime = cookTime || cook_time || '';
   const finalTotalTime = totalTime || '';
-  const finalRecipeYield = recipeYield || '';
+  const finalRecipeYield = recipeYield || recipe_yield || '';
   const finalRecipeCategory = recipeCategory || '';
   const finalRecipeCuisine = recipeCuisine || '';
   const finalKeywords = keywords || '';
