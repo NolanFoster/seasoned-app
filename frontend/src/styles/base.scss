@@ -100,7 +100,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: $spacing-md;
-  padding-top: $spacing-lg; /* Reduced top padding since title is now in top left */
+  padding-top: $spacing-xl + $spacing-lg; /* Increased top padding to provide space for title and FABs */
   min-height: 100vh;
   position: relative;
 }
@@ -169,6 +169,10 @@ body {
     width: 28px;
     height: 28px;
   }
+  
+  .container {
+    padding-top: $spacing-lg + $spacing-md; /* Reduced padding for mobile */
+  }
 }
 
 @media (max-width: 480px) {
@@ -179,6 +183,10 @@ body {
   .title-icon {
     width: 24px;
     height: 24px;
+  }
+  
+  .container {
+    padding-top: $spacing-md + $spacing-sm; /* Further reduced padding for small mobile */
   }
 }
 

@@ -6,7 +6,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: $spacing-lg - 5px;
-  margin-top: $spacing-md;
+  margin-top: $spacing-xl + $spacing-lg; /* Increased top margin to avoid overlap with title and FABs */
   transition: opacity $transition-normal;
 }
 
@@ -420,6 +420,21 @@
 
 .recipe-source a:hover {
   text-decoration: underline;
+}
+
+/* Responsive adjustments for recipe grid */
+@media (max-width: 768px) {
+  .recipe-grid {
+    margin-top: $spacing-lg + $spacing-md; /* Reduced margin for mobile */
+    gap: $spacing-md;
+  }
+}
+
+@media (max-width: 480px) {
+  .recipe-grid {
+    margin-top: $spacing-md + $spacing-sm; /* Further reduced margin for small mobile */
+    gap: $spacing-sm;
+  }
 }
 
 /* Dark mode overrides for recipe cards */
