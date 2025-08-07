@@ -994,7 +994,7 @@ function App() {
                     </div>
                   </div>
                   <div className="recipe-card-content">
-                    {recipe.prep_time || recipe.cook_time ? (
+                    {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
                       <div className="recipe-card-time">
                         <div className="time-item">
                           <span className="time-label">Prep</span>
@@ -1005,6 +1005,15 @@ function App() {
                           <span className="time-label">Cook</span>
                           <span className="time-value">{formatDuration(recipe.cook_time) || '-'}</span>
                         </div>
+                        {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                          <>
+                            <div className="time-divider"></div>
+                            <div className="time-item">
+                              <span className="time-label">Yield</span>
+                              <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <p className="recipe-card-time">
