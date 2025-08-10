@@ -726,7 +726,7 @@ li {
 
 .overlay-header h2 {
   margin: 0;
-  color: #2c3e50;
+  color: white;
 }
 
 .close-btn {
@@ -1226,7 +1226,7 @@ li {
 }
 
 .recipe-preview-title {
-  color: #2c3e50;
+  color: white;
   font-size: 1.8em;
   font-weight: 600;
   margin: 0 0 15px 0;
@@ -1234,7 +1234,7 @@ li {
 }
 
 .recipe-preview-description {
-  color: #666;
+  color: white;
   font-size: 1.1em;
   line-height: 1.5;
   margin: 0;
@@ -1249,7 +1249,7 @@ li {
 }
 
 .recipe-preview-section h4 {
-  color: #2c3e50;
+  color: white;
   font-size: 1.3em;
   font-weight: 600;
   margin: 0 0 15px 0;
@@ -1266,7 +1266,7 @@ li {
 .recipe-preview-ingredients li {
   padding: 8px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  color: #34495e;
+  color: white;
   font-size: 1em;
   line-height: 1.4;
 }
@@ -1282,7 +1282,7 @@ li {
 
 .recipe-preview-instructions li {
   padding: 10px 0;
-  color: #34495e;
+  color: white;
   font-size: 1em;
   line-height: 1.5;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -1319,7 +1319,7 @@ li {
 
 .recipe-preview-source p {
   margin: 0;
-  color: #2c3e50;
+  color: white;
   font-size: 0.9em;
 }
 
@@ -1340,7 +1340,7 @@ li {
   }
   
   .recipe-preview-description {
-    color: #bdc3c7;
+    color: white;
   }
   
   .recipe-preview-section h4 {
@@ -1349,12 +1349,12 @@ li {
   }
   
   .recipe-preview-ingredients li {
-    color: #ecf0f1;
+    color: white;
     border-bottom-color: rgba(255, 255, 255, 0.2);
   }
   
   .recipe-preview-instructions li {
-    color: #ecf0f1;
+    color: white;
     border-bottom-color: rgba(255, 255, 255, 0.2);
   }
   
@@ -1472,7 +1472,7 @@ li {
 
 .clip-help-text p {
   margin: 0 0 8px 0;
-  color: #495057;
+  color: #e9ecef;
 }
 
 .clip-help-text p:last-child {
@@ -1490,7 +1490,7 @@ li {
   }
   
   .clip-help-text p {
-    color: #adb5bd;
+    color: #f8f9fa;
   }
   
   .clip-help-text strong {

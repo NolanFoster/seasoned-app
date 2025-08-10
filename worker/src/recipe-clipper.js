@@ -268,6 +268,11 @@ function extractRecipeContent(html) {
                      html.match(/<[^>]*directions?[^>]*>[\s\S]*?<\/[^>]*>/gi);
         if (match) recipeContent += match.join(' ') + ' ';
       }
+      if (selector.includes('preparation')) {
+        // Specifically look for "preparation" sections (like Tasty uses)
+        const match = html.match(/<[^>]*preparation[^>]*>[\s\S]*?<\/[^>]*>/gi);
+        if (match) recipeContent += match.join(' ') + ' ';
+      }
       if (selector.includes('recipe')) {
         const match = html.match(/<[^>]*recipe[^>]*>[\s\S]*?<\/[^>]*>/gi);
         if (match) recipeContent += match.join(' ') + ' ';
@@ -276,6 +281,13 @@ function extractRecipeContent(html) {
       // Continue if regex fails
       continue;
     }
+  }
+
+  // Special handling for Tasty's specific format
+  // Look for numbered preparation steps that might not be in obvious containers
+  const tastyPreparationMatch = html.match(/(?:<h[1-6][^>]*>.*?preparation.*?<\/h[1-6]>[\s\S]*?)(?:<ol[^>]*>[\s\S]*?<\/ol>|<ul[^>]*>[\s\S]*?<\/ul>)/gi);
+  if (tastyPreparationMatch) {
+    recipeContent += tastyPreparationMatch.join(' ') + ' ';
   }
 
   // If we found recipe content, return it; otherwise return original
@@ -320,6 +332,12 @@ CRITICAL REQUIREMENTS:
 - If no recipe is found, return: null
 
 The HTML content contains the full webpage. Focus on extracting clear, actionable ingredients and step-by-step instructions from the recipe content. Ignore navigation, ads, and other non-recipe elements.
+
+IMPORTANT: Look for recipe instructions under various section names including:
+- "Instructions" or "Directions"
+- "Preparation" (common on Tasty and other sites)
+- "Method" or "Steps"
+- Any numbered list that appears to be cooking steps
 
 HTML Content:
 ${htmlContent}`;
@@ -486,7 +504,7 @@ ${htmlContent}`;
       // Try to find alternative field names
       const possibleNameFields = ['name', 'title', 'recipe_name', 'recipe_title'];
       const possibleIngredientFields = ['ingredients', 'ingredient_list', 'ingredient'];
-      const possibleInstructionFields = ['instructions', 'steps', 'directions', 'method'];
+      const possibleInstructionFields = ['instructions', 'steps', 'directions', 'method', 'preparation'];
       
       const foundName = possibleNameFields.find(field => recipeData[field]);
       const foundIngredients = possibleIngredientFields.find(field => recipeData[field]);
@@ -659,7 +677,7 @@ function extractRecipeFromAIResponse(response, pageUrl) {
       // Try to find alternative field names
       const possibleNameFields = ['name', 'title', 'recipe_name', 'recipe_title'];
       const possibleIngredientFields = ['ingredients', 'ingredient_list', 'ingredient'];
-      const possibleInstructionFields = ['instructions', 'steps', 'directions', 'method'];
+      const possibleInstructionFields = ['instructions', 'steps', 'directions', 'method', 'preparation'];
       
       const foundName = possibleNameFields.find(field => recipeData[field]);
       const foundIngredients = possibleIngredientFields.find(field => recipeData[field]);
