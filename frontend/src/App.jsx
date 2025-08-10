@@ -297,6 +297,10 @@ function App() {
     const recipe = {
       name,
       description,
+      image: '', // Will be updated after image upload
+      recipeIngredient: ingredients.split('\n').filter(i => i.trim()),
+      recipeInstructions: instructions.split('\n').filter(i => i.trim()),
+      // Backward compatibility
       ingredients: ingredients.split('\n').filter(i => i.trim()),
       instructions: instructions.split('\n').filter(i => i.trim()),
     };
@@ -327,6 +331,10 @@ function App() {
     const recipe = {
       name,
       description,
+      image: editingRecipe.image || editingRecipe.image_url || '',
+      recipeIngredient: ingredients.split('\n').filter(i => i.trim()),
+      recipeInstructions: instructions.split('\n').filter(i => i.trim()),
+      // Backward compatibility
       ingredients: ingredients.split('\n').filter(i => i.trim()),
       instructions: instructions.split('\n').filter(i => i.trim()),
     };
@@ -436,8 +444,11 @@ function App() {
     setEditingRecipe(recipe);
     setName(recipe.name);
     setDescription(recipe.description || '');
-    setIngredients(recipe.ingredients.join('\n'));
-    setInstructions(recipe.instructions.join('\n'));
+    // Handle both old and new schema field names
+    const recipeIngredients = recipe.recipeIngredient || recipe.ingredients || [];
+    const recipeInstructions = recipe.recipeInstructions || recipe.instructions || [];
+    setIngredients(Array.isArray(recipeIngredients) ? recipeIngredients.join('\n') : '');
+    setInstructions(Array.isArray(recipeInstructions) ? recipeInstructions.join('\n') : '');
     setSelectedImage(null);
   }
 
@@ -656,9 +667,9 @@ function App() {
                 <div className="recipe-card-image">
 
                   {/* Main image display */}
-                  {recipe.image_url ? (
+                  {(recipe.image || recipe.image_url) ? (
                     <img 
-                      src={recipe.image_url} 
+                      src={recipe.image || recipe.image_url} 
                       alt={recipe.name}
                       style={{
                         position: 'absolute',
@@ -669,9 +680,9 @@ function App() {
                         objectFit: 'cover',
                         zIndex: 1
                       }}
-                      onLoad={() => console.log('Image loaded successfully:', recipe.image_url)}
+                      onLoad={() => console.log('Image loaded successfully:', recipe.image || recipe.image_url)}
                       onError={(e) => {
-                        console.error('Image failed to load:', recipe.image_url);
+                        console.error('Image failed to load:', recipe.image || recipe.image_url);
                         console.error('Error details:', e);
                         // Fallback to gradient if image fails
                         e.target.style.display = 'none';
@@ -918,29 +929,31 @@ function App() {
                   
                   <div className="recipe-preview-sections">
                     <div className="recipe-preview-section">
-                      <h4>Ingredients ({clippedRecipePreview.ingredients.length})</h4>
+                      <h4>Ingredients ({(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).length})</h4>
                       <ul className="recipe-preview-ingredients">
-                        {clippedRecipePreview.ingredients.map((ingredient, index) => (
+                        {(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).map((ingredient, index) => (
                           <li key={index}>{ingredient}</li>
                         ))}
                       </ul>
                     </div>
                     
                     <div className="recipe-preview-section">
-                      <h4>Instructions ({clippedRecipePreview.instructions.length})</h4>
+                      <h4>Instructions ({(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).length})</h4>
                       <ol className="recipe-preview-instructions">
-                        {clippedRecipePreview.instructions.map((instruction, index) => (
-                          <li key={index}>{instruction}</li>
+                        {(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).map((instruction, index) => (
+                          <li key={index}>
+                            {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                          </li>
                         ))}
                       </ol>
                     </div>
                   </div>
                   
-                  {clippedRecipePreview.image_url && (
+                  {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
                     <div className="recipe-preview-image">
                       <h4>Recipe Image</h4>
                       <img 
-                        src={clippedRecipePreview.image_url} 
+                        src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
                         alt={clippedRecipePreview.name}
                         className="preview-image"
                       />
@@ -1188,9 +1201,9 @@ function App() {
           
           {/* Full Background Image */}
           <div className="recipe-full-background">
-            {selectedRecipe.image_url ? (
+            {(selectedRecipe.image || selectedRecipe.image_url) ? (
               <img 
-                src={selectedRecipe.image_url} 
+                src={selectedRecipe.image || selectedRecipe.image_url} 
                 alt={selectedRecipe.name}
                 className="recipe-full-background-image"
               />
@@ -1207,7 +1220,7 @@ function App() {
             <div className="recipe-panel glass">
               <h2>Ingredients</h2>
               <ul className="ingredients-list">
-                {selectedRecipe.ingredients.map((ingredient, index) => (
+                {(selectedRecipe.recipeIngredient || selectedRecipe.ingredients || []).map((ingredient, index) => (
                   <li key={index}>{ingredient}</li>
                 ))}
               </ul>
@@ -1217,8 +1230,10 @@ function App() {
             <div className="recipe-panel glass">
               <h2>Instructions</h2>
               <ol className="instructions-list">
-                {selectedRecipe.instructions.map((instruction, index) => (
-                  <li key={index}>{instruction}</li>
+                {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
+                  <li key={index}>
+                    {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                  </li>
                 ))}
               </ol>
             </div>
