@@ -6,9 +6,10 @@ compatibility_date = "2024-08-09"
 [ai]
 binding = "AI"
 
-# Environment variables for GPT API (keeping for backward compatibility)
+# Environment variables
 [vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
 [observability.logs]
 enabled = true

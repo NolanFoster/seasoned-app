@@ -1,5 +1,11 @@
 import { extractRecipeFromAIResponse } from './src/recipe-clipper.js';
 
+// Configuration - can be overridden with environment variables
+const config = {
+  ALLRECIPES_TEST_URL: process.env.ALLRECIPES_TEST_URL || "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+  ALLRECIPES_TEST_IMAGE: process.env.ALLRECIPES_TEST_IMAGE || "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg"
+};
+
 // Test data for AllRecipes Chef John's Salt-Roasted Chicken
 const allRecipesTestCases = [
   {
@@ -32,7 +38,7 @@ const allRecipesTestCases = [
                   "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
                   "Let chicken rest for 10 minutes before carving and serving."
                 ],
-                image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
+                image_url: config.ALLRECIPES_TEST_IMAGE,
                 prep_time: "15 minutes",
                 cook_time: "1 hour 15 minutes",
                 servings: "6",
@@ -66,8 +72,8 @@ const allRecipesTestCases = [
         "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
         "Let chicken rest for 10 minutes before carving and serving."
       ],
-      image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
-      source_url: "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+      image_url: config.ALLRECIPES_TEST_IMAGE,
+      source_url: config.ALLRECIPES_TEST_URL,
       prep_time: "15 minutes",
       cook_time: "1 hour 15 minutes",
       servings: "6",
@@ -94,7 +100,7 @@ const allRecipesTestCases = [
                   "Preheat oven to 450 degrees F (230 degrees C).",
                   "Rinse chicken and pat dry with paper towels."
                 ],
-                image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg"
+                image_url: config.ALLRECIPES_TEST_IMAGE
               })
             }]
           }
@@ -113,8 +119,8 @@ const allRecipesTestCases = [
         "Preheat oven to 450 degrees F (230 degrees C).",
         "Rinse chicken and pat dry with paper towels."
       ],
-      image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
-      source_url: "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+      image_url: config.ALLRECIPES_TEST_IMAGE,
+      source_url: config.ALLRECIPES_TEST_URL,
       prep_time: "",
       cook_time: "",
       servings: "",
@@ -134,7 +140,7 @@ const allRecipesTestCases = [
                 description: "A simple and delicious salt-roasted chicken recipe.",
                 ingredients: "1 (4 to 5 pound) whole chicken\n3 cups kosher salt\n1/4 cup olive oil",
                 instructions: "Preheat oven to 450 degrees F (230 degrees C).\nRinse chicken and pat dry with paper towels.",
-                image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg"
+                image_url: config.ALLRECIPES_TEST_IMAGE
               })
             }]
           }
@@ -153,8 +159,8 @@ const allRecipesTestCases = [
         "Preheat oven to 450 degrees F (230 degrees C).",
         "Rinse chicken and pat dry with paper towels."
       ],
-      image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
-      source_url: "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+      image_url: config.ALLRECIPES_TEST_IMAGE,
+      source_url: config.ALLRECIPES_TEST_URL,
       prep_time: "",
       cook_time: "",
       servings: "",
@@ -191,7 +197,7 @@ const allRecipesTestCases = [
         "Rinse chicken and pat dry with paper towels."
       ],
       image_url: "",
-      source_url: "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+      source_url: config.ALLRECIPES_TEST_URL,
       prep_time: "",
       cook_time: "",
       servings: "",
@@ -236,7 +242,7 @@ const allRecipesTestCases = [
 // Test runner for AllRecipes specific tests
 function runAllRecipesTests() {
   console.log('🧪 Running AllRecipes Recipe Clipper Tests\n');
-  console.log('Testing against: https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/\n');
+  console.log(`Testing against: ${config.ALLRECIPES_TEST_URL}\n`);
   
   let passed = 0;
   let failed = 0;
@@ -248,7 +254,7 @@ function runAllRecipesTests() {
     try {
       const result = extractRecipeFromAIResponse(
         testCase.response, 
-        "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/"
+        config.ALLRECIPES_TEST_URL
       );
       
       if (JSON.stringify(result) === JSON.stringify(testCase.expected)) {
@@ -311,8 +317,8 @@ function testAllRecipesRecipeData() {
       "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
       "Let chicken rest for 10 minutes before carving and serving."
     ],
-    image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
-    source_url: "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+          image_url: config.ALLRECIPES_TEST_IMAGE,
+      source_url: config.ALLRECIPES_TEST_URL,
     prep_time: "15 minutes",
     cook_time: "1 hour 15 minutes",
     servings: "6",
@@ -341,7 +347,7 @@ function testAllRecipesRecipeData() {
     },
     {
       name: "Source URL Validation",
-      test: () => testRecipe.source_url === "https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/",
+      test: () => testRecipe.source_url === config.ALLRECIPES_TEST_URL,
       expected: true,
       description: "Recipe should have the correct source URL"
     },

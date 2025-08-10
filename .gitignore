@@ -1,1 +1,13 @@
 dist/
+
+# Environment variables
+.env*
+.dev.vars*
+*.env
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# Wrangler temporary files
+.wrangler/

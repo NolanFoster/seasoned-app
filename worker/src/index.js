@@ -530,8 +530,8 @@ async function uploadImage(env, file, recipeId) {
       },
     });
     
-    // Generate the image URL using your custom domain
-    const imageUrl = `https://images.nolanfoster.me/${fileName}`;
+    // Generate the image URL using environment variable
+    const imageUrl = `${env.IMAGE_DOMAIN}/${fileName}`;
     console.log('Image uploaded successfully:', imageUrl);
     
     return imageUrl;

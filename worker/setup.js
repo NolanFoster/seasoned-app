@@ -28,7 +28,8 @@ console.log('   wrangler deploy\n');
 console.log('6. Test the API:');
 console.log('   curl https://your-worker.your-subdomain.workers.dev/recipes\n');
 
-console.log('\n📝 Note: Update the following in wrangler.toml:');
-console.log('   - database_id with your actual D1 database ID');
-console.log('   - bucket_name if you used a different name');
-console.log('   - Update the image URL in index.js with your R2 domain'); 
+console.log('\n📝 Note: Update the following:');
+console.log('   - Copy .dev.vars.example to .dev.vars.local and update values');
+console.log('   - Set GPT_API_KEY secret: wrangler secret put GPT_API_KEY');
+console.log('   - Update database_id and bucket_name in wrangler.toml if different');
+console.log('   - See ENVIRONMENT_SETUP.md for complete configuration guide'); 

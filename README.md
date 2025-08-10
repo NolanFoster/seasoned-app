@@ -82,10 +82,11 @@ Install dependencies:
 npm install
 ```
 
-Update the API URL in `src/App.jsx`:
+Update the API URLs in your environment file (`frontend/.env.local`):
 
-```javascript
-const API_URL = 'https://your-worker.your-subdomain.workers.dev';
+```bash
+VITE_API_URL=https://your-worker.your-subdomain.workers.dev
+VITE_CLIPPER_API_URL=https://your-clipper-worker.your-subdomain.workers.dev
 ```
 
 Start development server:
@@ -95,6 +96,23 @@ npm run dev
 ```
 
 ### 3. Configuration
+
+**Important**: This project now uses environment variables to avoid hardcoded URLs and sensitive information. See [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md) for detailed setup instructions.
+
+#### Environment Variables Setup
+
+1. **Copy example environment files:**
+   ```bash
+   # Worker
+   cp worker/.dev.vars.example worker/.dev.vars.local
+   
+   # Frontend  
+   cp frontend/.env.example frontend/.env.local
+   ```
+
+2. **Update the files with your actual values**
+
+3. **Never commit these files** - they're already in `.gitignore`
 
 #### Update wrangler.toml
 
