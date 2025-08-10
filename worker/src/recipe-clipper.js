@@ -101,8 +101,8 @@ async function extractRecipeWithGPT(pageUrl, env) {
     if (recipe) {
       console.log('Recipe extracted successfully with GPT:', {
         name: recipe.name,
-        ingredients: recipe.ingredients?.length || 0,
-        instructions: recipe.instructions?.length || 0
+        ingredients: recipe.recipeIngredient?.length || 0,
+        instructions: recipe.recipeInstructions?.length || 0
       });
     } else {
       console.log('No recipe extracted - AI returned null or empty data');
@@ -305,22 +305,62 @@ async function callGPTModel(htmlContent, pageUrl, env) {
     
     console.log('AI binding available, proceeding with AI call...');
     
-    const prompt = `You are a recipe extraction expert. Extract a recipe from the following raw HTML content. 
+    const prompt = `You are a recipe extraction expert. Extract a recipe from the following raw HTML content and format it according to Google's Recipe structured data schema.
 
 IMPORTANT: You must return ONLY a valid JSON object with NO additional text, markdown formatting, or explanations. The response must be parseable by JSON.parse().
 
-Return this exact JSON structure:
+Return this exact JSON structure matching Google's Recipe schema:
 {
   "name": "Recipe name",
+  "image": "URL of the main recipe image (REQUIRED)",
   "description": "Brief description of the recipe",
-  "ingredients": ["ingredient 1", "ingredient 2", ...],
-  "instructions": ["step 1", "step 2", ...],
-  "image_url": "URL of the main recipe image if found",
-  "source_url": "${pageUrl}",
-  "prep_time": "preparation time if available",
-  "cook_time": "cooking time if available",
-  "servings": "number of servings if available",
-  "difficulty": "easy/medium/hard if available"
+  "author": "Author name if available",
+  "datePublished": "Publication date in ISO format (YYYY-MM-DD) if available",
+  "prepTime": "Preparation time in ISO 8601 format (e.g., PT15M for 15 minutes, PT1H for 1 hour)",
+  "cookTime": "Cooking time in ISO 8601 format (e.g., PT30M for 30 minutes, PT2H for 2 hours)",
+  "totalTime": "Total time in ISO 8601 format if available",
+  "recipeYield": "Number of servings (e.g., '4 servings', '6 people')",
+  "recipeCategory": "Recipe category (e.g., 'Main Course', 'Dessert', 'Appetizer')",
+  "recipeCuisine": "Cuisine type (e.g., 'Italian', 'Mexican', 'Asian')",
+  "keywords": "Comma-separated keywords",
+  "recipeIngredient": ["ingredient 1", "ingredient 2", ...],
+  "recipeInstructions": [
+    {
+      "@type": "HowToStep",
+      "text": "step 1 description"
+    },
+    {
+      "@type": "HowToStep", 
+      "text": "step 2 description"
+    }
+  ],
+  "nutrition": {
+    "@type": "NutritionInformation",
+    "calories": "calories per serving",
+    "proteinContent": "protein amount",
+    "fatContent": "fat amount",
+    "carbohydrateContent": "carbohydrate amount",
+    "fiberContent": "fiber amount",
+    "sugarContent": "sugar amount",
+    "sodiumContent": "sodium amount",
+    "cholesterolContent": "cholesterol amount",
+    "saturatedFatContent": "saturated fat amount",
+    "transFatContent": "trans fat amount",
+    "unsaturatedFatContent": "unsaturated fat amount",
+    "servingSize": "serving size description"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "average rating (1-5)",
+    "ratingCount": "number of ratings",
+    "reviewCount": "number of reviews"
+  },
+  "video": {
+    "@type": "VideoObject",
+    "name": "video title if available",
+    "description": "video description if available",
+    "contentUrl": "video URL if available"
+  }
 }
 
 CRITICAL REQUIREMENTS:
@@ -330,6 +370,8 @@ CRITICAL REQUIREMENTS:
 - All strings must be properly quoted
 - Arrays must be properly closed
 - If no recipe is found, return: null
+- Use ISO 8601 duration format for times (PT15M = 15 minutes, PT1H30M = 1 hour 30 minutes)
+- Follow Google's Recipe schema exactly for field names
 
 The HTML content contains the full webpage. Focus on extracting clear, actionable ingredients and step-by-step instructions from the recipe content. Ignore navigation, ads, and other non-recipe elements.
 
@@ -492,65 +534,145 @@ ${htmlContent}`;
       return null;
     }
     
-    // Validate the extracted recipe data
-    if (!recipeData.name || !recipeData.ingredients || !recipeData.instructions) {
-      console.error('Missing required fields:', {
+    // Validate the extracted recipe data according to Google Recipe schema
+    if (!recipeData.name || !recipeData.image || !recipeData.recipeIngredient || !recipeData.recipeInstructions) {
+      console.error('Missing required fields for Google Recipe schema:', {
         hasName: !!recipeData.name,
-        hasIngredients: !!recipeData.ingredients,
-        hasInstructions: !!recipeData.instructions,
+        hasImage: !!recipeData.image,
+        hasRecipeIngredient: !!recipeData.recipeIngredient,
+        hasRecipeInstructions: !!recipeData.recipeInstructions,
         recipeData: recipeData
       });
       
-      // Try to find alternative field names
+      // Try to find alternative field names for backward compatibility
       const possibleNameFields = ['name', 'title', 'recipe_name', 'recipe_title'];
-      const possibleIngredientFields = ['ingredients', 'ingredient_list', 'ingredient'];
-      const possibleInstructionFields = ['instructions', 'steps', 'directions', 'method', 'preparation'];
+      const possibleImageFields = ['image', 'image_url', 'photo', 'picture'];
+      const possibleIngredientFields = ['recipeIngredient', 'ingredients', 'ingredient_list', 'ingredient'];
+      const possibleInstructionFields = ['recipeInstructions', 'instructions', 'steps', 'directions', 'method', 'preparation'];
       
       const foundName = possibleNameFields.find(field => recipeData[field]);
+      const foundImage = possibleImageFields.find(field => recipeData[field]);
       const foundIngredients = possibleIngredientFields.find(field => recipeData[field]);
       const foundInstructions = possibleInstructionFields.find(field => recipeData[field]);
       
       console.log('Alternative field search results:', {
         foundName,
+        foundImage,
         foundIngredients,
         foundInstructions,
         availableFields: Object.keys(recipeData)
       });
       
       // If we found alternative fields, use them
-      if (foundName && foundIngredients && foundInstructions) {
+      if (foundName && foundImage && foundIngredients && foundInstructions) {
         console.log('Found alternative field names, proceeding with recipe extraction');
         recipeData.name = recipeData[foundName];
-        recipeData.ingredients = recipeData[foundIngredients];
-        recipeData.instructions = recipeData[foundInstructions];
+        recipeData.image = recipeData[foundImage];
+        recipeData.recipeIngredient = recipeData[foundIngredients];
+        recipeData.recipeInstructions = recipeData[foundInstructions];
       } else {
         console.error('Incomplete recipe data - missing required fields after field name mapping');
         console.error('Available fields:', Object.keys(recipeData));
         console.error('Field values:', recipeData);
-        throw new Error('Incomplete recipe data extracted - missing name, ingredients, or instructions');
+        throw new Error('Incomplete recipe data extracted - missing name, image, recipeIngredient, or recipeInstructions');
       }
     }
 
-    // Clean up the extracted data
+    // Clean up the extracted data according to Google Recipe schema
     const cleanedRecipe = {
+      // Required fields
       name: String(recipeData.name || '').trim(),
+      image: String(recipeData.image || '').trim(),
+      
+      // Recommended fields
       description: String(recipeData.description || '').trim(),
-      ingredients: Array.isArray(recipeData.ingredients) 
-        ? recipeData.ingredients.map(i => String(i).trim()).filter(i => i.length > 0)
-        : (typeof recipeData.ingredients === 'string' 
-            ? recipeData.ingredients.split('\n').map(i => i.trim()).filter(i => i.length > 0)
+      author: String(recipeData.author || '').trim(),
+      datePublished: String(recipeData.datePublished || '').trim(),
+      prepTime: String(recipeData.prepTime || '').trim(),
+      cookTime: String(recipeData.cookTime || '').trim(),
+      totalTime: String(recipeData.totalTime || '').trim(),
+      recipeYield: String(recipeData.recipeYield || '').trim(),
+      recipeCategory: String(recipeData.recipeCategory || '').trim(),
+      recipeCuisine: String(recipeData.recipeCuisine || '').trim(),
+      keywords: String(recipeData.keywords || '').trim(),
+      
+      // Recipe content
+      recipeIngredient: Array.isArray(recipeData.recipeIngredient) 
+        ? recipeData.recipeIngredient.map(i => String(i).trim()).filter(i => i.length > 0)
+        : (typeof recipeData.recipeIngredient === 'string' 
+            ? recipeData.recipeIngredient.split('\n').map(i => i.trim()).filter(i => i.length > 0)
             : []),
-      instructions: Array.isArray(recipeData.instructions)
-        ? recipeData.instructions.map(i => String(i).trim()).filter(i => i.length > 0)
-        : (typeof recipeData.instructions === 'string'
-            ? recipeData.instructions.split('\n').map(i => i.trim()).filter(i => i.length > 0)
+      recipeInstructions: Array.isArray(recipeData.recipeInstructions)
+        ? recipeData.recipeInstructions.map(step => {
+            if (typeof step === 'string') {
+              return { "@type": "HowToStep", text: step.trim() };
+            } else if (step && typeof step === 'object' && step.text) {
+              return { "@type": "HowToStep", text: String(step.text).trim() };
+            }
+            return null;
+          }).filter(step => step && step.text.length > 0)
+        : (typeof recipeData.recipeInstructions === 'string'
+            ? recipeData.recipeInstructions.split('\n').map(step => ({ 
+                "@type": "HowToStep", 
+                text: step.trim() 
+              })).filter(step => step.text.length > 0)
             : []),
-      image_url: String(recipeData.image_url || ''),
+      
+      // Nutrition information
+      nutrition: recipeData.nutrition && typeof recipeData.nutrition === 'object' ? {
+        "@type": "NutritionInformation",
+        calories: String(recipeData.nutrition.calories || '').trim(),
+        proteinContent: String(recipeData.nutrition.proteinContent || '').trim(),
+        fatContent: String(recipeData.nutrition.fatContent || '').trim(),
+        carbohydrateContent: String(recipeData.nutrition.carbohydrateContent || '').trim(),
+        fiberContent: String(recipeData.nutrition.fiberContent || '').trim(),
+        sugarContent: String(recipeData.nutrition.sugarContent || '').trim(),
+        sodiumContent: String(recipeData.nutrition.sodiumContent || '').trim(),
+        cholesterolContent: String(recipeData.nutrition.cholesterolContent || '').trim(),
+        saturatedFatContent: String(recipeData.nutrition.saturatedFatContent || '').trim(),
+        transFatContent: String(recipeData.nutrition.transFatContent || '').trim(),
+        unsaturatedFatContent: String(recipeData.nutrition.unsaturatedFatContent || '').trim(),
+        servingSize: String(recipeData.nutrition.servingSize || '').trim()
+      } : null,
+      
+      // Rating information
+      aggregateRating: recipeData.aggregateRating && typeof recipeData.aggregateRating === 'object' ? {
+        "@type": "AggregateRating",
+        ratingValue: parseFloat(recipeData.aggregateRating.ratingValue) || null,
+        ratingCount: parseInt(recipeData.aggregateRating.ratingCount) || null,
+        reviewCount: parseInt(recipeData.aggregateRating.reviewCount) || null
+      } : null,
+      
+      // Video information
+      video: recipeData.video && typeof recipeData.video === 'object' ? {
+        "@type": "VideoObject",
+        name: String(recipeData.video.name || '').trim(),
+        description: String(recipeData.video.description || '').trim(),
+        contentUrl: String(recipeData.video.contentUrl || '').trim()
+      } : null,
+      
+      // Additional fields
       source_url: pageUrl,
-      prep_time: String(recipeData.prep_time || ''),
-      cook_time: String(recipeData.cook_time || ''),
-      servings: String(recipeData.servings || ''),
-      difficulty: String(recipeData.difficulty || '')
+      
+      // Backward compatibility fields for frontend
+      ingredients: Array.isArray(recipeData.recipeIngredient) 
+        ? recipeData.recipeIngredient.map(i => String(i).trim()).filter(i => i.length > 0)
+        : (typeof recipeData.recipeIngredient === 'string' 
+            ? recipeData.recipeIngredient.split('\n').map(i => i.trim()).filter(i => i.length > 0)
+            : []),
+      instructions: Array.isArray(recipeData.recipeInstructions)
+        ? recipeData.recipeInstructions.map(step => {
+            if (typeof step === 'string') {
+              return step.trim();
+            } else if (step && typeof step === 'object' && step.text) {
+              return String(step.text).trim();
+            }
+            return '';
+          }).filter(step => step.length > 0)
+        : (typeof recipeData.recipeInstructions === 'string'
+            ? recipeData.recipeInstructions.split('\n').map(step => step.trim()).filter(step => step.length > 0)
+            : []),
+      image_url: String(recipeData.image || '').trim()
     };
     
     console.log('Cleaned recipe data:', JSON.stringify(cleanedRecipe, null, 2));
@@ -570,7 +692,81 @@ function getMockRecipe(pageUrl) {
   console.log('Providing fallback mock recipe for local development...');
   return {
     name: "Chef John's Salt-Roasted Chicken (Mock)",
+    image: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
     description: "A simple and delicious salt-roasted chicken recipe that results in juicy, flavorful meat with crispy skin.",
+    author: "Chef John",
+    datePublished: "2024-01-15",
+    prepTime: "PT15M",
+    cookTime: "PT1H15M",
+    totalTime: "PT1H30M",
+    recipeYield: "6 servings",
+    recipeCategory: "Main Course",
+    recipeCuisine: "American",
+    keywords: "chicken, roast, salt, easy, dinner",
+    recipeIngredient: [
+      "1 (4 to 5 pound) whole chicken",
+      "3 cups kosher salt",
+      "1/4 cup olive oil",
+      "1 tablespoon black pepper",
+      "1 tablespoon dried thyme",
+      "1 tablespoon dried rosemary",
+      "1 lemon, halved",
+      "4 cloves garlic, crushed",
+      "1 onion, quartered"
+    ],
+    recipeInstructions: [
+      {
+        "@type": "HowToStep",
+        "text": "Preheat oven to 450 degrees F (230 degrees C)."
+      },
+      {
+        "@type": "HowToStep",
+        "text": "Rinse chicken and pat dry with paper towels."
+      },
+      {
+        "@type": "HowToStep",
+        "text": "In a large bowl, mix together kosher salt, black pepper, thyme, and rosemary."
+      },
+      {
+        "@type": "HowToStep",
+        "text": "Rub the chicken with olive oil, then generously coat with the salt mixture."
+      },
+      {
+        "@type": "HowToStep",
+        "text": "Place lemon halves, garlic, and onion inside the chicken cavity."
+      },
+      {
+        "@type": "HowToStep",
+        "text": "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C)."
+      },
+      {
+        "@type": "HowToStep",
+        "text": "Let chicken rest for 10 minutes before carving and serving."
+      }
+    ],
+    nutrition: {
+      "@type": "NutritionInformation",
+      "calories": "350 calories",
+      "proteinContent": "45g",
+      "fatContent": "18g",
+      "carbohydrateContent": "2g",
+      "fiberContent": "1g",
+      "sugarContent": "1g",
+      "sodiumContent": "1200mg",
+      "cholesterolContent": "140mg",
+      "saturatedFatContent": "5g",
+      "transFatContent": "0g",
+      "unsaturatedFatContent": "12g",
+      "servingSize": "1 serving (6 oz chicken)"
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      "ratingValue": 4.8,
+      "ratingCount": 1250,
+      "reviewCount": 89
+    },
+    source_url: pageUrl,
+    // Backward compatibility fields
     ingredients: [
       "1 (4 to 5 pound) whole chicken",
       "3 cups kosher salt",
@@ -591,12 +787,7 @@ function getMockRecipe(pageUrl) {
       "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
       "Let chicken rest for 10 minutes before carving and serving."
     ],
-    image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
-    source_url: pageUrl,
-    prep_time: "15 minutes",
-    cook_time: "1 hour 15 minutes",
-    servings: "6",
-    difficulty: "Easy"
+    image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg"
   };
 }
 
@@ -672,47 +863,125 @@ function extractRecipeFromAIResponse(response, pageUrl) {
       return null;
     }
     
-    // Validate the extracted recipe data
-    if (!recipeData.name || !recipeData.ingredients || !recipeData.instructions) {
-      // Try to find alternative field names
+    // Validate the extracted recipe data according to Google Recipe schema
+    if (!recipeData.name || !recipeData.image || !recipeData.recipeIngredient || !recipeData.recipeInstructions) {
+      // Try to find alternative field names for backward compatibility
       const possibleNameFields = ['name', 'title', 'recipe_name', 'recipe_title'];
-      const possibleIngredientFields = ['ingredients', 'ingredient_list', 'ingredient'];
-      const possibleInstructionFields = ['instructions', 'steps', 'directions', 'method', 'preparation'];
+      const possibleImageFields = ['image', 'image_url', 'photo', 'picture'];
+      const possibleIngredientFields = ['recipeIngredient', 'ingredients', 'ingredient_list', 'ingredient'];
+      const possibleInstructionFields = ['recipeInstructions', 'instructions', 'steps', 'directions', 'method', 'preparation'];
       
       const foundName = possibleNameFields.find(field => recipeData[field]);
+      const foundImage = possibleImageFields.find(field => recipeData[field]);
       const foundIngredients = possibleIngredientFields.find(field => recipeData[field]);
       const foundInstructions = possibleInstructionFields.find(field => recipeData[field]);
       
       // If we found alternative fields, use them
-      if (foundName && foundIngredients && foundInstructions) {
+      if (foundName && foundImage && foundIngredients && foundInstructions) {
         recipeData.name = recipeData[foundName];
-        recipeData.ingredients = recipeData[foundIngredients];
-        recipeData.instructions = recipeData[foundInstructions];
+        recipeData.image = recipeData[foundImage];
+        recipeData.recipeIngredient = recipeData[foundIngredients];
+        recipeData.recipeInstructions = recipeData[foundInstructions];
       } else {
-        throw new Error('Incomplete recipe data extracted');
+        throw new Error('Incomplete recipe data extracted - missing name, image, recipeIngredient, or recipeInstructions');
       }
     }
 
-    // Clean up the extracted data
+    // Clean up the extracted data according to Google Recipe schema
     const cleanedRecipe = {
+      // Required fields
       name: String(recipeData.name || '').trim(),
+      image: String(recipeData.image || '').trim(),
+      
+      // Recommended fields
       description: String(recipeData.description || '').trim(),
-      ingredients: Array.isArray(recipeData.ingredients) 
-        ? recipeData.ingredients.map(i => String(i).trim()).filter(i => i.length > 0)
-        : (typeof recipeData.ingredients === 'string' 
-            ? recipeData.ingredients.split('\n').map(i => i.trim()).filter(i => i.length > 0)
+      author: String(recipeData.author || '').trim(),
+      datePublished: String(recipeData.datePublished || '').trim(),
+      prepTime: String(recipeData.prepTime || '').trim(),
+      cookTime: String(recipeData.cookTime || '').trim(),
+      totalTime: String(recipeData.totalTime || '').trim(),
+      recipeYield: String(recipeData.recipeYield || '').trim(),
+      recipeCategory: String(recipeData.recipeCategory || '').trim(),
+      recipeCuisine: String(recipeData.recipeCuisine || '').trim(),
+      keywords: String(recipeData.keywords || '').trim(),
+      
+      // Recipe content
+      recipeIngredient: Array.isArray(recipeData.recipeIngredient) 
+        ? recipeData.recipeIngredient.map(i => String(i).trim()).filter(i => i.length > 0)
+        : (typeof recipeData.recipeIngredient === 'string' 
+            ? recipeData.recipeIngredient.split('\n').map(i => i.trim()).filter(i => i.length > 0)
             : []),
-      instructions: Array.isArray(recipeData.instructions)
-        ? recipeData.instructions.map(i => String(i).trim()).filter(i => i.length > 0)
-        : (typeof recipeData.instructions === 'string'
-            ? recipeData.instructions.split('\n').map(i => i.trim()).filter(i => i.length > 0)
+      recipeInstructions: Array.isArray(recipeData.recipeInstructions)
+        ? recipeData.recipeInstructions.map(step => {
+            if (typeof step === 'string') {
+              return { "@type": "HowToStep", text: step.trim() };
+            } else if (step && typeof step === 'object' && step.text) {
+              return { "@type": "HowToStep", text: String(step.text).trim() };
+            }
+            return null;
+          }).filter(step => step && step.text.length > 0)
+        : (typeof recipeData.recipeInstructions === 'string'
+            ? recipeData.recipeInstructions.split('\n').map(step => ({ 
+                "@type": "HowToStep", 
+                text: step.trim() 
+              })).filter(step => step.text.length > 0)
             : []),
-      image_url: String(recipeData.image_url || ''),
+      
+      // Nutrition information
+      nutrition: recipeData.nutrition && typeof recipeData.nutrition === 'object' ? {
+        "@type": "NutritionInformation",
+        calories: String(recipeData.nutrition.calories || '').trim(),
+        proteinContent: String(recipeData.nutrition.proteinContent || '').trim(),
+        fatContent: String(recipeData.nutrition.fatContent || '').trim(),
+        carbohydrateContent: String(recipeData.nutrition.carbohydrateContent || '').trim(),
+        fiberContent: String(recipeData.nutrition.fiberContent || '').trim(),
+        sugarContent: String(recipeData.nutrition.sugarContent || '').trim(),
+        sodiumContent: String(recipeData.nutrition.sodiumContent || '').trim(),
+        cholesterolContent: String(recipeData.nutrition.cholesterolContent || '').trim(),
+        saturatedFatContent: String(recipeData.nutrition.saturatedFatContent || '').trim(),
+        transFatContent: String(recipeData.nutrition.transFatContent || '').trim(),
+        unsaturatedFatContent: String(recipeData.nutrition.unsaturatedFatContent || '').trim(),
+        servingSize: String(recipeData.nutrition.servingSize || '').trim()
+      } : null,
+      
+      // Rating information
+      aggregateRating: recipeData.aggregateRating && typeof recipeData.aggregateRating === 'object' ? {
+        "@type": "AggregateRating",
+        ratingValue: parseFloat(recipeData.aggregateRating.ratingValue) || null,
+        ratingCount: parseInt(recipeData.aggregateRating.ratingCount) || null,
+        reviewCount: parseInt(recipeData.aggregateRating.reviewCount) || null
+      } : null,
+      
+      // Video information
+      video: recipeData.video && typeof recipeData.video === 'object' ? {
+        "@type": "VideoObject",
+        name: String(recipeData.video.name || '').trim(),
+        description: String(recipeData.video.description || '').trim(),
+        contentUrl: String(recipeData.video.contentUrl || '').trim()
+      } : null,
+      
+      // Additional fields
       source_url: pageUrl,
-      prep_time: String(recipeData.prep_time || ''),
-      cook_time: String(recipeData.cook_time || ''),
-      servings: String(recipeData.servings || ''),
-      difficulty: String(recipeData.difficulty || '')
+      
+      // Backward compatibility fields for frontend
+      ingredients: Array.isArray(recipeData.recipeIngredient) 
+        ? recipeData.recipeIngredient.map(i => String(i).trim()).filter(i => i.length > 0)
+        : (typeof recipeData.recipeIngredient === 'string' 
+            ? recipeData.recipeIngredient.split('\n').map(i => i.trim()).filter(i => i.length > 0)
+            : []),
+      instructions: Array.isArray(recipeData.recipeInstructions)
+        ? recipeData.recipeInstructions.map(step => {
+            if (typeof step === 'string') {
+              return step.trim();
+            } else if (step && typeof step === 'object' && step.text) {
+              return String(step.text).trim();
+            }
+            return '';
+          }).filter(step => step.length > 0)
+        : (typeof recipeData.recipeInstructions === 'string'
+            ? recipeData.recipeInstructions.split('\n').map(step => step.trim()).filter(step => step.length > 0)
+            : []),
+      image_url: String(recipeData.image || '').trim()
     };
 
     return cleanedRecipe;

@@ -196,8 +196,38 @@ async function getRecipes(env) {
   
   return results.map(recipe => ({
     ...recipe,
-    ingredients: JSON.parse(recipe.ingredients),
-    instructions: JSON.parse(recipe.instructions)
+    // Parse JSON fields back to arrays/objects
+    recipeIngredient: JSON.parse(recipe.recipe_ingredient || '[]'),
+    recipeInstructions: JSON.parse(recipe.recipe_instructions || '[]'),
+    // Map nutrition fields to a structured object
+    nutrition: {
+      calories: recipe.nutrition_calories,
+      proteinContent: recipe.nutrition_protein,
+      fatContent: recipe.nutrition_fat,
+      carbohydrateContent: recipe.nutrition_carbohydrate,
+      fiberContent: recipe.nutrition_fiber,
+      sugarContent: recipe.nutrition_sugar,
+      sodiumContent: recipe.nutrition_sodium,
+      cholesterolContent: recipe.nutrition_cholesterol,
+      saturatedFatContent: recipe.nutrition_saturated_fat,
+      transFatContent: recipe.nutrition_trans_fat,
+      unsaturatedFatContent: recipe.nutrition_unsaturated_fat,
+      servingSize: recipe.nutrition_serving_size
+    },
+    // Map rating fields to a structured object
+    aggregateRating: {
+      ratingValue: recipe.aggregate_rating_value,
+      ratingCount: recipe.aggregate_rating_count,
+      reviewCount: recipe.review_count
+    },
+    // Map video field
+    video: recipe.video_url ? {
+      contentUrl: recipe.video_url
+    } : null,
+    // Backward compatibility fields
+    ingredients: JSON.parse(recipe.recipe_ingredient || '[]'),
+    instructions: JSON.parse(recipe.recipe_instructions || '[]'),
+    image_url: recipe.image
   }));
 }
 
@@ -210,25 +240,111 @@ async function getRecipeById(env, id) {
   
   return {
     ...result,
-    ingredients: JSON.parse(result.ingredients),
-    instructions: JSON.parse(result.instructions)
+    // Parse JSON fields back to arrays/objects
+    recipeIngredient: JSON.parse(result.recipe_ingredient || '[]'),
+    recipeInstructions: JSON.parse(result.recipe_instructions || '[]'),
+    // Map nutrition fields to a structured object
+    nutrition: {
+      calories: result.nutrition_calories,
+      proteinContent: result.nutrition_protein,
+      fatContent: result.nutrition_fat,
+      carbohydrateContent: result.nutrition_carbohydrate,
+      fiberContent: result.nutrition_fiber,
+      sugarContent: result.nutrition_sugar,
+      sodiumContent: result.nutrition_sodium,
+      cholesterolContent: result.nutrition_cholesterol,
+      saturatedFatContent: result.nutrition_saturated_fat,
+      transFatContent: result.nutrition_trans_fat,
+      unsaturatedFatContent: result.nutrition_unsaturated_fat,
+      servingSize: result.nutrition_serving_size
+    },
+    // Map rating fields to a structured object
+    aggregateRating: {
+      ratingValue: result.aggregate_rating_value,
+      ratingCount: result.aggregate_rating_count,
+      reviewCount: result.review_count
+    },
+    // Map video field
+    video: result.video_url ? {
+      contentUrl: result.video_url
+    } : null,
+    // Backward compatibility fields
+    ingredients: JSON.parse(result.recipe_ingredient || '[]'),
+    instructions: JSON.parse(result.recipe_instructions || '[]'),
+    image_url: result.image
   };
 }
 
 async function createRecipe(env, recipeData) {
-  const { name, description, ingredients, instructions, image_url, source_url } = recipeData;
+  const { 
+    name, description, image, author, datePublished, prepTime, cookTime, totalTime,
+    recipeYield, recipeCategory, recipeCuisine, keywords, recipeIngredient, 
+    recipeInstructions, nutrition, aggregateRating, video, source_url,
+    // Backward compatibility fields
+    ingredients, instructions, image_url
+  } = recipeData;
   
   try {
+    // Use new schema fields if available, fall back to old fields for backward compatibility
+    const finalName = name || '';
+    const finalDescription = description || '';
+    const finalImage = image || image_url || '';
+    const finalAuthor = author || '';
+    const finalDatePublished = datePublished || '';
+    const finalPrepTime = prepTime || '';
+    const finalCookTime = cookTime || '';
+    const finalTotalTime = totalTime || '';
+    const finalRecipeYield = recipeYield || '';
+    const finalRecipeCategory = recipeCategory || '';
+    const finalRecipeCuisine = recipeCuisine || '';
+    const finalKeywords = keywords || '';
+    const finalRecipeIngredient = recipeIngredient || ingredients || [];
+    const finalRecipeInstructions = recipeInstructions || instructions || [];
+    const finalSourceUrl = source_url || '';
+    
     const result = await env.DB.prepare(`
-      INSERT INTO recipes (name, description, ingredients, instructions, image_url, source_url)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO recipes (
+        name, description, image, author, date_published, prep_time, cook_time, total_time,
+        recipe_yield, recipe_category, recipe_cuisine, keywords, recipe_ingredient, 
+        recipe_instructions, nutrition_calories, nutrition_protein, nutrition_fat, 
+        nutrition_carbohydrate, nutrition_fiber, nutrition_sugar, nutrition_sodium,
+        nutrition_cholesterol, nutrition_saturated_fat, nutrition_trans_fat, 
+        nutrition_unsaturated_fat, nutrition_serving_size, aggregate_rating_value,
+        aggregate_rating_count, review_count, video_url, source_url
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      name,
-      description || '',
-      JSON.stringify(ingredients),
-      JSON.stringify(instructions),
-      image_url || null,
-      source_url || null
+      finalName,
+      finalDescription,
+      finalImage,
+      finalAuthor,
+      finalDatePublished,
+      finalPrepTime,
+      finalCookTime,
+      finalTotalTime,
+      finalRecipeYield,
+      finalRecipeCategory,
+      finalRecipeCuisine,
+      finalKeywords,
+      JSON.stringify(finalRecipeIngredient),
+      JSON.stringify(finalRecipeInstructions),
+      nutrition?.calories || '',
+      nutrition?.proteinContent || '',
+      nutrition?.fatContent || '',
+      nutrition?.carbohydrateContent || '',
+      nutrition?.fiberContent || '',
+      nutrition?.sugarContent || '',
+      nutrition?.sodiumContent || '',
+      nutrition?.cholesterolContent || '',
+      nutrition?.saturatedFatContent || '',
+      nutrition?.transFatContent || '',
+      nutrition?.unsaturatedFatContent || '',
+      nutrition?.servingSize || '',
+      aggregateRating?.ratingValue || null,
+      aggregateRating?.ratingCount || null,
+      aggregateRating?.reviewCount || null,
+      video?.contentUrl || '',
+      finalSourceUrl
     ).run();
     
     return result.meta.last_row_id;
@@ -242,19 +358,74 @@ async function createRecipe(env, recipeData) {
 }
 
 async function updateRecipe(env, id, recipeData) {
-  const { name, description, ingredients, instructions, image_url, source_url } = recipeData;
+  const { 
+    name, description, image, author, datePublished, prepTime, cookTime, totalTime,
+    recipeYield, recipeCategory, recipeCuisine, keywords, recipeIngredient, 
+    recipeInstructions, nutrition, aggregateRating, video, source_url,
+    // Backward compatibility fields
+    ingredients, instructions, image_url
+  } = recipeData;
+  
+  // Use new schema fields if available, fall back to old fields for backward compatibility
+  const finalName = name || '';
+  const finalDescription = description || '';
+  const finalImage = image || image_url || '';
+  const finalAuthor = author || '';
+  const finalDatePublished = datePublished || '';
+  const finalPrepTime = prepTime || '';
+  const finalCookTime = cookTime || '';
+  const finalTotalTime = totalTime || '';
+  const finalRecipeYield = recipeYield || '';
+  const finalRecipeCategory = recipeCategory || '';
+  const finalRecipeCuisine = recipeCuisine || '';
+  const finalKeywords = keywords || '';
+  const finalRecipeIngredient = recipeIngredient || ingredients || [];
+  const finalRecipeInstructions = recipeInstructions || instructions || [];
+  const finalSourceUrl = source_url || '';
   
   const result = await env.DB.prepare(`
     UPDATE recipes 
-    SET name = ?, description = ?, ingredients = ?, instructions = ?, image_url = ?, source_url = ?, updated_at = CURRENT_TIMESTAMP
+    SET name = ?, description = ?, image = ?, author = ?, date_published = ?, prep_time = ?, 
+        cook_time = ?, total_time = ?, recipe_yield = ?, recipe_category = ?, recipe_cuisine = ?, 
+        keywords = ?, recipe_ingredient = ?, recipe_instructions = ?, nutrition_calories = ?, 
+        nutrition_protein = ?, nutrition_fat = ?, nutrition_carbohydrate = ?, nutrition_fiber = ?, 
+        nutrition_sugar = ?, nutrition_sodium = ?, nutrition_cholesterol = ?, nutrition_saturated_fat = ?, 
+        nutrition_trans_fat = ?, nutrition_unsaturated_fat = ?, nutrition_serving_size = ?, 
+        aggregate_rating_value = ?, aggregate_rating_count = ?, review_count = ?, video_url = ?, 
+        source_url = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).bind(
-    name,
-    description || '',
-    JSON.stringify(ingredients),
-    JSON.stringify(instructions),
-    image_url || null,
-    source_url || null,
+    finalName,
+    finalDescription,
+    finalImage,
+    finalAuthor,
+    finalDatePublished,
+    finalPrepTime,
+    finalCookTime,
+    finalTotalTime,
+    finalRecipeYield,
+    finalRecipeCategory,
+    finalRecipeCuisine,
+    finalKeywords,
+    JSON.stringify(finalRecipeIngredient),
+    JSON.stringify(finalRecipeInstructions),
+    nutrition?.calories || '',
+    nutrition?.proteinContent || '',
+    nutrition?.fatContent || '',
+    nutrition?.carbohydrateContent || '',
+    nutrition?.fiberContent || '',
+    nutrition?.sugarContent || '',
+    nutrition?.sodiumContent || '',
+    nutrition?.cholesterolContent || '',
+    nutrition?.saturatedFatContent || '',
+    nutrition?.transFatContent || '',
+    nutrition?.unsaturatedFatContent || '',
+    nutrition?.servingSize || '',
+    aggregateRating?.ratingValue || null,
+    aggregateRating?.ratingCount || null,
+    aggregateRating?.reviewCount || null,
+    video?.contentUrl || '',
+    finalSourceUrl,
     id
   ).run();
   
@@ -271,7 +442,7 @@ async function deleteRecipe(env, id) {
 
 async function updateRecipeImage(env, recipeId, imageUrl) {
   await env.DB.prepare(
-    'UPDATE recipes SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    'UPDATE recipes SET image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
   ).bind(imageUrl, recipeId).run();
 }
 
@@ -356,13 +527,68 @@ async function extractRecipeFromUrl(pageUrl) {
           console.log('Recipe instructions:', json.recipeInstructions);
           recipe = {
             name: decodeHtmlEntities(json.name),
+            image: json.image ? (Array.isArray(json.image) ? json.image[0] : json.image.url || json.image) : '',
             description: decodeHtmlEntities(json.description || ''),
+            author: decodeHtmlEntities(json.author || ''),
+            datePublished: json.datePublished || '',
+            prepTime: json.prepTime || '',
+            cookTime: json.cookTime || '',
+            totalTime: json.totalTime || '',
+            recipeYield: json.recipeYield || '',
+            recipeCategory: json.recipeCategory || '',
+            recipeCuisine: json.recipeCuisine || '',
+            keywords: json.keywords || '',
+            recipeIngredient: (json.recipeIngredient || []).map(decodeHtmlEntities),
+            recipeInstructions: (json.recipeInstructions || []).map(i => {
+              if (typeof i === 'string') {
+                return { "@type": "HowToStep", text: decodeHtmlEntities(i) };
+              } else if (i && typeof i === 'object') {
+                return { 
+                  "@type": "HowToStep", 
+                  text: decodeHtmlEntities(i.text || i.name || '') 
+                };
+              }
+              return null;
+            }).filter(step => step && step.text.length > 0),
+            nutrition: json.nutrition ? {
+              "@type": "NutritionInformation",
+              calories: json.nutrition.calories || '',
+              proteinContent: json.nutrition.proteinContent || '',
+              fatContent: json.nutrition.fatContent || '',
+              carbohydrateContent: json.nutrition.carbohydrateContent || '',
+              fiberContent: json.nutrition.fiberContent || '',
+              sugarContent: json.nutrition.sugarContent || '',
+              sodiumContent: json.nutrition.sodiumContent || '',
+              cholesterolContent: json.nutrition.cholesterolContent || '',
+              saturatedFatContent: json.nutrition.saturatedFatContent || '',
+              transFatContent: json.nutrition.transFatContent || '',
+              unsaturatedFatContent: json.nutrition.unsaturatedFatContent || '',
+              servingSize: json.nutrition.servingSize || ''
+            } : null,
+            aggregateRating: json.aggregateRating ? {
+              "@type": "AggregateRating",
+              ratingValue: parseFloat(json.aggregateRating.ratingValue) || null,
+              ratingCount: parseInt(json.aggregateRating.ratingCount) || null,
+              reviewCount: parseInt(json.aggregateRating.reviewCount) || null
+            } : null,
+            video: json.video ? {
+              "@type": "VideoObject",
+              name: decodeHtmlEntities(json.video.name || ''),
+              description: decodeHtmlEntities(json.video.description || ''),
+              contentUrl: json.video.contentUrl || ''
+            } : null,
+            source_url: pageUrl,
+            // Backward compatibility fields
             ingredients: (json.recipeIngredient || []).map(decodeHtmlEntities),
-            instructions: (json.recipeInstructions || []).map(i => 
-              decodeHtmlEntities(typeof i === 'string' ? i : i.text || i.name || '')
-            ),
-            image_url: json.image ? (Array.isArray(json.image) ? json.image[0] : json.image.url || json.image) : '',
-            source_url: pageUrl
+            instructions: (json.recipeInstructions || []).map(i => {
+              if (typeof i === 'string') {
+                return decodeHtmlEntities(i);
+              } else if (i && typeof i === 'object') {
+                return decodeHtmlEntities(i.text || i.name || '');
+              }
+              return '';
+            }).filter(step => step.length > 0),
+            image_url: json.image ? (Array.isArray(json.image) ? json.image[0] : json.image.url || json.image) : ''
           };
           break;
         } else if (json['@graph']) {
@@ -373,13 +599,68 @@ async function extractRecipeFromUrl(pageUrl) {
               console.log('Recipe instructions:', item.recipeInstructions);
               recipe = {
                 name: decodeHtmlEntities(item.name),
+                image: item.image ? (Array.isArray(item.image) ? item.image[0] : item.image.url || item.image) : '',
                 description: decodeHtmlEntities(item.description || ''),
+                author: decodeHtmlEntities(item.author || ''),
+                datePublished: item.datePublished || '',
+                prepTime: item.prepTime || '',
+                cookTime: item.cookTime || '',
+                totalTime: item.totalTime || '',
+                recipeYield: item.recipeYield || '',
+                recipeCategory: item.recipeCategory || '',
+                recipeCuisine: item.recipeCuisine || '',
+                keywords: item.keywords || '',
+                recipeIngredient: (item.recipeIngredient || []).map(decodeHtmlEntities),
+                recipeInstructions: (item.recipeInstructions || []).map(i => {
+                  if (typeof i === 'string') {
+                    return { "@type": "HowToStep", text: decodeHtmlEntities(i) };
+                  } else if (i && typeof i === 'object') {
+                    return { 
+                      "@type": "HowToStep", 
+                      text: decodeHtmlEntities(i.text || i.name || '') 
+                    };
+                  }
+                  return null;
+                }).filter(step => step && step.text.length > 0),
+                nutrition: item.nutrition ? {
+                  "@type": "NutritionInformation",
+                  calories: item.nutrition.calories || '',
+                  proteinContent: item.nutrition.proteinContent || '',
+                  fatContent: item.nutrition.fatContent || '',
+                  carbohydrateContent: item.nutrition.carbohydrateContent || '',
+                  fiberContent: item.nutrition.fiberContent || '',
+                  sugarContent: item.nutrition.sugarContent || '',
+                  sodiumContent: item.nutrition.sodiumContent || '',
+                  cholesterolContent: item.nutrition.cholesterolContent || '',
+                  saturatedFatContent: item.nutrition.saturatedFatContent || '',
+                  transFatContent: item.nutrition.transFatContent || '',
+                  unsaturatedFatContent: item.nutrition.unsaturatedFatContent || '',
+                  servingSize: item.nutrition.servingSize || ''
+                } : null,
+                aggregateRating: item.aggregateRating ? {
+                  "@type": "AggregateRating",
+                  ratingValue: parseFloat(item.aggregateRating.ratingValue) || null,
+                  ratingCount: parseInt(item.aggregateRating.ratingCount) || null,
+                  reviewCount: parseInt(item.aggregateRating.reviewCount) || null
+                } : null,
+                video: item.video ? {
+                  "@type": "VideoObject",
+                  name: decodeHtmlEntities(item.video.name || ''),
+                  description: decodeHtmlEntities(item.video.description || ''),
+                  contentUrl: item.video.contentUrl || ''
+                } : null,
+                source_url: pageUrl,
+                // Backward compatibility fields
                 ingredients: (item.recipeIngredient || []).map(decodeHtmlEntities),
-                instructions: (item.recipeInstructions || []).map(i => 
-                  decodeHtmlEntities(typeof i === 'string' ? i : i.text || i.name || '')
-                ),
-                image_url: item.image ? (Array.isArray(item.image) ? item.image[0] : item.image.url || item.image) : '',
-                source_url: pageUrl
+                instructions: (item.recipeInstructions || []).map(i => {
+                  if (typeof i === 'string') {
+                    return decodeHtmlEntities(i);
+                  } else if (i && typeof i === 'object') {
+                    return decodeHtmlEntities(i.text || i.name || '');
+                  }
+                  return '';
+                }).filter(step => step.length > 0),
+                image_url: item.image ? (Array.isArray(item.image) ? item.image[0] : item.image.url || item.image) : ''
               };
               break;
             }
@@ -433,10 +714,17 @@ async function extractRecipeFromUrl(pageUrl) {
         recipe = {
           name: title,
           description: 'Recipe extracted from website',
-          ingredients: ingredients.slice(0, 20), // Limit to first 20 ingredients
-          instructions: instructions.slice(0, 20), // Limit to first 20 instructions
-          image_url: image_url,
-          source_url: pageUrl
+          image: image_url,
+          recipeIngredient: ingredients.slice(0, 20), // Limit to first 20 ingredients
+          recipeInstructions: instructions.slice(0, 20).map(instruction => ({
+            "@type": "HowToStep",
+            text: instruction
+          })), // Limit to first 20 instructions
+          source_url: pageUrl,
+          // Backward compatibility fields
+          ingredients: ingredients.slice(0, 20),
+          instructions: instructions.slice(0, 20),
+          image_url: image_url
         };
       }
     }
