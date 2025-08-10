@@ -490,8 +490,14 @@ function App() {
       ...clippedRecipePreview,
       name: editablePreview.name.trim(),
       description: editablePreview.description.trim(),
+      // Maintain both old and new schema fields
       ingredients: editablePreview.ingredients.filter(i => i.trim()),
-      instructions: editablePreview.instructions.filter(i => i.trim())
+      instructions: editablePreview.instructions.filter(i => i.trim()),
+      recipeIngredient: editablePreview.ingredients.filter(i => i.trim()),
+      recipeInstructions: editablePreview.instructions.filter(i => i.trim()).map(instruction => ({
+        "@type": "HowToStep",
+        text: instruction
+      }))
     });
     setIsEditingPreview(false);
     setEditablePreview(null);

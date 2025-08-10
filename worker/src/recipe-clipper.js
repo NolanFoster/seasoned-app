@@ -104,6 +104,21 @@ async function extractRecipeWithGPT(pageUrl, env) {
         ingredients: recipe.recipeIngredient?.length || 0,
         instructions: recipe.recipeInstructions?.length || 0
       });
+      
+      // Check if instructions were extracted properly
+      if (!recipe.recipeInstructions || recipe.recipeInstructions.length === 0) {
+        console.log('AI model failed to extract instructions, trying HTML fallback...');
+        const fallbackInstructions = extractInstructionsFromHTML(html);
+        if (fallbackInstructions && fallbackInstructions.length > 0) {
+          console.log('Fallback HTML extraction found instructions:', fallbackInstructions.length);
+          recipe.recipeInstructions = fallbackInstructions.map(instruction => ({
+            "@type": "HowToStep",
+            text: instruction
+          }));
+          // Also update backward compatibility fields
+          recipe.instructions = fallbackInstructions;
+        }
+      }
     } else {
       console.log('No recipe extracted - AI returned null or empty data');
     }
@@ -115,7 +130,164 @@ async function extractRecipeWithGPT(pageUrl, env) {
   }
 }
 
-
+// Fallback function to extract instructions from HTML when AI model fails
+function extractInstructionsFromHTML(html) {
+  try {
+    console.log('Attempting fallback HTML instruction extraction...');
+    
+    // Try multiple patterns to find recipe instructions
+    const patterns = [
+      // Look for numbered lists (common in recipes)
+      /<ol[^>]*>([\s\S]*?)<\/ol>/gi,
+      // Look for unordered lists
+      /<ul[^>]*>([\s\S]*?)<\/ul>/gi,
+      // Look for paragraphs that might contain steps
+      /<p[^>]*>([^<]+(?:step|instruction|direction|method)[^<]*)<\/p>/gi,
+      // Look for divs with instruction-related classes
+      /<div[^>]*class="[^"]*(?:instruction|direction|step|method)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      // Look for sections with instruction-related content
+      /<section[^>]*>([\s\S]*?(?:instruction|direction|step|method)[\s\S]*?)<\/section>/gi
+    ];
+    
+    let instructions = [];
+    
+    for (const pattern of patterns) {
+      const matches = html.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          // Extract text content from HTML
+          const textContent = match.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          
+          // Split by common delimiters
+          const potentialSteps = textContent.split(/(?:\.|;|,|\n|•|\*|\-)/);
+          
+          for (const step of potentialSteps) {
+            const cleanStep = step.trim();
+            // Filter out steps that are too short or too long, or contain unwanted content
+            if (cleanStep.length > 10 && 
+                cleanStep.length < 300 && 
+                !cleanStep.toLowerCase().includes('privacy') &&
+                !cleanStep.toLowerCase().includes('cookie') &&
+                !cleanStep.toLowerCase().includes('terms') &&
+                !cleanStep.toLowerCase().includes('©') &&
+                !cleanStep.toLowerCase().includes('advertisement') &&
+                !cleanStep.toLowerCase().includes('weeknight dinners') &&
+                !cleanStep.toLowerCase().includes('work lunches') &&
+                !cleanStep.toLowerCase().includes('holiday cooking') &&
+                !cleanStep.toLowerCase().includes('budget recipes') &&
+                !cleanStep.toLowerCase().includes('family dinners') &&
+                !cleanStep.toLowerCase().includes('plant-based') &&
+                !cleanStep.toLowerCase().includes('shop all') &&
+                !cleanStep.toLowerCase().includes('download here') &&
+                !cleanStep.toLowerCase().includes('related recipes') &&
+                !cleanStep.toLowerCase().includes('close') &&
+                !cleanStep.toLowerCase().includes('submenu') &&
+                !cleanStep.toLowerCase().includes('featured') &&
+                !cleanStep.toLowerCase().includes('cookware') &&
+                !cleanStep.toLowerCase().includes('share via') &&
+                !cleanStep.toLowerCase().includes('print') &&
+                !cleanStep.toLowerCase().includes('inspired by') &&
+                (cleanStep.toLowerCase().includes('step') || 
+                 cleanStep.toLowerCase().includes('mix') ||
+                 cleanStep.toLowerCase().includes('add') ||
+                 cleanStep.toLowerCase().includes('bake') ||
+                 cleanStep.toLowerCase().includes('cook') ||
+                 cleanStep.toLowerCase().includes('preheat') ||
+                 cleanStep.toLowerCase().includes('whisk') ||
+                 cleanStep.toLowerCase().includes('fold') ||
+                 cleanStep.toLowerCase().includes('chill') ||
+                 cleanStep.toLowerCase().includes('cool') ||
+                 cleanStep.toLowerCase().includes('sift') ||
+                 cleanStep.toLowerCase().includes('line') ||
+                 cleanStep.toLowerCase().includes('scoop') ||
+                 cleanStep.toLowerCase().includes('spread') ||
+                 cleanStep.toLowerCase().includes('remove') ||
+                 cleanStep.toLowerCase().includes('serve'))) {
+              instructions.push(cleanStep);
+            }
+          }
+        }
+      }
+    }
+    
+    // If we still don't have instructions, try a more aggressive approach
+    if (instructions.length === 0) {
+      console.log('Standard patterns failed, trying aggressive HTML parsing...');
+      
+      // Look for any content that looks like cooking instructions
+      const allText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+      const sentences = allText.split(/[.!?]+/);
+      
+      for (const sentence of sentences) {
+        const cleanSentence = sentence.trim();
+        if (cleanSentence.length > 20 && 
+            cleanSentence.length < 200 &&
+            (cleanSentence.toLowerCase().includes('bowl') ||
+             cleanSentence.toLowerCase().includes('mix') ||
+             cleanSentence.toLowerCase().includes('add') ||
+             cleanSentence.toLowerCase().includes('bake') ||
+             cleanSentence.toLowerCase().includes('cook') ||
+             cleanSentence.toLowerCase().includes('preheat') ||
+             cleanSentence.toLowerCase().includes('whisk') ||
+             cleanSentence.toLowerCase().includes('fold') ||
+             cleanSentence.toLowerCase().includes('chill') ||
+             cleanSentence.toLowerCase().includes('cool') ||
+             cleanSentence.toLowerCase().includes('oven') ||
+             cleanSentence.toLowerCase().includes('sheet') ||
+             cleanSentence.toLowerCase().includes('minutes') ||
+             cleanSentence.toLowerCase().includes('degrees'))) {
+          instructions.push(cleanSentence);
+        }
+      }
+    }
+    
+    // Clean up the instructions - remove duplicates and filter out navigation text
+    instructions = [...new Set(instructions)]
+      .filter(instruction => {
+        const lower = instruction.toLowerCase();
+        // Filter out navigation and non-recipe content
+        return !lower.includes('weeknight dinners') &&
+               !lower.includes('work lunches') &&
+               !lower.includes('holiday cooking') &&
+               !lower.includes('budget recipes') &&
+               !lower.includes('family dinners') &&
+               !lower.includes('plant-based') &&
+               !lower.includes('shop all') &&
+               !lower.includes('download here') &&
+               !lower.includes('related recipes') &&
+               !lower.includes('close') &&
+               !lower.includes('submenu') &&
+               !lower.includes('featured') &&
+               !lower.includes('cookware') &&
+               !lower.includes('share via') &&
+               !lower.includes('print') &&
+               !lower.includes('inspired by') &&
+               !lower.includes('tasty logo') &&
+               !lower.includes('buzzfeed logo') &&
+               !lower.includes('search') &&
+               !lower.includes('menu') &&
+               !lower.includes('newsletter') &&
+               !lower.includes('follow') &&
+               !lower.includes('advertise') &&
+               !lower.includes('feedback') &&
+               !lower.includes('community') &&
+               !lower.includes('privacy') &&
+               !lower.includes('terms') &&
+               !lower.includes('accessibility') &&
+               !lower.includes('values') &&
+               instruction.length > 10 &&
+               instruction.length < 200;
+      })
+      .slice(0, 15); // Limit to 15 clean instructions
+    
+    console.log('Fallback HTML extraction found instructions:', instructions.length);
+    return instructions;
+    
+  } catch (error) {
+    console.error('Error in fallback HTML instruction extraction:', error);
+    return [];
+  }
+}
 
 // Clean up common JSON formatting issues
 function cleanJsonContent(jsonString) {

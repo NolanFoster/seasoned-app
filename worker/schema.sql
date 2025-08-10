@@ -1,3 +1,6 @@
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS recipes;
+
 -- Recipe database schema updated for Google Recipe structured data
 CREATE TABLE IF NOT EXISTS recipes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

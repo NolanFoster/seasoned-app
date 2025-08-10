@@ -42,12 +42,44 @@ export default {
 
       // Create new recipe
       if (pathname === '/recipe' && request.method === 'POST') {
-        const body = await request.json();
-        const recipeId = await createRecipe(env, body);
-        return new Response(JSON.stringify({ id: recipeId, message: 'Recipe created' }), {
-          status: 201,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        try {
+          console.log('POST /recipe endpoint called');
+          const body = await request.json();
+          console.log('Request body received:', {
+            hasName: !!body.name,
+            hasDescription: !!body.description,
+            hasImage: !!body.image,
+            hasImageUrl: !!body.image_url,
+            hasSourceUrl: !!body.source_url,
+            hasIngredients: !!body.ingredients,
+            hasRecipeIngredient: !!body.recipeIngredient,
+            hasInstructions: !!body.instructions,
+            hasRecipeInstructions: !!body.recipeInstructions
+          });
+          
+          const recipeId = await createRecipe(env, body);
+          console.log('Recipe created with ID:', recipeId);
+          
+          return new Response(JSON.stringify({ id: recipeId, message: 'Recipe created' }), {
+            status: 201,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console.error('Error in POST /recipe endpoint:', error);
+          console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+          });
+          
+          return new Response(JSON.stringify({ 
+            error: 'Failed to create recipe', 
+            details: error.message 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       // Update recipe
@@ -197,36 +229,36 @@ async function getRecipes(env) {
   return results.map(recipe => ({
     ...recipe,
     // Parse JSON fields back to arrays/objects
-    recipeIngredient: JSON.parse(recipe.recipe_ingredient || '[]'),
-    recipeInstructions: JSON.parse(recipe.recipe_instructions || '[]'),
+    recipeIngredient: recipe.recipe_ingredient ? JSON.parse(recipe.recipe_ingredient) : [],
+    recipeInstructions: recipe.recipe_instructions ? JSON.parse(recipe.recipe_instructions) : [],
     // Map nutrition fields to a structured object
     nutrition: {
-      calories: recipe.nutrition_calories,
-      proteinContent: recipe.nutrition_protein,
-      fatContent: recipe.nutrition_fat,
-      carbohydrateContent: recipe.nutrition_carbohydrate,
-      fiberContent: recipe.nutrition_fiber,
-      sugarContent: recipe.nutrition_sugar,
-      sodiumContent: recipe.nutrition_sodium,
-      cholesterolContent: recipe.nutrition_cholesterol,
-      saturatedFatContent: recipe.nutrition_saturated_fat,
-      transFatContent: recipe.nutrition_trans_fat,
-      unsaturatedFatContent: recipe.nutrition_unsaturated_fat,
-      servingSize: recipe.nutrition_serving_size
+      calories: recipe.nutrition_calories || '',
+      proteinContent: recipe.nutrition_protein || '',
+      fatContent: recipe.nutrition_fat || '',
+      carbohydrateContent: recipe.nutrition_carbohydrate || '',
+      fiberContent: recipe.nutrition_fiber || '',
+      sugarContent: recipe.nutrition_sugar || '',
+      sodiumContent: recipe.nutrition_sodium || '',
+      cholesterolContent: recipe.nutrition_cholesterol || '',
+      saturatedFatContent: recipe.nutrition_saturated_fat || '',
+      transFatContent: recipe.nutrition_trans_fat || '',
+      unsaturatedFatContent: recipe.nutrition_unsaturated_fat || '',
+      servingSize: recipe.nutrition_serving_size || ''
     },
     // Map rating fields to a structured object
     aggregateRating: {
-      ratingValue: recipe.aggregate_rating_value,
-      ratingCount: recipe.aggregate_rating_count,
-      reviewCount: recipe.review_count
+      ratingValue: recipe.aggregate_rating_value || null,
+      ratingCount: recipe.aggregate_rating_count || null,
+      reviewCount: recipe.review_count || null
     },
     // Map video field
     video: recipe.video_url ? {
       contentUrl: recipe.video_url
     } : null,
-    // Backward compatibility fields
-    ingredients: JSON.parse(recipe.recipe_ingredient || '[]'),
-    instructions: JSON.parse(recipe.recipe_instructions || '[]'),
+    // Backward compatibility fields for frontend
+    ingredients: recipe.recipe_ingredient ? JSON.parse(recipe.recipe_ingredient) : [],
+    instructions: recipe.recipe_instructions ? JSON.parse(recipe.recipe_instructions) : [],
     image_url: recipe.image
   }));
 }
@@ -241,8 +273,8 @@ async function getRecipeById(env, id) {
   return {
     ...result,
     // Parse JSON fields back to arrays/objects
-    recipeIngredient: JSON.parse(result.recipe_ingredient || '[]'),
-    recipeInstructions: JSON.parse(result.recipe_instructions || '[]'),
+    recipeIngredient: result.recipe_ingredient ? JSON.parse(result.recipe_ingredient) : [],
+    recipeInstructions: result.recipe_instructions ? JSON.parse(result.recipe_instructions) : [],
     // Map nutrition fields to a structured object
     nutrition: {
       calories: result.nutrition_calories,
@@ -268,9 +300,9 @@ async function getRecipeById(env, id) {
     video: result.video_url ? {
       contentUrl: result.video_url
     } : null,
-    // Backward compatibility fields
-    ingredients: JSON.parse(result.recipe_ingredient || '[]'),
-    instructions: JSON.parse(result.recipe_instructions || '[]'),
+    // Backward compatibility fields for frontend
+    ingredients: result.recipe_ingredient ? JSON.parse(result.recipe_ingredient) : [],
+    instructions: result.recipe_instructions ? JSON.parse(result.recipe_instructions) : [],
     image_url: result.image
   };
 }
@@ -285,6 +317,17 @@ async function createRecipe(env, recipeData) {
   } = recipeData;
   
   try {
+    console.log('Creating recipe with data:', {
+      name,
+      description,
+      image: image || image_url,
+      source_url,
+      hasIngredients: !!ingredients,
+      hasRecipeIngredient: !!recipeIngredient,
+      hasInstructions: !!instructions,
+      hasRecipeInstructions: !!recipeInstructions
+    });
+
     // Use new schema fields if available, fall back to old fields for backward compatibility
     const finalName = name || '';
     const finalDescription = description || '';
@@ -302,21 +345,29 @@ async function createRecipe(env, recipeData) {
     const finalRecipeInstructions = recipeInstructions || instructions || [];
     const finalSourceUrl = source_url || '';
     
+    console.log('Final recipe data:', {
+      finalName,
+      finalImage,
+      finalSourceUrl,
+      finalRecipeIngredient: Array.isArray(finalRecipeIngredient) ? finalRecipeIngredient.length : 'not array',
+      finalRecipeInstructions: Array.isArray(finalRecipeInstructions) ? finalRecipeInstructions.length : 'not array'
+    });
+
+    // Insert using all schema columns
     const result = await env.DB.prepare(`
       INSERT INTO recipes (
-        name, description, image, author, date_published, prep_time, cook_time, total_time,
-        recipe_yield, recipe_category, recipe_cuisine, keywords, recipe_ingredient, 
-        recipe_instructions, nutrition_calories, nutrition_protein, nutrition_fat, 
-        nutrition_carbohydrate, nutrition_fiber, nutrition_sugar, nutrition_sodium,
-        nutrition_cholesterol, nutrition_saturated_fat, nutrition_trans_fat, 
-        nutrition_unsaturated_fat, nutrition_serving_size, aggregate_rating_value,
-        aggregate_rating_count, review_count, video_url, source_url
+        name, image, description, author, date_published, prep_time, cook_time, total_time,
+        recipe_yield, recipe_category, recipe_cuisine, nutrition_calories, nutrition_protein,
+        nutrition_fat, nutrition_carbohydrate, nutrition_fiber, nutrition_sugar, nutrition_sodium,
+        nutrition_cholesterol, nutrition_saturated_fat, nutrition_trans_fat, nutrition_unsaturated_fat,
+        nutrition_serving_size, recipe_ingredient, recipe_instructions, source_url, keywords,
+        video_url, aggregate_rating_value, aggregate_rating_count, review_count
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       finalName,
-      finalDescription,
       finalImage,
+      finalDescription,
       finalAuthor,
       finalDatePublished,
       finalPrepTime,
@@ -325,9 +376,7 @@ async function createRecipe(env, recipeData) {
       finalRecipeYield,
       finalRecipeCategory,
       finalRecipeCuisine,
-      finalKeywords,
-      JSON.stringify(finalRecipeIngredient),
-      JSON.stringify(finalRecipeInstructions),
+      // Nutrition fields
       nutrition?.calories || '',
       nutrition?.proteinContent || '',
       nutrition?.fatContent || '',
@@ -340,15 +389,29 @@ async function createRecipe(env, recipeData) {
       nutrition?.transFatContent || '',
       nutrition?.unsaturatedFatContent || '',
       nutrition?.servingSize || '',
+      // Recipe content
+      JSON.stringify(finalRecipeIngredient),
+      JSON.stringify(finalRecipeInstructions),
+      // Additional fields
+      finalSourceUrl,
+      finalKeywords,
+      video?.contentUrl || '',
+      // Rating fields
       aggregateRating?.ratingValue || null,
       aggregateRating?.ratingCount || null,
-      aggregateRating?.reviewCount || null,
-      video?.contentUrl || '',
-      finalSourceUrl
+      aggregateRating?.reviewCount || null
     ).run();
     
+    console.log('Recipe created successfully with ID:', result.meta.last_row_id);
     return result.meta.last_row_id;
   } catch (error) {
+    console.error('Error creating recipe:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
     // Check if it's a duplicate constraint violation
     if (error.message && error.message.includes('UNIQUE constraint failed')) {
       throw new Error('A recipe with this name and source already exists');
@@ -387,12 +450,12 @@ async function updateRecipe(env, id, recipeData) {
     UPDATE recipes 
     SET name = ?, description = ?, image = ?, author = ?, date_published = ?, prep_time = ?, 
         cook_time = ?, total_time = ?, recipe_yield = ?, recipe_category = ?, recipe_cuisine = ?, 
-        keywords = ?, recipe_ingredient = ?, recipe_instructions = ?, nutrition_calories = ?, 
-        nutrition_protein = ?, nutrition_fat = ?, nutrition_carbohydrate = ?, nutrition_fiber = ?, 
-        nutrition_sugar = ?, nutrition_sodium = ?, nutrition_cholesterol = ?, nutrition_saturated_fat = ?, 
-        nutrition_trans_fat = ?, nutrition_unsaturated_fat = ?, nutrition_serving_size = ?, 
-        aggregate_rating_value = ?, aggregate_rating_count = ?, review_count = ?, video_url = ?, 
-        source_url = ?, updated_at = CURRENT_TIMESTAMP
+        keywords = ?, recipe_ingredient = ?, recipe_instructions = ?, source_url = ?,
+        nutrition_calories = ?, nutrition_protein = ?, nutrition_fat = ?, nutrition_carbohydrate = ?,
+        nutrition_fiber = ?, nutrition_sugar = ?, nutrition_sodium = ?, nutrition_cholesterol = ?,
+        nutrition_saturated_fat = ?, nutrition_trans_fat = ?, nutrition_unsaturated_fat = ?,
+        nutrition_serving_size = ?, aggregate_rating_value = ?, aggregate_rating_count = ?,
+        review_count = ?, video_url = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).bind(
     finalName,
@@ -409,6 +472,8 @@ async function updateRecipe(env, id, recipeData) {
     finalKeywords,
     JSON.stringify(finalRecipeIngredient),
     JSON.stringify(finalRecipeInstructions),
+    finalSourceUrl,
+    // Nutrition fields
     nutrition?.calories || '',
     nutrition?.proteinContent || '',
     nutrition?.fatContent || '',
@@ -421,11 +486,12 @@ async function updateRecipe(env, id, recipeData) {
     nutrition?.transFatContent || '',
     nutrition?.unsaturatedFatContent || '',
     nutrition?.servingSize || '',
+    // Rating fields
     aggregateRating?.ratingValue || null,
     aggregateRating?.ratingCount || null,
     aggregateRating?.reviewCount || null,
+    // Video field
     video?.contentUrl || '',
-    finalSourceUrl,
     id
   ).run();
   
@@ -578,7 +644,7 @@ async function extractRecipeFromUrl(pageUrl) {
               contentUrl: json.video.contentUrl || ''
             } : null,
             source_url: pageUrl,
-            // Backward compatibility fields
+            // Backward compatibility fields for frontend
             ingredients: (json.recipeIngredient || []).map(decodeHtmlEntities),
             instructions: (json.recipeInstructions || []).map(i => {
               if (typeof i === 'string') {
@@ -650,7 +716,7 @@ async function extractRecipeFromUrl(pageUrl) {
                   contentUrl: item.video.contentUrl || ''
                 } : null,
                 source_url: pageUrl,
-                // Backward compatibility fields
+                // Backward compatibility fields for frontend
                 ingredients: (item.recipeIngredient || []).map(decodeHtmlEntities),
                 instructions: (item.recipeInstructions || []).map(i => {
                   if (typeof i === 'string') {
@@ -682,49 +748,49 @@ async function extractRecipeFromUrl(pageUrl) {
       const title = titleMatch ? titleMatch[1].trim() : 'Untitled Recipe';
       
       // Extract ingredients (look for common patterns)
-      const ingredients = [];
+      const extractedIngredients = [];
       const ingredientMatches = html.match(/<li[^>]*>([^<]+)<\/li>/gi) || [];
       for (let match of ingredientMatches) {
         const text = match.replace(/<[^>]*>/g, '').trim();
         if (text.length > 10 && text.length < 200 && 
             !text.includes('©') && !text.includes('Privacy') && 
             !text.includes('Terms') && !text.includes('Cookie')) {
-          ingredients.push(text);
+          extractedIngredients.push(text);
         }
       }
       
       // Extract instructions (look for numbered lists or paragraphs)
-      const instructions = [];
+      const extractedInstructions = [];
       const instructionMatches = html.match(/<p[^>]*>([^<]+)<\/p>/gi) || [];
       for (let match of instructionMatches) {
         const text = match.replace(/<[^>]*>/g, '').trim();
         if (text.length > 20 && text.length < 500 && 
             !text.includes('©') && !text.includes('Privacy') && 
             !text.includes('Terms') && !text.includes('Cookie')) {
-          instructions.push(text);
+          extractedInstructions.push(text);
         }
       }
       
       // Extract image
       const imageMatch = html.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/i);
-      const image_url = imageMatch ? imageMatch[1] : '';
+      const extractedImage = imageMatch ? imageMatch[1] : '';
       
-      if (ingredients.length > 0 || instructions.length > 0) {
-        console.log('Created recipe from HTML:', { title, ingredients: ingredients.length, instructions: instructions.length });
+      if (extractedIngredients.length > 0 || extractedInstructions.length > 0) {
+        console.log('Created recipe from HTML:', { title, ingredients: extractedIngredients.length, instructions: extractedInstructions.length });
         recipe = {
           name: title,
           description: 'Recipe extracted from website',
-          image: image_url,
-          recipeIngredient: ingredients.slice(0, 20), // Limit to first 20 ingredients
-          recipeInstructions: instructions.slice(0, 20).map(instruction => ({
+          image: extractedImage,
+          recipeIngredient: extractedIngredients.slice(0, 20), // Limit to first 20 ingredients
+          recipeInstructions: extractedInstructions.slice(0, 20).map(instruction => ({
             "@type": "HowToStep",
             text: instruction
           })), // Limit to first 20 instructions
           source_url: pageUrl,
-          // Backward compatibility fields
-          ingredients: ingredients.slice(0, 20),
-          instructions: instructions.slice(0, 20),
-          image_url: image_url
+          // Backward compatibility fields for frontend
+          ingredients: extractedIngredients.slice(0, 20),
+          instructions: extractedInstructions.slice(0, 20),
+          image_url: extractedImage
         };
       }
     }
@@ -732,8 +798,8 @@ async function extractRecipeFromUrl(pageUrl) {
     if (recipe) {
       console.log('Recipe extracted successfully:', {
         name: recipe.name,
-        ingredients: recipe.ingredients.length,
-        instructions: recipe.instructions.length
+        ingredients: recipe.recipeIngredient?.length || recipe.ingredients?.length || 0,
+        instructions: recipe.recipeInstructions?.length || recipe.instructions?.length || 0
       });
     } else {
       console.log('No recipe could be extracted');
