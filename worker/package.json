@@ -1,0 +1,27 @@
+{
+  "name": "recipe-worker",
+  "version": "1.0.0",
+  "description": "Recipe app backend with SQLite and image upload",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "setup": "node setup.js",
+    "db:create": "wrangler d1 create recipe-db",
+    "db:migrate": "wrangler d1 execute recipe-db --file=./schema.sql",
+    "r2:create": "wrangler r2 bucket create recipe-images"
+  },
+  "devDependencies": {
+    "wrangler": "^4.28.1"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "d1",
+    "r2",
+    "recipes",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT"
+}
