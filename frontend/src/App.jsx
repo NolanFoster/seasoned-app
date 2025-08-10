@@ -1,6 +1,5 @@
 
 import { useEffect, useState, useRef } from 'react'
-import Starback from 'starback'
 
 const API_URL = 'https://recipe-worker.nolanfoster.workers.dev'; // Replace with your worker URL
 
@@ -17,8 +16,6 @@ function App() {
   const [showClipForm, setShowClipForm] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const starCanvasRef = useRef(null);
-  const starbackRef = useRef(null);
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
 
@@ -32,25 +29,15 @@ function App() {
       const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setIsDarkMode(darkMode);
       
-      if (darkMode && starCanvasRef.current && !starbackRef.current) {
-        // Initialize star background for dark mode
+      // Always initialize seasoning background for both light and dark modes
+      if (seasoningCanvasRef.current && !seasoningRef.current) {
         setTimeout(() => {
-          if (darkMode && starCanvasRef.current && !starbackRef.current) {
-            initializeStarBackground();
-          }
-        }, 100);
-        // Clean up seasoning background
-        cleanupSeasoningBackground();
-      } else if (!darkMode && seasoningCanvasRef.current && !seasoningRef.current) {
-        // Initialize seasoning background for light mode
-        setTimeout(() => {
-          if (!darkMode && seasoningCanvasRef.current && !seasoningRef.current) {
+          if (seasoningCanvasRef.current && !seasoningRef.current) {
             initializeSeasoningBackground();
           }
         }, 100);
-        // Clean up star background
-        cleanupStarBackground();
       }
+
     };
 
     // Check initial dark mode
@@ -63,114 +50,11 @@ function App() {
     return () => {
       mediaQuery.removeEventListener('change', checkDarkMode);
       // Clean up on unmount
-      cleanupStarBackground();
       cleanupSeasoningBackground();
     };
   }, []);
 
-  // Monitor star background state for debugging
-  useEffect(() => {
-    if (isDarkMode) {
-      console.log('Dark mode enabled, star background should be visible');
-      console.log('Canvas ref:', starCanvasRef.current);
-      console.log('Starback ref:', starbackRef.current);
-    } else {
-      console.log('Light mode enabled, star background should be hidden');
-    }
-  }, [isDarkMode]);
 
-  // Clean up star background
-  const cleanupStarBackground = () => {
-    if (starbackRef.current) {
-      // Stop the animation by setting the ref to null
-      // The animate function checks this and will stop
-      starbackRef.current = null;
-    }
-  };
-
-  // Initialize star background using custom star animation
-  const initializeStarBackground = () => {
-    if (!starCanvasRef.current || starbackRef.current) return;
-    
-    try {
-      const canvas = starCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      
-      console.log('Initializing custom star background...');
-      
-      // Create star data
-      const stars = [];
-      const numStars = 800; // Increased from 500 for more density
-      
-      for (let i = 0; i < numStars; i++) {
-        // Add color variety for more realistic stars
-        const colorVariation = Math.random();
-        let starColor;
-        if (colorVariation < 0.7) {
-          starColor = 'rgba(255, 255, 255, '; // White stars (70%)
-        } else if (colorVariation < 0.85) {
-          starColor = 'rgba(173, 216, 230, '; // Light blue stars (15%)
-        } else {
-          starColor = 'rgba(255, 255, 224, '; // Light yellow stars (15%)
-        }
-        
-        stars.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          size: Math.random() * 1.2 + 0.3, // Smaller size range: 0.3 to 1.5 (was 0.5 to 2.5)
-          opacity: Math.random() * 0.6 + 0.1, // Lower opacity range: 0.1 to 0.7 (was 0.2 to 1.0)
-          speed: Math.random() * 0.0000008 + 0.02, // Much slower speed: 0.02 to 0.1 (was 0.05 to 0.2)
-          color: starColor,
-          twinkle: Math.random() * Math.PI * 2, // Random twinkle phase
-          twinkleSpeed: Math.random() * 0.02 + 0.01 // Twinkle speed
-        });
-      }
-      
-      // Animation function
-      const animate = () => {
-        if (!starbackRef.current) return; // Stop if cleaned up
-        
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        stars.forEach(star => {
-          // Move star
-          star.y += star.speed;
-          if (star.y > canvas.height) {
-            star.y = 0;
-            star.x = Math.random() * canvas.width;
-          }
-          
-          // Update twinkle
-          star.twinkle += star.twinkleSpeed;
-          
-          // Calculate twinkling opacity
-          const twinkleOpacity = star.opacity * (0.7 + 0.3 * Math.sin(star.twinkle));
-          
-          // Draw star
-          ctx.beginPath();
-          ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-          ctx.fillStyle = `${star.color}${twinkleOpacity})`;
-          ctx.fill();
-        });
-        
-        requestAnimationFrame(animate);
-      };
-      
-      // Store animation reference
-      starbackRef.current = { animate, stars, canvas, ctx };
-      
-      // Start animation
-      animate();
-      
-      console.log('Custom star background initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize star background:', error);
-      starbackRef.current = null;
-    }
-  };
 
   // Clean up seasoning background
   const cleanupSeasoningBackground = () => {
@@ -342,27 +226,9 @@ function App() {
     }
   };
 
-  // Handle window resize for backgrounds
+  // Handle window resize for seasoning background
   useEffect(() => {
     const handleResize = () => {
-      // Handle star background resize
-      if (starCanvasRef.current && starbackRef.current) {
-        const canvas = starCanvasRef.current;
-        const ctx = starbackRef.current.ctx;
-        
-        // Update canvas size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
-        // Update star positions for new canvas size
-        if (starbackRef.current.stars) {
-          starbackRef.current.stars.forEach(star => {
-            if (star.x > canvas.width) star.x = Math.random() * canvas.width;
-            if (star.y > canvas.height) star.y = Math.random() * canvas.height;
-          });
-        }
-      }
-      
       // Handle seasoning background resize
       if (seasoningCanvasRef.current && seasoningRef.current) {
         const canvas = seasoningCanvasRef.current;
@@ -545,28 +411,12 @@ function App() {
 
   return (
     <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
-      {/* Star background canvas for dark mode */}
-      <canvas 
-        ref={starCanvasRef} 
-        className="star-background"
-        style={{ 
-          display: isDarkMode ? 'block' : 'none',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          zIndex: -1,
-          pointerEvents: 'none'
-        }}
-      />
-      
-      {/* Seasoning background canvas for light mode */}
+      {/* Seasoning background canvas for both light and dark modes */}
       <canvas 
         ref={seasoningCanvasRef} 
         className="seasoning-background"
         style={{ 
-          display: !isDarkMode ? 'block' : 'none',
+          display: 'block',
           position: 'fixed',
           top: 0,
           left: 0,

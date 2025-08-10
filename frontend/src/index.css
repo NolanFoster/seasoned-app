@@ -26,35 +26,59 @@ body {
 /* Dark mode styles */
 @media (prefers-color-scheme: dark) {
   body {
-    background: linear-gradient(135deg, #050505 0%, #0f0f1a 25%, #0d1420 50%, #081a2a 75%, #2a1a42 100%);
+    background: linear-gradient(-45deg, #2c3e50 0%, #34495e 20%, #2a3a4a 35%, #1a1a2e 50%, #16213e 65%, #0f3460 80%, #2c3e50 100%);
+    background-size: 300% 300%;
+    animation: dark-aura-move 180s ease-in-out infinite;
     color: white;
     position: relative;
     overflow-x: hidden;
   }
   
-  /* Star background canvas */
-  .star-background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    pointer-events: none;
-    display: block;
+  /* Dark mode aura animation */
+  @keyframes dark-aura-move {
+    0% {
+      background-position: 0% 50%;
+      box-shadow: 0 0 100px rgba(15, 52, 96, 0.2);
+    }
+    20% {
+      background-position: 50% 25%;
+      box-shadow: 0 0 110px rgba(83, 52, 131, 0.25);
+    }
+    40% {
+      background-position: 100% 50%;
+      box-shadow: 0 0 120px rgba(22, 33, 62, 0.3);
+    }
+    60% {
+      background-position: 75% 100%;
+      box-shadow: 0 0 130px rgba(26, 26, 46, 0.25);
+    }
+    80% {
+      background-position: 25% 75%;
+      box-shadow: 0 0 120px rgba(15, 52, 96, 0.2);
+    }
+    100% {
+      background-position: 0% 50%;
+      box-shadow: 0 0 100px rgba(15, 52, 96, 0.2);
+    }
   }
   
-  /* Seasoning background canvas */
-  .seasoning-background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    pointer-events: none;
-    display: block;
-  }
+
+  
+}
+
+/* Seasoning background canvas - available for both light and dark modes */
+.seasoning-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
   
   /* Dark frost glass effect */
   .glass {
@@ -74,8 +98,8 @@ body {
   
   /* Dark frost for recipe panels */
   .recipe-panel.glass {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   /* Dark frost for floating action buttons */
@@ -85,7 +109,7 @@ body {
   }
   
   .fab:hover {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
   }
   
   /* White icons in dark mode */
@@ -100,7 +124,7 @@ body {
   }
   
   .back-btn:hover {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
   }
   
   /* Dark text colors for better contrast */
@@ -128,21 +152,21 @@ body {
   
   /* Dark frost glass effect for recipe cards */
   .recipe-card {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
   }
   
   .recipe-card:hover {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.7);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 8px 25px rgba(0, 0, 0, 0.3);
   }
   
   /* Dark frost for recipe card content */
   .recipe-card-content {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
@@ -382,7 +406,7 @@ li {
   -webkit-backdrop-filter: blur(20px);
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: none;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   cursor: pointer;
@@ -558,8 +582,8 @@ li {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -569,7 +593,7 @@ li {
 
 .fab:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.25);
   background: rgba(255, 255, 255, 0.25);
 }
 
@@ -674,7 +698,7 @@ li {
   /* Dark mode styles for full-screen view */
 @media (prefers-color-scheme: dark) {
   .recipe-fullscreen {
-    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+    background: transparent;
   }
   
   /* Dark frost for full-screen panels */
@@ -746,8 +770,8 @@ li {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: none;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 3002;
@@ -758,9 +782,8 @@ li {
 
 .back-btn:hover {
   transform: translateX(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
   background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .back-arrow {
@@ -889,6 +912,53 @@ li {
 /* Make recipe cards clickable */
 .recipe-card {
   cursor: pointer;
+}
+
+/* Dark mode overrides for recipe cards */
+@media (prefers-color-scheme: dark) {
+  .recipe-card {
+    background: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+  
+  .recipe-card:hover {
+    background: rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  .recipe-card-content {
+    background: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* Dark mode overrides for buttons */
+@media (prefers-color-scheme: dark) {
+  .fab {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
+  }
+  
+  .fab:hover {
+    background: rgba(0, 0, 0, 0.4) !important;
+  }
+  
+  .fab-icon {
+    color: white !important;
+  }
+  
+  .back-btn {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
+  }
+  
+  .back-btn:hover {
+    background: rgba(0, 0, 0, 0.4) !important;
+  }
 }
 
 /* Hide main content when recipe view is open */
