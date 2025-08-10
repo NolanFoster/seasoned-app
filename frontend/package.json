@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy:staging": "npm run build && wrangler pages deploy dist --env staging",
+    "deploy:prod": "npm run build && wrangler pages deploy dist --env production"
   },
   "dependencies": {
     "react": "^18.3.1",
