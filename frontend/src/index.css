@@ -1023,9 +1023,10 @@ li {
   padding: 40px;
   max-width: 1400px;
   margin: 0 auto;
-  margin-top: 180px; /* Space for header and title */
+  margin-top: 30px; /* Reduced from 180px - content will flow after title section */
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
 /* Stack panels on tablets and smaller screens */
@@ -1229,7 +1230,7 @@ li {
 
 /* Recipe Top Header */
 .recipe-top-header {
-  position: absolute;
+  position: fixed; /* Changed from absolute to fixed */
   top: 0;
   left: 0;
   right: 0;
@@ -1237,7 +1238,7 @@ li {
   align-items: center;
   justify-content: space-between;
   padding: 15px 40px;
-  z-index: 10;
+  z-index: 100; /* Increased from 10 to ensure it's always on top */
   /* Removed glass panel background effect */
   background: transparent;
   /* Removed backdrop-filter and box-shadow */
@@ -1311,6 +1312,9 @@ li {
 @media (max-width: 768px) {
   .recipe-top-header {
     padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.2); /* Add slight background on mobile for visibility */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
   .recipe-fullscreen-actions {
@@ -1332,13 +1336,14 @@ li {
   .recipe-fullscreen-content {
     grid-template-columns: 1fr;
     padding: 20px;
-    margin-top: 180px; /* Increased to account for timing info */
+    margin-top: 20px; /* Reduced from 180px */
     gap: 20px; /* Add gap between panels */
   }
   
   .recipe-title-section {
-    top: 60px;
-    padding: 0 20px;
+    position: relative; /* Changed from absolute on mobile */
+    top: auto;
+    padding: 80px 20px 20px 20px; /* Added top padding for fixed header */
   }
   
   /* Adjust title size on mobile */
@@ -1398,8 +1403,7 @@ li {
   }
   
   .recipe-title-section {
-    top: 55px;
-    padding: 0 15px;
+    padding: 70px 15px 15px 15px; /* Adjusted padding for small screens */
   }
   
   /* Further adjust timing info on very small screens */
@@ -1440,7 +1444,7 @@ li {
   
   .recipe-fullscreen-content {
     padding: 15px;
-    margin-top: 120px;
+    margin-top: 15px; /* Reduced from 120px */
     gap: 15px; /* Smaller gap on very small screens */
   }
   
@@ -1454,8 +1458,12 @@ li {
   
   /* Ensure proper stacking on mobile */
   .recipe-full-background {
-    position: absolute; /* Change from fixed to absolute on mobile */
-    height: 300px; /* Limit height on mobile */
+    position: fixed; /* Keep as fixed for proper background */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
   }
   
   .recipe-fullscreen {
@@ -1538,13 +1546,13 @@ li {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: absolute;
-  top: 80px;
-  left: 0;
-  right: 0;
-  z-index: 9;
+  position: relative; /* Changed from absolute to relative */
+  padding-top: 100px; /* Space for fixed header */
+  z-index: 2; /* Reduced from 9, but still above background */
   text-align: center;
-  padding: 0 40px;
+  padding-left: 40px;
+  padding-right: 40px;
+  padding-bottom: 20px;
 }
 
 .recipe-links {
@@ -1618,7 +1626,7 @@ li {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: -1;
+  z-index: -1; /* Back to -1 to ensure it's behind everything */
 }
 
 .recipe-full-background::after {
@@ -1629,7 +1637,7 @@ li {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 0;
+  z-index: 1; /* Changed from 0 to 1 */
   pointer-events: none;
 }
 
