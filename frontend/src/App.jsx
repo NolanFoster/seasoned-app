@@ -1418,42 +1418,11 @@ function App() {
       {/* Full Screen Recipe View */}
       {selectedRecipe && (
         <div className="recipe-fullscreen">
-          {/* Top Header with Back Button, Title, and Action Buttons */}
+          {/* Top Header with Back Button and Action Buttons */}
           <div className="recipe-top-header">
             <button className="back-btn" onClick={() => setSelectedRecipe(null)}>
               <span className="back-arrow">←</span>
             </button>
-            <div className="recipe-title-section">
-              <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
-              {/* Recipe Links - moved under title */}
-              {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                <div className="recipe-links">
-                  {selectedRecipe.source_url && (
-                    <a 
-                      href={selectedRecipe.source_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="recipe-link source-link"
-                      title="View original recipe"
-                    >
-                      🌐 Source Recipe
-                    </a>
-                  )}
-                  {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                    <button 
-                      className="recipe-link video-link"
-                      title="Watch recipe video"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
-                      }}
-                    >
-                      🎥 Watch Video
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
             <div className="recipe-fullscreen-actions">
               <button 
                 className="edit-btn fullscreen-edit-btn" 
@@ -1479,6 +1448,39 @@ function App() {
                 🗑️
               </button>
             </div>
+          </div>
+          
+          {/* Title Section - moved below header */}
+          <div className="recipe-title-section">
+            <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
+            {/* Recipe Links - under title */}
+            {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+              <div className="recipe-links">
+                {selectedRecipe.source_url && (
+                  <a 
+                    href={selectedRecipe.source_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="recipe-link source-link"
+                    title="View original recipe"
+                  >
+                    🌐 Source Recipe
+                  </a>
+                )}
+                {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                  <button 
+                    className="recipe-link video-link"
+                    title="Watch recipe video"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                    }}
+                  >
+                    🎥 Watch Video
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Full Background Image */}

@@ -955,7 +955,7 @@ li {
   padding: 40px;
   max-width: 1400px;
   margin: 0 auto;
-  margin-top: 20px; /* Reduced since header is now sticky */
+  margin-top: 180px; /* Space for header and title */
   position: relative;
   z-index: 1;
 }
@@ -1161,26 +1161,24 @@ li {
 
 /* Recipe Top Header */
 .recipe-top-header {
-  position: sticky;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 30px 40px;
+  justify-content: space-between;
+  padding: 15px 40px;
   z-index: 10;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  /* Removed glass panel background effect */
+  background: transparent;
+  /* Removed backdrop-filter and box-shadow */
 }
 
 /* Full Screen Recipe Actions */
 .recipe-fullscreen-actions {
   display: flex;
   gap: 15px;
-  margin-left: auto;
 }
 
 .fullscreen-edit-btn,
@@ -1244,15 +1242,10 @@ li {
 /* Mobile responsiveness for full screen actions */
 @media (max-width: 768px) {
   .recipe-top-header {
-    /* Keep desktop layout on mobile - no flex-direction: column */
-    gap: 10px;
-    padding: 15px 20px;
-    position: sticky;
+    padding: 10px 20px;
   }
   
   .recipe-fullscreen-actions {
-    /* Keep actions on the right side */
-    margin-left: auto;
     gap: 10px;
   }
   
@@ -1271,20 +1264,18 @@ li {
   .recipe-fullscreen-content {
     grid-template-columns: 1fr;
     padding: 20px;
-    margin-top: 20px;
+    margin-top: 140px;
     gap: 20px; /* Add gap between panels */
   }
   
   .recipe-title-section {
-    max-width: 60%;
-    flex: 1;
+    top: 60px;
+    padding: 0 20px;
   }
   
   /* Adjust title size on mobile */
-  .recipe-top-header .recipe-fullscreen-title {
-    font-size: 1.5em; /* Slightly smaller for mobile */
-    padding: 5px 10px;
-    text-align: left; /* Keep left alignment like desktop */
+  .recipe-fullscreen-title {
+    font-size: 1.8em; /* Slightly smaller for mobile */
     line-height: 1.2;
   }
   
@@ -1311,18 +1302,16 @@ li {
 /* Extra small screens */
 @media (max-width: 480px) {
   .recipe-top-header {
-    /* Keep horizontal layout even on very small screens */
-    padding: 10px 15px;
-    gap: 8px;
+    padding: 8px 15px;
   }
   
-  .recipe-top-header .recipe-fullscreen-title {
-    font-size: 1.2em; /* Further reduced for very small screens */
-    padding: 5px 8px;
+  .recipe-fullscreen-title {
+    font-size: 1.5em; /* Further reduced for very small screens */
   }
   
   .recipe-title-section {
-    max-width: 50%; /* Slightly less space for title */
+    top: 55px;
+    padding: 0 15px;
   }
   
   .fullscreen-edit-btn,
@@ -1344,7 +1333,7 @@ li {
   
   .recipe-fullscreen-content {
     padding: 15px;
-    margin-top: 15px;
+    margin-top: 120px;
     gap: 15px; /* Smaller gap on very small screens */
   }
   
@@ -1426,16 +1415,15 @@ li {
   }
 }
 
-.recipe-top-header .recipe-fullscreen-title {
+.recipe-fullscreen-title {
   color: white;
   font-size: 2.5em;
   font-weight: 600;
-  margin: 0;
+  margin: 0 auto;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   padding: 15px 25px;
   display: inline-block;
   width: fit-content;
-  flex: none;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
 
@@ -1443,8 +1431,13 @@ li {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
-  max-width: 60%;
+  position: absolute;
+  top: 80px;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  text-align: center;
+  padding: 0 40px;
 }
 
 .recipe-links {
