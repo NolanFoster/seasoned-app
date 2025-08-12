@@ -4,6 +4,54 @@ import { useEffect, useState, useRef } from 'react'
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-worker.nolanfoster.workers.dev'; // Main recipe worker
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 
+// Function to convert ISO 8601 duration to human readable format
+function formatDuration(duration) {
+  if (!duration || typeof duration !== 'string') return duration;
+  
+  // If it's already in a readable format (doesn't start with PT), return as is
+  if (!duration.startsWith('PT')) return duration;
+  
+  try {
+    // Remove the PT prefix
+    let remaining = duration.substring(2);
+    
+    let hours = 0;
+    let minutes = 0;
+    
+    // Extract hours if present
+    const hourMatch = remaining.match(/(\d+)H/);
+    if (hourMatch) {
+      hours = parseInt(hourMatch[1], 10);
+      remaining = remaining.replace(hourMatch[0], '');
+    }
+    
+    // Extract minutes if present
+    const minuteMatch = remaining.match(/(\d+)M/);
+    if (minuteMatch) {
+      minutes = parseInt(minuteMatch[1], 10);
+    }
+    
+    // Format the output
+    let result = '';
+    if (hours > 0) {
+      result += `${hours} h`;
+      if (minutes > 0) {
+        result += ` ${minutes} m`;
+      }
+    } else if (minutes > 0) {
+      result += `${minutes} m`;
+    } else {
+      // If no hours or minutes found, return the original
+      return duration;
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error parsing duration:', error);
+    return duration;
+  }
+}
+
 // Video Popup Component
 function VideoPopup({ videoUrl, onClose }) {
   const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 280 });
@@ -950,12 +998,12 @@ function App() {
                       <div className="recipe-card-time">
                         <div className="time-item">
                           <span className="time-label">Prep</span>
-                          <span className="time-value">{recipe.prep_time || '-'}</span>
+                          <span className="time-value">{formatDuration(recipe.prep_time) || '-'}</span>
                         </div>
                         <div className="time-divider"></div>
                         <div className="time-item">
                           <span className="time-label">Cook</span>
-                          <span className="time-value">{recipe.cook_time || '-'}</span>
+                          <span className="time-value">{formatDuration(recipe.cook_time) || '-'}</span>
                         </div>
                       </div>
                     ) : (
