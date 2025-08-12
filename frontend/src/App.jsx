@@ -939,28 +939,6 @@ function App() {
                       }}></div>
                     )}
                     <div className="recipe-card-overlay">
-                      <div className="recipe-card-actions">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            editRecipe(recipe);
-                          }} 
-                          className="edit-btn card-edit-btn"
-                          title="Edit Recipe"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteRecipe(recipe.id);
-                          }} 
-                          className="delete-btn card-delete-btn"
-                          title="Delete Recipe"
-                        >
-                          🗑️
-                        </button>
-                      </div>
                     </div>
                     <div className="recipe-card-title-overlay">
                       <h3 className="recipe-card-title">{recipe.name}</h3>
