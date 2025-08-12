@@ -917,9 +917,9 @@ li {
 }
 
 .back-btn {
-  position: fixed;
-  top: 30px;
-  left: 30px;
+  position: fixed !important;
+  top: 30px !important;
+  left: 30px !important;
   width: 70px;
   height: 50px;
   border-radius: 25px;
@@ -1309,6 +1309,7 @@ li {
   align-items: center;
   gap: 20px;
   padding: 30px 40px;
+  padding-left: 120px; /* Make room for the back button */
   z-index: 3002;
 }
 
@@ -1383,7 +1384,8 @@ li {
     flex-direction: column;
     gap: 15px;
     padding: 20px;
-    position: relative; /* Change from fixed to allow proper stacking */
+    padding-left: 80px; /* Make room for the back button on mobile */
+    position: fixed; /* Keep fixed position */
   }
   
   .recipe-fullscreen-actions {
@@ -1406,7 +1408,7 @@ li {
   .recipe-fullscreen-content {
     grid-template-columns: 1fr;
     padding: 20px;
-    margin-top: 20px; /* Reduced margin-top since header is now relative */
+    margin-top: 180px; /* Increased margin-top for fixed header on mobile */
   }
   
   .recipe-title-section {
@@ -1436,9 +1438,9 @@ li {
   
   /* Adjust back button on mobile */
   .back-btn {
-    position: absolute; /* Change to absolute within relative header */
-    top: 20px;
-    left: 20px;
+    position: fixed !important; /* Keep fixed position on mobile */
+    top: 20px !important;
+    left: 20px !important;
     width: 50px;
     height: 50px;
   }
@@ -1453,7 +1455,7 @@ li {
   
   .recipe-fullscreen-content {
     padding: 15px;
-    margin-top: 15px;
+    margin-top: 160px; /* Adjusted for fixed header on very small screens */
   }
   
   .recipe-panel {
@@ -1648,8 +1650,11 @@ li {
 
 /* Update back button positioning for top header */
 .recipe-top-header .back-btn {
-  position: static;
+  position: fixed !important;
+  top: 30px !important;
+  left: 30px !important;
   flex-shrink: 0;
+  z-index: 3003; /* Ensure it's above the header */
 }
 
 /* Update recipe content positioning */
