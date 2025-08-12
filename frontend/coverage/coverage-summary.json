@@ -1,0 +1,3 @@
+{"total": {"lines":{"total":493,"covered":430,"skipped":0,"pct":87.22},"statements":{"total":521,"covered":445,"skipped":0,"pct":85.41},"functions":{"total":103,"covered":90,"skipped":0,"pct":87.37},"branches":{"total":363,"covered":286,"skipped":0,"pct":78.78},"branchesTrue":{"total":0,"covered":0,"skipped":0,"pct":"Unknown"}}
+,"/workspace/frontend/src/App.jsx": {"lines":{"total":493,"covered":430,"skipped":0,"pct":87.22},"functions":{"total":103,"covered":90,"skipped":0,"pct":87.37},"statements":{"total":521,"covered":445,"skipped":0,"pct":85.41},"branches":{"total":363,"covered":286,"skipped":0,"pct":78.78}}
+}
