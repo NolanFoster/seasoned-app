@@ -939,28 +939,6 @@ function App() {
                       }}></div>
                     )}
                     <div className="recipe-card-overlay">
-                      <div className="recipe-card-actions">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            editRecipe(recipe);
-                          }} 
-                          className="edit-btn card-edit-btn"
-                          title="Edit Recipe"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteRecipe(recipe.id);
-                          }} 
-                          className="delete-btn card-delete-btn"
-                          title="Delete Recipe"
-                        >
-                          🗑️
-                        </button>
-                      </div>
                     </div>
                     <div className="recipe-card-title-overlay">
                       <h3 className="recipe-card-title">{recipe.name}</h3>
@@ -1454,31 +1432,7 @@ function App() {
                 </div>
               )}
             </div>
-            <div className="recipe-fullscreen-actions">
-              <button 
-                className="edit-btn fullscreen-edit-btn" 
-                onClick={() => {
-                  editRecipe(selectedRecipe);
-                  setSelectedRecipe(null);
-                  setShowAddForm(true);
-                }}
-                title="Edit Recipe"
-              >
-                ✏️
-              </button>
-              <button 
-                className="delete-btn fullscreen-delete-btn" 
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete this recipe?')) {
-                    deleteRecipe(selectedRecipe.id);
-                    setSelectedRecipe(null);
-                  }
-                }}
-                title="Delete Recipe"
-              >
-                🗑️
-              </button>
-            </div>
+            <div className="recipe-fullscreen-close" onClick={() => setSelectedRecipe(null)}>✕</div>
           </div>
           
           {/* Full Background Image */}
