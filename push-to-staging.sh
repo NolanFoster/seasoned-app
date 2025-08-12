@@ -6,27 +6,39 @@ echo "🧪 Running tests before pushing to staging..."
 
 # Run frontend tests if frontend directory exists
 if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
-    echo "Running frontend tests..."
+    echo "Checking frontend tests..."
     cd frontend
-    npm test
-    FRONTEND_RESULT=$?
-    cd ..
-    if [ $FRONTEND_RESULT -ne 0 ]; then
-        echo "❌ Frontend tests failed! Aborting push to staging."
-        exit 1
+    if npm run | grep -q " test"; then
+        echo "Running frontend tests..."
+        npm test
+        FRONTEND_RESULT=$?
+        cd ..
+        if [ $FRONTEND_RESULT -ne 0 ]; then
+            echo "❌ Frontend tests failed! Aborting push to staging."
+            exit 1
+        fi
+    else
+        echo "⚠️  No test script found in frontend/package.json, skipping frontend tests"
+        cd ..
     fi
 fi
 
 # Run worker tests if worker directory exists
 if [ -d "worker" ] && [ -f "worker/package.json" ]; then
-    echo "Running worker tests..."
+    echo "Checking worker tests..."
     cd worker
-    npm test
-    WORKER_RESULT=$?
-    cd ..
-    if [ $WORKER_RESULT -ne 0 ]; then
-        echo "❌ Worker tests failed! Aborting push to staging."
-        exit 1
+    if npm run | grep -q " test"; then
+        echo "Running worker tests..."
+        npm test
+        WORKER_RESULT=$?
+        cd ..
+        if [ $WORKER_RESULT -ne 0 ]; then
+            echo "❌ Worker tests failed! Aborting push to staging."
+            exit 1
+        fi
+    else
+        echo "⚠️  No test script found in worker/package.json, skipping worker tests"
+        cd ..
     fi
 fi
 
