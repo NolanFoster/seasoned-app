@@ -872,10 +872,12 @@ function App() {
         }}
       />
       
-      <h1 className="title">
-        <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
-        Seasoned
-      </h1>
+      <div className="header-section">
+        <h1 className="title">
+          <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
+          Seasoned
+        </h1>
+      </div>
       
       {/* Floating Action Buttons */}
       <div className="fab-container">
