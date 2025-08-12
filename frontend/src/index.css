@@ -1022,9 +1022,10 @@ li {
   padding: 40px;
   max-width: 1400px;
   margin: 0 auto;
-  margin-top: 180px; /* Space for header and title */
+  margin-top: 30px; /* Reduced from 180px - content will flow after title section */
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
 /* Stack panels on tablets and smaller screens */
@@ -1033,6 +1034,12 @@ li {
     grid-template-columns: 1fr;
     gap: 25px;
     padding: 30px;
+  }
+  
+  /* Add horizontal margins to recipe panels on smaller screens */
+  .recipe-panel {
+    margin-left: 20px;
+    margin-right: 20px;
   }
 }
 
@@ -1312,6 +1319,9 @@ li {
 @media (max-width: 768px) {
   .recipe-top-header {
     padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.2); /* Add slight background on mobile for visibility */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
   .recipe-fullscreen-actions {
@@ -1332,14 +1342,15 @@ li {
   
   .recipe-fullscreen-content {
     grid-template-columns: 1fr;
-    padding: 20px;
-    margin-top: 180px; /* Increased to account for timing info */
+    padding: 0 20px 20px; /* Remove top padding, keep sides and bottom */
+    margin-top: 20px; /* Reduced from 180px */
     gap: 20px; /* Add gap between panels */
   }
   
   .recipe-title-section {
-    top: 60px;
-    padding: 0 20px;
+    position: relative; /* Changed from absolute on mobile */
+    top: auto;
+    padding: 80px 20px 20px 20px; /* Added top padding for fixed header */
   }
   
   /* Adjust title size on mobile */
@@ -1350,7 +1361,7 @@ li {
   
   /* Adjust timing info on mobile */
   .recipe-timing-info {
-    gap: 0.8rem;
+    gap: 1.5rem;
     margin-top: 0.8rem;
     margin-bottom: 0.4rem;
   }
@@ -1399,13 +1410,12 @@ li {
   }
   
   .recipe-title-section {
-    top: 55px;
-    padding: 0 15px;
+    padding: 70px 15px 15px 15px; /* Adjusted padding for small screens */
   }
   
   /* Further adjust timing info on very small screens */
   .recipe-timing-info {
-    gap: 0.5rem;
+    gap: 1rem;
     margin-top: 0.6rem;
   }
   
@@ -1440,13 +1450,17 @@ li {
   }
   
   .recipe-fullscreen-content {
-    padding: 15px;
-    margin-top: 120px;
+    padding: 0 15px 15px; /* Remove top padding, keep sides and bottom */
+    margin-top: 15px; /* Reduced from 120px */
     gap: 15px; /* Smaller gap on very small screens */
   }
   
   .recipe-panel {
     padding: 20px; /* Reduced padding on very small screens */
+    margin-left: 0; /* Reset margins on very small screens */
+    margin-right: 0; /* Reset margins on very small screens */
+    width: 100%; /* Ensure full width within container padding */
+    box-sizing: border-box; /* Include padding in width calculation */
   }
   
   .recipe-panel h2 {
@@ -1455,8 +1469,12 @@ li {
   
   /* Ensure proper stacking on mobile */
   .recipe-full-background {
-    position: absolute; /* Change from fixed to absolute on mobile */
-    height: 300px; /* Limit height on mobile */
+    position: fixed; /* Keep as fixed for proper background */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
   }
   
   .recipe-fullscreen {
@@ -1553,7 +1571,9 @@ li {
   right: 0;
   z-index: 50; /* Increased to stay below sticky header but above content */
   text-align: center;
-  padding: 0 40px;
+  padding-left: 40px;
+  padding-right: 40px;
+  padding-bottom: 20px;
 }
 
 .recipe-links {
@@ -1627,7 +1647,7 @@ li {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: -1;
+  z-index: -1; /* Back to -1 to ensure it's behind everything */
 }
 
 .recipe-full-background::after {
@@ -1638,7 +1658,7 @@ li {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 0;
+  z-index: 1; /* Changed from 0 to 1 */
   pointer-events: none;
 }
 
@@ -2742,7 +2762,7 @@ button:disabled:hover {
 /* Recipe Timing Info */
 .recipe-timing-info {
   display: flex;
-  gap: 1.5rem;
+  gap: 2.5rem;
   margin-top: 1rem;
   margin-bottom: 0.5rem;
   flex-wrap: wrap;
@@ -2752,14 +2772,10 @@ button:disabled:hover {
 
 .timing-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 0.3rem;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
   padding: 0.5rem 1rem;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .timing-icon {
@@ -2769,13 +2785,16 @@ button:disabled:hover {
 
 .timing-label {
   color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9em;
+  font-size: 0.85em;
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .timing-value {
   color: white;
   font-weight: 600;
+  font-size: 1.1em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
