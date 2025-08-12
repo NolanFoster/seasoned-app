@@ -1012,6 +1012,9 @@ li {
   font-size: 1.5em;
   color: white;
   font-weight: bold;
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-1px); /* Fine-tune vertical centering */
 }
 
 
@@ -1318,9 +1321,8 @@ li {
 @media (max-width: 768px) {
   .recipe-top-header {
     padding: 10px 20px;
-    background: rgba(0, 0, 0, 0.2); /* Add slight background on mobile for visibility */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: transparent; /* Removed glass background on mobile */
+    /* Removed backdrop-filter effects */
   }
   
   .recipe-fullscreen-actions {
