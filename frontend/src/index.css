@@ -849,6 +849,8 @@ li {
   overflow-y: auto;
   transition: background 0.3s ease;
   color: white;
+  display: flex;
+  flex-direction: column;
 }
 
   /* Dark mode styles for full-screen view */
@@ -917,9 +919,6 @@ li {
 }
 
 .back-btn {
-  position: fixed;
-  top: 30px;
-  left: 30px;
   width: 70px;
   height: 50px;
   border-radius: 25px;
@@ -930,7 +929,6 @@ li {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 3002;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -957,9 +955,9 @@ li {
   padding: 40px;
   max-width: 1400px;
   margin: 0 auto;
-  margin-top: 120px; /* Account for top header height */
+  margin-top: 20px; /* Reduced since header is now sticky */
   position: relative;
-  z-index: 3001;
+  z-index: 1;
 }
 
 /* Removed instructions-panel-container and recipe-links-panel - links are now in the header */
@@ -1154,7 +1152,7 @@ li {
 
 /* Recipe Top Header */
 .recipe-top-header {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -1162,7 +1160,11 @@ li {
   align-items: center;
   gap: 20px;
   padding: 30px 40px;
-  z-index: 3002;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Full Screen Recipe Actions */
@@ -1236,7 +1238,7 @@ li {
     flex-direction: column;
     gap: 15px;
     padding: 20px;
-    position: relative; /* Change from fixed to allow proper stacking */
+    position: sticky;
   }
   
   .recipe-fullscreen-actions {
@@ -1260,7 +1262,7 @@ li {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    margin-top: 20px; /* Reduced margin-top since header is now relative */
+    margin-top: 20px;
     gap: 20px; /* Add gap between panels */
   }
   
@@ -1302,16 +1304,8 @@ li {
   
   /* Adjust back button on mobile */
   .back-btn {
-    position: fixed;
-    top: 20px;
-    left: 20px;
     width: 50px;
     height: 50px;
-  }
-  
-  .recipe-top-header .back-btn {
-    top: 20px;
-    left: 20px;
   }
 }
 
@@ -1489,7 +1483,7 @@ li {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 3000;
+  z-index: -1;
 }
 
 .recipe-full-background::after {
@@ -1500,7 +1494,7 @@ li {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 3001;
+  z-index: 0;
   pointer-events: none;
 }
 
@@ -1524,9 +1518,9 @@ li {
 
 /* Update back button positioning for top header */
 .recipe-top-header .back-btn {
-  position: fixed;
-  top: 30px;
-  left: 30px;
+  position: relative;
+  top: auto;
+  left: auto;
   flex-shrink: 0;
 }
 
@@ -1538,9 +1532,9 @@ li {
   padding: 40px;
   max-width: 1400px;
   margin: 0 auto;
-  margin-top: 120px; /* Account for top header height */
+  margin-top: 20px; /* Reduced since header is now sticky */
   position: relative;
-  z-index: 3001;
+  z-index: 1;
 }
 
 /* Recipe Preview Overlay Styles */
