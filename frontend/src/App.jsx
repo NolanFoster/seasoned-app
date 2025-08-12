@@ -880,15 +880,14 @@ function App() {
       {/* Floating Action Buttons */}
       <div className="fab-container">
         <button 
-          className={`fab fab-clip ${clipperStatus === 'unavailable' ? 'fab-disabled' : ''}`} 
+          className={`fab fab-clip ${clipperStatus === 'unavailable' ? 'fab-unavailable' : clipperStatus === 'available' ? 'fab-available' : 'fab-checking'}`} 
           onClick={() => setShowClipForm(true)}
           disabled={clipperStatus === 'unavailable'}
           title={clipperStatus === 'unavailable' ? 'Clipper service unavailable' : 'Clip recipe from website'}
         >
-          <span className="fab-icon">✂️</span>
-          {clipperStatus === 'checking' && <span className="status-indicator checking">⏳</span>}
-          {clipperStatus === 'available' && <span className="status-indicator available">✓</span>}
-          {clipperStatus === 'unavailable' && <span className="status-indicator unavailable">⚠️</span>}
+          <span className="fab-icon">
+            <img src="/scissor.svg" alt="Clip" style={{ width: '24px', height: '24px' }} />
+          </span>
         </button>
         <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
@@ -1099,7 +1098,12 @@ function App() {
                   className="add-btn" 
                   disabled={isClipping || clipperStatus === 'unavailable'}
                 >
-                  {isClipping ? '🔄 Clipping...' : '✂️ Clip Recipe'}
+                  {isClipping ? '🔄 Clipping...' : (
+                    <>
+                      <img src="/scissor.svg" alt="Clip" style={{ width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle' }} />
+                      Clip Recipe
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1228,6 +1232,33 @@ function App() {
                       disabled={isSavingRecipe}
                     >
                       {isSavingRecipe ? '🔄 Saving...' : 'Save Recipe'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!isSavingRecipe) {
+                          // Store the current URL to retry with
+                          const currentUrl = clippedRecipePreview.source_url;
+                          setClippedRecipePreview(null);
+                          setClipUrl(currentUrl);
+                          setClipError('');
+                          setIsEditingPreview(false);
+                          setEditablePreview(null);
+                          setShowClipForm(true);
+                          // Show a brief message that this is a retry
+                          setTimeout(() => {
+                            const urlInput = document.querySelector('input[placeholder="Recipe URL"]');
+                            if (urlInput) {
+                              urlInput.focus();
+                              urlInput.select();
+                            }
+                          }, 100);
+                        }
+                      }} 
+                      className="try-again-btn"
+                      disabled={isSavingRecipe}
+                      title="Try clipping this recipe again"
+                    >
+                      🔄 Try Again
                     </button>
                     <button 
                       onClick={() => {

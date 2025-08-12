@@ -119,6 +119,101 @@ async function extractRecipeWithGPT(pageUrl, env) {
           recipe.instructions = fallbackInstructions;
         }
       }
+      
+      // Try to extract additional fields from HTML if AI didn't get them
+      if (!recipe.description || recipe.description.length < 10) {
+        const extractedDescription = extractDescriptionFromHTML(html);
+        if (extractedDescription) {
+          recipe.description = extractedDescription;
+        }
+      }
+      
+      if (!recipe.author || recipe.author.length < 2) {
+        const extractedAuthor = extractAuthorFromHTML(html);
+        if (extractedAuthor) {
+          recipe.author = extractedAuthor;
+        }
+      }
+      
+      if (!recipe.datePublished || recipe.datePublished.length < 5) {
+        const extractedDate = extractDateFromHTML(html);
+        if (extractedDate) {
+          recipe.datePublished = extractedDate;
+        }
+      }
+      
+      if (!recipe.recipeYield || recipe.recipeYield.length < 3) {
+        const extractedYield = extractYieldFromHTML(html);
+        if (extractedYield) {
+          recipe.recipeYield = extractedYield;
+        }
+      }
+      
+      if (!recipe.recipeCategory || recipe.recipeCategory.length < 3) {
+        const extractedCategory = extractCategoryFromHTML(html);
+        if (extractedCategory) {
+          recipe.recipeCategory = extractedCategory;
+        }
+      }
+      
+      if (!recipe.recipeCuisine || recipe.recipeCuisine.length < 3) {
+        const extractedCuisine = extractCuisineFromHTML(html);
+        if (extractedCuisine) {
+          recipe.recipeCuisine = extractedCuisine;
+        }
+      }
+      
+      if (!recipe.prepTime || recipe.prepTime.length < 3) {
+        const extractedPrepTime = extractPrepTimeFromHTML(html);
+        if (extractedPrepTime) {
+          recipe.prepTime = extractedPrepTime;
+        }
+      }
+      
+      if (!recipe.cookTime || recipe.cookTime.length < 3) {
+        const extractedCookTime = extractCookTimeFromHTML(html);
+        if (extractedCookTime) {
+          recipe.cookTime = extractedCookTime;
+        }
+      }
+      
+      if (!recipe.totalTime || recipe.totalTime.length < 3) {
+        const extractedTotalTime = extractTotalTimeFromHTML(html);
+        if (extractedTotalTime) {
+          recipe.totalTime = extractedTotalTime;
+        }
+      }
+      
+      if (!recipe.keywords || recipe.keywords.length < 5) {
+        const extractedKeywords = extractKeywordsFromHTML(html);
+        if (extractedKeywords) {
+          recipe.keywords = extractedKeywords;
+        }
+      }
+      
+      // Try to extract nutrition information if not present
+      if (!recipe.nutrition || !recipe.nutrition.calories) {
+        const extractedNutrition = extractNutritionFromHTML(html);
+        if (extractedNutrition) {
+          recipe.nutrition = extractedNutrition;
+        }
+      }
+      
+      // Try to extract rating information if not present
+      if (!recipe.aggregateRating || !recipe.aggregateRating.ratingValue) {
+        const extractedRating = extractRatingFromHTML(html);
+        if (extractedRating) {
+          recipe.aggregateRating = extractedRating;
+        }
+      }
+      
+      // Try to extract video information if not present
+      if (!recipe.video || !recipe.video.contentUrl) {
+        const extractedVideo = extractVideoFromHTML(html);
+        if (extractedVideo) {
+          recipe.video = extractedVideo;
+        }
+      }
     } else {
       console.log('No recipe extracted - AI returned null or empty data');
     }
@@ -127,6 +222,465 @@ async function extractRecipeWithGPT(pageUrl, env) {
   } catch (error) {
     console.error('Error in GPT recipe extraction:', error);
     throw error;
+  }
+}
+
+// Enhanced HTML extraction functions for additional recipe fields
+
+// Extract description from HTML
+function extractDescriptionFromHTML(html) {
+  try {
+    // Look for meta description
+    const metaDescMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (metaDescMatch) {
+      return metaDescMatch[1].trim();
+    }
+    
+    // Look for og:description
+    const ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (ogDescMatch) {
+      return ogDescMatch[1].trim();
+    }
+    
+    // Look for recipe description in content
+    const descPatterns = [
+      /<p[^>]*class="[^"]*description[^"]*"[^>]*>([^<]+)<\/p>/i,
+      /<div[^>]*class="[^"]*description[^"]*"[^>]*>([^<]+)<\/div>/i,
+      /<span[^>]*class="[^"]*description[^"]*"[^>]*>([^<]+)<\/span>/i
+    ];
+    
+    for (const pattern of descPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 20) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting description:', error);
+    return null;
+  }
+}
+
+// Extract author from HTML
+function extractAuthorFromHTML(html) {
+  try {
+    // Look for meta author
+    const metaAuthorMatch = html.match(/<meta[^>]*name=["']author["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (metaAuthorMatch) {
+      return metaAuthorMatch[1].trim();
+    }
+    
+    // Look for og:author
+    const ogAuthorMatch = html.match(/<meta[^>]*property=["']og:author["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (ogAuthorMatch) {
+      return ogAuthorMatch[1].trim();
+    }
+    
+    // Look for author in byline patterns
+    const authorPatterns = [
+      /<span[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)<\/span>/i,
+      /<div[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)<\/div>/i,
+      /<p[^>]*class="[^"]*author[^"]*"[^>]*>([^<]+)<\/p>/i,
+      /by\s+([^<,]+)/i,
+      /author[:\s]+([^<,]+)/i
+    ];
+    
+    for (const pattern of authorPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 2 && match[1].trim().length < 50) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting author:', error);
+    return null;
+  }
+}
+
+// Extract publication date from HTML
+function extractDateFromHTML(html) {
+  try {
+    // Look for meta publication date
+    const metaDateMatch = html.match(/<meta[^>]*property=["'](?:og:published_time|article:published_time)["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (metaDateMatch) {
+      const dateStr = metaDateMatch[1].trim();
+      // Try to parse and format as YYYY-MM-DD
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    // Look for date in text patterns
+    const datePatterns = [
+      /published\s+(?:on\s+)?([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i,
+      /updated\s+(?:on\s+)?([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i,
+      /date[:\s]+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i
+    ];
+    
+    for (const pattern of datePatterns) {
+      const match = html.match(pattern);
+      if (match) {
+        const dateStr = match[1].trim();
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting date:', error);
+    return null;
+  }
+}
+
+// Extract recipe yield (servings) from HTML
+function extractYieldFromHTML(html) {
+  try {
+    const yieldPatterns = [
+      /serves?\s+(\d+(?:\s*-\s*\d+)?(?:\s*people?)?)/i,
+      /yield[:\s]+(\d+(?:\s*-\s*\d+)?(?:\s*people?)?)/i,
+      /servings?[:\s]+(\d+(?:\s*-\s*\d+)?(?:\s*people?)?)/i,
+      /makes?\s+(\d+(?:\s*-\s*\d+)?(?:\s*people?)?)/i,
+      /(\d+(?:\s*-\s*\d+)?)\s*servings?/i,
+      /(\d+(?:\s*-\s*\d+)?)\s*people?/i
+    ];
+    
+    for (const pattern of yieldPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 0) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting yield:', error);
+    return null;
+  }
+}
+
+// Extract recipe category from HTML
+function extractCategoryFromHTML(html) {
+  try {
+    const categoryPatterns = [
+      /<span[^>]*class="[^"]*category[^"]*"[^>]*>([^<]+)<\/span>/i,
+      /<div[^>]*class="[^"]*category[^"]*"[^>]*>([^<]+)<\/div>/i,
+      /category[:\s]+([^<,]+)/i,
+      /type[:\s]+([^<,]+)/i
+    ];
+    
+    for (const pattern of categoryPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 2 && match[1].trim().length < 30) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting category:', error);
+    return null;
+  }
+}
+
+// Extract recipe cuisine from HTML
+function extractCuisineFromHTML(html) {
+  try {
+    const cuisinePatterns = [
+      /<span[^>]*class="[^"]*cuisine[^"]*"[^>]*>([^<]+)<\/span>/i,
+      /<div[^>]*class="[^"]*cuisine[^"]*"[^>]*>([^<]+)<\/div>/i,
+      /cuisine[:\s]+([^<,]+)/i,
+      /style[:\s]+([^<,]+)/i
+    ];
+    
+    for (const pattern of cuisinePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 2 && match[1].trim().length < 30) {
+        return match[1].trim();
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting cuisine:', error);
+    return null;
+  }
+}
+
+// Extract prep time from HTML
+function extractPrepTimeFromHTML(html) {
+  try {
+    const prepTimePatterns = [
+      /prep(?:aration)?\s+time[:\s]+([^<,]+)/i,
+      /prep[:\s]+([^<,]+)/i,
+      /preparation[:\s]+([^<,]+)/i
+    ];
+    
+    for (const pattern of prepTimePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 0) {
+        const timeStr = match[1].trim();
+        return convertTimeToISO8601(timeStr);
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting prep time:', error);
+    return null;
+  }
+}
+
+// Extract cook time from HTML
+function extractCookTimeFromHTML(html) {
+  try {
+    const cookTimePatterns = [
+      /cook(?:ing)?\s+time[:\s]+([^<,]+)/i,
+      /cook[:\s]+([^<,]+)/i,
+      /cooking[:\s]+([^<,]+)/i
+    ];
+    
+    for (const pattern of cookTimePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 0) {
+        const timeStr = match[1].trim();
+        return convertTimeToISO8601(timeStr);
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting cook time:', error);
+    return null;
+  }
+}
+
+// Extract total time from HTML
+function extractTotalTimeFromHTML(html) {
+  try {
+    const totalTimePatterns = [
+      /total\s+time[:\s]+([^<,]+)/i,
+      /total[:\s]+([^<,]+)/i,
+      /time[:\s]+([^<,]+)/i
+    ];
+    
+    for (const pattern of totalTimePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1].trim().length > 0) {
+        const timeStr = match[1].trim();
+        return convertTimeToISO8601(timeStr);
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting total time:', error);
+    return null;
+  }
+}
+
+// Convert time string to ISO 8601 format
+function convertTimeToISO8601(timeStr) {
+  try {
+    const lowerTime = timeStr.toLowerCase();
+    
+    // Handle "X minutes" format
+    const minutesMatch = lowerTime.match(/(\d+)\s*minutes?/);
+    if (minutesMatch) {
+      return `PT${minutesMatch[1]}M`;
+    }
+    
+    // Handle "X hours" format
+    const hoursMatch = lowerTime.match(/(\d+)\s*hours?/);
+    if (hoursMatch) {
+      return `PT${hoursMatch[1]}H`;
+    }
+    
+    // Handle "X hours Y minutes" format
+    const hoursMinutesMatch = lowerTime.match(/(\d+)\s*hours?\s+(\d+)\s*minutes?/);
+    if (hoursMinutesMatch) {
+      return `PT${hoursMinutesMatch[1]}H${hoursMinutesMatch[2]}M`;
+    }
+    
+    // Handle "X hr Y min" format
+    const hrMinMatch = lowerTime.match(/(\d+)\s*hr\s+(\d+)\s*min/);
+    if (hrMinMatch) {
+      return `PT${hrMinMatch[1]}H${hrMinMatch[2]}M`;
+    }
+    
+    // Return original if no pattern matches
+    return timeStr;
+  } catch (error) {
+    console.error('Error converting time to ISO 8601:', error);
+    return timeStr;
+  }
+}
+
+// Extract keywords from HTML
+function extractKeywordsFromHTML(html) {
+  try {
+    // Look for meta keywords
+    const metaKeywordsMatch = html.match(/<meta[^>]*name=["']keywords["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (metaKeywordsMatch) {
+      return metaKeywordsMatch[1].trim();
+    }
+    
+    // Look for og:keywords
+    const ogKeywordsMatch = html.match(/<meta[^>]*property=["']og:keywords["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (ogKeywordsMatch) {
+      return ogKeywordsMatch[1].trim();
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting keywords:', error);
+    return null;
+  }
+}
+
+// Extract nutrition information from HTML
+function extractNutritionFromHTML(html) {
+  try {
+    const nutrition = {};
+    
+    // Look for calories
+    const caloriesMatch = html.match(/(\d+)\s*calories?/i);
+    if (caloriesMatch) {
+      nutrition.calories = `${caloriesMatch[1]} calories`;
+    }
+    
+    // Look for protein
+    const proteinMatch = html.match(/(\d+(?:\.\d+)?)\s*g?\s*protein/i);
+    if (proteinMatch) {
+      nutrition.proteinContent = `${proteinMatch[1]}g`;
+    }
+    
+    // Look for fat
+    const fatMatch = html.match(/(\d+(?:\.\d+)?)\s*g?\s*fat/i);
+    if (fatMatch) {
+      nutrition.fatContent = `${fatMatch[1]}g`;
+    }
+    
+    // Look for carbohydrates
+    const carbMatch = html.match(/(\d+(?:\.\d+)?)\s*g?\s*(?:carbohydrates?|carbs?)/i);
+    if (carbMatch) {
+      nutrition.carbohydrateContent = `${carbMatch[1]}g`;
+    }
+    
+    // Look for fiber
+    const fiberMatch = html.match(/(\d+(?:\.\d+)?)\s*g?\s*fiber/i);
+    if (fiberMatch) {
+      nutrition.fiberContent = `${fiberMatch[1]}g`;
+    }
+    
+    // Look for sugar
+    const sugarMatch = html.match(/(\d+(?:\.\d+)?)\s*g?\s*sugar/i);
+    if (sugarMatch) {
+      nutrition.sugarContent = `${sugarMatch[1]}g`;
+    }
+    
+    // Look for sodium
+    const sodiumMatch = html.match(/(\d+(?:\.\d+)?)\s*mg?\s*sodium/i);
+    if (sodiumMatch) {
+      nutrition.sodiumContent = `${sodiumMatch[1]}mg`;
+    }
+    
+    // Look for cholesterol
+    const cholesterolMatch = html.match(/(\d+(?:\.\d+)?)\s*mg?\s*cholesterol/i);
+    if (cholesterolMatch) {
+      nutrition.cholesterolContent = `${cholesterolMatch[1]}mg`;
+    }
+    
+    // Only return if we found some nutrition data
+    if (Object.keys(nutrition).length > 0) {
+      return {
+        "@type": "NutritionInformation",
+        ...nutrition
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting nutrition:', error);
+    return null;
+  }
+}
+
+// Extract rating information from HTML
+function extractRatingFromHTML(html) {
+  try {
+    const rating = {};
+    
+    // Look for rating value
+    const ratingValueMatch = html.match(/(\d+(?:\.\d+)?)\s*out\s*of\s*5/i);
+    if (ratingValueMatch) {
+      rating.ratingValue = parseFloat(ratingValueMatch[1]);
+    }
+    
+    // Look for rating count
+    const ratingCountMatch = html.match(/(\d+)\s*ratings?/i);
+    if (ratingCountMatch) {
+      rating.ratingCount = parseInt(ratingCountMatch[1]);
+    }
+    
+    // Look for review count
+    const reviewCountMatch = html.match(/(\d+)\s*reviews?/i);
+    if (reviewCountMatch) {
+      rating.reviewCount = parseInt(reviewCountMatch[1]);
+    }
+    
+    // Only return if we found some rating data
+    if (Object.keys(rating).length > 0) {
+      return {
+        "@type": "AggregateRating",
+        ...rating
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting rating:', error);
+    return null;
+  }
+}
+
+// Extract video information from HTML
+function extractVideoFromHTML(html) {
+  try {
+    const video = {};
+    
+    // Look for video URL
+    const videoUrlMatch = html.match(/<video[^>]*src=["']([^"']+)["'][^>]*>/i) ||
+                          html.match(/<iframe[^>]*src=["']([^"']+)["'][^>]*>/i);
+    if (videoUrlMatch) {
+      video.contentUrl = videoUrlMatch[1];
+    }
+    
+    // Look for video title
+    const videoTitleMatch = html.match(/<video[^>]*title=["']([^"']+)["'][^>]*>/i);
+    if (videoTitleMatch) {
+      video.name = videoTitleMatch[1];
+    }
+    
+    // Only return if we found video data
+    if (video.contentUrl) {
+      return {
+        "@type": "VideoObject",
+        ...video
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting video:', error);
+    return null;
   }
 }
 
@@ -462,6 +1016,46 @@ function extractRecipeContent(html) {
     recipeContent += tastyPreparationMatch.join(' ') + ' ';
   }
 
+  // Enhanced: Look for nutrition information sections
+  const nutritionMatch = html.match(/<[^>]*nutrition[^>]*>[\s\S]*?<\/[^>]*>/gi);
+  if (nutritionMatch) {
+    recipeContent += nutritionMatch.join(' ') + ' ';
+  }
+
+  // Enhanced: Look for time information sections
+  const timeMatch = html.match(/<[^>]*time[^>]*>[\s\S]*?<\/[^>]*>/gi);
+  if (timeMatch) {
+    recipeContent += timeMatch.join(' ') + ' ';
+  }
+
+  // Enhanced: Look for serving/yield information
+  const yieldMatch = html.match(/<[^>]*serving[^>]*>[\s\S]*?<\/[^>]*>/gi) || 
+                     html.match(/<[^>]*yield[^>]*>[\s\S]*?<\/[^>]*>/gi);
+  if (yieldMatch) {
+    recipeContent += yieldMatch.join(' ') + ' ';
+  }
+
+  // Enhanced: Look for author and date information
+  const authorMatch = html.match(/<[^>]*author[^>]*>[\s\S]*?<\/[^>]*>/gi) ||
+                      html.match(/<[^>]*byline[^>]*>[\s\S]*?<\/[^>]*>/gi);
+  if (authorMatch) {
+    recipeContent += authorMatch.join(' ') + ' ';
+  }
+
+  // Enhanced: Look for category and cuisine information
+  const categoryMatch = html.match(/<[^>]*category[^>]*>[\s\S]*?<\/[^>]*>/gi) ||
+                        html.match(/<[^>]*cuisine[^>]*>[\s\S]*?<\/[^>]*>/gi);
+  if (categoryMatch) {
+    recipeContent += categoryMatch.join(' ') + ' ';
+  }
+
+  // Enhanced: Look for rating and review information
+  const ratingMatch = html.match(/<[^>]*rating[^>]*>[\s\S]*?<\/[^>]*>/gi) ||
+                      html.match(/<[^>]*review[^>]*>[\s\S]*?<\/[^>]*>/gi);
+  if (ratingMatch) {
+    recipeContent += ratingMatch.join(' ') + ' ';
+  }
+
   // If we found recipe content, return it; otherwise return original
   return recipeContent.length > 100 ? recipeContent : html;
 }
@@ -471,8 +1065,8 @@ async function callGPTModel(htmlContent, pageUrl, env) {
   try {
     // Check if we have the AI binding
     if (!env.AI) {
-      console.log('AI binding not available, using fallback mock recipe for local development...');
-      return getMockRecipe(pageUrl);
+      console.log('AI binding not available, cannot extract recipe without AI model');
+      throw new Error('AI binding not available - recipe extraction requires Cloudflare Workers AI');
     }
     
     console.log('AI binding available, proceeding with AI call...');
@@ -544,6 +1138,15 @@ CRITICAL REQUIREMENTS:
 - If no recipe is found, return: null
 - Use ISO 8601 duration format for times (PT15M = 15 minutes, PT1H30M = 1 hour 30 minutes)
 - Follow Google's Recipe schema exactly for field names
+- Extract EVERY possible field from the HTML content
+- Look for nutrition information in tables, lists, or text
+- Look for ratings and reviews in the page
+- Look for video content and metadata
+- Look for author information in bylines, credits, or meta tags
+- Look for publication dates in meta tags, headers, or text
+- Look for recipe categories and cuisine types in navigation, breadcrumbs, or text
+- Look for serving sizes in ingredient lists, headers, or text
+- Look for keywords in meta tags, titles, or surrounding text
 
 The HTML content contains the full webpage. Focus on extracting clear, actionable ingredients and step-by-step instructions from the recipe content. Ignore navigation, ads, and other non-recipe elements.
 
@@ -552,6 +1155,28 @@ IMPORTANT: Look for recipe instructions under various section names including:
 - "Preparation" (common on Tasty and other sites)
 - "Method" or "Steps"
 - Any numbered list that appears to be cooking steps
+
+IMPORTANT: Look for nutrition information in:
+- Nutrition facts tables
+- Ingredient lists with nutritional values
+- Text mentioning calories, protein, fat, etc.
+- Meta tags with nutrition data
+
+IMPORTANT: Look for time information in:
+- "Prep time", "Cook time", "Total time" sections
+- Text mentioning minutes, hours, or cooking duration
+- Meta tags with time data
+
+IMPORTANT: Look for author information in:
+- Byline sections
+- "By [Author]" text
+- Meta tags with author data
+- Footer credits
+
+IMPORTANT: Look for publication dates in:
+- Meta tags (og:published_time, article:published_time)
+- Date stamps in headers or text
+- "Published on" or "Updated on" text
 
 HTML Content:
 ${htmlContent}`;
@@ -853,115 +1478,12 @@ ${htmlContent}`;
   } catch (error) {
     console.error('Error calling AI model:', error);
     
-    // In local development or when AI fails, provide a fallback mock response for testing
-    console.log('AI model failed, using fallback mock recipe for local development...');
-    return getMockRecipe(pageUrl);
+    // Re-throw the error instead of providing a mock recipe
+    throw new Error('AI model failed to extract recipe: ' + error.message);
   }
 }
 
-// Fallback mock recipe for local development
-function getMockRecipe(pageUrl) {
-  console.log('Providing fallback mock recipe for local development...');
-  return {
-    name: "Chef John's Salt-Roasted Chicken (Mock)",
-    image: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg",
-    description: "A simple and delicious salt-roasted chicken recipe that results in juicy, flavorful meat with crispy skin.",
-    author: "Chef John",
-    datePublished: "2024-01-15",
-    prepTime: "PT15M",
-    cookTime: "PT1H15M",
-    totalTime: "PT1H30M",
-    recipeYield: "6 servings",
-    recipeCategory: "Main Course",
-    recipeCuisine: "American",
-    keywords: "chicken, roast, salt, easy, dinner",
-    recipeIngredient: [
-      "1 (4 to 5 pound) whole chicken",
-      "3 cups kosher salt",
-      "1/4 cup olive oil",
-      "1 tablespoon black pepper",
-      "1 tablespoon dried thyme",
-      "1 tablespoon dried rosemary",
-      "1 lemon, halved",
-      "4 cloves garlic, crushed",
-      "1 onion, quartered"
-    ],
-    recipeInstructions: [
-      {
-        "@type": "HowToStep",
-        "text": "Preheat oven to 450 degrees F (230 degrees C)."
-      },
-      {
-        "@type": "HowToStep",
-        "text": "Rinse chicken and pat dry with paper towels."
-      },
-      {
-        "@type": "HowToStep",
-        "text": "In a large bowl, mix together kosher salt, black pepper, thyme, and rosemary."
-      },
-      {
-        "@type": "HowToStep",
-        "text": "Rub the chicken with olive oil, then generously coat with the salt mixture."
-      },
-      {
-        "@type": "HowToStep",
-        "text": "Place lemon halves, garlic, and onion inside the chicken cavity."
-      },
-      {
-        "@type": "HowToStep",
-        "text": "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C)."
-      },
-      {
-        "@type": "HowToStep",
-        "text": "Let chicken rest for 10 minutes before carving and serving."
-      }
-    ],
-    nutrition: {
-      "@type": "NutritionInformation",
-      "calories": "350 calories",
-      "proteinContent": "45g",
-      "fatContent": "18g",
-      "carbohydrateContent": "2g",
-      "fiberContent": "1g",
-      "sugarContent": "1g",
-      "sodiumContent": "1200mg",
-      "cholesterolContent": "140mg",
-      "saturatedFatContent": "5g",
-      "transFatContent": "0g",
-      "unsaturatedFatContent": "12g",
-      "servingSize": "1 serving (6 oz chicken)"
-    },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      "ratingValue": 4.8,
-      "ratingCount": 1250,
-      "reviewCount": 89
-    },
-    source_url: pageUrl,
-    // Backward compatibility fields
-    ingredients: [
-      "1 (4 to 5 pound) whole chicken",
-      "3 cups kosher salt",
-      "1/4 cup olive oil",
-      "1 tablespoon black pepper",
-      "1 tablespoon dried thyme",
-      "1 tablespoon dried rosemary",
-      "1 lemon, halved",
-      "4 cloves garlic, crushed",
-      "1 onion, quartered"
-    ],
-    instructions: [
-      "Preheat oven to 450 degrees F (230 degrees C).",
-      "Rinse chicken and pat dry with paper towels.",
-      "In a large bowl, mix together kosher salt, black pepper, thyme, and rosemary.",
-      "Rub the chicken with olive oil, then generously coat with the salt mixture.",
-      "Place lemon halves, garlic, and onion inside the chicken cavity.",
-      "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
-      "Let chicken rest for 10 minutes before carving and serving."
-    ],
-    image_url: "https://images.media-allrecipes.com/userphotos/560x315/235171.jpg"
-  };
-}
+
 
 // Extract recipe data from AI response (for testing)
 function extractRecipeFromAIResponse(response, pageUrl) {
