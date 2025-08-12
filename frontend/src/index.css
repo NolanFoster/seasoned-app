@@ -1472,6 +1472,15 @@ li {
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  /* Normalize button appearance to match anchor tags */
+  font-family: inherit;
+  line-height: normal;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  outline: none;
+  /* Override global button margins */
+  margin: 0;
 }
 
 .recipe-link:hover {
