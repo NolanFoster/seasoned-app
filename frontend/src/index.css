@@ -960,6 +960,15 @@ li {
   z-index: 1;
 }
 
+/* Stack panels on tablets and smaller screens */
+@media (max-width: 1024px) {
+  .recipe-fullscreen-content {
+    grid-template-columns: 1fr;
+    gap: 25px;
+    padding: 30px;
+  }
+}
+
 /* Removed instructions-panel-container and recipe-links-panel - links are now in the header */
 
 .recipe-panel {
@@ -1259,22 +1268,10 @@ li {
   }
   
   .recipe-fullscreen-content {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: 1fr;
     padding: 20px;
     margin-top: 20px;
     gap: 20px; /* Add gap between panels */
-  }
-  
-  /* Order the panels: ingredients (1), instructions (2) */
-  /* Ingredients panel - first .recipe-panel */
-  .recipe-fullscreen-content > .recipe-panel:first-of-type {
-    order: 1;
-  }
-  
-  /* Instructions panel - last .recipe-panel */
-  .recipe-fullscreen-content > .recipe-panel:last-of-type {
-    order: 2;
   }
   
   .recipe-title-section {
@@ -1524,18 +1521,7 @@ li {
   flex-shrink: 0;
 }
 
-/* Update recipe content positioning */
-.recipe-fullscreen-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
-  margin-top: 20px; /* Reduced since header is now sticky */
-  position: relative;
-  z-index: 1;
-}
+/* Update recipe content positioning - removed duplicate, see main definition above */
 
 /* Recipe Preview Overlay Styles */
 .recipe-preview-overlay {
