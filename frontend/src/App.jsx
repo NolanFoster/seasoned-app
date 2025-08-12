@@ -946,13 +946,18 @@ function App() {
                     </div>
                   </div>
                   <div className="recipe-card-content">
-                    {recipe.total_time || (recipe.prep_time || recipe.cook_time) ? (
-                      <p className="recipe-card-time">
-                        <span className="time-icon">⏱️</span>
-                        {recipe.total_time || 
-                         (recipe.prep_time && recipe.cook_time ? `${recipe.prep_time} + ${recipe.cook_time}` : 
-                          recipe.prep_time || recipe.cook_time)}
-                      </p>
+                    {recipe.prep_time || recipe.cook_time ? (
+                      <div className="recipe-card-time">
+                        <div className="time-item">
+                          <span className="time-label">Prep</span>
+                          <span className="time-value">{recipe.prep_time || '-'}</span>
+                        </div>
+                        <div className="time-divider"></div>
+                        <div className="time-item">
+                          <span className="time-label">Cook</span>
+                          <span className="time-value">{recipe.cook_time || '-'}</span>
+                        </div>
+                      </div>
                     ) : (
                       <p className="recipe-card-time">
                         <span className="time-icon">⏱️</span>

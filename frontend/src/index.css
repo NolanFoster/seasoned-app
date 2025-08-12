@@ -140,6 +140,18 @@ body {
     color: white !important;
   }
   
+  .recipe-card-time .time-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+  
+  .recipe-card-time .time-value {
+    color: white !important;
+  }
+  
+  .recipe-card-time .time-divider {
+    background: rgba(255, 255, 255, 0.2) !important;
+  }
+  
   .recipe-card-time .no-time {
     color: rgba(255, 255, 255, 0.7) !important;
   }
@@ -570,12 +582,38 @@ li {
   font-size: 0.9em;
   line-height: 1.4;
   margin: 0;
-  text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 20px;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.recipe-card-time .time-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-card-time .time-label {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.recipe-card-time .time-value {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.recipe-card-time .time-divider {
+  width: 1px;
+  height: 30px;
+  background: rgba(52, 73, 94, 0.2);
+  margin: 0 5px;
 }
 
 .recipe-card-time .time-icon {
