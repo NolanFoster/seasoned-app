@@ -23,6 +23,7 @@
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "vite": "^5.3.5"
+    "vite": "^5.3.5",
+    "wrangler": "^4.28.1"
   }
 }
