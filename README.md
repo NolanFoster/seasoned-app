@@ -250,7 +250,10 @@ npm run deploy:prod
 
 1. **Build**: Runs `npm run build` to create optimized production files in `dist/` folder
 2. **Deploy**: Uses `wrangler pages deploy dist` to upload to Cloudflare Pages
-3. **URL**: Your app will be available at `https://seasoned-frontend.pages.dev` (or custom domain if configured)
+3. **URL**: 
+   - **Production** (main branch): `https://seasoned-frontend.pages.dev`
+   - **Staging** (staging branch): `https://seasoned-frontend.pages.dev` (preview deployment)
+   - **Custom domain** if configured
 
 #### Alternative Deployment Options
 

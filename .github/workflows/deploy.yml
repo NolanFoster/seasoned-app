@@ -42,6 +42,7 @@ jobs:
           projectName: seasoned-frontend
           directory: frontend/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
           
   deploy-backend:
     runs-on: ubuntu-latest

@@ -5,8 +5,6 @@ compatibility_date = "2024-01-01"
 bucket = "./dist"
 entry-point = "workers-site"
 
-[env.production]
-name = "seasoned-frontend-prod"
-
-[env.staging]
-name = "seasoned-frontend-staging" 
+# For Cloudflare Pages, we use branch-based deployment
+# Production branch (main) will use the default name
+# Staging branch will create a preview deployment 
