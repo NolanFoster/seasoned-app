@@ -1425,6 +1425,34 @@ function App() {
             </button>
             <div className="recipe-title-section">
               <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
+              {/* Recipe Links - moved under title */}
+              {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                <div className="recipe-links">
+                  {selectedRecipe.source_url && (
+                    <a 
+                      href={selectedRecipe.source_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="recipe-link source-link"
+                      title="View original recipe"
+                    >
+                      🌐 Source Recipe
+                    </a>
+                  )}
+                  {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                    <button 
+                      className="recipe-link video-link"
+                      title="Watch recipe video"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                      }}
+                    >
+                      🎥 Watch Video
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="recipe-fullscreen-actions">
               <button 
@@ -1479,38 +1507,6 @@ function App() {
                 ))}
               </ul>
             </div>
-            
-            {/* Links Panel - moved outside of instructions panel container */}
-            {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-              <div className="recipe-links-panel glass">
-                <h3>Recipe Links</h3>
-                <div className="recipe-links-content">
-                  {selectedRecipe.source_url && (
-                    <a 
-                      href={selectedRecipe.source_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="recipe-link source-link"
-                      title="View original recipe"
-                    >
-                      🌐 Source Recipe
-                    </a>
-                  )}
-                  {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                    <button 
-                      className="recipe-link video-link"
-                      title="Watch recipe video"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
-                      }}
-                    >
-                      🎥 Watch Video
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
             
             {/* Instructions Panel */}
             <div className="recipe-panel glass">
