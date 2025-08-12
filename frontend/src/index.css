@@ -1040,10 +1040,10 @@ li {
     padding: 30px;
   }
   
-  /* Add horizontal margins to recipe panels on smaller screens */
+  /* Remove margins since parent already has padding */
   .recipe-panel {
-    margin-left: 20px;
-    margin-right: 20px;
+    margin-left: 0;
+    margin-right: 0;
   }
 }
 
@@ -1458,9 +1458,9 @@ li {
   
   .recipe-panel {
     padding: 20px; /* Reduced padding on very small screens */
-    margin-left: 15px; /* Add consistent margin on both sides */
-    margin-right: 15px; /* Add consistent margin on both sides */
-    width: calc(100% - 30px); /* Adjust width to account for margins */
+    margin-left: 0; /* Remove margin - parent already has padding */
+    margin-right: 0; /* Remove margin - parent already has padding */
+    width: 100%; /* Full width within padded container */
     box-sizing: border-box; /* Include padding in width calculation */
   }
   
