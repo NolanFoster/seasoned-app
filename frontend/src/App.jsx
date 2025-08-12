@@ -1497,6 +1497,36 @@ function App() {
           {/* Title Section - moved below header */}
           <div className="recipe-title-section">
             <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
+            
+            {/* Recipe Timing Info - prep time, cook time, yield */}
+            {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
+              selectedRecipe.cook_time || selectedRecipe.cookTime || 
+              selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+              <div className="recipe-timing-info">
+                {(selectedRecipe.prep_time || selectedRecipe.prepTime) && (
+                  <div className="timing-item">
+                    <span className="timing-icon">⏱️</span>
+                    <span className="timing-label">Prep:</span>
+                    <span className="timing-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime)}</span>
+                  </div>
+                )}
+                {(selectedRecipe.cook_time || selectedRecipe.cookTime) && (
+                  <div className="timing-item">
+                    <span className="timing-icon">🔥</span>
+                    <span className="timing-label">Cook:</span>
+                    <span className="timing-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime)}</span>
+                  </div>
+                )}
+                {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+                  <div className="timing-item">
+                    <span className="timing-icon">🍽️</span>
+                    <span className="timing-label">Yield:</span>
+                    <span className="timing-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Recipe Links - under title */}
             {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
               <div className="recipe-links">
