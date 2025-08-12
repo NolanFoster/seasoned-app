@@ -12,8 +12,9 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
     '!src/**/*.d.ts',
-    '!src/index.js',
-    '!src/setupTests.js'
+    '!src/setupTests.js',
+    '!src/__tests__/**/*',
+    '!babel-plugin-transform-import-meta.js'
   ],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx}',
