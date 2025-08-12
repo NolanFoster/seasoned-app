@@ -1036,6 +1036,12 @@ li {
     gap: 25px;
     padding: 30px;
   }
+  
+  /* Add horizontal margins to recipe panels on smaller screens */
+  .recipe-panel {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
 }
 
 /* Removed instructions-panel-container and recipe-links-panel - links are now in the header */
@@ -1335,7 +1341,7 @@ li {
   
   .recipe-fullscreen-content {
     grid-template-columns: 1fr;
-    padding: 20px;
+    padding: 0 20px 20px; /* Remove top padding, keep sides and bottom */
     margin-top: 20px; /* Reduced from 180px */
     gap: 20px; /* Add gap between panels */
   }
@@ -1443,13 +1449,17 @@ li {
   }
   
   .recipe-fullscreen-content {
-    padding: 15px;
+    padding: 0 15px 15px; /* Remove top padding, keep sides and bottom */
     margin-top: 15px; /* Reduced from 120px */
     gap: 15px; /* Smaller gap on very small screens */
   }
   
   .recipe-panel {
     padding: 20px; /* Reduced padding on very small screens */
+    margin-left: 0; /* Reset margins on very small screens */
+    margin-right: 0; /* Reset margins on very small screens */
+    width: 100%; /* Ensure full width within container padding */
+    box-sizing: border-box; /* Include padding in width calculation */
   }
   
   .recipe-panel h2 {
