@@ -962,12 +962,7 @@ li {
   z-index: 3001;
 }
 
-/* Instructions Panel Container */
-.instructions-panel-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+/* Removed instructions-panel-container - links panel is now a direct child */
 
 /* Recipe Links Panel */
 .recipe-links-panel {
@@ -1099,15 +1094,24 @@ li {
 @media (max-width: 768px) {
   .recipe-links-panel {
     padding: 15px;
+    margin-bottom: 0; /* Remove any bottom margin since we use gap */
   }
   
   .recipe-links-content {
     gap: 10px;
+    justify-content: center; /* Center the links on mobile */
   }
   
   .recipe-links-panel .recipe-link {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
+    flex: 1; /* Make links expand to fill available space */
+    min-width: 120px; /* Ensure minimum width for readability */
+  }
+  
+  /* Ensure panels have consistent spacing on mobile */
+  .recipe-panel {
+    margin-bottom: 0; /* Remove bottom margins since we use gap */
   }
 }
 
@@ -1404,9 +1408,26 @@ li {
   }
   
   .recipe-fullscreen-content {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     padding: 20px;
     margin-top: 20px; /* Reduced margin-top since header is now relative */
+    gap: 20px; /* Add gap between panels */
+  }
+  
+  /* Order the panels: links (1), ingredients (2), instructions (3) */
+  .recipe-links-panel {
+    order: 1;
+  }
+  
+  /* Ingredients panel - first .recipe-panel */
+  .recipe-fullscreen-content > .recipe-panel:first-of-type {
+    order: 2;
+  }
+  
+  /* Instructions panel - last .recipe-panel */
+  .recipe-fullscreen-content > .recipe-panel:last-of-type {
+    order: 3;
   }
   
   .recipe-title-section {
@@ -1454,6 +1475,7 @@ li {
   .recipe-fullscreen-content {
     padding: 15px;
     margin-top: 15px;
+    gap: 15px; /* Smaller gap on very small screens */
   }
   
   .recipe-panel {

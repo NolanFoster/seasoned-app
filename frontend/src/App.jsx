@@ -1480,51 +1480,48 @@ function App() {
               </ul>
             </div>
             
-            {/* Instructions Panel with Links Panel on Top */}
-            <div className="instructions-panel-container">
-              {/* Links Panel - positioned on top of instructions */}
-              {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                <div className="recipe-links-panel glass">
-                  <h3>Recipe Links</h3>
-                  <div className="recipe-links-content">
-                    {selectedRecipe.source_url && (
-                      <a 
-                        href={selectedRecipe.source_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="recipe-link source-link"
-                        title="View original recipe"
-                      >
-                        🌐 Source Recipe
-                      </a>
-                    )}
-                    {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                      <button 
-                        className="recipe-link video-link"
-                        title="Watch recipe video"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
-                        }}
-                      >
-                        🎥 Watch Video
-                      </button>
-                    )}
-                  </div>
+            {/* Links Panel - moved outside of instructions panel container */}
+            {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+              <div className="recipe-links-panel glass">
+                <h3>Recipe Links</h3>
+                <div className="recipe-links-content">
+                  {selectedRecipe.source_url && (
+                    <a 
+                      href={selectedRecipe.source_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="recipe-link source-link"
+                      title="View original recipe"
+                    >
+                      🌐 Source Recipe
+                    </a>
+                  )}
+                  {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                    <button 
+                      className="recipe-link video-link"
+                      title="Watch recipe video"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                      }}
+                    >
+                      🎥 Watch Video
+                    </button>
+                  )}
                 </div>
-              )}
-              
-              {/* Instructions Panel */}
-              <div className="recipe-panel glass">
-                <h2>Instructions</h2>
-                <ol className="instructions-list">
-                  {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
-                    <li key={index}>
-                      {typeof instruction === 'string' ? instruction : instruction.text || ''}
-                    </li>
-                  ))}
-                </ol>
               </div>
+            )}
+            
+            {/* Instructions Panel */}
+            <div className="recipe-panel glass">
+              <h2>Instructions</h2>
+              <ol className="instructions-list">
+                {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
+                  <li key={index}>
+                    {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
         </div>
