@@ -915,10 +915,9 @@ li {
   background: transparent; /* Changed from white to transparent for light mode */
   z-index: 3000;
   overflow-y: auto;
+  overflow-x: hidden;
   transition: background 0.3s ease;
   color: white;
-  display: flex;
-  flex-direction: column;
 }
 
   /* Dark mode styles for full-screen view */
@@ -1229,7 +1228,7 @@ li {
 
 /* Recipe Top Header */
 .recipe-top-header {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -1237,10 +1236,12 @@ li {
   align-items: center;
   justify-content: space-between;
   padding: 15px 40px;
-  z-index: 10;
-  /* Removed glass panel background effect */
-  background: transparent;
-  /* Removed backdrop-filter and box-shadow */
+  z-index: 100;
+  /* Glass panel background effect for better visibility when scrolling */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Full Screen Recipe Actions */
@@ -1488,6 +1489,14 @@ li {
     background: rgba(0, 0, 0, 0.4);
   }
   
+  /* Dark mode sticky header */
+  .recipe-top-header {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+  
   .recipe-link {
     background: rgba(0, 0, 0, 0.3) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
@@ -1542,7 +1551,7 @@ li {
   top: 80px;
   left: 0;
   right: 0;
-  z-index: 9;
+  z-index: 50; /* Increased to stay below sticky header but above content */
   text-align: center;
   padding: 0 40px;
 }
