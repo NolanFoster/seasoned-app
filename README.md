@@ -212,11 +212,78 @@ npm run deploy
 
 ### Frontend
 
-Build and deploy to your preferred hosting service:
+The frontend is configured for deployment to **Cloudflare Pages** with multiple environment support.
+
+#### Prerequisites
+
+1. **Install Wrangler CLI** (if not already installed):
+   ```bash
+   npm install -g wrangler
+   ```
+
+2. **Login to Cloudflare**:
+   ```bash
+   wrangler login
+   ```
+
+#### Deploy to Cloudflare Pages
+
+**Quick Deploy** (default environment):
+```bash
+cd frontend
+npm run deploy
+```
+
+**Deploy to Staging**:
+```bash
+cd frontend
+npm run deploy:staging
+```
+
+**Deploy to Production**:
+```bash
+cd frontend
+npm run deploy:prod
+```
+
+#### What Happens During Deployment
+
+1. **Build**: Runs `npm run build` to create optimized production files in `dist/` folder
+2. **Deploy**: Uses `wrangler pages deploy dist` to upload to Cloudflare Pages
+3. **URL**: Your app will be available at `https://seasoned-frontend.pages.dev` (or custom domain if configured)
+
+#### Alternative Deployment Options
+
+If you prefer other hosting services, you can build manually and deploy the `dist/` folder:
 
 ```bash
 cd frontend
 npm run build
+```
+
+Then upload the `dist/` folder contents to:
+- **Netlify**: Drag and drop the `dist` folder
+- **Vercel**: Connect your repo for auto-deployment
+- **GitHub Pages**: Push to `gh-pages` branch
+- **Any static hosting**: Upload `dist` folder contents
+
+#### Environment Configuration
+
+Before deploying, ensure your environment variables are set in `frontend/.env.local`:
+
+```bash
+VITE_API_URL=https://your-worker.your-subdomain.workers.dev
+VITE_CLIPPER_API_URL=https://your-clipper-worker.your-subdomain.workers.dev
+```
+
+#### Local Preview
+
+Preview your production build locally before deploying:
+
+```bash
+cd frontend
+npm run build
+npm run preview
 ```
 
 ## Troubleshooting
