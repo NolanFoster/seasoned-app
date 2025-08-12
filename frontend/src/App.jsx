@@ -945,7 +945,19 @@ function App() {
                     </div>
                   </div>
                   <div className="recipe-card-content">
-                    {recipe.description && <p className="recipe-card-description">{recipe.description}</p>}
+                    {recipe.total_time || (recipe.prep_time || recipe.cook_time) ? (
+                      <p className="recipe-card-time">
+                        <span className="time-icon">⏱️</span>
+                        {recipe.total_time || 
+                         (recipe.prep_time && recipe.cook_time ? `${recipe.prep_time} + ${recipe.cook_time}` : 
+                          recipe.prep_time || recipe.cook_time)}
+                      </p>
+                    ) : (
+                      <p className="recipe-card-time">
+                        <span className="time-icon">⏱️</span>
+                        <span className="no-time">-</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               );

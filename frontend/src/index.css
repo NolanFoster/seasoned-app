@@ -136,6 +136,14 @@ body {
     color: white !important;
   }
   
+  .recipe-card-time {
+    color: white !important;
+  }
+  
+  .recipe-card-time .no-time {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+  
   .recipe-source-link {
     color: white !important;
   }
@@ -555,6 +563,28 @@ li {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.recipe-card-time {
+  color: #34495e;
+  font-size: 0.9em;
+  line-height: 1.4;
+  margin: 0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.recipe-card-time .time-icon {
+  font-size: 1.1em;
+}
+
+.recipe-card-time .no-time {
+  font-weight: 500;
+  color: #7f8c8d;
 }
 
 .recipe-source-link {
