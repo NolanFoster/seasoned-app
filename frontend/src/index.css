@@ -917,9 +917,9 @@ li {
 }
 
 .back-btn {
-  position: fixed !important;
-  top: 30px !important;
-  left: 30px !important;
+  position: fixed;
+  top: 30px;
+  left: 30px;
   width: 70px;
   height: 50px;
   border-radius: 25px;
@@ -1309,7 +1309,6 @@ li {
   align-items: center;
   gap: 20px;
   padding: 30px 40px;
-  padding-left: 120px; /* Make room for the back button */
   z-index: 3002;
 }
 
@@ -1384,8 +1383,6 @@ li {
     flex-direction: column;
     gap: 15px;
     padding: 20px;
-    padding-left: 80px; /* Make room for the back button on mobile */
-    position: fixed; /* Keep fixed position */
   }
   
   .recipe-fullscreen-actions {
@@ -1408,20 +1405,12 @@ li {
   .recipe-fullscreen-content {
     grid-template-columns: 1fr;
     padding: 20px;
-    margin-top: 180px; /* Increased margin-top for fixed header on mobile */
+    margin-top: 180px;
   }
   
   .recipe-title-section {
     max-width: 100%;
     order: 2;
-  }
-  
-  /* Adjust title size on mobile */
-  .recipe-top-header .recipe-fullscreen-title {
-    font-size: 1.8em; /* Reduced from 2.5em */
-    padding: 10px 15px; /* Reduced padding */
-    text-align: center;
-    line-height: 1.2;
   }
   
   .recipe-links {
@@ -1434,46 +1423,6 @@ li {
     padding: 0.75rem 1.25rem;
     font-size: 1rem;
     justify-content: center;
-  }
-  
-  /* Adjust back button on mobile */
-  .back-btn {
-    position: fixed !important; /* Keep fixed position on mobile */
-    top: 20px !important;
-    left: 20px !important;
-    width: 50px;
-    height: 50px;
-  }
-}
-
-/* Extra small screens */
-@media (max-width: 480px) {
-  .recipe-top-header .recipe-fullscreen-title {
-    font-size: 1.5em; /* Further reduced for very small screens */
-    padding: 8px 12px;
-  }
-  
-  .recipe-fullscreen-content {
-    padding: 15px;
-    margin-top: 160px; /* Adjusted for fixed header on very small screens */
-  }
-  
-  .recipe-panel {
-    padding: 20px; /* Reduced padding on very small screens */
-  }
-  
-  .recipe-panel h2 {
-    font-size: 1.3em; /* Slightly smaller heading */
-  }
-  
-  /* Ensure proper stacking on mobile */
-  .recipe-full-background {
-    position: absolute; /* Change from fixed to absolute on mobile */
-    height: 300px; /* Limit height on mobile */
-  }
-  
-  .recipe-fullscreen {
-    overflow-x: hidden; /* Prevent horizontal scroll */
   }
 }
 
@@ -1650,11 +1599,8 @@ li {
 
 /* Update back button positioning for top header */
 .recipe-top-header .back-btn {
-  position: fixed !important;
-  top: 30px !important;
-  left: 30px !important;
+  position: static;
   flex-shrink: 0;
-  z-index: 3003; /* Ensure it's above the header */
 }
 
 /* Update recipe content positioning */
