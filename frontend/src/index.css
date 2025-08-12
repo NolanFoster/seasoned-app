@@ -1289,9 +1289,6 @@ li {
     gap: 15px;
     padding: 20px;
     position: relative; /* Change from fixed to allow proper stacking */
-    background: rgba(0, 0, 0, 0.5); /* Add background to ensure readability */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
   }
   
   .recipe-fullscreen-actions {
