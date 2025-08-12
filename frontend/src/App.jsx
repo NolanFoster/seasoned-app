@@ -4,6 +4,54 @@ import { useEffect, useState, useRef } from 'react'
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-worker.nolanfoster.workers.dev'; // Main recipe worker
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 
+// Function to convert ISO 8601 duration to human readable format
+function formatDuration(duration) {
+  if (!duration || typeof duration !== 'string') return duration;
+  
+  // If it's already in a readable format (doesn't start with PT), return as is
+  if (!duration.startsWith('PT')) return duration;
+  
+  try {
+    // Remove the PT prefix
+    let remaining = duration.substring(2);
+    
+    let hours = 0;
+    let minutes = 0;
+    
+    // Extract hours if present
+    const hourMatch = remaining.match(/(\d+)H/);
+    if (hourMatch) {
+      hours = parseInt(hourMatch[1], 10);
+      remaining = remaining.replace(hourMatch[0], '');
+    }
+    
+    // Extract minutes if present
+    const minuteMatch = remaining.match(/(\d+)M/);
+    if (minuteMatch) {
+      minutes = parseInt(minuteMatch[1], 10);
+    }
+    
+    // Format the output
+    let result = '';
+    if (hours > 0) {
+      result += `${hours} h`;
+      if (minutes > 0) {
+        result += ` ${minutes} m`;
+      }
+    } else if (minutes > 0) {
+      result += `${minutes} m`;
+    } else {
+      // If no hours or minutes found, return the original
+      return duration;
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error parsing duration:', error);
+    return duration;
+  }
+}
+
 // Video Popup Component
 function VideoPopup({ videoUrl, onClose }) {
   const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 280 });
@@ -919,7 +967,8 @@ function App() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          zIndex: 1
+                          zIndex: 1,
+                          borderRadius: '20px 20px 0 0'
                         }}
                         onLoad={() => console.log('Image loaded successfully:', recipe.image || recipe.image_url)}
                         onError={(e) => {
@@ -947,7 +996,33 @@ function App() {
                     </div>
                   </div>
                   <div className="recipe-card-content">
-                    {recipe.description && <p className="recipe-card-description">{recipe.description}</p>}
+                    {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                      <div className="recipe-card-time">
+                        <div className="time-item">
+                          <span className="time-label">Prep</span>
+                          <span className="time-value">{formatDuration(recipe.prep_time) || '-'}</span>
+                        </div>
+                        <div className="time-divider"></div>
+                        <div className="time-item">
+                          <span className="time-label">Cook</span>
+                          <span className="time-value">{formatDuration(recipe.cook_time) || '-'}</span>
+                        </div>
+                        {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                          <>
+                            <div className="time-divider"></div>
+                            <div className="time-item">
+                              <span className="time-label">Yield</span>
+                              <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="recipe-card-time">
+                        <span className="time-icon">⏱️</span>
+                        <span className="no-time">-</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -1433,6 +1508,36 @@ function App() {
           {/* Title Section - moved below header */}
           <div className="recipe-title-section">
             <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
+            
+            {/* Recipe Timing Info - prep time, cook time, yield */}
+            {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
+              selectedRecipe.cook_time || selectedRecipe.cookTime || 
+              selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+              <div className="recipe-timing-info">
+                {(selectedRecipe.prep_time || selectedRecipe.prepTime) && (
+                  <div className="timing-item">
+                    <span className="timing-icon">⏱️</span>
+                    <span className="timing-label">Prep:</span>
+                    <span className="timing-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime)}</span>
+                  </div>
+                )}
+                {(selectedRecipe.cook_time || selectedRecipe.cookTime) && (
+                  <div className="timing-item">
+                    <span className="timing-icon">🔥</span>
+                    <span className="timing-label">Cook:</span>
+                    <span className="timing-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime)}</span>
+                  </div>
+                )}
+                {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+                  <div className="timing-item">
+                    <span className="timing-icon">🍽️</span>
+                    <span className="timing-label">Yield:</span>
+                    <span className="timing-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Recipe Links - under title */}
             {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
               <div className="recipe-links">
