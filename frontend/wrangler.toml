@@ -1,6 +1,9 @@
 name = "seasoned-frontend"
 compatibility_date = "2024-01-01"
 
+# Specify the build output directory for Cloudflare Pages
+pages_build_output_dir = "dist"
+
 [site]
 bucket = "./dist"
 entry-point = "workers-site"
