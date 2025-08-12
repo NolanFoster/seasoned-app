@@ -20,6 +20,35 @@ A modern recipe management application with SQLite backend and image upload supp
 - **Storage**: Cloudflare R2 for images
 - **Deployment**: Cloudflare Workers
 
+## Development Workflow
+
+### Testing and Staging Deployment
+
+This project follows a strict testing and staging deployment workflow to ensure code quality:
+
+1. **Always Test First**: All code changes must pass tests before committing
+2. **Feature Branches**: Work on feature branches, never directly on main
+3. **Staging Validation**: Changes must be validated in staging before production
+4. **Automated Testing**: Pre-commit hooks and GitHub Actions enforce testing
+
+#### Quick Start
+
+1. Install the pre-commit hook:
+   ```bash
+   ./.github/hooks/install-hooks.sh
+   ```
+
+2. Make your changes and commit (tests run automatically)
+
+3. Push to staging when ready:
+   ```bash
+   ./push-to-staging.sh
+   ```
+
+4. After staging validation, create a PR to main
+
+For detailed workflow rules, see `.cursorrules` in the project root.
+
 ## Setup Instructions
 
 ### Prerequisites
