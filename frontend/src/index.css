@@ -1436,11 +1436,16 @@ li {
   
   /* Adjust back button on mobile */
   .back-btn {
-    position: absolute; /* Change to absolute within relative header */
+    position: fixed;
     top: 20px;
     left: 20px;
     width: 50px;
     height: 50px;
+  }
+  
+  .recipe-top-header .back-btn {
+    top: 20px;
+    left: 20px;
   }
 }
 
@@ -1648,7 +1653,9 @@ li {
 
 /* Update back button positioning for top header */
 .recipe-top-header .back-btn {
-  position: static;
+  position: fixed;
+  top: 30px;
+  left: 30px;
   flex-shrink: 0;
 }
 
