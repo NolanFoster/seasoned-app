@@ -917,7 +917,8 @@ function App() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          zIndex: 1
+                          zIndex: 1,
+                          borderRadius: '20px 20px 0 0'
                         }}
                         onLoad={() => console.log('Image loaded successfully:', recipe.image || recipe.image_url)}
                         onError={(e) => {
