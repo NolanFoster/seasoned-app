@@ -873,7 +873,7 @@ function App() {
       />
       
       <h1 className="title">
-        <img src="/images/spoon.svg" alt="Seasoned" className="title-icon" />
+        <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
         Seasoned
       </h1>
       
