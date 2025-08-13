@@ -24,6 +24,12 @@
   cursor: pointer;
   position: relative;
   
+  // Performance optimizations to prevent flickering
+  will-change: transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  
   // CSS custom properties for dynamic effects
   --glass-intensity: 0;
   --reflection-offset: 0px;
