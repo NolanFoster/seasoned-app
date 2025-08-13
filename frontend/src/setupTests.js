@@ -33,6 +33,23 @@ HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
   closePath: jest.fn(),
 }));
 
+// Global alert/confirm mocks and clearing between tests
+if (!global.alert) global.alert = jest.fn();
+if (!global.confirm) global.confirm = jest.fn();
+
+beforeEach(() => {
+  global.alert && global.alert.mockClear && global.alert.mockClear();
+  global.confirm && global.confirm.mockClear && global.confirm.mockClear();
+
+  // Ensure main.jsx executes fresh when required within tests that rely on it
+  try {
+    const mainPath = require.resolve('./main.jsx');
+    delete require.cache[mainPath];
+  } catch (_) {
+    // ignore if not resolvable in this test context
+  }
+});
+
 // Mock import.meta.env -> process.env for tests
 process.env.VITE_API_URL = 'https://test-api.example.com';
 process.env.VITE_CLIPPER_API_URL = 'https://test-clipper-api.example.com';

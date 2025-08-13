@@ -775,7 +775,14 @@ function App() {
   }
 
   function updatePreview() {
-    if (!editablePreview || !editablePreview.name.trim()) return;
+    if (!editablePreview || !editablePreview.name.trim()) {
+      // Revert empty name to previous value to avoid leaving an empty field
+      setEditablePreview(prev => ({
+        ...prev,
+        name: (clippedRecipePreview && clippedRecipePreview.name) || ''
+      }));
+      return;
+    }
     
     setClippedRecipePreview({
       ...clippedRecipePreview,
@@ -959,8 +966,8 @@ function App() {
       </div>
       
       <div className="recipes-list">
-        {/* Show recipe cards only when no forms are active */}
-        {!showAddForm && !showClipForm && !clippedRecipePreview && (
+        {/* Show recipe cards only when no forms are active and no recipe is selected */}
+        {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
           <div className="recipe-grid">
             {recipes.map((recipe) => {
               console.log('Recipe data:', recipe);

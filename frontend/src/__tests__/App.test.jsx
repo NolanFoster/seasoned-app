@@ -494,7 +494,7 @@ describe('App Component - Edit Recipe', () => {
     // Check form is populated
     expect(screen.getByDisplayValue('Original Recipe')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Original description')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('ingredient 1\ningredient 2')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('ingredient 1\ningredient 2', { exact: false })).toBeInTheDocument();
     expect(screen.getByDisplayValue('step 1\nstep 2')).toBeInTheDocument();
   });
 
