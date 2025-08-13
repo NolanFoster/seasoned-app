@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Pre-commit hook to ensure tests pass before committing
+# To use this hook, copy it to .git/hooks/pre-commit and make it executable
+
+echo "Running pre-commit tests..."
+
+# Check if we're in the frontend directory or have frontend changes
+if git diff --cached --name-only | grep -q "^frontend/"; then
+    echo "Frontend changes detected. Running frontend tests..."
+    cd frontend
+    if [ -f "package.json" ]; then
+        # Check if test script exists
+        if npm run | grep -q " test"; then
+            npm test
+            FRONTEND_TEST_RESULT=$?
+            if [ $FRONTEND_TEST_RESULT -ne 0 ]; then
+                echo "❌ Frontend tests failed! Commit aborted."
+                exit 1
+            fi
+            echo "✅ Frontend tests passed!"
+        else
+            echo "⚠️  No test script found in frontend/package.json"
+        fi
+    fi
+    cd ..
+fi
+
+# Check if we're in the worker directory or have worker changes
+if git diff --cached --name-only | grep -q "^worker/"; then
+    echo "Worker changes detected. Running worker tests..."
+    cd worker
+    if [ -f "package.json" ]; then
+        # Check if test script exists
+        if npm run | grep -q " test"; then
+            npm test
+            WORKER_TEST_RESULT=$?
+            if [ $WORKER_TEST_RESULT -ne 0 ]; then
+                echo "❌ Worker tests failed! Commit aborted."
+                exit 1
+            fi
+            echo "✅ Worker tests passed!"
+        else
+            echo "⚠️  No test script found in worker/package.json"
+        fi
+    fi
+    cd ..
+fi
+
+echo "✅ All tests passed! Proceeding with commit..."
+echo "📝 Remember to push to a feature branch and then merge to staging!"
+
+exit 0

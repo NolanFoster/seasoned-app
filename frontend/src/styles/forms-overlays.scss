@@ -1,0 +1,864 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+/* Overlay Styles */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.overlay-content {
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.overlay-header h2 {
+  margin: 0;
+  color: white;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  width: 50px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 17.5px;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.add-btn {
+  background: rgba(46, 204, 113, 0.8);
+  color: white;
+}
+
+.add-btn:hover {
+  background: rgba(46, 204, 113, 1);
+}
+
+.update-btn {
+  background: rgba(52, 152, 219, 0.8);
+  color: white;
+}
+
+.update-btn:hover {
+  background: rgba(52, 152, 219, 1);
+}
+
+.cancel-btn {
+  background: rgba(149, 165, 166, 0.8);
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: rgba(149, 165, 166, 1);
+}
+
+/* Image Upload Styles */
+.image-upload {
+  margin: 15px 0;
+}
+
+.image-upload-label {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.3s;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.image-upload-label:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Form Panel Styles */
+.form-panel {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideInUp 0.3s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.form-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.form-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.form-panel-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+}
+
+.form-panel-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: inherit;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.form-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-panel input,
+.form-panel textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.form-panel input:focus,
+.form-panel textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-panel textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-panel .form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.form-panel .form-actions::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+}
+
+/* Recipe Preview Panel */
+.recipe-preview-panel {
+  max-width: 900px;
+}
+
+.recipe-preview-panel .form-panel-content {
+  gap: 2rem;
+}
+
+/* Enhanced button styles for form panels */
+.form-panel .form-actions button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.form-panel .form-actions button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.form-panel .form-actions button:hover::before {
+  left: 100%;
+}
+
+/* Recipe Preview Overlay */
+.recipe-preview-overlay {
+  max-width: 800px !important;
+  max-height: 90vh !important;
+  overflow-y: auto;
+}
+
+.recipe-preview-content {
+  margin-bottom: 20px;
+}
+
+.recipe-preview-header {
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.recipe-preview-title {
+  color: white;
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  line-height: 1.3;
+}
+
+.recipe-preview-description {
+  color: white;
+  font-size: 1.1em;
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
+}
+
+.recipe-preview-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 25px;
+}
+
+.recipe-preview-section h4 {
+  color: white;
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(52, 152, 219, 0.3);
+}
+
+.recipe-preview-ingredients {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recipe-preview-ingredients li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  color: white;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+.recipe-preview-ingredients li:last-child {
+  border-bottom: none;
+}
+
+.recipe-preview-instructions {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.recipe-preview-instructions li {
+  padding: 10px 0;
+  color: white;
+  font-size: 1em;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.recipe-preview-instructions li:last-child {
+  border-bottom: none;
+}
+
+.recipe-preview-image {
+  text-align: center;
+  margin: 25px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
+}
+
+.recipe-preview-source {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(52, 152, 219, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.recipe-preview-source p {
+  margin: 0;
+  color: white;
+  font-size: 0.9em;
+}
+
+.source-link {
+  color: #3498db;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.source-link:hover {
+  text-decoration: underline;
+}
+
+/* Editable Preview Styles */
+.preview-edit-input,
+.preview-edit-textarea {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  color: #2c3e50;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.preview-edit-input:focus,
+.preview-edit-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.preview-edit-textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.ingredients-edit-container,
+.instructions-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ingredient-edit-row,
+.instruction-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.ingredient-input {
+  flex: 1;
+}
+
+.instruction-textarea {
+  flex: 1;
+  min-height: 60px;
+}
+
+.remove-ingredient-btn,
+.remove-instruction-btn {
+  background: rgba(220, 53, 69, 0.8);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.remove-ingredient-btn:hover,
+.remove-instruction-btn:hover {
+  background: rgba(220, 53, 69, 1);
+  transform: scale(1.1);
+}
+
+.add-ingredient-btn,
+.add-instruction-btn {
+  background: rgba(40, 167, 69, 0.8);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+}
+
+.add-ingredient-btn:hover,
+.add-instruction-btn:hover {
+  background: rgba(40, 167, 69, 1);
+  transform: translateY(-1px);
+}
+
+/* Save Progress Overlay */
+.save-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.save-progress-content {
+  text-align: center;
+  color: white;
+  padding: 20px;
+}
+
+.save-spinner {
+  font-size: 48px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+.save-note {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+
+/* Clipper Status Messages */
+.clipper-status {
+  margin-bottom: 16px;
+}
+
+.status-message {
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-message.checking {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #856404;
+}
+
+.status-message.available {
+  background: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  color: #155724;
+}
+
+.status-message.unavailable {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: #721c24;
+  justify-content: space-between;
+}
+
+.retry-btn {
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  color: #721c24;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: rgba(220, 53, 69, 0.3);
+  border-color: rgba(220, 53, 69, 0.5);
+}
+
+.try-again-btn {
+  background: rgba(255, 193, 7, 0.8);
+  color: #856404;
+  border: 1px solid rgba(255, 193, 7, 0.6);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.try-again-btn:hover {
+  background: rgba(255, 193, 7, 1);
+  color: #6b520a;
+  border-color: rgba(255, 193, 7, 0.8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.try-again-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.clip-help-text {
+  background: rgba(13, 110, 253, 0.05);
+  border: 1px solid rgba(13, 110, 253, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.clip-help-text p {
+  margin: 0 0 8px 0;
+  color: #e9ecef;
+}
+
+.clip-help-text p:last-child {
+  margin-bottom: 0;
+}
+
+.clip-help-text strong {
+  color: #0d6efd;
+}
+
+/* Disabled button styles */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+button:disabled:hover {
+  transform: none;
+  background: inherit;
+}
+
+.clipper-form .form-actions .add-btn,
+.clipper-form .form-actions .update-btn,
+.clipper-form .form-actions .cancel-btn,
+.clipper-form .form-actions .try-again-btn,
+.clipper-form .retry-btn,
+.clipper-form .close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+/* Normalize sizing for primary action */
+.clipper-form .form-actions .add-btn,
+.clipper-form .form-actions .update-btn,
+.clipper-form .form-actions .try-again-btn,
+.clipper-form .form-actions .cancel-btn {
+  padding: 10px 18px;
+}
+
+/* Hover effects */
+.clipper-form .form-actions .add-btn:hover,
+.clipper-form .form-actions .update-btn:hover,
+.clipper-form .form-actions .try-again-btn:hover,
+.clipper-form .form-actions .cancel-btn:hover,
+.clipper-form .retry-btn:hover,
+.clipper-form .close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Danger/Warning subtle tints remain but with glass base */
+.clipper-form .retry-btn {
+  color: white;
+}
+
+/* Disabled state inherits global button:disabled but ensure no hover transform */
+.clipper-form button:disabled:hover {
+  transform: none;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .form-panel {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  
+  .form-panel::before {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  }
+  
+  .form-panel input,
+  .form-panel textarea {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+  
+  .form-panel input:focus,
+  .form-panel textarea:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .form-panel-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .form-panel .form-actions {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .form-panel-header h2 {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .recipe-preview-title,
+  .recipe-preview-description,
+  .recipe-preview-section h4,
+  .recipe-preview-ingredients li,
+  .recipe-preview-instructions li,
+  .recipe-preview-source p {
+    color: white;
+  }
+  
+  .recipe-preview-section h4 {
+    border-bottom-color: rgba(52, 152, 219, 0.5);
+  }
+  
+  .recipe-preview-ingredients li,
+  .recipe-preview-instructions li {
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .recipe-preview-source {
+    background: rgba(52, 152, 219, 0.2);
+    border-color: rgba(52, 152, 219, 0.3);
+  }
+  
+  .source-link {
+    color: #74b9ff;
+  }
+  
+  .preview-edit-input,
+  .preview-edit-textarea {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+  }
+  
+  .preview-edit-input:focus,
+  .preview-edit-textarea:focus {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+  
+  .remove-ingredient-btn,
+  .remove-instruction-btn {
+    background: rgba(220, 53, 69, 0.6);
+  }
+  
+  .remove-ingredient-btn:hover,
+  .remove-instruction-btn:hover {
+    background: rgba(220, 53, 69, 0.8);
+  }
+  
+  .add-ingredient-btn,
+  .add-instruction-btn {
+    background: rgba(40, 167, 69, 0.6);
+  }
+  
+  .add-ingredient-btn:hover,
+  .add-instruction-btn:hover {
+    background: rgba(40, 167, 69, 0.8);
+  }
+  
+  .clip-help-text {
+    background: rgba(13, 110, 253, 0.1);
+    border-color: rgba(13, 110, 253, 0.3);
+  }
+  
+  .clip-help-text p {
+    color: #f8f9fa;
+  }
+  
+  .clip-help-text strong {
+    color: #6ea8fe;
+  }
+  
+  .error-message {
+    background: rgba(220, 53, 69, 0.2);
+    border: 1px solid rgba(220, 53, 69, 0.4);
+    color: #ff6b6b;
+  }
+  .clipper-form .form-actions .add-btn,
+  .clipper-form .form-actions .update-btn,
+  .clipper-form .form-actions .cancel-btn,
+  .clipper-form .form-actions .try-again-btn,
+  .clipper-form .retry-btn,
+  .clipper-form .close-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .clipper-form .form-actions .add-btn:hover,
+  .clipper-form .form-actions .update-btn:hover,
+  .clipper-form .form-actions .try-again-btn:hover,
+  .clipper-form .form-actions .cancel-btn:hover,
+  .clipper-form .retry-btn:hover,
+  .clipper-form .close-btn:hover {
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .recipe-preview-overlay {
+    max-width: 95vw !important;
+    margin: 20px;
+  }
+  
+  .recipe-preview-sections {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .recipe-preview-title {
+    font-size: 1.5em;
+  }
+  
+  .recipe-preview-section h4 {
+    font-size: 1.2em;
+  }
+  
+  .form-panel {
+    padding: 1.5rem;
+  }
+  
+  .form-panel-header h2 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-panel {
+    padding: 1rem;
+  }
+  
+  .form-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .form-panel .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-panel .form-actions button {
+    width: 100%;
+  }
+}

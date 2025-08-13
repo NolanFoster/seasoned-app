@@ -4,6 +4,65 @@ import { useEffect, useState, useRef } from 'react'
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-worker.nolanfoster.workers.dev'; // Main recipe worker
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 
+// Function to convert ISO 8601 duration to human readable format
+function formatDuration(duration) {
+  if (!duration) return '';
+  
+  // Attempt to coerce non-string durations to string safely
+  if (typeof duration !== 'string') {
+    try {
+      const coerced = duration.toString();
+      if (typeof coerced !== 'string') return '';
+      duration = coerced;
+    } catch (error) {
+      return '';
+    }
+  }
+  
+  // If it's already in a readable format (doesn't start with PT), return as is
+  if (!duration.startsWith('PT')) return duration;
+  
+  try {
+    // Remove the PT prefix
+    let remaining = duration.substring(2);
+    
+    let hours = 0;
+    let minutes = 0;
+    
+    // Extract hours if present
+    const hourMatch = remaining.match(/(\d+)H/);
+    if (hourMatch) {
+      hours = parseInt(hourMatch[1], 10);
+      remaining = remaining.replace(hourMatch[0], '');
+    }
+    
+    // Extract minutes if present
+    const minuteMatch = remaining.match(/(\d+)M/);
+    if (minuteMatch) {
+      minutes = parseInt(minuteMatch[1], 10);
+    }
+    
+    // Format the output
+    let result = '';
+    if (hours > 0) {
+      result += `${hours} h`;
+      if (minutes > 0) {
+        result += ` ${minutes} m`;
+      }
+    } else if (minutes > 0) {
+      result += `${minutes} m`;
+    } else {
+      // If no hours or minutes found, return empty for fallback
+      return duration;
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error parsing duration:', error);
+    return duration;
+  }
+}
+
 // Video Popup Component
 function VideoPopup({ videoUrl, onClose }) {
   const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 280 });
@@ -246,6 +305,7 @@ function App() {
   const [isClipping, setIsClipping] = useState(false);
   const [clipError, setClipError] = useState('');
   const [clipperStatus, setClipperStatus] = useState('checking'); // 'checking', 'available', 'unavailable'
+  const [titleOpacity, setTitleOpacity] = useState(1); // For fading title section on scroll
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [editablePreview, setEditablePreview] = useState(null);
   const [isEditingPreview, setIsEditingPreview] = useState(false);
@@ -255,16 +315,113 @@ function App() {
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
+  const recipeGridRef = useRef(null);
+  const recipeFullscreenRef = useRef(null);
 
   useEffect(() => {
     fetchRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
 
+  // Scroll-based glass reflection effect
+  useEffect(() => {
+    let ticking = false;
+    let scrollY = 0;
+    
+    const updateScrollEffects = () => {
+      if (!recipeGridRef.current) {
+        ticking = false;
+        return;
+      }
+      
+      const cards = recipeGridRef.current.querySelectorAll('.recipe-card');
+      const windowHeight = window.innerHeight;
+      
+      cards.forEach((card, index) => {
+        const rect = card.getBoundingClientRect();
+        const cardTop = rect.top + scrollY;
+        const cardCenter = cardTop + rect.height / 2;
+        const distanceFromCenter = Math.abs(scrollY + windowHeight / 2 - cardCenter);
+        const maxDistance = windowHeight;
+        const intensity = Math.max(0, 1 - distanceFromCenter / maxDistance);
+        
+        // Apply dynamic styles based on scroll position
+        card.style.setProperty('--glass-intensity', intensity);
+        card.style.setProperty('--reflection-offset', `${scrollY * 0.1}px`);
+        
+        // Add subtle rotation based on position
+        const rotation = (rect.left / window.innerWidth - 0.5) * 2;
+        card.style.setProperty('--card-rotation', `${rotation}deg`);
+      });
+      
+      ticking = false;
+    };
+    
+    const handleScroll = () => {
+      scrollY = window.scrollY;
+      
+      if (!ticking) {
+        window.requestAnimationFrame(updateScrollEffects);
+        ticking = true;
+      }
+    };
+    
+    // Add passive option for better scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial call
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [recipes]);
+
+  // Scroll-based fade effect for recipe fullscreen title
+  useEffect(() => {
+    if (!selectedRecipe || !recipeFullscreenRef.current) return;
+
+    let ticking = false;
+
+    const handleRecipeScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (!recipeFullscreenRef.current) {
+            ticking = false;
+            return;
+          }
+
+          const scrollTop = recipeFullscreenRef.current.scrollTop;
+          const fadeStartOffset = 50; // Start fading after 50px of scroll
+          const fadeEndOffset = 150; // Fully fade by 150px
+
+          // Calculate opacity based on scroll position
+          let opacity = 1;
+          if (scrollTop > fadeStartOffset) {
+            opacity = Math.max(0, 1 - (scrollTop - fadeStartOffset) / (fadeEndOffset - fadeStartOffset));
+          }
+
+          setTitleOpacity(opacity);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const scrollContainer = recipeFullscreenRef.current;
+    scrollContainer.addEventListener('scroll', handleRecipeScroll, { passive: true });
+    
+    // Reset opacity when recipe changes
+    setTitleOpacity(1);
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleRecipeScroll);
+      }
+    };
+  }, [selectedRecipe]);
+
   // Dark mode detection and background initialization
   useEffect(() => {
     const checkDarkMode = () => {
-      const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const supportsMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+      const darkMode = supportsMatchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
       setIsDarkMode(darkMode);
       
       // Always initialize seasoning background for both light and dark modes
@@ -282,14 +439,16 @@ function App() {
     checkDarkMode();
     
     // Listen for dark mode changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    mediaQuery.addEventListener('change', checkDarkMode);
+    const supportsMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+    const mediaQuery = supportsMatchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    mediaQuery && mediaQuery.addEventListener('change', checkDarkMode);
     
     return () => {
-      mediaQuery.removeEventListener('change', checkDarkMode);
+      mediaQuery && mediaQuery.removeEventListener('change', checkDarkMode);
       // Clean up on unmount
       cleanupSeasoningBackground();
     };
+
   }, []);
 
 
@@ -702,16 +861,25 @@ function App() {
     setEditablePreview({
       name: clippedRecipePreview.name,
       description: clippedRecipePreview.description || '',
-      ingredients: [...clippedRecipePreview.ingredients],
-      instructions: [...clippedRecipePreview.instructions],
-      image_url: clippedRecipePreview.image_url,
+      ingredients: [...(clippedRecipePreview.ingredients || clippedRecipePreview.recipeIngredient || [])],
+      instructions: [...(clippedRecipePreview.instructions || (clippedRecipePreview.recipeInstructions || []).map(inst => 
+        typeof inst === 'string' ? inst : inst.text
+      ))],
+      image_url: clippedRecipePreview.image_url || clippedRecipePreview.image,
       source_url: clippedRecipePreview.source_url
     });
     setIsEditingPreview(true);
   }
 
   function updatePreview() {
-    if (!editablePreview || !editablePreview.name.trim()) return;
+    if (!editablePreview || !editablePreview.name.trim()) {
+      // Revert empty name to previous value to avoid leaving an empty field
+      setEditablePreview(prev => ({
+        ...prev,
+        name: (clippedRecipePreview && clippedRecipePreview.name) || ''
+      }));
+      return;
+    }
     
     setClippedRecipePreview({
       ...clippedRecipePreview,
@@ -873,7 +1041,7 @@ function App() {
       />
       
       <h1 className="title">
-        <img src="/images/spoon.svg" alt="Seasoned" className="title-icon" />
+        <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
         Seasoned
       </h1>
       
@@ -895,9 +1063,9 @@ function App() {
       </div>
       
       <div className="recipes-list">
-        {/* Show recipe cards only when no forms are active */}
-        {!showAddForm && !showClipForm && !clippedRecipePreview && (
-          <div className="recipe-grid">
+        {/* Show recipe cards only when no forms are active and no recipe is selected */}
+        {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
+          <div className="recipe-grid" ref={recipeGridRef}>
             {recipes.map((recipe) => {
               console.log('Recipe data:', recipe);
               console.log('Image URL:', recipe.image_url);
@@ -917,7 +1085,9 @@ function App() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          zIndex: 1
+                          zIndex: 1,
+                          borderRadius: '20px 20px 0 0',
+                          opacity: 0.85
                         }}
                         onLoad={() => console.log('Image loaded successfully:', recipe.image || recipe.image_url)}
                         onError={(e) => {
@@ -935,39 +1105,44 @@ function App() {
                         width: '100%',
                         height: '100%',
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        zIndex: 1
+                        zIndex: 1,
+                        opacity: 0.85
                       }}></div>
                     )}
                     <div className="recipe-card-overlay">
-                      <div className="recipe-card-actions">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            editRecipe(recipe);
-                          }} 
-                          className="edit-btn card-edit-btn"
-                          title="Edit Recipe"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteRecipe(recipe.id);
-                          }} 
-                          className="delete-btn card-delete-btn"
-                          title="Delete Recipe"
-                        >
-                          🗑️
-                        </button>
-                      </div>
                     </div>
                     <div className="recipe-card-title-overlay">
                       <h3 className="recipe-card-title">{recipe.name}</h3>
                     </div>
                   </div>
                   <div className="recipe-card-content">
-                    {recipe.description && <p className="recipe-card-description">{recipe.description}</p>}
+                    {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                      <div className="recipe-card-time">
+                        <div className="time-item">
+                          <span className="time-label">Prep</span>
+                          <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                        </div>
+                        <div className="time-divider"></div>
+                        <div className="time-item">
+                          <span className="time-label">Cook</span>
+                          <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
+                        </div>
+                        {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                          <>
+                            <div className="time-divider"></div>
+                            <div className="time-item">
+                              <span className="time-label">Yield</span>
+                              <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="recipe-card-time">
+                        <span className="time-icon">⏱️</span>
+                        <span className="no-time">-</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -1033,8 +1208,8 @@ function App() {
         )}
 
         {/* Show Clip Recipe Form when active */}
-        {showClipForm && (
-          <div className="form-panel glass">
+                  {showClipForm && (
+            <div className="form-panel glass clipper-form">
             <div className="form-panel-header">
               <h2>Clip Recipe from Website</h2>
               <button className="close-btn" onClick={() => {
@@ -1417,15 +1592,12 @@ function App() {
 
       {/* Full Screen Recipe View */}
       {selectedRecipe && (
-        <div className="recipe-fullscreen">
-          {/* Top Header with Back Button, Title, and Action Buttons */}
+        <div className="recipe-fullscreen" ref={recipeFullscreenRef}>
+          {/* Top Header with Back Button and Action Buttons */}
           <div className="recipe-top-header">
             <button className="back-btn" onClick={() => setSelectedRecipe(null)}>
               <span className="back-arrow">←</span>
             </button>
-            <div className="recipe-title-section">
-              <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
-            </div>
             <div className="recipe-fullscreen-actions">
               <button 
                 className="edit-btn fullscreen-edit-btn" 
@@ -1451,6 +1623,71 @@ function App() {
                 🗑️
               </button>
             </div>
+          </div>
+          
+          {/* Title Section - moved below header */}
+          <div className="recipe-title-section" style={{ opacity: titleOpacity, transition: 'opacity 0.2s ease-out' }}>
+            <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
+            
+            {/* Recipe Timing Info - prep time, cook time, yield */}
+            {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
+              selectedRecipe.cook_time || selectedRecipe.cookTime || 
+              selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) ? (
+              <div className="recipe-card-time">
+                <div className="time-item">
+                  <span className="time-label">Prep</span>
+                  <span className="time-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime) || '-'}</span>
+                </div>
+                <div className="time-divider"></div>
+                <div className="time-item">
+                  <span className="time-label">Cook</span>
+                  <span className="time-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime) || '-'}</span>
+                </div>
+                {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+                  <>
+                    <div className="time-divider"></div>
+                    <div className="time-item">
+                      <span className="time-label">Yield</span>
+                      <span className="time-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p className="recipe-card-time">
+                <span className="time-icon">⏱️</span>
+                <span className="no-time">-</span>
+              </p>
+            )}
+            
+            {/* Recipe Links - under title */}
+            {(selectedRecipe.source_url || selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+              <div className="recipe-links">
+                {selectedRecipe.source_url && (
+                  <a 
+                    href={selectedRecipe.source_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="recipe-link source-link"
+                    title="View original recipe"
+                  >
+                    🌐 Source Recipe
+                  </a>
+                )}
+                {(selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                  <button 
+                    className="recipe-link video-link"
+                    title="Watch recipe video"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openVideoPopup(selectedRecipe.video_url !== undefined ? selectedRecipe.video_url : (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                    }}
+                  >
+                    🎥 Watch Video
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Full Background Image */}
@@ -1480,51 +1717,16 @@ function App() {
               </ul>
             </div>
             
-            {/* Instructions Panel with Links Panel on Top */}
-            <div className="instructions-panel-container">
-              {/* Links Panel - positioned on top of instructions */}
-              {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                <div className="recipe-links-panel glass">
-                  <h3>Recipe Links</h3>
-                  <div className="recipe-links-content">
-                    {selectedRecipe.source_url && (
-                      <a 
-                        href={selectedRecipe.source_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="recipe-link source-link"
-                        title="View original recipe"
-                      >
-                        🌐 Source Recipe
-                      </a>
-                    )}
-                    {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                      <button 
-                        className="recipe-link video-link"
-                        title="Watch recipe video"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
-                        }}
-                      >
-                        🎥 Watch Video
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Instructions Panel */}
-              <div className="recipe-panel glass">
-                <h2>Instructions</h2>
-                <ol className="instructions-list">
-                  {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
-                    <li key={index}>
-                      {typeof instruction === 'string' ? instruction : instruction.text || ''}
-                    </li>
-                  ))}
-                </ol>
-              </div>
+            {/* Instructions Panel */}
+            <div className="recipe-panel glass">
+              <h2>Instructions</h2>
+              <ol className="instructions-list">
+                {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
+                  <li key={index}>
+                    {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
         </div>

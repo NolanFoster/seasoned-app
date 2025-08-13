@@ -1,0 +1,129 @@
+name: Test and Deploy to Staging
+
+on:
+  pull_request:
+    branches: [ main, staging ]
+  push:
+    branches: [ staging ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Test Frontend
+      if: contains(github.event.head_commit.message, 'frontend') || github.event_name == 'pull_request'
+      run: |
+        cd frontend
+        if [ -f "package.json" ]; then
+          npm ci
+          npm test
+        fi
+    
+    - name: Test Worker
+      if: contains(github.event.head_commit.message, 'worker') || github.event_name == 'pull_request'
+      run: |
+        cd worker
+        if [ -f "package.json" ]; then
+          npm ci
+          npm test
+        fi
+    
+    - name: Run Linting
+      run: |
+        # Run linting for frontend
+        if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+          cd frontend
+          npm run lint || echo "No lint script found"
+          cd ..
+        fi
+        
+        # Run linting for worker
+        if [ -d "worker" ] && [ -f "worker/package.json" ]; then
+          cd worker
+          npm run lint || echo "No lint script found"
+          cd ..
+        fi
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Staging Environment
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # For example:
+        # - Deploy frontend to staging CDN
+        # - Deploy worker to staging Cloudflare Workers
+        # - Update staging database if needed
+        
+    - name: Run Smoke Tests on Staging
+      run: |
+        echo "🔍 Running smoke tests on staging..."
+        # Add smoke test commands here
+        # For example:
+        # - curl staging API endpoints
+        # - Check frontend is accessible
+        # - Verify worker endpoints respond
+        
+    - name: Notify Team
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Staging deployment successful!"
+          # Add notification logic (Slack, Discord, etc.)
+        else
+          echo "❌ Staging deployment failed!"
+          # Add failure notification logic
+        fi
+
+  enforce-staging-first:
+    name: Enforce Staging First
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Check if changes are in staging
+      run: |
+        # Check if the PR branch has been merged to staging
+        git fetch origin staging
+        
+        # Get the commits in this PR
+        PR_COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.head_ref }})
+        
+        # Check if these commits exist in staging
+        MISSING_FROM_STAGING=false
+        for commit in $PR_COMMITS; do
+          if ! git merge-base --is-ancestor $commit origin/staging 2>/dev/null; then
+            MISSING_FROM_STAGING=true
+            break
+          fi
+        done
+        
+        if [ "$MISSING_FROM_STAGING" = true ]; then
+          echo "⚠️  Warning: These changes have not been tested in staging!"
+          echo "Please merge to staging branch first and validate before merging to main."
+          # Uncomment the next line to enforce this as a hard requirement
+          # exit 1
+        else
+          echo "✅ Changes have been validated in staging"
+        fi

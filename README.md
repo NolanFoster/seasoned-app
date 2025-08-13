@@ -20,6 +20,35 @@ A modern recipe management application with SQLite backend and image upload supp
 - **Storage**: Cloudflare R2 for images
 - **Deployment**: Cloudflare Workers
 
+## Development Workflow
+
+### Testing and Staging Deployment
+
+This project follows a strict testing and staging deployment workflow to ensure code quality:
+
+1. **Always Test First**: All code changes must pass tests before committing
+2. **Feature Branches**: Work on feature branches, never directly on main
+3. **Staging Validation**: Changes must be validated in staging before production
+4. **Automated Testing**: Pre-commit hooks and GitHub Actions enforce testing
+
+#### Quick Start
+
+1. Install the pre-commit hook:
+   ```bash
+   ./.github/hooks/install-hooks.sh
+   ```
+
+2. Make your changes and commit (tests run automatically)
+
+3. Push to staging when ready:
+   ```bash
+   ./push-to-staging.sh
+   ```
+
+4. After staging validation, create a PR to main
+
+For detailed workflow rules, see `.cursorrules` in the project root.
+
 ## Setup Instructions
 
 ### Prerequisites
@@ -250,7 +279,10 @@ npm run deploy:prod
 
 1. **Build**: Runs `npm run build` to create optimized production files in `dist/` folder
 2. **Deploy**: Uses `wrangler pages deploy dist` to upload to Cloudflare Pages
-3. **URL**: Your app will be available at `https://seasoned-frontend.pages.dev` (or custom domain if configured)
+3. **URL**: 
+   - **Production** (main branch): `https://seasoned-frontend.pages.dev`
+   - **Staging** (staging branch): `https://seasoned-frontend.pages.dev` (preview deployment)
+   - **Custom domain** if configured
 
 #### Alternative Deployment Options
 
