@@ -8,7 +8,7 @@
   right: $spacing-lg;
   display: flex;
   gap: $spacing-md - 5px;
-  z-index: $z-overlay;
+  z-index: $z-fab;
   
   /* Ensure it stays fixed even with transforms on parent elements */
   transform: translateZ(0);

@@ -1033,7 +1033,7 @@ function App() {
   }
 
   return (
-    <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
+    <>
       {/* Seasoning background canvas for both light and dark modes */}
       <canvas 
         ref={seasoningCanvasRef} 
@@ -1050,12 +1050,13 @@ function App() {
         }}
       />
       
+      {/* Fixed title - outside container to ensure proper fixed positioning */}
       <h1 className="title">
         <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
         Seasoned
       </h1>
       
-      {/* Floating Action Buttons */}
+      {/* Floating Action Buttons - outside container to ensure proper fixed positioning */}
       <div className="fab-container">
         <button 
           className={`fab fab-clip ${clipperStatus === 'unavailable' ? 'fab-unavailable' : clipperStatus === 'available' ? 'fab-available' : 'fab-checking'}`} 
@@ -1072,7 +1073,9 @@ function App() {
         </button>
       </div>
       
-      <div className="recipes-list">
+      {/* Main container - scrollable content */}
+      <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
+        <div className="recipes-list">
         {/* Show recipe cards only when no forms are active and no recipe is selected */}
         {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
@@ -1749,7 +1752,8 @@ function App() {
           onClose={() => setShowVideoPopup(false)} 
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

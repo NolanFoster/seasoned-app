@@ -7,12 +7,6 @@ html {
   overscroll-behavior: none;
   scroll-behavior: smooth;
   height: 100%;
-  
-  /* Force GPU acceleration for smoother rendering */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 body {
@@ -126,7 +120,7 @@ body {
   position: fixed;
   top: $spacing-md;
   left: $spacing-md;
-  z-index: calc(#{$z-overlay} - 1);
+  z-index: $z-overlay;
   
   /* Fade effect controlled by JS */
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
