@@ -1,14 +1,17 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
 /* Base styles and global resets */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background: linear-gradient(-45deg, #ff6b6b, #ff8e53, #ff6b35, #ff8e53);
+  font-family: $font-family-base;
+  background: $gradient-light;
   background-size: 400% 400%;
   animation: aura-move 15s ease infinite;
   min-height: 100vh;
-  padding: 20px;
-  color: #333;
-  transition: background 0.3s ease, color 0.3s ease;
+  padding: $spacing-md;
+  color: $text-color;
+  transition: background $transition-normal, color $transition-normal;
 }
 
 @keyframes aura-move {
@@ -24,12 +27,12 @@ body {
 }
 
 /* Dark mode styles */
-@media (prefers-color-scheme: dark) {
+@include dark-mode {
   body {
-    background: linear-gradient(-45deg, #2c3e50 0%, #34495e 20%, #2a3a4a 35%, #1a1a2e 50%, #16213e 65%, #0f3460 80%, #2c3e50 100%);
+    background: $gradient-dark;
     background-size: 300% 300%;
     animation: dark-aura-move 180s ease-in-out infinite;
-    color: white;
+    color: $dark-text;
     position: relative;
     overflow-x: hidden;
   }

@@ -1,29 +1,30 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
 /* Recipe Grid and Cards */
 .recipe-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 25px;
-  margin-top: 20px;
-  transition: opacity 0.3s ease;
+  gap: $spacing-lg - 5px;
+  margin-top: $spacing-md;
+  transition: opacity $transition-normal;
 }
 
 /* Recipe Card Styles */
 .recipe-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
+  @include glass-effect;
+  border-radius: $border-radius-lg - 5px;
   overflow: hidden;
   border: none;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform $transition-normal, box-shadow $transition-normal;
   cursor: pointer;
-}
-
-.recipe-card:hover {
-  transform: translateY(-5px);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  
+  &:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .recipe-card-image {
@@ -31,11 +32,9 @@
   position: relative;
   display: flex;
   align-items: flex-end;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  @include glass-effect;
   border: none;
-  border-radius: 20px 20px 0 0;
+  border-radius: $border-radius-lg - 5px $border-radius-lg - 5px 0 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
