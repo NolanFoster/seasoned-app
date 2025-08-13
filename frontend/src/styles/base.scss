@@ -100,7 +100,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: $spacing-md;
-  padding-top: $spacing-lg; /* Reduced top padding since title is now in top left */
+  padding-top: 120px; /* Increased from $spacing-lg to ensure cards clear the title and FABs */
   min-height: 100vh;
   position: relative;
 }
@@ -158,6 +158,10 @@ body {
 
 /* Responsive title adjustments */
 @media (max-width: 768px) {
+  .container {
+    padding-top: 100px; /* Adjusted for smaller screens */
+  }
+  
   .title {
     font-size: 1.5rem;
     padding: $spacing-xs $spacing-sm;
@@ -172,6 +176,10 @@ body {
 }
 
 @media (max-width: 480px) {
+  .container {
+    padding-top: 80px; /* Further adjusted for mobile */
+  }
+  
   .title {
     font-size: 1.25rem;
   }

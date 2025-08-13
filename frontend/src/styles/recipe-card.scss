@@ -6,7 +6,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: $spacing-lg - 5px;
-  margin-top: $spacing-md;
+  margin-top: $spacing-xl; /* Increased from $spacing-md for better spacing */
   transition: opacity $transition-normal;
 }
 
