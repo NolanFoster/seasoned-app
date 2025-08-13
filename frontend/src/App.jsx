@@ -1512,30 +1512,32 @@ function App() {
             {/* Recipe Timing Info - prep time, cook time, yield */}
             {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
               selectedRecipe.cook_time || selectedRecipe.cookTime || 
-              selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
-              <div className="recipe-timing-info">
-                {(selectedRecipe.prep_time || selectedRecipe.prepTime) && (
-                  <div className="timing-item">
-                    <span className="timing-icon">⏱️</span>
-                    <span className="timing-label">Prep:</span>
-                    <span className="timing-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime)}</span>
-                  </div>
-                )}
-                {(selectedRecipe.cook_time || selectedRecipe.cookTime) && (
-                  <div className="timing-item">
-                    <span className="timing-icon">🔥</span>
-                    <span className="timing-label">Cook:</span>
-                    <span className="timing-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime)}</span>
-                  </div>
-                )}
+              selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) ? (
+              <div className="recipe-card-time">
+                <div className="time-item">
+                  <span className="time-label">Prep</span>
+                  <span className="time-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime) || '-'}</span>
+                </div>
+                <div className="time-divider"></div>
+                <div className="time-item">
+                  <span className="time-label">Cook</span>
+                  <span className="time-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime) || '-'}</span>
+                </div>
                 {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
-                  <div className="timing-item">
-                    <span className="timing-icon">🍽️</span>
-                    <span className="timing-label">Yield:</span>
-                    <span className="timing-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
-                  </div>
+                  <>
+                    <div className="time-divider"></div>
+                    <div className="time-item">
+                      <span className="time-label">Yield</span>
+                      <span className="time-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
+                    </div>
+                  </>
                 )}
               </div>
+            ) : (
+              <p className="recipe-card-time">
+                <span className="time-icon">⏱️</span>
+                <span className="no-time">-</span>
+              </p>
             )}
             
             {/* Recipe Links - under title */}
