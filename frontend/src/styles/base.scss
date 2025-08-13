@@ -12,6 +12,29 @@ body {
   padding: $spacing-md;
   color: $text-color;
   transition: background $transition-normal, color $transition-normal;
+  
+  /* Prevent overscroll bounce and flickering */
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Ensure smooth scrolling without flicker */
+  scroll-behavior: smooth;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  
+  /* Force GPU acceleration for smoother rendering */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+html {
+  /* Also apply to html for better coverage */
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
 }
 
 @keyframes aura-move {

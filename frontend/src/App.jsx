@@ -323,11 +323,16 @@ function App() {
 
   // Scroll-based glass reflection effect
   useEffect(() => {
-    const handleScroll = () => {
-      if (!recipeGridRef.current) return;
+    let ticking = false;
+    let scrollY = 0;
+    
+    const updateScrollEffects = () => {
+      if (!recipeGridRef.current) {
+        ticking = false;
+        return;
+      }
       
       const cards = recipeGridRef.current.querySelectorAll('.recipe-card');
-      const scrollY = window.scrollY;
       const windowHeight = window.innerHeight;
       
       cards.forEach((card, index) => {
@@ -346,9 +351,21 @@ function App() {
         const rotation = (rect.left / window.innerWidth - 0.5) * 2;
         card.style.setProperty('--card-rotation', `${rotation}deg`);
       });
+      
+      ticking = false;
     };
     
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      scrollY = window.scrollY;
+      
+      if (!ticking) {
+        window.requestAnimationFrame(updateScrollEffects);
+        ticking = true;
+      }
+    };
+    
+    // Add passive option for better scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial call
     
     return () => window.removeEventListener('scroll', handleScroll);
