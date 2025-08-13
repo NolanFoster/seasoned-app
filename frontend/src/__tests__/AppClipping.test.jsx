@@ -17,6 +17,13 @@ describe('App Component - Clipping Functionality', () => {
     confirm.mockClear();
   });
 
+  afterEach(() => {
+    // Clean up any timers that might be running
+    jest.clearAllTimers();
+    // Reset all mocks to prevent interference between tests
+    jest.resetAllMocks();
+  });
+
   test('shows clip form when clip FAB is clicked', async () => {
     fetch
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
@@ -426,9 +433,12 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for recipe to be displayed
     await waitFor(() => {
-      fireEvent.click(screen.getByText('Save Recipe'));
+      expect(screen.getByText('Recipe to Save')).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByText('Save Recipe'));
 
     await waitFor(() => {
       expect(alert).toHaveBeenCalledWith('Recipe saved successfully!');
@@ -468,11 +478,16 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for recipe to be displayed
     await waitFor(() => {
-      fireEvent.click(screen.getByText('Save Recipe'));
+      expect(screen.getByText('Duplicate Recipe')).toBeInTheDocument();
     });
 
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Potential duplicate detected'));
+    fireEvent.click(screen.getByText('Save Recipe'));
+
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Potential duplicate detected'));
+    });
   });
 
   test('saves duplicate recipe when confirmed', async () => {
@@ -580,8 +595,16 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/original-recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for recipe to be displayed
     await waitFor(() => {
-      fireEvent.click(screen.getByText('🔄 Try Again'));
+      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('🔄 Try Again'));
+
+    // Wait for clip form to reopen
+    await waitFor(() => {
+      expect(screen.getByText('Clip Recipe from Website')).toBeInTheDocument();
     });
 
     const urlInput = screen.getByPlaceholderText('Recipe URL');
@@ -600,7 +623,6 @@ describe('App Component - Clipping Functionality', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'healthy' }) })
       .mockResolvedValueOnce({ ok: true, json: async () => mockClippedRecipe });
-    // Removed the save response mock since we're testing the debounce
 
     const user = userEvent.setup();
     render(<App />);
@@ -613,15 +635,18 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for recipe to be displayed
     await waitFor(() => {
-      const saveButton = screen.getByText('Save Recipe');
-      fireEvent.click(saveButton);
-      fireEvent.click(saveButton); // Click again rapidly
+      expect(screen.getByText('Recipe')).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(alert).toHaveBeenCalledWith('Please wait a moment before trying to save again.');
-    });
+    const saveButton = screen.getByText('Save Recipe');
+    
+    // Click save button twice rapidly (synchronously to ensure they happen quickly)
+    fireEvent.click(saveButton);
+    fireEvent.click(saveButton);
+
+    expect(alert).toHaveBeenCalledWith('Please wait a moment before trying to save again.');
   });
 
   test('shows save progress overlay', async () => {
