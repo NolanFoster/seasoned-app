@@ -11,3 +11,7 @@ dist/
 
 # Wrangler temporary files
 .wrangler/
+
+# Node modules
+node_modules/
+**/node_modules/

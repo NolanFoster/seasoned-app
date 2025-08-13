@@ -775,7 +775,14 @@ function App() {
   }
 
   function updatePreview() {
-    if (!editablePreview || !editablePreview.name.trim()) return;
+    if (!editablePreview || !editablePreview.name.trim()) {
+      // Revert empty name to previous value to avoid leaving an empty field
+      setEditablePreview(prev => ({
+        ...prev,
+        name: (clippedRecipePreview && clippedRecipePreview.name) || ''
+      }));
+      return;
+    }
     
     setClippedRecipePreview({
       ...clippedRecipePreview,
@@ -959,8 +966,8 @@ function App() {
       </div>
       
       <div className="recipes-list">
-        {/* Show recipe cards only when no forms are active */}
-        {!showAddForm && !showClipForm && !clippedRecipePreview && (
+        {/* Show recipe cards only when no forms are active and no recipe is selected */}
+        {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
           <div className="recipe-grid">
             {recipes.map((recipe) => {
               console.log('Recipe data:', recipe);
@@ -1102,8 +1109,8 @@ function App() {
         )}
 
         {/* Show Clip Recipe Form when active */}
-        {showClipForm && (
-          <div className="form-panel glass">
+                  {showClipForm && (
+            <div className="form-panel glass clipper-form">
             <div className="form-panel-header">
               <h2>Clip Recipe from Website</h2>
               <button className="close-btn" onClick={() => {
@@ -1555,7 +1562,7 @@ function App() {
             )}
             
             {/* Recipe Links - under title */}
-            {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+            {(selectedRecipe.source_url || selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
               <div className="recipe-links">
                 {selectedRecipe.source_url && (
                   <a 
@@ -1568,13 +1575,13 @@ function App() {
                     🌐 Source Recipe
                   </a>
                 )}
-                {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                {(selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
                   <button 
                     className="recipe-link video-link"
                     title="Watch recipe video"
                     onClick={(e) => {
                       e.stopPropagation();
-                      openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                      openVideoPopup(selectedRecipe.video_url !== undefined ? selectedRecipe.video_url : (selectedRecipe.video && selectedRecipe.video.contentUrl));
                     }}
                   >
                     🎥 Watch Video
