@@ -731,7 +731,10 @@ function App() {
       description: editableRecipe.description,
       image: editingRecipe.image || editingRecipe.image_url || '',
       recipeIngredient: editableRecipe.ingredients.filter(i => i.trim()),
-      recipeInstructions: editableRecipe.instructions.filter(i => i.trim()),
+      recipeInstructions: editableRecipe.instructions.filter(i => i.trim()).map(instruction => ({
+        "@type": "HowToStep",
+        text: instruction
+      })),
       // Backward compatibility
       ingredients: editableRecipe.ingredients.filter(i => i.trim()),
       instructions: editableRecipe.instructions.filter(i => i.trim()),
@@ -846,11 +849,23 @@ function App() {
     const recipeIngredients = recipe.recipeIngredient || recipe.ingredients || [];
     const recipeInstructions = recipe.recipeInstructions || recipe.instructions || [];
     
+    // Extract text from instruction objects if they are objects
+    const processedInstructions = Array.isArray(recipeInstructions) 
+      ? recipeInstructions.map(instruction => {
+          if (typeof instruction === 'string') {
+            return instruction;
+          } else if (instruction && typeof instruction === 'object' && instruction.text) {
+            return instruction.text;
+          }
+          return '';
+        })
+      : [];
+    
     setEditableRecipe({
       name: recipe.name,
       description: recipe.description || '',
       ingredients: Array.isArray(recipeIngredients) ? [...recipeIngredients] : [],
-      instructions: Array.isArray(recipeInstructions) ? [...recipeInstructions] : [],
+      instructions: processedInstructions,
       image: recipe.image || recipe.image_url || ''
     });
     setIsEditingRecipe(true);
