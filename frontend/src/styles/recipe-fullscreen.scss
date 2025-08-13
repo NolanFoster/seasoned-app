@@ -261,12 +261,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 30px;
   padding: 40px;
-  max-width: 1400px;
+  max-width: 1200px; // Reduced from 1400px for better fit on smaller screens
   margin: 0 auto;
   margin-top: 30px;
   position: relative;
   z-index: 1;
   width: 100%;
+  box-sizing: border-box; // Ensure padding is included in width calculations
 }
 
 /* Recipe Panels */
@@ -281,6 +282,7 @@
   overflow: hidden;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  min-width: 0; // Allow panels to shrink properly
 }
 
 .recipe-panel h2 {
@@ -506,11 +508,20 @@
     grid-template-columns: 1fr;
     gap: 25px;
     padding: 30px;
+    max-width: 800px; // Further reduce max-width for tablets
   }
   
   .recipe-panel {
     margin-left: 0;
     margin-right: 0;
+    max-width: 100%; // Ensure panels don't exceed container
+  }
+}
+
+/* Medium screens */
+@media (max-width: 900px) {
+  .recipe-fullscreen-content {
+    max-width: 700px;
   }
 }
 
@@ -541,6 +552,7 @@
     padding: 0 20px 20px;
     margin-top: 20px;
     gap: 20px;
+    max-width: 600px; // Constrain width on mobile devices
   }
   
   .recipe-title-section {
@@ -643,6 +655,8 @@
     padding: 0 15px 15px;
     margin-top: 15px;
     gap: 15px;
+    max-width: 100%; // Full width on very small screens
+    width: 100%;
   }
   
   .recipe-panel {
@@ -651,10 +665,23 @@
     margin-right: 0;
     width: 100%;
     box-sizing: border-box;
+    max-width: 500px; // Limit panel width for readability
+    margin: 0 auto; // Center the panels
   }
   
   .recipe-panel h2 {
     font-size: 1.3em;
+    margin-bottom: 15px; // Reduce margin on small screens
+  }
+  
+  .ingredients-list li,
+  .instructions-list li {
+    font-size: 1em; // Slightly smaller font for better fit
+    padding: 10px 0; // Reduce padding
+  }
+  
+  .instructions-list {
+    padding-left: 15px; // Reduce left padding for numbered list
   }
   
   .recipe-full-background {
