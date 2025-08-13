@@ -313,6 +313,8 @@ function App() {
   const [lastSaveTime, setLastSaveTime] = useState(0);
   const [showVideoPopup, setShowVideoPopup] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
+  const [editableRecipe, setEditableRecipe] = useState(null);
+  const [isEditingRecipe, setIsEditingRecipe] = useState(false);
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -723,16 +725,16 @@ function App() {
   }
 
   async function updateRecipe() {
-    if (!editingRecipe || !name) return;
+    if (!editingRecipe || !editableRecipe || !editableRecipe.name.trim()) return;
     const recipe = {
-      name,
-      description,
+      name: editableRecipe.name,
+      description: editableRecipe.description,
       image: editingRecipe.image || editingRecipe.image_url || '',
-      recipeIngredient: ingredients.split('\n').filter(i => i.trim()),
-      recipeInstructions: instructions.split('\n').filter(i => i.trim()),
+      recipeIngredient: editableRecipe.ingredients.filter(i => i.trim()),
+      recipeInstructions: editableRecipe.instructions.filter(i => i.trim()),
       // Backward compatibility
-      ingredients: ingredients.split('\n').filter(i => i.trim()),
-      instructions: instructions.split('\n').filter(i => i.trim()),
+      ingredients: editableRecipe.ingredients.filter(i => i.trim()),
+      instructions: editableRecipe.instructions.filter(i => i.trim()),
     };
     try {
       const res = await fetch(`${API_URL}/recipe/${editingRecipe.id}`, {
@@ -749,6 +751,8 @@ function App() {
         fetchRecipes();
         resetForm();
         setEditingRecipe(null);
+        setEditableRecipe(null);
+        setIsEditingRecipe(false);
       }
     } catch (e) {
       console.error('Error updating recipe:', e);
@@ -838,13 +842,18 @@ function App() {
 
   function editRecipe(recipe) {
     setEditingRecipe(recipe);
-    setName(recipe.name);
-    setDescription(recipe.description || '');
     // Handle both old and new schema field names
     const recipeIngredients = recipe.recipeIngredient || recipe.ingredients || [];
     const recipeInstructions = recipe.recipeInstructions || recipe.instructions || [];
-    setIngredients(Array.isArray(recipeIngredients) ? recipeIngredients.join('\n') : '');
-    setInstructions(Array.isArray(recipeInstructions) ? recipeInstructions.join('\n') : '');
+    
+    setEditableRecipe({
+      name: recipe.name,
+      description: recipe.description || '',
+      ingredients: Array.isArray(recipeIngredients) ? [...recipeIngredients] : [],
+      instructions: Array.isArray(recipeInstructions) ? [...recipeInstructions] : [],
+      image: recipe.image || recipe.image_url || ''
+    });
+    setIsEditingRecipe(true);
     setSelectedImage(null);
   }
 
@@ -855,6 +864,8 @@ function App() {
     setInstructions('');
     setSelectedImage(null);
     setEditingRecipe(null);
+    setEditableRecipe(null);
+    setIsEditingRecipe(false);
     setShowAddForm(false);
   }
 
@@ -1168,54 +1179,195 @@ function App() {
           <div className="form-panel glass">
             <div className="form-panel-header">
               <h2>{editingRecipe ? 'Edit Recipe' : 'Add New Recipe'}</h2>
-              <button className="close-btn" onClick={() => setShowAddForm(false)}>×</button>
+              <button className="close-btn" onClick={() => {
+                setShowAddForm(false);
+                resetForm();
+              }}>×</button>
             </div>
             <div className="form-panel-content">
-              <input 
-                type="text" 
-                placeholder="Name" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
-              />
-              <textarea 
-                placeholder="Description" 
-                value={description} 
-                onChange={e => setDescription(e.target.value)} 
-              />
-              <textarea 
-                placeholder="Ingredients (one per line)" 
-                value={ingredients} 
-                onChange={e => setIngredients(e.target.value)} 
-              />
-              <textarea 
-                placeholder="Instructions (one per line)" 
-                value={instructions} 
-                onChange={e => setInstructions(e.target.value)} 
-              />
-              
-              <div className="image-upload">
-                <label htmlFor="image-input" className="image-upload-label">
-                  {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
-                </label>
-                <input
-                  id="image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  style={{ display: 'none' }}
-                />
-              </div>
-              
-              <div className="form-actions">
-                {editingRecipe ? (
-                  <>
-                    <button onClick={updateRecipe} className="update-btn">Update Recipe</button>
-                    <button onClick={resetForm} className="cancel-btn">Cancel</button>
-                  </>
-                ) : (
-                  <button onClick={addRecipe} className="add-btn">Add Recipe</button>
-                )}
-              </div>
+              {editingRecipe && isEditingRecipe && editableRecipe ? (
+                // Edit Mode - matching clip edit format
+                <>
+                  <div className="recipe-preview-content">
+                    <div className="recipe-preview-section">
+                      <h4>Recipe Name</h4>
+                      <input 
+                        type="text" 
+                        value={editableRecipe.name} 
+                        onChange={e => setEditableRecipe({...editableRecipe, name: e.target.value})}
+                        className="preview-edit-input"
+                      />
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Description</h4>
+                      <textarea 
+                        value={editableRecipe.description} 
+                        onChange={e => setEditableRecipe({...editableRecipe, description: e.target.value})}
+                        className="preview-edit-textarea"
+                        placeholder="Recipe description..."
+                      />
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Ingredients</h4>
+                      <div className="ingredients-edit-container">
+                        {editableRecipe.ingredients.map((ingredient, index) => (
+                          <div key={index} className="ingredient-edit-row">
+                            <input 
+                              type="text" 
+                              value={ingredient} 
+                              onChange={e => {
+                                const newIngredients = [...editableRecipe.ingredients];
+                                newIngredients[index] = e.target.value;
+                                setEditableRecipe({...editableRecipe, ingredients: newIngredients});
+                              }}
+                              className="preview-edit-input ingredient-input"
+                            />
+                            <button 
+                              onClick={() => {
+                                const newIngredients = editableRecipe.ingredients.filter((_, i) => i !== index);
+                                setEditableRecipe({...editableRecipe, ingredients: newIngredients});
+                              }}
+                              className="remove-ingredient-btn"
+                              title="Remove ingredient"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => {
+                            setEditableRecipe({
+                              ...editableRecipe, 
+                              ingredients: [...editableRecipe.ingredients, '']
+                            });
+                          }}
+                          className="add-ingredient-btn"
+                        >
+                          + Add Ingredient
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Instructions</h4>
+                      <div className="instructions-edit-container">
+                        {editableRecipe.instructions.map((instruction, index) => (
+                          <div key={index} className="instruction-edit-row">
+                            <textarea 
+                              value={instruction} 
+                              onChange={e => {
+                                const newInstructions = [...editableRecipe.instructions];
+                                newInstructions[index] = e.target.value;
+                                setEditableRecipe({...editableRecipe, instructions: newInstructions});
+                              }}
+                              className="preview-edit-textarea instruction-textarea"
+                              placeholder={`Step ${index + 1}`}
+                            />
+                            <button 
+                              onClick={() => {
+                                const newInstructions = editableRecipe.instructions.filter((_, i) => i !== index);
+                                setEditableRecipe({...editableRecipe, instructions: newInstructions});
+                              }}
+                              className="remove-instruction-btn"
+                              title="Remove instruction"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => {
+                            setEditableRecipe({
+                              ...editableRecipe, 
+                              instructions: [...editableRecipe.instructions, '']
+                            });
+                          }}
+                          className="add-instruction-btn"
+                        >
+                          + Add Instruction
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="recipe-preview-section">
+                      <h4>Recipe Image</h4>
+                      <div className="image-upload">
+                        <label htmlFor="image-input" className="image-upload-label">
+                          {selectedImage ? selectedImage.name : 'Choose New Image (Optional)'}
+                        </label>
+                        <input
+                          id="image-input"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          style={{ display: 'none' }}
+                        />
+                      </div>
+                      {editableRecipe.image && (
+                        <img 
+                          src={editableRecipe.image} 
+                          alt={editableRecipe.name}
+                          className="preview-image"
+                          style={{ marginTop: '10px', maxWidth: '200px' }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="form-actions">
+                    <button onClick={updateRecipe} className="update-btn">
+                      ✓ Update Recipe
+                    </button>
+                    <button onClick={resetForm} className="cancel-btn">
+                      Cancel Edit
+                    </button>
+                  </div>
+                </>
+              ) : (
+                // Add Mode - keeping the original simpler format
+                <>
+                  <input 
+                    type="text" 
+                    placeholder="Name" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                  />
+                  <textarea 
+                    placeholder="Description" 
+                    value={description} 
+                    onChange={e => setDescription(e.target.value)} 
+                  />
+                  <textarea 
+                    placeholder="Ingredients (one per line)" 
+                    value={ingredients} 
+                    onChange={e => setIngredients(e.target.value)} 
+                  />
+                  <textarea 
+                    placeholder="Instructions (one per line)" 
+                    value={instructions} 
+                    onChange={e => setInstructions(e.target.value)} 
+                  />
+                  
+                  <div className="image-upload">
+                    <label htmlFor="image-input-add" className="image-upload-label">
+                      {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
+                    </label>
+                    <input
+                      id="image-input-add"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+                  
+                  <div className="form-actions">
+                    <button onClick={addRecipe} className="add-btn">Add Recipe</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
