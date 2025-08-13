@@ -31,12 +31,12 @@ const testCases = [
               text: JSON.stringify({
                 name: "Test Recipe",
                 description: "A test recipe",
-                ingredients: ["ingredient 1", "ingredient 2"],
-                instructions: ["step 1", "step 2"],
-                image_url: "https://example.com/image.jpg",
-                prep_time: "10 minutes",
-                cook_time: "20 minutes",
-                servings: "4",
+                recipeIngredient: ["ingredient 1", "ingredient 2"],
+                recipeInstructions: ["step 1", "step 2"],
+                image: "https://example.com/image.jpg",
+                prepTime: "10 minutes",
+                cookTime: "20 minutes",
+                recipeYield: "4",
                 difficulty: "Easy"
               })
             }]
@@ -46,15 +46,29 @@ const testCases = [
     },
     expected: {
       name: "Test Recipe",
+      image: "https://example.com/image.jpg",
       description: "A test recipe",
+      author: "",
+      datePublished: "",
+      prepTime: "10 minutes",
+      cookTime: "20 minutes",
+      totalTime: "",
+      recipeYield: "4",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: ["ingredient 1", "ingredient 2"],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "step 1" },
+        { "@type": "HowToStep", text: "step 2" }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: "https://example.com",
       ingredients: ["ingredient 1", "ingredient 2"],
       instructions: ["step 1", "step 2"],
-      image_url: "https://example.com/image.jpg",
-      source_url: "https://example.com",
-      prep_time: "10 minutes",
-      cook_time: "20 minutes",
-      servings: "4",
-      difficulty: "Easy"
+      image_url: "https://example.com/image.jpg"
     },
     description: "AI returns complete recipe data that should be parsed correctly"
   },
@@ -79,15 +93,29 @@ const testCases = [
     },
     expected: {
       name: "Alternative Recipe",
+      image: "https://example.com/image.jpg",
       description: "Recipe with different field names",
+      author: "",
+      datePublished: "",
+      prepTime: "",
+      cookTime: "",
+      totalTime: "",
+      recipeYield: "",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: ["item 1", "item 2"],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "instruction 1" },
+        { "@type": "HowToStep", text: "instruction 2" }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: "https://example.com",
       ingredients: ["item 1", "item 2"],
       instructions: ["instruction 1", "instruction 2"],
-      image_url: "https://example.com/image.jpg",
-      source_url: "https://example.com",
-      prep_time: "",
-      cook_time: "",
-      servings: "",
-      difficulty: ""
+      image_url: "https://example.com/image.jpg"
     },
     description: "AI returns recipe with alternative field names that should be mapped correctly"
   },
@@ -101,9 +129,9 @@ const testCases = [
               text: JSON.stringify({
                 name: "String Recipe",
                 description: "Recipe with string arrays",
-                ingredients: "ingredient 1\ningredient 2\ningredient 3",
-                instructions: "step 1\nstep 2\nstep 3",
-                image_url: "https://example.com/image.jpg"
+                recipeIngredient: "ingredient 1\ningredient 2\ningredient 3",
+                recipeInstructions: "step 1\nstep 2\nstep 3",
+                image: "https://example.com/image.jpg"
               })
             }]
           }
@@ -112,15 +140,30 @@ const testCases = [
     },
     expected: {
       name: "String Recipe",
+      image: "https://example.com/image.jpg",
       description: "Recipe with string arrays",
+      author: "",
+      datePublished: "",
+      prepTime: "",
+      cookTime: "",
+      totalTime: "",
+      recipeYield: "",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: ["ingredient 1", "ingredient 2", "ingredient 3"],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "step 1" },
+        { "@type": "HowToStep", text: "step 2" },
+        { "@type": "HowToStep", text: "step 3" }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: "https://example.com",
       ingredients: ["ingredient 1", "ingredient 2", "ingredient 3"],
       instructions: ["step 1", "step 2", "step 3"],
-      image_url: "https://example.com/image.jpg",
-      source_url: "https://example.com",
-      prep_time: "",
-      cook_time: "",
-      servings: "",
-      difficulty: ""
+      image_url: "https://example.com/image.jpg"
     },
     description: "AI returns ingredients/instructions as strings that should be split into arrays"
   },

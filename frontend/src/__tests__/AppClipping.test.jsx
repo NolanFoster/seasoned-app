@@ -14,6 +14,7 @@ describe('App Component - Clipping Functionality', () => {
   beforeEach(() => {
     fetch.mockClear();
     alert.mockClear();
+    confirm.mockClear();
   });
 
   test('shows clip form when clip FAB is clicked', async () => {
@@ -92,11 +93,7 @@ describe('App Component - Clipping Functionality', () => {
       description: 'A delicious recipe',
       ingredients: ['ingredient 1', 'ingredient 2'],
       instructions: ['step 1', 'step 2'],
-      image_url: 'https://example.com/image.jpg',
-      source_url: 'https://example.com/recipe',
-      prep_time: 'PT15M',
-      cook_time: 'PT30M',
-      recipe_yield: '4 servings'
+      source_url: 'https://example.com/recipe'
     };
 
     fetch
@@ -284,13 +281,26 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for recipe to load
     await waitFor(() => {
-      fireEvent.click(screen.getByText('✏️ Edit Recipe'));
+      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
+      expect(screen.getByText('ingredient 1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('✏️ Edit Recipe'));
+
+    // Wait for edit mode
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Ingredient')).toBeInTheDocument();
     });
 
     await user.click(screen.getByText('+ Add Ingredient'));
     
-    const newIngredientInput = screen.getAllByClassName('ingredient-input').pop();
+    // Find all ingredient inputs and get the last one (newly added)
+    const ingredientInputs = screen.getAllByRole('textbox').filter(input => 
+      input.classList.contains('ingredient-input')
+    );
+    const newIngredientInput = ingredientInputs[ingredientInputs.length - 1];
     await user.type(newIngredientInput, 'new ingredient');
 
     await user.click(screen.getByText('✓ Update Preview'));
@@ -322,8 +332,17 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for the recipe to be displayed
     await waitFor(() => {
-      fireEvent.click(screen.getByText('✏️ Edit Recipe'));
+      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
+      expect(screen.getByText('ingredient 1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('✏️ Edit Recipe'));
+
+    await waitFor(() => {
+      const removeButtons = screen.getAllByTitle('Remove ingredient');
+      expect(removeButtons.length).toBe(2);
     });
 
     const removeButtons = screen.getAllByTitle('Remove ingredient');
@@ -359,8 +378,16 @@ describe('App Component - Clipping Functionality', () => {
     await user.type(screen.getByPlaceholderText('Recipe URL'), 'https://example.com/recipe');
     await user.click(screen.getByRole('button', { name: /Clip Recipe/i }));
 
+    // Wait for the recipe name to be displayed in preview
     await waitFor(() => {
-      fireEvent.click(screen.getByText('✏️ Edit Recipe'));
+      expect(screen.getByText('Original Name')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('✏️ Edit Recipe'));
+
+    await waitFor(() => {
+      const nameInput = screen.getByDisplayValue('Original Name');
+      expect(nameInput).toBeInTheDocument();
     });
 
     const nameInput = screen.getByDisplayValue('Original Name');
@@ -531,7 +558,7 @@ describe('App Component - Clipping Functionality', () => {
 
   test('try again button repopulates URL field', async () => {
     const mockClippedRecipe = {
-      name: 'Recipe',
+      name: 'Test Recipe',
       ingredients: ['ingredient 1'],
       instructions: ['step 1'],
       source_url: 'https://example.com/original-recipe'
@@ -572,8 +599,8 @@ describe('App Component - Clipping Functionality', () => {
     fetch
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'healthy' }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => mockClippedRecipe })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 1 }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => mockClippedRecipe });
+    // Removed the save response mock since we're testing the debounce
 
     const user = userEvent.setup();
     render(<App />);

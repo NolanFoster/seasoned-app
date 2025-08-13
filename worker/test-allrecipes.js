@@ -18,7 +18,7 @@ const allRecipesTestCases = [
               text: JSON.stringify({
                 name: "Chef John's Salt-Roasted Chicken",
                 description: "A simple and delicious salt-roasted chicken recipe that results in juicy, flavorful meat with crispy skin.",
-                ingredients: [
+                recipeIngredient: [
                   "1 (4 to 5 pound) whole chicken",
                   "3 cups kosher salt",
                   "1/4 cup olive oil",
@@ -29,7 +29,7 @@ const allRecipesTestCases = [
                   "4 cloves garlic, crushed",
                   "1 onion, quartered"
                 ],
-                instructions: [
+                recipeInstructions: [
                   "Preheat oven to 450 degrees F (230 degrees C).",
                   "Rinse chicken and pat dry with paper towels.",
                   "In a large bowl, mix together kosher salt, black pepper, thyme, and rosemary.",
@@ -38,10 +38,10 @@ const allRecipesTestCases = [
                   "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
                   "Let chicken rest for 10 minutes before carving and serving."
                 ],
-                image_url: config.ALLRECIPES_TEST_IMAGE,
-                prep_time: "15 minutes",
-                cook_time: "1 hour 15 minutes",
-                servings: "6",
+                image: config.ALLRECIPES_TEST_IMAGE,
+                prepTime: "15 minutes",
+                cookTime: "1 hour 15 minutes",
+                recipeYield: "6",
                 difficulty: "Easy"
               })
             }]
@@ -51,7 +51,41 @@ const allRecipesTestCases = [
     },
     expected: {
       name: "Chef John's Salt-Roasted Chicken",
+      image: config.ALLRECIPES_TEST_IMAGE,
       description: "A simple and delicious salt-roasted chicken recipe that results in juicy, flavorful meat with crispy skin.",
+      author: "",
+      datePublished: "",
+      prepTime: "15 minutes",
+      cookTime: "1 hour 15 minutes",
+      totalTime: "",
+      recipeYield: "6",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: [
+        "1 (4 to 5 pound) whole chicken",
+        "3 cups kosher salt",
+        "1/4 cup olive oil",
+        "1 tablespoon black pepper",
+        "1 tablespoon dried thyme",
+        "1 tablespoon dried rosemary",
+        "1 lemon, halved",
+        "4 cloves garlic, crushed",
+        "1 onion, quartered"
+      ],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "Preheat oven to 450 degrees F (230 degrees C)." },
+        { "@type": "HowToStep", text: "Rinse chicken and pat dry with paper towels." },
+        { "@type": "HowToStep", text: "In a large bowl, mix together kosher salt, black pepper, thyme, and rosemary." },
+        { "@type": "HowToStep", text: "Rub the chicken with olive oil, then generously coat with the salt mixture." },
+        { "@type": "HowToStep", text: "Place lemon halves, garlic, and onion inside the chicken cavity." },
+        { "@type": "HowToStep", text: "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C)." },
+        { "@type": "HowToStep", text: "Let chicken rest for 10 minutes before carving and serving." }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: config.ALLRECIPES_TEST_URL,
       ingredients: [
         "1 (4 to 5 pound) whole chicken",
         "3 cups kosher salt",
@@ -72,12 +106,7 @@ const allRecipesTestCases = [
         "Place chicken in a roasting pan and roast for 1 hour and 15 minutes, or until internal temperature reaches 165 degrees F (74 degrees C).",
         "Let chicken rest for 10 minutes before carving and serving."
       ],
-      image_url: config.ALLRECIPES_TEST_IMAGE,
-      source_url: config.ALLRECIPES_TEST_URL,
-      prep_time: "15 minutes",
-      cook_time: "1 hour 15 minutes",
-      servings: "6",
-      difficulty: "Easy"
+      image_url: config.ALLRECIPES_TEST_IMAGE
     },
     description: "Complete recipe extraction from AllRecipes with all fields populated"
   },
@@ -109,7 +138,30 @@ const allRecipesTestCases = [
     },
     expected: {
       name: "Chef John's Salt-Roasted Chicken",
+      image: config.ALLRECIPES_TEST_IMAGE,
       description: "A simple and delicious salt-roasted chicken recipe.",
+      author: "",
+      datePublished: "",
+      prepTime: "",
+      cookTime: "",
+      totalTime: "",
+      recipeYield: "",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: [
+        "1 (4 to 5 pound) whole chicken",
+        "3 cups kosher salt",
+        "1/4 cup olive oil"
+      ],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "Preheat oven to 450 degrees F (230 degrees C)." },
+        { "@type": "HowToStep", text: "Rinse chicken and pat dry with paper towels." }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: config.ALLRECIPES_TEST_URL,
       ingredients: [
         "1 (4 to 5 pound) whole chicken",
         "3 cups kosher salt",
@@ -119,12 +171,7 @@ const allRecipesTestCases = [
         "Preheat oven to 450 degrees F (230 degrees C).",
         "Rinse chicken and pat dry with paper towels."
       ],
-      image_url: config.ALLRECIPES_TEST_IMAGE,
-      source_url: config.ALLRECIPES_TEST_URL,
-      prep_time: "",
-      cook_time: "",
-      servings: "",
-      difficulty: ""
+      image_url: config.ALLRECIPES_TEST_IMAGE
     },
     description: "Recipe with alternative field names (title, ingredient_list, steps) that should be mapped correctly"
   },
@@ -138,9 +185,9 @@ const allRecipesTestCases = [
               text: JSON.stringify({
                 name: "Chef John's Salt-Roasted Chicken",
                 description: "A simple and delicious salt-roasted chicken recipe.",
-                ingredients: "1 (4 to 5 pound) whole chicken\n3 cups kosher salt\n1/4 cup olive oil",
-                instructions: "Preheat oven to 450 degrees F (230 degrees C).\nRinse chicken and pat dry with paper towels.",
-                image_url: config.ALLRECIPES_TEST_IMAGE
+                recipeIngredient: "1 (4 to 5 pound) whole chicken\n3 cups kosher salt\n1/4 cup olive oil",
+                recipeInstructions: "Preheat oven to 450 degrees F (230 degrees C).\nRinse chicken and pat dry with paper towels.",
+                image: config.ALLRECIPES_TEST_IMAGE
               })
             }]
           }
@@ -149,7 +196,30 @@ const allRecipesTestCases = [
     },
     expected: {
       name: "Chef John's Salt-Roasted Chicken",
+      image: config.ALLRECIPES_TEST_IMAGE,
       description: "A simple and delicious salt-roasted chicken recipe.",
+      author: "",
+      datePublished: "",
+      prepTime: "",
+      cookTime: "",
+      totalTime: "",
+      recipeYield: "",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: [
+        "1 (4 to 5 pound) whole chicken",
+        "3 cups kosher salt",
+        "1/4 cup olive oil"
+      ],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "Preheat oven to 450 degrees F (230 degrees C)." },
+        { "@type": "HowToStep", text: "Rinse chicken and pat dry with paper towels." }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: config.ALLRECIPES_TEST_URL,
       ingredients: [
         "1 (4 to 5 pound) whole chicken",
         "3 cups kosher salt",
@@ -159,12 +229,7 @@ const allRecipesTestCases = [
         "Preheat oven to 450 degrees F (230 degrees C).",
         "Rinse chicken and pat dry with paper towels."
       ],
-      image_url: config.ALLRECIPES_TEST_IMAGE,
-      source_url: config.ALLRECIPES_TEST_URL,
-      prep_time: "",
-      cook_time: "",
-      servings: "",
-      difficulty: ""
+      image_url: config.ALLRECIPES_TEST_IMAGE
     },
     description: "Recipe with ingredients/instructions as strings that should be split into arrays"
   },
@@ -177,8 +242,9 @@ const allRecipesTestCases = [
             content: [{
               text: JSON.stringify({
                 name: "Chef John's Salt-Roasted Chicken",
-                ingredients: ["1 (4 to 5 pound) whole chicken", "3 cups kosher salt"],
-                instructions: ["Preheat oven to 450 degrees F (230 degrees C).", "Rinse chicken and pat dry with paper towels."]
+                recipeIngredient: ["1 (4 to 5 pound) whole chicken", "3 cups kosher salt"],
+                recipeInstructions: ["Preheat oven to 450 degrees F (230 degrees C).", "Rinse chicken and pat dry with paper towels."],
+                image: config.ALLRECIPES_TEST_IMAGE
               })
             }]
           }
@@ -187,7 +253,29 @@ const allRecipesTestCases = [
     },
     expected: {
       name: "Chef John's Salt-Roasted Chicken",
+      image: config.ALLRECIPES_TEST_IMAGE,
       description: "",
+      author: "",
+      datePublished: "",
+      prepTime: "",
+      cookTime: "",
+      totalTime: "",
+      recipeYield: "",
+      recipeCategory: "",
+      recipeCuisine: "",
+      keywords: "",
+      recipeIngredient: [
+        "1 (4 to 5 pound) whole chicken",
+        "3 cups kosher salt"
+      ],
+      recipeInstructions: [
+        { "@type": "HowToStep", text: "Preheat oven to 450 degrees F (230 degrees C)." },
+        { "@type": "HowToStep", text: "Rinse chicken and pat dry with paper towels." }
+      ],
+      nutrition: null,
+      aggregateRating: null,
+      video: null,
+      source_url: config.ALLRECIPES_TEST_URL,
       ingredients: [
         "1 (4 to 5 pound) whole chicken",
         "3 cups kosher salt"
@@ -196,14 +284,9 @@ const allRecipesTestCases = [
         "Preheat oven to 450 degrees F (230 degrees C).",
         "Rinse chicken and pat dry with paper towels."
       ],
-      image_url: "",
-      source_url: config.ALLRECIPES_TEST_URL,
-      prep_time: "",
-      cook_time: "",
-      servings: "",
-      difficulty: ""
+      image_url: config.ALLRECIPES_TEST_IMAGE
     },
-    description: "Recipe with only required fields (name, ingredients, instructions) - optional fields should default to empty strings"
+    description: "Recipe with only required fields (name, ingredients, instructions, image) - optional fields should default to empty strings"
   },
   {
     name: "AllRecipes - Null Response (No Recipe Found)",

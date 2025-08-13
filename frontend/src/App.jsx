@@ -750,9 +750,11 @@ function App() {
     setEditablePreview({
       name: clippedRecipePreview.name,
       description: clippedRecipePreview.description || '',
-      ingredients: [...clippedRecipePreview.ingredients],
-      instructions: [...clippedRecipePreview.instructions],
-      image_url: clippedRecipePreview.image_url,
+      ingredients: [...(clippedRecipePreview.ingredients || clippedRecipePreview.recipeIngredient || [])],
+      instructions: [...(clippedRecipePreview.instructions || (clippedRecipePreview.recipeInstructions || []).map(inst => 
+        typeof inst === 'string' ? inst : inst.text
+      ))],
+      image_url: clippedRecipePreview.image_url || clippedRecipePreview.image,
       source_url: clippedRecipePreview.source_url
     });
     setIsEditingPreview(true);
