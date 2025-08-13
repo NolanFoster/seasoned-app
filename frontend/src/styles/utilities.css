@@ -1,0 +1,286 @@
+/* Video Popup Styles */
+.video-popup {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.video-popup:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.video-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: grab;
+}
+
+.video-popup-header:active {
+  cursor: grabbing;
+}
+
+.video-popup-title {
+  font-weight: 600;
+  color: white;
+  font-size: 14px;
+}
+
+.video-popup-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.video-popup-controls button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.video-popup-controls button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.video-popup-controls button:active {
+  transform: scale(0.95);
+}
+
+.video-popup-close:hover {
+  background: rgba(220, 53, 69, 0.3) !important;
+  color: #ff6b6b !important;
+}
+
+.video-popup-content {
+  width: 100%;
+  height: calc(100% - 44px);
+  background: #000;
+  position: relative;
+}
+
+.video-popup-content iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.video-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.video-error-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.video-error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.video-error p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.video-error-url {
+  font-family: monospace;
+  font-size: 12px;
+  color: #adb5bd;
+  word-break: break-all;
+  max-width: 280px;
+}
+
+.video-error-link {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.video-error-link:hover {
+  background: #0056b3;
+  color: white;
+  text-decoration: none;
+}
+
+.video-popup-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nw-resize;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0 0 12px 0;
+  transition: background 0.2s ease;
+}
+
+.video-popup-resize-handle:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Smooth transitions for recipe grid */
+.recipe-grid {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.recipe-grid.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Dark mode styles for video popup */
+@media (prefers-color-scheme: dark) {
+  .video-popup {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+  
+  .video-popup:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+  
+  .video-popup-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .video-popup-title {
+    color: white;
+  }
+  
+  .video-popup-controls button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+  
+  .video-popup-controls button:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  
+  .video-popup-resize-handle {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .video-popup-resize-handle:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  
+  .video-error {
+    background: rgba(0, 0, 0, 0.15);
+    color: white;
+  }
+  
+  .video-error-url {
+    color: #adb5bd;
+  }
+  
+  .video-error-link {
+    background: rgba(52, 152, 219, 0.8);
+    color: white;
+  }
+  
+  .video-error-link:hover {
+    background: rgba(52, 152, 219, 1);
+  }
+  
+  .save-progress-overlay {
+    background: rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* Mobile responsive styles for video popup */
+@media (max-width: 768px) {
+  .video-popup {
+    width: calc(100vw - 40px) !important;
+    height: calc(100vh - 200px) !important;
+    left: 20px !important;
+    top: 100px !important;
+  }
+  
+  .video-popup-header {
+    padding: 10px 12px;
+  }
+  
+  .video-popup-title {
+    font-size: 13px;
+  }
+  
+  .video-popup-controls button {
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
+  }
+}
+
+/* Recipe Timing Info */
+.recipe-timing-info {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.timing-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timing-icon {
+  font-size: 1.2em;
+}
+
+.timing-label {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.timing-value {
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
