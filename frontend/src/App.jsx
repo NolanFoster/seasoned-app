@@ -360,6 +360,16 @@ function App() {
     const handleScroll = () => {
       scrollY = window.scrollY;
       
+      // Fade title based on scroll position
+      const titleElement = document.querySelector('.title');
+      if (titleElement) {
+        if (scrollY > 50) {
+          titleElement.classList.add('fade-out');
+        } else {
+          titleElement.classList.remove('fade-out');
+        }
+      }
+      
       if (!ticking) {
         window.requestAnimationFrame(updateScrollEffects);
         ticking = true;

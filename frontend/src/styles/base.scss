@@ -106,39 +106,50 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: $spacing-md;
-  padding-top: calc(#{$spacing-md} + 120px); /* Extra space for fixed title and buttons */
+  padding-top: $spacing-lg; /* Reduced top padding since title is now in top left */
   min-height: 100vh;
   position: relative;
 }
 
 .title {
-  font-size: 2.5rem;
-  text-align: center;
+  font-size: 2rem;
   margin: 0;
-  padding: $spacing-md 0;
+  padding: $spacing-sm $spacing-md;
   font-weight: 700;
   color: white;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 15px;
+  gap: 12px;
   
-  /* Fixed positioning */
+  /* Fixed positioning at top left */
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: $spacing-md;
+  left: $spacing-md;
   z-index: calc(#{$z-overlay} - 1);
-  background: rgba(255, 255, 255, 0.1);
+  
+  /* Fade effect controlled by JS */
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  opacity: 1;
+  transform: translateY(0);
+  
+  /* Optional: add a subtle background for better readability */
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-lg;
+  padding: $spacing-sm $spacing-md;
+  
+  &.fade-out {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+  }
 }
 
 .title-icon {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
 }
 
@@ -148,7 +159,32 @@ body {
     color: #ecf0f1;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
     background: rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Responsive title adjustments */
+@media (max-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+    padding: $spacing-xs $spacing-sm;
+    top: $spacing-sm;
+    left: $spacing-sm;
+  }
+  
+  .title-icon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.25rem;
+  }
+  
+  .title-icon {
+    width: 24px;
+    height: 24px;
   }
 }
 
