@@ -1023,7 +1023,8 @@ function App() {
                           height: '100%',
                           objectFit: 'cover',
                           zIndex: 1,
-                          borderRadius: '20px 20px 0 0'
+                          borderRadius: '20px 20px 0 0',
+                          opacity: 0.85
                         }}
                         onLoad={() => console.log('Image loaded successfully:', recipe.image || recipe.image_url)}
                         onError={(e) => {
@@ -1041,7 +1042,8 @@ function App() {
                         width: '100%',
                         height: '100%',
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        zIndex: 1
+                        zIndex: 1,
+                        opacity: 0.85
                       }}></div>
                     )}
                     <div className="recipe-card-overlay">
