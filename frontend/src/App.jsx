@@ -305,6 +305,7 @@ function App() {
   const [isClipping, setIsClipping] = useState(false);
   const [clipError, setClipError] = useState('');
   const [clipperStatus, setClipperStatus] = useState('checking'); // 'checking', 'available', 'unavailable'
+  const [titleOpacity, setTitleOpacity] = useState(1); // For fading title section on scroll
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [editablePreview, setEditablePreview] = useState(null);
   const [isEditingPreview, setIsEditingPreview] = useState(false);
@@ -315,6 +316,7 @@ function App() {
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
+  const recipeFullscreenRef = useRef(null);
 
   useEffect(() => {
     fetchRecipes();
@@ -370,6 +372,50 @@ function App() {
     
     return () => window.removeEventListener('scroll', handleScroll);
   }, [recipes]);
+
+  // Scroll-based fade effect for recipe fullscreen title
+  useEffect(() => {
+    if (!selectedRecipe || !recipeFullscreenRef.current) return;
+
+    let ticking = false;
+
+    const handleRecipeScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (!recipeFullscreenRef.current) {
+            ticking = false;
+            return;
+          }
+
+          const scrollTop = recipeFullscreenRef.current.scrollTop;
+          const fadeStartOffset = 50; // Start fading after 50px of scroll
+          const fadeEndOffset = 150; // Fully fade by 150px
+
+          // Calculate opacity based on scroll position
+          let opacity = 1;
+          if (scrollTop > fadeStartOffset) {
+            opacity = Math.max(0, 1 - (scrollTop - fadeStartOffset) / (fadeEndOffset - fadeStartOffset));
+          }
+
+          setTitleOpacity(opacity);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const scrollContainer = recipeFullscreenRef.current;
+    scrollContainer.addEventListener('scroll', handleRecipeScroll, { passive: true });
+    
+    // Reset opacity when recipe changes
+    setTitleOpacity(1);
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleRecipeScroll);
+      }
+    };
+  }, [selectedRecipe]);
 
   // Dark mode detection and background initialization
   useEffect(() => {
@@ -1546,7 +1592,7 @@ function App() {
 
       {/* Full Screen Recipe View */}
       {selectedRecipe && (
-        <div className="recipe-fullscreen">
+        <div className="recipe-fullscreen" ref={recipeFullscreenRef}>
           {/* Top Header with Back Button and Action Buttons */}
           <div className="recipe-top-header">
             <button className="back-btn" onClick={() => setSelectedRecipe(null)}>
@@ -1580,7 +1626,7 @@ function App() {
           </div>
           
           {/* Title Section - moved below header */}
-          <div className="recipe-title-section">
+          <div className="recipe-title-section" style={{ opacity: titleOpacity, transition: 'opacity 0.2s ease-out' }}>
             <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
             
             {/* Recipe Timing Info - prep time, cook time, yield */}
