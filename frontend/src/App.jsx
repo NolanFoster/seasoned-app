@@ -6,7 +6,18 @@ const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-
 
 // Function to convert ISO 8601 duration to human readable format
 function formatDuration(duration) {
-  if (!duration || typeof duration !== 'string') return duration;
+  if (!duration) return '';
+  
+  // Attempt to coerce non-string durations to string safely
+  if (typeof duration !== 'string') {
+    try {
+      const coerced = duration.toString();
+      if (typeof coerced !== 'string') return '';
+      duration = coerced;
+    } catch (error) {
+      return '';
+    }
+  }
   
   // If it's already in a readable format (doesn't start with PT), return as is
   if (!duration.startsWith('PT')) return duration;
@@ -41,7 +52,7 @@ function formatDuration(duration) {
     } else if (minutes > 0) {
       result += `${minutes} m`;
     } else {
-      // If no hours or minutes found, return the original
+      // If no hours or minutes found, return empty for fallback
       return duration;
     }
     
@@ -312,7 +323,8 @@ function App() {
   // Dark mode detection and background initialization
   useEffect(() => {
     const checkDarkMode = () => {
-      const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const supportsMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+      const darkMode = supportsMatchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
       setIsDarkMode(darkMode);
       
       // Always initialize seasoning background for both light and dark modes
@@ -330,14 +342,16 @@ function App() {
     checkDarkMode();
     
     // Listen for dark mode changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    mediaQuery.addEventListener('change', checkDarkMode);
+    const supportsMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+    const mediaQuery = supportsMatchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    mediaQuery && mediaQuery.addEventListener('change', checkDarkMode);
     
     return () => {
-      mediaQuery.removeEventListener('change', checkDarkMode);
+      mediaQuery && mediaQuery.removeEventListener('change', checkDarkMode);
       // Clean up on unmount
       cleanupSeasoningBackground();
     };
+
   }, []);
 
 
@@ -1000,12 +1014,12 @@ function App() {
                       <div className="recipe-card-time">
                         <div className="time-item">
                           <span className="time-label">Prep</span>
-                          <span className="time-value">{formatDuration(recipe.prep_time) || '-'}</span>
+                          <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
                         </div>
                         <div className="time-divider"></div>
                         <div className="time-item">
                           <span className="time-label">Cook</span>
-                          <span className="time-value">{formatDuration(recipe.cook_time) || '-'}</span>
+                          <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
                         </div>
                         {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
                           <>
