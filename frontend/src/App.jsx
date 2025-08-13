@@ -1555,7 +1555,7 @@ function App() {
             )}
             
             {/* Recipe Links - under title */}
-            {(selectedRecipe.source_url || selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+            {(selectedRecipe.source_url || selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
               <div className="recipe-links">
                 {selectedRecipe.source_url && (
                   <a 
@@ -1568,13 +1568,13 @@ function App() {
                     🌐 Source Recipe
                   </a>
                 )}
-                {(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                {(selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
                   <button 
                     className="recipe-link video-link"
                     title="Watch recipe video"
                     onClick={(e) => {
                       e.stopPropagation();
-                      openVideoPopup(selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                      openVideoPopup(selectedRecipe.video_url !== undefined ? selectedRecipe.video_url : (selectedRecipe.video && selectedRecipe.video.contentUrl));
                     }}
                   >
                     🎥 Watch Video
