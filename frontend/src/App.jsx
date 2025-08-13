@@ -314,11 +314,45 @@ function App() {
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
+  const recipeGridRef = useRef(null);
 
   useEffect(() => {
     fetchRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
+
+  // Scroll-based glass reflection effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!recipeGridRef.current) return;
+      
+      const cards = recipeGridRef.current.querySelectorAll('.recipe-card');
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      
+      cards.forEach((card, index) => {
+        const rect = card.getBoundingClientRect();
+        const cardTop = rect.top + scrollY;
+        const cardCenter = cardTop + rect.height / 2;
+        const distanceFromCenter = Math.abs(scrollY + windowHeight / 2 - cardCenter);
+        const maxDistance = windowHeight;
+        const intensity = Math.max(0, 1 - distanceFromCenter / maxDistance);
+        
+        // Apply dynamic styles based on scroll position
+        card.style.setProperty('--glass-intensity', intensity);
+        card.style.setProperty('--reflection-offset', `${scrollY * 0.1}px`);
+        
+        // Add subtle rotation based on position
+        const rotation = (rect.left / window.innerWidth - 0.5) * 2;
+        card.style.setProperty('--card-rotation', `${rotation}deg`);
+      });
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial call
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [recipes]);
 
   // Dark mode detection and background initialization
   useEffect(() => {
@@ -968,7 +1002,7 @@ function App() {
       <div className="recipes-list">
         {/* Show recipe cards only when no forms are active and no recipe is selected */}
         {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
-          <div className="recipe-grid">
+          <div className="recipe-grid" ref={recipeGridRef}>
             {recipes.map((recipe) => {
               console.log('Recipe data:', recipe);
               console.log('Image URL:', recipe.image_url);
