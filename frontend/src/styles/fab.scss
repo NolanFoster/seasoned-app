@@ -9,6 +9,12 @@
   display: flex;
   gap: $spacing-md - 5px;
   z-index: $z-overlay;
+  
+  /* Ensure it stays fixed even with transforms on parent elements */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .fab {

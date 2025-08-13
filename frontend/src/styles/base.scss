@@ -2,27 +2,11 @@
 @use 'mixins' as *;
 
 /* Base styles and global resets */
-body {
-  margin: 0;
-  font-family: $font-family-base;
-  background: $gradient-light;
-  background-size: 400% 400%;
-  animation: aura-move 15s ease infinite;
-  min-height: 100vh;
-  padding: $spacing-md;
-  color: $text-color;
-  transition: background $transition-normal, color $transition-normal;
-  
+html {
   /* Prevent overscroll bounce and flickering */
   overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  -webkit-overflow-scrolling: touch;
-  
-  /* Ensure smooth scrolling without flicker */
   scroll-behavior: smooth;
-  
-  /* Prevent horizontal scroll */
-  overflow-x: hidden;
+  height: 100%;
   
   /* Force GPU acceleration for smoother rendering */
   transform: translateZ(0);
@@ -31,10 +15,26 @@ body {
   -webkit-backface-visibility: hidden;
 }
 
-html {
-  /* Also apply to html for better coverage */
+body {
+  margin: 0;
+  font-family: $font-family-base;
+  background: $gradient-light;
+  background-size: 400% 400%;
+  animation: aura-move 15s ease infinite;
+  min-height: 100vh;
+  height: 100%;
+  padding: 0;
+  color: $text-color;
+  transition: background $transition-normal, color $transition-normal;
+  
+  /* Prevent overscroll bounce and flickering */
   overscroll-behavior: none;
-  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 @keyframes aura-move {
@@ -105,12 +105,17 @@ html {
 .container {
   max-width: 1200px;
   margin: 0 auto;
+  padding: $spacing-md;
+  padding-top: calc(#{$spacing-md} + 120px); /* Extra space for fixed title and buttons */
+  min-height: 100vh;
+  position: relative;
 }
 
 .title {
   font-size: 2.5rem;
   text-align: center;
-  margin-bottom: 30px;
+  margin: 0;
+  padding: $spacing-md 0;
   font-weight: 700;
   color: white;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
@@ -118,6 +123,17 @@ html {
   align-items: center;
   justify-content: center;
   gap: 15px;
+  
+  /* Fixed positioning */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: calc(#{$z-overlay} - 1);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .title-icon {
@@ -131,6 +147,8 @@ html {
   .title {
     color: #ecf0f1;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 }
 
