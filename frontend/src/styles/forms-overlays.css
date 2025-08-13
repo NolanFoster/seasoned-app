@@ -624,6 +624,52 @@ button:disabled:hover {
   background: inherit;
 }
 
+.clipper-form .form-actions .add-btn,
+.clipper-form .form-actions .update-btn,
+.clipper-form .form-actions .cancel-btn,
+.clipper-form .form-actions .try-again-btn,
+.clipper-form .retry-btn,
+.clipper-form .close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+/* Normalize sizing for primary action */
+.clipper-form .form-actions .add-btn,
+.clipper-form .form-actions .update-btn,
+.clipper-form .form-actions .try-again-btn,
+.clipper-form .form-actions .cancel-btn {
+  padding: 10px 18px;
+}
+
+/* Hover effects */
+.clipper-form .form-actions .add-btn:hover,
+.clipper-form .form-actions .update-btn:hover,
+.clipper-form .form-actions .try-again-btn:hover,
+.clipper-form .form-actions .cancel-btn:hover,
+.clipper-form .retry-btn:hover,
+.clipper-form .close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Danger/Warning subtle tints remain but with glass base */
+.clipper-form .retry-btn {
+  color: white;
+}
+
+/* Disabled state inherits global button:disabled but ensure no hover transform */
+.clipper-form button:disabled:hover {
+  transform: none;
+}
+
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .form-panel {
@@ -741,6 +787,27 @@ button:disabled:hover {
     background: rgba(220, 53, 69, 0.2);
     border: 1px solid rgba(220, 53, 69, 0.4);
     color: #ff6b6b;
+  }
+  .clipper-form .form-actions .add-btn,
+  .clipper-form .form-actions .update-btn,
+  .clipper-form .form-actions .cancel-btn,
+  .clipper-form .form-actions .try-again-btn,
+  .clipper-form .retry-btn,
+  .clipper-form .close-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .clipper-form .form-actions .add-btn:hover,
+  .clipper-form .form-actions .update-btn:hover,
+  .clipper-form .form-actions .try-again-btn:hover,
+  .clipper-form .form-actions .cancel-btn:hover,
+  .clipper-form .retry-btn:hover,
+  .clipper-form .close-btn:hover {
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
   }
 }
 

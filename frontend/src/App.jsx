@@ -1102,8 +1102,8 @@ function App() {
         )}
 
         {/* Show Clip Recipe Form when active */}
-        {showClipForm && (
-          <div className="form-panel glass">
+                  {showClipForm && (
+            <div className="form-panel glass clipper-form">
             <div className="form-panel-header">
               <h2>Clip Recipe from Website</h2>
               <button className="close-btn" onClick={() => {
