@@ -1,3 +1,6 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
 /* Full Screen Recipe View */
 .recipe-fullscreen {
   position: fixed;
