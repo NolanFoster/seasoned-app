@@ -244,6 +244,17 @@
   }
 }
 
+/* Compact FAB used adjacent to the search bar in the title */
+.title .fab {
+  width: 48px;
+  height: 40px;
+  border-radius: 20px;
+}
+
+.title .fab-icon {
+  font-size: 1.6em;
+}
+
 /* Mobile responsiveness for FAB */
 @media (max-width: 640px) {
   .fab-container {
