@@ -263,11 +263,13 @@
   height: 40px;
   border-radius: 20px;
   flex-shrink: 0; // Prevent shrinking in flex container
+  margin-left: $spacing-xs; // Add small extra margin for safety
   
   /* Mobile responsiveness handled by parent container */
   @media (max-width: 640px) {
     // Hide on mobile to avoid crowding
     display: none;
+    margin-left: 0; // Reset margin on mobile
   }
 }
 

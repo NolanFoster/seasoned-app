@@ -114,7 +114,7 @@ body {
   z-index: $z-overlay;
   display: flex;
   align-items: center;
-  gap: $spacing-md;
+  gap: $spacing-lg + $spacing-sm; // Increased gap: 30px + 10px = 40px
   max-width: calc(100% - #{$spacing-md * 2});
   
   /* Fade effect controlled by JS */
@@ -131,12 +131,13 @@ body {
   /* Responsive adjustments */
   @media (max-width: 900px) {
     max-width: calc(100% - #{$spacing-sm * 2});
-    gap: $spacing-sm;
+    gap: $spacing-md; // Keep reasonable gap on smaller screens
   }
   
   @media (max-width: 640px) {
     width: calc(100% - #{$spacing-sm * 2});
     max-width: none;
+    gap: $spacing-sm; // Smaller gap on mobile
   }
 }
 
