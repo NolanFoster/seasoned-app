@@ -1141,14 +1141,11 @@ function App() {
             )}
           </button>
         </div>
-      </h1>
-      
-      {/* Floating Action Button - centered next to search panel */}
-      <div className="fab-container centered">
+        {/* Add button placed just to the right of the search panel */}
         <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
         </button>
-      </div>
+      </h1>
       
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
