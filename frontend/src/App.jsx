@@ -1145,6 +1145,17 @@ function App() {
         <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
         </button>
+        {/* Clip button to open clip form */}
+        <button
+          className="fab fab-clip"
+          title="Clip recipe from website"
+          onClick={() => setIsClipping(true)}
+          style={{ marginLeft: '8px' }}
+        >
+          <span className="fab-icon">
+            <img src="/scissor.svg" alt="Clip recipe from website" />
+          </span>
+        </button>
       </h1>
       
       {/* Main container - scrollable content */}
@@ -1153,7 +1164,7 @@ function App() {
         {/* Show recipe cards only when no forms are active and no recipe is selected */}
         {!showAddForm && !clippedRecipePreview && !selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
-            {recipes.map((recipe) => {
+            {(Array.isArray(recipes) ? recipes : []).map((recipe) => {
               console.log('Recipe data:', recipe);
               console.log('Image URL:', recipe.image_url);
               return (
@@ -1871,6 +1882,68 @@ function App() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Show Clip Recipe Form when active */}
+        {isClipping && !clippedRecipePreview && (
+          <div className="form-panel glass">
+            <div className="form-panel-header">
+              <h2>Clip Recipe from Website</h2>
+              <button 
+                className="close-btn" 
+                onClick={() => {
+                  setIsClipping(false);
+                  setClipError('');
+                }}
+                title="Close"
+              >×</button>
+            </div>
+            <div className="form-panel-content">
+              <div className="recipe-preview-section">
+                <h4>Recipe URL</h4>
+                <input
+                  type="text"
+                  placeholder="Recipe URL"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  className="preview-edit-input"
+                />
+              </div>
+              {clipError && (
+                <p className="error-message">{clipError}</p>
+              )}
+              <div className="form-actions">
+                <button 
+                  onClick={async () => {
+                    if (!isValidUrl(searchInput)) return;
+                    try {
+                      setIsClipping(true);
+                      const res = await fetch(`${CLIPPER_API_URL}/clip`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: searchInput })
+                      });
+                      if (!res.ok) {
+                        const msg = await res.text();
+                        setClipError(msg || 'Failed to clip recipe');
+                        return;
+                      }
+                      const result = await res.json();
+                      setClippedRecipePreview(result);
+                      setClipError('');
+                    } catch (e) {
+                      setClipError('Failed to clip recipe. Please try again.');
+                    } finally {
+                      // Keep panel open until preview shows
+                    }
+                  }}
+                  className="add-btn"
+                >
+                  Clip Recipe
+                </button>
+              </div>
             </div>
           </div>
         )}
