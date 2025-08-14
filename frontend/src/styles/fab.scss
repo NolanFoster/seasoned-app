@@ -259,7 +259,7 @@
 .fab-standalone {
   // Remove fixed positioning since parent handles layout
   position: relative;
-  width: 48px;
+  width: 56px;  // Increased from 48px for better proportions
   height: 40px;
   border-radius: 20px;
   flex-shrink: 0; // Prevent shrinking in flex container
@@ -274,7 +274,7 @@
 }
 
 .fab-standalone .fab-icon {
-  font-size: 1.6em;
+  font-size: 1.8em;  // Increased from 1.6em for larger button
 }
 
 /* Mobile FAB positioning - show as fixed element on mobile */
@@ -296,8 +296,10 @@
     position: fixed;
     top: 70px;
     left: 50%;
-    transform: translateX(-24px);
+    transform: translateX(-28px);  // Updated from -24px to center the wider button
     z-index: 1100;
+    width: 56px;  // Match desktop width
+    height: 40px;  // Keep consistent height
   }
 }
 

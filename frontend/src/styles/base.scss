@@ -114,7 +114,7 @@ body {
   z-index: $z-overlay;
   display: flex;
   align-items: center;
-  gap: $spacing-lg + $spacing-sm; // Increased gap: 30px + 10px = 40px
+  gap: $spacing-md; // Reduced from $spacing-lg + $spacing-sm (40px) to match search panel
   max-width: calc(100% - #{$spacing-md * 2});
   
   /* Fade effect controlled by JS */
