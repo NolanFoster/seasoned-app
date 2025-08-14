@@ -63,6 +63,25 @@ function formatDuration(duration) {
   }
 }
 
+// Function to check if a string is a valid URL
+function isValidUrl(string) {
+  try {
+    // Check if it starts with http://, https://, or www.
+    if (string.match(/^(https?:\/\/)|(www\.)/i)) {
+      return true;
+    }
+    // Check if it looks like a domain (contains dot and has valid TLD-like ending)
+    if (string.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}.*$/)) {
+      return true;
+    }
+    // Try to construct a URL to validate
+    new URL(string.startsWith('http') ? string : `https://${string}`);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Video Popup Component
 function VideoPopup({ videoUrl, onClose }) {
   const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 280 });
@@ -315,6 +334,7 @@ function App() {
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const [editableRecipe, setEditableRecipe] = useState(null);
   const [isEditingRecipe, setIsEditingRecipe] = useState(false);
+  const [searchInput, setSearchInput] = useState(''); // New state for search input
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -1084,12 +1104,18 @@ function App() {
             className="title-search-input" 
             placeholder="Search recipes or paste a URL to clip..."
             aria-label="Search recipes"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
-          <button className="title-search-button" aria-label="Search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
+          <button className="title-search-button" aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}>
+            {isValidUrl(searchInput) ? (
+              <img src="/scissor.svg" alt="Clip" style={{ width: '18px', height: '18px' }} />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            )}
           </button>
         </div>
       </h1>

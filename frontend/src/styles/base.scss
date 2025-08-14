@@ -218,6 +218,24 @@ body {
   &:active {
     background: rgba(255, 255, 255, 0.2);
   }
+  
+  // Style for both SVG and IMG icons
+  svg, img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    transition: transform $transition-fast;
+  }
+  
+  img {
+    filter: brightness(0) invert(1); // Make scissor icon white
+  }
+  
+  &:hover {
+    svg, img {
+      transform: scale(1.1);
+    }
+  }
 }
 
 /* Dark mode title */
@@ -289,7 +307,7 @@ body {
   .title-search-button {
     padding: 4px 8px;
     
-    svg {
+    svg, img {
       width: 16px;
       height: 16px;
     }
@@ -337,7 +355,7 @@ body {
   .title-search-button {
     padding: 4px 6px;
     
-    svg {
+    svg, img {
       width: 14px;
       height: 14px;
     }
