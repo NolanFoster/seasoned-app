@@ -8,13 +8,39 @@
   right: $spacing-lg;
   display: flex;
   gap: $spacing-md - 5px;
-  z-index: $z-overlay;
+  z-index: $z-fab;
   
   /* Ensure it stays fixed even with transforms on parent elements */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  
+  /* Centered variant - positions FAB next to centered search bar */
+  &.centered {
+    top: $spacing-md;
+    left: 50%;
+    right: auto;
+    transform: translateX(180px); // Half of search panel width (320px/2) + gap (20px)
+    
+    @media (max-width: 768px) {
+      transform: translateX(170px); // Slightly closer on tablets
+    }
+    
+    @media (max-width: 640px) {
+      top: $spacing-md + 50px; // Move below search bar on mobile
+      transform: translateX(-28px); // Center the FAB below search (56px/2)
+    }
+    
+    @media (max-width: 480px) {
+      top: $spacing-md + 45px;
+      transform: translateX(-24px); // Center the smaller FAB (48px/2)
+    }
+    
+    @media (max-width: 360px) {
+      transform: translateX(-22px); // Center the smallest FAB (44px/2)
+    }
+  }
 }
 
 .fab {
@@ -215,6 +241,65 @@
     background: rgba(220, 53, 69, 0.4) !important;
     border-color: rgba(220, 53, 69, 0.8) !important;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 30px rgba(220, 53, 69, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Compact FAB used adjacent to the search bar in the title */
+.title .fab {
+  width: 48px;
+  height: 40px;
+  border-radius: 20px;
+}
+
+.title .fab-icon {
+  font-size: 1.6em;
+}
+
+/* Standalone FAB positioned next to the title panel */
+.fab-standalone {
+  // Remove fixed positioning since parent handles layout
+  position: relative;
+  width: 56px;  // Increased from 48px for better proportions
+  height: 40px;
+  border-radius: 20px;
+  flex-shrink: 0; // Prevent shrinking in flex container
+  margin-left: $spacing-xs; // Add small extra margin for safety
+  
+  /* Mobile responsiveness handled by parent container */
+  @media (max-width: 640px) {
+    // Hide on mobile to avoid crowding
+    display: none;
+    margin-left: 0; // Reset margin on mobile
+  }
+}
+
+.fab-standalone .fab-icon {
+  font-size: 1.8em;  // Increased from 1.6em for larger button
+}
+
+/* Mobile FAB positioning - show as fixed element on mobile */
+@media (max-width: 640px) {
+  .header-container::after {
+    content: '';
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-24px);
+    width: 48px;
+    height: 40px;
+    pointer-events: none; // Placeholder only
+  }
+  
+  // Create a mobile version of the FAB
+  .fab-standalone {
+    display: block;
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-28px);  // Updated from -24px to center the wider button
+    z-index: 1100;
+    width: 56px;  // Match desktop width
+    height: 40px;  // Keep consistent height
   }
 }
 

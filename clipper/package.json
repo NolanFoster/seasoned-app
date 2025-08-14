@@ -1,0 +1,27 @@
+{
+  "name": "recipe-clipper-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for extracting recipes from URLs using GPT-OSS-20B",
+  "main": "src/recipe-clipper.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node tests/run-tests.js"
+  },
+  "keywords": [
+    "cloudflare",
+    "worker",
+    "recipe",
+    "gpt",
+    "ai",
+    "extraction"
+  ],
+  "author": "Recipe App Team",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

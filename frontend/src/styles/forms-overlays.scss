@@ -8,18 +8,18 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 5000; /* Increased from 4000 to ensure it's above recipe fullscreen (3000) */
   padding: 20px;
 }
 
 .overlay-content {
-  max-width: 500px;
+  max-width: 800px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -118,13 +118,23 @@
   margin: 0 auto;
   padding: 2rem;
   border-radius: 16px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  /* Enhanced glass effect with blur */
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: slideInUp 0.3s ease-out;
   position: relative;
-  overflow: hidden;
+  z-index: 5001; /* Increased from 4001 to match new overlay z-index */
+}
+
+/* Form panel inside overlay should have full width */
+.overlay .form-panel {
+  max-width: 100%;
+  margin: 0;
 }
 
 .form-panel::before {
@@ -382,8 +392,8 @@
 .preview-edit-input,
 .preview-edit-textarea {
   background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   padding: 10px 12px;
@@ -486,7 +496,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: 5010; /* Increased from 4010 to match new z-index hierarchy */
   border-radius: 12px;
 }
 
@@ -634,8 +644,7 @@ button:disabled:hover {
 .clipper-form .retry-btn,
 .clipper-form .close-btn {
   background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Removed backdrop-filter blur */
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   border-radius: 20px;
@@ -676,9 +685,13 @@ button:disabled:hover {
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .form-panel {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   }
   
   .form-panel::before {

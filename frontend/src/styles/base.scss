@@ -7,12 +7,6 @@ html {
   overscroll-behavior: none;
   scroll-behavior: smooth;
   height: 100%;
-  
-  /* Force GPU acceleration for smoother rendering */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 body {
@@ -106,40 +100,259 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: $spacing-md;
-  padding-top: calc(#{$spacing-md} + 120px); /* Extra space for fixed title and buttons */
+  padding-top: $spacing-xl + $spacing-lg; /* Increased top padding to provide space for title and FABs */
   min-height: 100vh;
   position: relative;
 }
 
+/* Header container for title and FAB */
+.header-container {
+  position: fixed;
+  top: $spacing-md;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: $z-overlay;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md; // Reduced from $spacing-lg + $spacing-sm (40px) to match search panel
+  max-width: calc(100% - #{$spacing-md * 2});
+  
+  /* Fade effect controlled by JS */
+  &.fade-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+    pointer-events: none;
+    
+    .title-search {
+      opacity: 0;
+    }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 900px) {
+    max-width: calc(100% - #{$spacing-sm * 2});
+    gap: $spacing-md; // Keep reasonable gap on smaller screens
+  }
+  
+  @media (max-width: 640px) {
+    width: calc(100% - #{$spacing-sm * 2});
+    max-width: none;
+    gap: $spacing-sm; // Smaller gap on mobile
+  }
+}
+
 .title {
-  font-size: 2.5rem;
-  text-align: center;
+  font-size: 2rem;
   margin: 0;
-  padding: $spacing-md 0;
   font-weight: 700;
   color: white;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 15px;
+  gap: 12px;
   
-  /* Fixed positioning */
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: calc(#{$z-overlay} - 1);
-  background: rgba(255, 255, 255, 0.1);
+  /* Remove fixed positioning since parent handles it now */
+  position: relative;
+  
+  /* Add width to ensure search bar has space */
+  width: auto;
+  
+  /* Fade effect controlled by parent now */
+  transition: opacity 0.3s ease-in-out;
+  opacity: 1;
+  
+  /* Optional: add a subtle background for better readability */
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-lg;
+  padding: $spacing-sm; // Even padding on all sides
 }
 
 .title-icon {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+  margin-right: 4px; // Add small margin for better spacing
+}
+
+/* Title search bar styles */
+.title-search {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: calc(#{$border-radius-lg} - 5px); // 20px to complement the 25px panel
+  padding: 4px;
+  transition: background $transition-normal, border $transition-normal;
+  min-width: 320px;
+  height: 40px; // Set consistent height
+  gap: 4px; // Add gap between buttons
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  &:focus-within {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  }
+  
+  // Loading state with pulsating glow
+  &.clipping {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+    border-color: rgba(76, 175, 80, 0.8);
+    
+    .title-search-input {
+      &:disabled {
+        opacity: 0.8;
+        cursor: wait;
+      }
+    }
+  }
+  
+  // Error state with red glow
+  &.clip-error {
+    animation: error-pulse 0.5s ease-in-out;
+    border-color: rgba(244, 67, 54, 0.8);
+    background: rgba(244, 67, 54, 0.2);
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+    
+    &:hover {
+      background: rgba(244, 67, 54, 0.25);
+      border-color: rgba(244, 67, 54, 0.9);
+    }
+  }
+}
+
+// Pulsating glow animation
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.8), 0 0 30px rgba(76, 175, 80, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+  }
+}
+
+// Error pulse animation
+@keyframes error-pulse {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-5px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.title-search-input {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  outline: none;
+  width: 280px;
+  transition: width $transition-normal;
+  border-radius: calc(#{$border-radius-lg} - 9px); // Match inner curve
+  height: 100%; // Fill parent height
+  flex: 1; // Take remaining space
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  &:focus {
+    width: 350px;
+  }
+}
+
+.title-search-button {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(#{$border-radius-lg} - 9px); // 16px for inner element
+  transition: background $transition-normal;
+  height: 100%; // Fill parent height
+  aspect-ratio: 1; // Make button square
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  &:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  // Style for both SVG and IMG icons
+  svg, img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    transition: transform $transition-fast, filter $transition-normal;
+  }
+  
+  img.clip-icon {
+    filter: brightness(0) invert(1); // White by default
+  }
+  
+  img.clip-icon-available {
+    // Green color filter
+    filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 3px rgba(76, 175, 80, 0.6));
+    transition: filter $transition-normal;
+  }
+  
+  &:hover {
+    svg, img {
+      transform: scale(1.1);
+    }
+  }
+  
+  // Loading spinner
+  .loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    svg {
+      animation: spin 1s linear infinite;
+    }
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+// Spin animation for loading
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Dark mode title */
@@ -148,15 +361,164 @@ body {
     color: #ecf0f1;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
     background: rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .title-search {
+    background: rgba(255, 255, 255, 0.1);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+    }
+  }
+  
+  .title-search-input {
+    color: #ecf0f1;
+    
+    &::placeholder {
+      color: rgba(236, 240, 241, 0.6);
+    }
+  }
+  
+  .title-search-button {
+    color: #ecf0f1;
+    
+    img.clip-icon-available {
+      // Same green color in dark mode
+      filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 4px rgba(76, 175, 80, 0.8));
+    }
+  }
+  
+  // Enhanced glow effects in dark mode
+  .title-search {
+    &.clipping {
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+    }
+    
+    &.clip-error {
+      background: rgba(244, 67, 54, 0.3);
+      box-shadow: 0 0 15px rgba(244, 67, 54, 0.7);
+    }
+  }
+}
+
+/* Responsive title adjustments */
+@media (max-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+    padding: $spacing-xs $spacing-sm;
+    top: $spacing-sm;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    &.fade-out {
+      transform: translateX(-50%) translateY(-20px);
+    }
+  }
+  
+  .title-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .title-search {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 4px;
+    min-width: unset;
+  }
+  
+  .title-search-input {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    
+    &:focus {
+      width: 100%;
+    }
+  }
+  
+  .title-search-button {
+    padding: 4px 8px;
+    
+    svg, img {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  .container {
+    padding-top: $spacing-lg + $spacing-md; /* Reduced padding for mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.25rem;
+    padding: $spacing-xs;
+    flex-wrap: wrap;
+    width: calc(100% - #{$spacing-sm * 2});
+    gap: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    
+    &.fade-out {
+      transform: translateX(-50%) translateY(-20px);
+    }
+    
+    /* Keep the text "Seasoned" as a flex item */
+    > img, 
+    > .title-search {
+      flex-shrink: 0;
+    }
+  }
+  
+  .title-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .title-search {
+    display: flex; /* Show search bar on mobile */
+    width: 100%;
+    margin-top: 4px;
+    margin-left: 0;
+    min-width: unset;
+    flex-basis: 100%; /* Force search bar to new line */
+    height: 36px; /* Slightly smaller height on mobile */
+  }
+  
+  .title-search-input {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+  
+  .title-search-button {
+    padding: 4px 6px;
+    
+    svg, img {
+      width: 14px;
+      height: 14px;
+    }
+  }
+  
+  .container {
+    padding-top: $spacing-xl + $spacing-xl; /* Increased padding to account for stacked layout */
   }
 }
 
 /* Glass morphism effect */
 .glass {
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* Glass effect without blur - keeping saturation for color enhancement */
+  backdrop-filter: saturate(180%);
+  -webkit-backdrop-filter: saturate(180%);
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 
@@ -217,10 +579,6 @@ body {
     transform: scale(1.1);
     opacity: 0.8;
   }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 @keyframes slideInUp {

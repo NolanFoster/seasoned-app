@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-worker.nolanfoster.workers.dev'; // Main recipe worker
@@ -60,6 +59,25 @@ function formatDuration(duration) {
   } catch (error) {
     console.error('Error parsing duration:', error);
     return duration;
+  }
+}
+
+// Function to check if a string is a valid URL
+function isValidUrl(string) {
+  try {
+    // Check if it starts with http://, https://, or www.
+    if (string.match(/^(https?:\/\/)|(www\.)/i)) {
+      return true;
+    }
+    // Check if it looks like a domain (contains dot and has valid TLD-like ending)
+    if (string.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}.*$/)) {
+      return true;
+    }
+    // Try to construct a URL to validate
+    new URL(string.startsWith('http') ? string : `https://${string}`);
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -294,11 +312,9 @@ function App() {
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [clipUrl, setClipUrl] = useState('');
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showClipForm, setShowClipForm] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [clippedRecipePreview, setClippedRecipePreview] = useState(null);
@@ -313,6 +329,12 @@ function App() {
   const [lastSaveTime, setLastSaveTime] = useState(0);
   const [showVideoPopup, setShowVideoPopup] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
+  const [editableRecipe, setEditableRecipe] = useState(null);
+  const [isEditingRecipe, setIsEditingRecipe] = useState(false);
+  const [searchInput, setSearchInput] = useState(''); // New state for search input
+  const [isSearchBarClipping, setIsSearchBarClipping] = useState(false); // Loading state for search bar
+  const [searchBarClipError, setSearchBarClipError] = useState(false); // Error state for search bar
+  const [clipUrl, setClipUrl] = useState('');
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -359,6 +381,16 @@ function App() {
     
     const handleScroll = () => {
       scrollY = window.scrollY;
+      
+      // Fade title based on scroll position
+      const headerElement = document.querySelector('.header-container');
+      if (headerElement) {
+        if (scrollY > 50) {
+          headerElement.classList.add('fade-out');
+        } else {
+          headerElement.classList.remove('fade-out');
+        }
+      }
       
       if (!ticking) {
         window.requestAnimationFrame(updateScrollEffects);
@@ -713,16 +745,20 @@ function App() {
   }
 
   async function updateRecipe() {
-    if (!editingRecipe || !name) return;
+    if (!editingRecipe || !editableRecipe || !editableRecipe.name.trim()) return;
     const recipe = {
-      name,
-      description,
+      name: editableRecipe.name,
+      description: editableRecipe.description,
       image: editingRecipe.image || editingRecipe.image_url || '',
-      recipeIngredient: ingredients.split('\n').filter(i => i.trim()),
-      recipeInstructions: instructions.split('\n').filter(i => i.trim()),
+      recipeIngredient: editableRecipe.ingredients.filter(i => i.trim()),
+      recipeInstructions: editableRecipe.instructions.filter(i => i.trim()),
       // Backward compatibility
-      ingredients: ingredients.split('\n').filter(i => i.trim()),
-      instructions: instructions.split('\n').filter(i => i.trim()),
+      ingredients: editableRecipe.ingredients.filter(i => i.trim()),
+      instructions: editableRecipe.instructions.filter(i => i.trim()),
+      // Use edited timing and yield values
+      prep_time: editableRecipe.prep_time,
+      cook_time: editableRecipe.cook_time,
+      recipe_yield: editableRecipe.recipe_yield
     };
     try {
       const res = await fetch(`${API_URL}/recipe/${editingRecipe.id}`, {
@@ -739,6 +775,8 @@ function App() {
         fetchRecipes();
         resetForm();
         setEditingRecipe(null);
+        setEditableRecipe(null);
+        setIsEditingRecipe(false);
       }
     } catch (e) {
       console.error('Error updating recipe:', e);
@@ -778,63 +816,72 @@ function App() {
     }
   }
 
-  async function clipRecipe() {
-    if (!clipUrl) return;
-    setIsClipping(true);
-    setClipError(''); // Clear any previous errors
+
+
+  async function handleSearchBarClip() {
+    if (!isValidUrl(searchInput) || clipperStatus !== 'available') return;
+    
+    setIsSearchBarClipping(true);
+    setSearchBarClipError(false);
     
     try {
       const res = await fetch(`${CLIPPER_API_URL}/clip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: clipUrl }),
+        body: JSON.stringify({ url: searchInput }),
       });
       
       if (res.ok) {
         const result = await res.json();
-        console.log('Recipe clipped successfully:', result);
-        setClippedRecipePreview(result); // Store preview instead of saving immediately
-        setShowClipForm(false);
+        console.log('Recipe clipped successfully from search bar:', result);
+        setClippedRecipePreview(result);
+        setSearchInput(''); // Clear search input on success
+        setIsSearchBarClipping(false);
+        setSearchBarClipError(false);
       } else {
-        const errorText = await res.text();
-        console.error('Clip failed:', res.status, errorText);
+        console.error('Search bar clip failed:', res.status);
+        setSearchBarClipError(true);
         
-        // Provide more specific error messages
-        if (res.status === 404) {
-          setClipError('No recipe found on this page. Please check if the URL contains a recipe.');
-        } else if (res.status === 500) {
-          setClipError('Recipe extraction failed. The page might be too complex or the recipe format is not supported.');
-        } else if (res.status === 0 || res.status === 503) {
-          setClipError('Clipper service is temporarily unavailable. Please try again later.');
-        } else {
-          setClipError(`Failed to clip recipe: ${errorText}`);
-        }
+        // Keep error state for 3 seconds then reset
+        setTimeout(() => {
+          setSearchBarClipError(false);
+          setIsSearchBarClipping(false);
+        }, 3000);
       }
     } catch (e) {
-      console.error('Error clipping recipe:', e);
+      console.error('Error clipping from search bar:', e);
+      setSearchBarClipError(true);
       
-      // Provide user-friendly error messages for network issues
-      if (e.name === 'TypeError' && e.message.includes('fetch')) {
-        setClipError('Unable to connect to the clipper service. Please check your internet connection and try again.');
-      } else if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
-        setClipError('Clipper service is currently unavailable. Please try again later.');
-      } else {
-        setClipError(`Error clipping recipe: ${e.message}`);
-      }
-    } finally {
-      setIsClipping(false);
+      // Keep error state for 3 seconds then reset
+      setTimeout(() => {
+        setSearchBarClipError(false);
+        setIsSearchBarClipping(false);
+      }, 3000);
     }
   }
 
   function editRecipe(recipe) {
     setEditingRecipe(recipe);
-    setName(recipe.name);
-    setDescription(recipe.description || '');
     // Handle both old and new schema field names
     const recipeIngredients = recipe.recipeIngredient || recipe.ingredients || [];
     const recipeInstructions = recipe.recipeInstructions || recipe.instructions || [];
-    setIngredients(Array.isArray(recipeIngredients) ? recipeIngredients.join('\n') : '');
-    setInstructions(Array.isArray(recipeInstructions) ? recipeInstructions.join('\n') : '');
+    
+    // Handle instructions that might be objects with text property
+    const processedInstructions = Array.isArray(recipeInstructions) 
+      ? recipeInstructions.map(inst => typeof inst === 'string' ? inst : inst.text || '')
+      : [];
+    
+    setEditableRecipe({
+      name: recipe.name,
+      description: recipe.description || '',
+      ingredients: Array.isArray(recipeIngredients) ? [...recipeIngredients] : [],
+      instructions: processedInstructions,
+      image: recipe.image || recipe.image_url || '',
+      prep_time: recipe.prep_time || recipe.prepTime,
+      cook_time: recipe.cook_time || recipe.cookTime,
+      recipe_yield: recipe.recipe_yield || recipe.recipeYield || recipe.yield
+    });
+    setIsEditingRecipe(true);
     setSelectedImage(null);
   }
 
@@ -845,6 +892,8 @@ function App() {
     setInstructions('');
     setSelectedImage(null);
     setEditingRecipe(null);
+    setEditableRecipe(null);
+    setIsEditingRecipe(false);
     setShowAddForm(false);
   }
 
@@ -931,7 +980,6 @@ function App() {
         console.log('Recipe saved successfully:', id);
         fetchRecipes(); // Refresh the recipe list
         setClippedRecipePreview(null);
-        setClipUrl('');
         setClipError('');
         setIsEditingPreview(false);
         setEditablePreview(null);
@@ -1023,7 +1071,7 @@ function App() {
   }
 
   return (
-    <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
+    <>
       {/* Seasoning background canvas for both light and dark modes */}
       <canvas 
         ref={seasoningCanvasRef} 
@@ -1040,33 +1088,79 @@ function App() {
         }}
       />
       
-      <h1 className="title">
-        <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
-        Seasoned
-      </h1>
-      
-      {/* Floating Action Buttons */}
-      <div className="fab-container">
-        <button 
-          className={`fab fab-clip ${clipperStatus === 'unavailable' ? 'fab-unavailable' : clipperStatus === 'available' ? 'fab-available' : 'fab-checking'}`} 
-          onClick={() => setShowClipForm(true)}
-          disabled={clipperStatus === 'unavailable'}
-          title={clipperStatus === 'unavailable' ? 'Clipper service unavailable' : 'Clip recipe from website'}
-        >
-          <span className="fab-icon">
-            <img src="/scissor.svg" alt="Clip" style={{ width: '24px', height: '24px' }} />
-          </span>
-        </button>
-        <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
+      {/* Fixed header container */}
+      <div className="header-container">
+        <h1 className="title">
+          <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
+          Seasoned
+          {/* Search bar in the same panel */}
+          <div className={`title-search ${isSearchBarClipping ? 'clipping' : ''} ${searchBarClipError ? 'clip-error' : ''}`}>
+            <input 
+              type="text" 
+              className="title-search-input" 
+              placeholder="Search recipes or paste a URL to clip..."
+              aria-label="Search recipes"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && isValidUrl(searchInput) && clipperStatus === 'available') {
+                  handleSearchBarClip();
+                }
+              }}
+              disabled={isSearchBarClipping}
+            />
+            <button 
+              className="title-search-button" 
+              aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
+              title="Clip recipe from website"
+              onClick={() => {
+                if (isValidUrl(searchInput) && clipperStatus === 'available') {
+                  handleSearchBarClip();
+                } else {
+                  setIsClipping(true);
+                }
+              }}
+              disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
+            >
+              {isSearchBarClipping ? (
+                <div className="loading-spinner">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56" />
+                  </svg>
+                </div>
+              ) : isValidUrl(searchInput) ? (
+                <img 
+                  src="/scissor.svg" 
+                  alt="Clip" 
+                  style={{ 
+                    width: '18px', 
+                    height: '18px'
+                  }} 
+                  className={clipperStatus === 'available' ? 'clip-icon-available' : 'clip-icon'}
+                />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+              )}
+            </button>
+          </div>
+        </h1>
+        
+        {/* Add button placed just to the right of the search panel */}
+        <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
         </button>
       </div>
       
-      <div className="recipes-list">
-        {/* Show recipe cards only when no forms are active and no recipe is selected */}
-        {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
+      {/* Main container - scrollable content */}
+      <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
+        <div className="recipes-list">
+        {/* Show recipe cards unless recipe is selected */}
+        {!selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
-            {recipes.map((recipe) => {
+            {(Array.isArray(recipes) ? recipes : []).map((recipe) => {
               console.log('Recipe data:', recipe);
               console.log('Image URL:', recipe.image_url);
               return (
@@ -1152,134 +1246,339 @@ function App() {
 
         {/* Show Add Recipe Form when active */}
         {showAddForm && (
-          <div className="form-panel glass">
-            <div className="form-panel-header">
-              <h2>{editingRecipe ? 'Edit Recipe' : 'Add New Recipe'}</h2>
-              <button className="close-btn" onClick={() => setShowAddForm(false)}>×</button>
-            </div>
-            <div className="form-panel-content">
-              <input 
-                type="text" 
-                placeholder="Name" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
-              />
-              <textarea 
-                placeholder="Description" 
-                value={description} 
-                onChange={e => setDescription(e.target.value)} 
-              />
-              <textarea 
-                placeholder="Ingredients (one per line)" 
-                value={ingredients} 
-                onChange={e => setIngredients(e.target.value)} 
-              />
-              <textarea 
-                placeholder="Instructions (one per line)" 
-                value={instructions} 
-                onChange={e => setInstructions(e.target.value)} 
-              />
-              
-              <div className="image-upload">
-                <label htmlFor="image-input" className="image-upload-label">
-                  {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
-                </label>
-                <input
-                  id="image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  style={{ display: 'none' }}
-                />
-              </div>
-              
-              <div className="form-actions">
-                {editingRecipe ? (
-                  <>
-                    <button onClick={updateRecipe} className="update-btn">Update Recipe</button>
-                    <button onClick={resetForm} className="cancel-btn">Cancel</button>
-                  </>
-                ) : (
-                  <button onClick={addRecipe} className="add-btn">Add Recipe</button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Show Clip Recipe Form when active */}
-                  {showClipForm && (
-            <div className="form-panel glass clipper-form">
-            <div className="form-panel-header">
-              <h2>Clip Recipe from Website</h2>
-              <button className="close-btn" onClick={() => {
-                setShowClipForm(false);
-                setClipUrl('');
-                setClipError('');
-              }}>×</button>
-            </div>
-            <div className="form-panel-content">
-              {/* Clipper Status Indicator */}
-              <div className="clipper-status">
-                {clipperStatus === 'checking' && (
-                  <div className="status-message checking">
-                    <span className="status-icon">⏳</span>
-                    Checking clipper service...
-                  </div>
-                )}
-                {clipperStatus === 'available' && (
-                  <div className="status-message available">
-                    <span className="status-icon">✓</span>
-                    Clipper service is available
-                  </div>
-                )}
-                {clipperStatus === 'unavailable' && (
-                  <div className="status-message unavailable">
-                    <span className="status-icon">⚠️</span>
-                    Clipper service is currently unavailable
-                    <button 
-                      onClick={checkClipperHealth} 
-                      className="retry-btn"
-                      title="Retry connection"
-                    >
-                      🔄 Retry
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              <input 
-                type="text" 
-                placeholder="Recipe URL" 
-                value={clipUrl} 
-                onChange={e => setClipUrl(e.target.value)} 
-              />
-              
-              {/* Help Text */}
-              <div className="clip-help-text">
-                <p>💡 <strong>How it works:</strong> Paste a URL from any recipe website and our AI will automatically extract the recipe details including ingredients, instructions, and cooking times.</p>
-                <p>✨ <strong>Supported sites:</strong> AllRecipes, Food Network, Epicurious, and most recipe blogs</p>
-              </div>
-              
-              {clipError && (
-                <div className="error-message">
-                  <span className="error-icon">⚠️</span>
-                  {clipError}
+          <div className="overlay">
+            <div className="overlay-content">
+              <div className="form-panel glass">
+                <div className="form-panel-header">
+                  <h2>{editingRecipe ? 'Edit Recipe' : 'Add New Recipe'}</h2>
+                  <button className="close-btn" onClick={() => {
+                    setShowAddForm(false);
+                    resetForm();
+                  }}>×</button>
                 </div>
-              )}
-              <div className="form-actions">
-                <button 
-                  onClick={clipRecipe} 
-                  className="add-btn" 
-                  disabled={isClipping || clipperStatus === 'unavailable'}
-                >
-                  {isClipping ? '🔄 Clipping...' : (
+                <div className="form-panel-content">
+                  {editingRecipe && isEditingRecipe && editableRecipe ? (
+                    // Edit Mode - matching clip edit format
                     <>
-                      <img src="/scissor.svg" alt="Clip" style={{ width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle' }} />
-                      Clip Recipe
+                      <div className="recipe-preview-content">
+                        <div className="recipe-preview-section">
+                          <h4>Recipe Name</h4>
+                          <input 
+                            type="text" 
+                            value={editableRecipe.name} 
+                            onChange={e => setEditableRecipe({...editableRecipe, name: e.target.value})}
+                            className="preview-edit-input"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Description</h4>
+                          <textarea 
+                            value={editableRecipe.description} 
+                            onChange={e => setEditableRecipe({...editableRecipe, description: e.target.value})}
+                            className="preview-edit-textarea"
+                            placeholder="Recipe description..."
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Ingredients</h4>
+                          <div className="ingredients-edit-container">
+                            {editableRecipe.ingredients.map((ingredient, index) => (
+                              <div key={index} className="ingredient-edit-row">
+                                <input 
+                                  type="text" 
+                                  value={ingredient} 
+                                  onChange={e => {
+                                    const newIngredients = [...editableRecipe.ingredients];
+                                    newIngredients[index] = e.target.value;
+                                    setEditableRecipe({...editableRecipe, ingredients: newIngredients});
+                                  }}
+                                  className="preview-edit-input ingredient-input"
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const newIngredients = editableRecipe.ingredients.filter((_, i) => i !== index);
+                                    setEditableRecipe({...editableRecipe, ingredients: newIngredients});
+                                  }}
+                                  className="remove-ingredient-btn"
+                                  title="Remove ingredient"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => {
+                                setEditableRecipe({
+                                  ...editableRecipe, 
+                                  ingredients: [...editableRecipe.ingredients, '']
+                                });
+                              }}
+                              className="add-ingredient-btn"
+                            >
+                              + Add Ingredient
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Instructions</h4>
+                          <div className="instructions-edit-container">
+                            {editableRecipe.instructions.map((instruction, index) => (
+                              <div key={index} className="instruction-edit-row">
+                                <textarea 
+                                  value={instruction} 
+                                  onChange={e => {
+                                    const newInstructions = [...editableRecipe.instructions];
+                                    newInstructions[index] = e.target.value;
+                                    setEditableRecipe({...editableRecipe, instructions: newInstructions});
+                                  }}
+                                  className="preview-edit-textarea instruction-textarea"
+                                  placeholder={`Step ${index + 1}`}
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const newInstructions = editableRecipe.instructions.filter((_, i) => i !== index);
+                                    setEditableRecipe({...editableRecipe, instructions: newInstructions});
+                                  }}
+                                  className="remove-instruction-btn"
+                                  title="Remove instruction"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => {
+                                setEditableRecipe({
+                                  ...editableRecipe, 
+                                  instructions: [...editableRecipe.instructions, '']
+                                });
+                              }}
+                              className="add-instruction-btn"
+                            >
+                              + Add Instruction
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Prep Time (minutes)</h4>
+                          <input 
+                            type="number" 
+                            value={editableRecipe.prep_time || ''} 
+                            onChange={e => setEditableRecipe({...editableRecipe, prep_time: e.target.value ? parseInt(e.target.value) : null})}
+                            className="preview-edit-input"
+                            placeholder="Prep time in minutes"
+                            min="0"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Cook Time (minutes)</h4>
+                          <input 
+                            type="number" 
+                            value={editableRecipe.cook_time || ''} 
+                            onChange={e => setEditableRecipe({...editableRecipe, cook_time: e.target.value ? parseInt(e.target.value) : null})}
+                            className="preview-edit-input"
+                            placeholder="Cook time in minutes"
+                            min="0"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Yield</h4>
+                          <input 
+                            type="text" 
+                            value={editableRecipe.recipe_yield || ''} 
+                            onChange={e => setEditableRecipe({...editableRecipe, recipe_yield: e.target.value})}
+                            className="preview-edit-input"
+                            placeholder="e.g., 4 servings, 1 loaf"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Recipe Image</h4>
+                          <div className="image-upload">
+                            <label htmlFor="image-input" className="image-upload-label">
+                              {selectedImage ? selectedImage.name : 'Choose New Image (Optional)'}
+                            </label>
+                            <input
+                              id="image-input"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              style={{ display: 'none' }}
+                            />
+                          </div>
+                          {editableRecipe.image && (
+                            <img 
+                              src={editableRecipe.image} 
+                              alt={editableRecipe.name}
+                              className="preview-image"
+                              style={{ marginTop: '10px', maxWidth: '200px' }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="form-actions">
+                        <button onClick={updateRecipe} className="update-btn">
+                          ✓ Update Recipe
+                        </button>
+                        <button onClick={resetForm} className="cancel-btn">
+                          Cancel Edit
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    // Add Mode - updated to match edit panel format
+                    <>
+                      <div className="recipe-preview-content">
+                        <div className="recipe-preview-section">
+                          <h4>Recipe Name</h4>
+                          <input 
+                            type="text" 
+                            value={name} 
+                            onChange={e => setName(e.target.value)}
+                            className="preview-edit-input"
+                            placeholder="Enter recipe name"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Description</h4>
+                          <textarea 
+                            value={description} 
+                            onChange={e => setDescription(e.target.value)}
+                            className="preview-edit-textarea"
+                            placeholder="Recipe description..."
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Ingredients</h4>
+                          <div className="ingredients-edit-container">
+                            {ingredients.split('\n').filter(i => i.trim()).map((ingredient, index) => (
+                              <div key={index} className="ingredient-edit-row">
+                                <input 
+                                  type="text" 
+                                  value={ingredient} 
+                                  onChange={e => {
+                                    const lines = ingredients.split('\n');
+                                    lines[index] = e.target.value;
+                                    setIngredients(lines.join('\n'));
+                                  }}
+                                  className="preview-edit-input ingredient-input"
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const lines = ingredients.split('\n').filter((_, i) => i !== index);
+                                    setIngredients(lines.join('\n'));
+                                  }}
+                                  className="remove-ingredient-btn"
+                                  title="Remove ingredient"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            {ingredients.split('\n').filter(i => i.trim()).length === 0 && (
+                              <div className="ingredient-edit-row">
+                                <input 
+                                  type="text" 
+                                  value="" 
+                                  onChange={e => setIngredients(e.target.value)}
+                                  className="preview-edit-input ingredient-input"
+                                  placeholder="Add first ingredient"
+                                />
+                              </div>
+                            )}
+                            <button 
+                              onClick={() => {
+                                setIngredients(ingredients + (ingredients ? '\n' : ''));
+                              }}
+                              className="add-ingredient-btn"
+                            >
+                              + Add Ingredient
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Instructions</h4>
+                          <div className="instructions-edit-container">
+                            {instructions.split('\n').filter(i => i.trim()).map((instruction, index) => (
+                              <div key={index} className="instruction-edit-row">
+                                <textarea 
+                                  value={instruction} 
+                                  onChange={e => {
+                                    const lines = instructions.split('\n');
+                                    lines[index] = e.target.value;
+                                    setInstructions(lines.join('\n'));
+                                  }}
+                                  className="preview-edit-textarea instruction-textarea"
+                                  placeholder={`Step ${index + 1}`}
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const lines = instructions.split('\n').filter((_, i) => i !== index);
+                                    setInstructions(lines.join('\n'));
+                                  }}
+                                  className="remove-instruction-btn"
+                                  title="Remove instruction"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            {instructions.split('\n').filter(i => i.trim()).length === 0 && (
+                              <div className="instruction-edit-row">
+                                <textarea 
+                                  value="" 
+                                  onChange={e => setInstructions(e.target.value)}
+                                  className="preview-edit-textarea instruction-textarea"
+                                  placeholder="Step 1"
+                                />
+                              </div>
+                            )}
+                            <button 
+                              onClick={() => {
+                                setInstructions(instructions + (instructions ? '\n' : ''));
+                              }}
+                              className="add-instruction-btn"
+                            >
+                              + Add Instruction
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Recipe Image</h4>
+                          <div className="image-upload">
+                            <label htmlFor="image-input-add" className="image-upload-label">
+                              {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
+                            </label>
+                            <input
+                              id="image-input-add"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              style={{ display: 'none' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="form-actions">
+                        <button onClick={addRecipe} className="add-btn">
+                          + Add Recipe
+                        </button>
+                      </div>
                     </>
                   )}
-                </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1287,304 +1586,377 @@ function App() {
 
         {/* Show Clipped Recipe Preview when active */}
         {clippedRecipePreview && (
-          <div className="form-panel glass recipe-preview-panel">
-            {/* Save Progress Overlay */}
-            {isSavingRecipe && (
-              <div className="save-progress-overlay">
-                <div className="save-progress-content">
-                  <div className="save-spinner">🔄</div>
-                  <p>Saving recipe...</p>
-                  <p className="save-note">Please don't close this window</p>
-                </div>
-              </div>
-            )}
-            
-            <div className="form-panel-header">
-              <h2>Clipped Recipe Preview</h2>
-              <button 
-                className="close-btn" 
-                onClick={() => {
-                  if (!isSavingRecipe) {
-                    setClippedRecipePreview(null);
-                    setClipUrl('');
-                    setClipError('');
-                    setIsEditingPreview(false);
-                    setEditablePreview(null);
-                  }
-                }}
-                disabled={isSavingRecipe}
-              >×</button>
-            </div>
-            
-            <div className="form-panel-content">
-              {!isEditingPreview ? (
-                // Preview Mode
-                <>
-                  <div className="recipe-preview-content">
-                    <div className="recipe-preview-header">
-                      <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
-                      {clippedRecipePreview.description && (
-                        <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
-                      )}
+          <div className="overlay">
+            <div className="overlay-content recipe-preview-overlay">
+              <div className="form-panel glass recipe-preview-panel">
+                {/* Save Progress Overlay */}
+                {isSavingRecipe && (
+                  <div className="save-progress-overlay">
+                    <div className="save-progress-content">
+                      <div className="save-spinner">🔄</div>
+                      <p>Saving recipe...</p>
+                      <p className="save-note">Please don't close this window</p>
                     </div>
-                    
-                    <div className="recipe-preview-sections">
-                      <div className="recipe-preview-section">
-                        <h4>Ingredients ({(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).length})</h4>
-                        <ul className="recipe-preview-ingredients">
-                          {(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).map((ingredient, index) => (
-                            <li key={index}>{ingredient}</li>
-                          ))}
-                        </ul>
+                  </div>
+                )}
+                
+                <div className="form-panel-header">
+                  <h2>Clipped Recipe Preview</h2>
+                  <button 
+                    className="close-btn" 
+                    onClick={() => {
+                      if (!isSavingRecipe) {
+                        setClippedRecipePreview(null);
+                        setClipUrl('');
+                        setClipError('');
+                        setIsEditingPreview(false);
+                        setEditablePreview(null);
+                      }
+                    }}
+                    disabled={isSavingRecipe}
+                  >×</button>
+                </div>
+                
+                <div className="form-panel-content">
+                  {!isEditingPreview ? (
+                    // Preview Mode
+                    <>
+                      <div className="recipe-preview-content">
+                        <div className="recipe-preview-header">
+                          <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
+                          {clippedRecipePreview.description && (
+                            <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
+                          )}
+                        </div>
+                        
+                        <div className="recipe-preview-sections">
+                          <div className="recipe-preview-section">
+                            <h4>Ingredients ({(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).length})</h4>
+                            <ul className="recipe-preview-ingredients">
+                              {(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).map((ingredient, index) => (
+                                <li key={index}>{ingredient}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          
+                          <div className="recipe-preview-section">
+                            <h4>Instructions ({(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).length})</h4>
+                            <ol className="recipe-preview-instructions">
+                              {(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).map((instruction, index) => (
+                                <li key={index}>
+                                  {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        </div>
+                        
+                        {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
+                          <div className="recipe-preview-image">
+                            <h4>Recipe Image</h4>
+                            <img 
+                              src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
+                              alt={clippedRecipePreview.name}
+                              className="preview-image"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="recipe-preview-source">
+                          <h4>Source</h4>
+                          <p><a href={clippedRecipePreview.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{clippedRecipePreview.source_url}</a></p>
+                        </div>
                       </div>
                       
-                      <div className="recipe-preview-section">
-                        <h4>Instructions ({(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).length})</h4>
-                        <ol className="recipe-preview-instructions">
-                          {(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).map((instruction, index) => (
-                            <li key={index}>
-                              {typeof instruction === 'string' ? instruction : instruction.text || ''}
-                            </li>
-                          ))}
-                        </ol>
+                      <div className="form-actions">
+                        <button onClick={editPreview} className="edit-btn" disabled={isSavingRecipe}>
+                          ✏️ Edit Recipe
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            // Prevent rapid successive saves (debounce)
+                            const now = Date.now();
+                            if (now - lastSaveTime < 2000) { // 2 second debounce
+                              alert('Please wait a moment before trying to save again.');
+                              return;
+                            }
+                            
+                            if (isSavingRecipe) return; // Prevent double saves
+                            setIsSavingRecipe(true);
+                            setLastSaveTime(now);
+                            
+                            try {
+                              // Check if recipe with same name and source already exists
+                              const duplicates = checkForDuplicates(clippedRecipePreview);
+                              
+                              if (duplicates.length > 0) {
+                                const duplicateNames = duplicates.map(d => d.name).join(', ');
+                                if (confirm(`Potential duplicate detected:\n\n${duplicateNames}\n\nDo you want to save this recipe anyway?`)) {
+                                  await saveRecipeToDatabase();
+                                }
+                              } else {
+                                await saveRecipeToDatabase();
+                              }
+                            } catch (error) {
+                              console.error('Error saving recipe:', error);
+                              alert('Failed to save recipe. Please try again.');
+                            } finally {
+                              setIsSavingRecipe(false);
+                            }
+                          }} 
+                          className="add-btn"
+                          disabled={isSavingRecipe}
+                        >
+                          {isSavingRecipe ? '🔄 Saving...' : 'Save Recipe'}
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (!isSavingRecipe) {
+                              // Store the current URL to retry with
+                              const currentUrl = clippedRecipePreview.source_url;
+                              setClippedRecipePreview(null);
+                              setSearchInput(currentUrl);
+                              setClipError('');
+                              setIsEditingPreview(false);
+                              setEditablePreview(null);
+                                                          // Focus on search bar for retry
+                                setTimeout(() => {
+                                  const searchInput = document.querySelector('.title-search-input');
+                                  if (searchInput) {
+                                    searchInput.focus();
+                                    searchInput.select();
+                                  }
+                                }, 100);
+                            }
+                          }} 
+                          className="try-again-btn"
+                          disabled={isSavingRecipe}
+                          title="Try clipping this recipe again"
+                        >
+                          🔄 Try Again
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (!isSavingRecipe) {
+                              setClippedRecipePreview(null);
+                              setClipError('');
+                              setIsEditingPreview(false);
+                              setEditablePreview(null);
+                            }
+                          }} 
+                          className="cancel-btn"
+                          disabled={isSavingRecipe}
+                        >
+                          Cancel
+                        </button>
                       </div>
-                    </div>
-                    
-                    {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                      <div className="recipe-preview-image">
-                        <h4>Recipe Image</h4>
-                        <img 
-                          src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
-                          alt={clippedRecipePreview.name}
-                          className="preview-image"
-                        />
+                    </>
+                  ) : (
+                    // Edit Mode
+                    <>
+                      <div className="recipe-preview-content">
+                        <div className="recipe-preview-section">
+                          <h4>Recipe Name</h4>
+                          <input 
+                            type="text" 
+                            value={editablePreview.name} 
+                            onChange={e => setEditablePreview({...editablePreview, name: e.target.value})}
+                            className="preview-edit-input"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Description</h4>
+                          <textarea 
+                            value={editablePreview.description} 
+                            onChange={e => setEditablePreview({...editablePreview, description: e.target.value})}
+                            className="preview-edit-textarea"
+                            placeholder="Recipe description..."
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Ingredients</h4>
+                          <div className="ingredients-edit-container">
+                            {editablePreview.ingredients.map((ingredient, index) => (
+                              <div key={index} className="ingredient-edit-row">
+                                <input 
+                                  type="text" 
+                                  value={ingredient} 
+                                  onChange={e => {
+                                    const newIngredients = [...editablePreview.ingredients];
+                                    newIngredients[index] = e.target.value;
+                                    setEditablePreview({...editablePreview, ingredients: newIngredients});
+                                  }}
+                                  className="preview-edit-input ingredient-input"
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const newIngredients = editablePreview.ingredients.filter((_, i) => i !== index);
+                                    setEditablePreview({...editablePreview, ingredients: newIngredients});
+                                  }}
+                                  className="remove-ingredient-btn"
+                                  title="Remove ingredient"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => {
+                                setEditablePreview({
+                                  ...editablePreview, 
+                                  ingredients: [...editablePreview.ingredients, '']
+                                });
+                              }}
+                              className="add-ingredient-btn"
+                            >
+                              + Add Ingredient
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Instructions</h4>
+                          <div className="instructions-edit-container">
+                            {editablePreview.instructions.map((instruction, index) => (
+                              <div key={index} className="instruction-edit-row">
+                                <textarea 
+                                  value={instruction} 
+                                  onChange={e => {
+                                    const newInstructions = [...editablePreview.instructions];
+                                    newInstructions[index] = e.target.value;
+                                    setEditablePreview({...editablePreview, instructions: newInstructions});
+                                  }}
+                                  className="preview-edit-textarea instruction-textarea"
+                                  placeholder={`Step ${index + 1}`}
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const newInstructions = editablePreview.instructions.filter((_, i) => i !== index);
+                                    setEditablePreview({...editablePreview, instructions: newInstructions});
+                                  }}
+                                  className="remove-instruction-btn"
+                                  title="Remove instruction"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => {
+                                setEditablePreview({
+                                  ...editablePreview, 
+                                  instructions: [...editablePreview.instructions, '']
+                                });
+                              }}
+                              className="add-instruction-btn"
+                            >
+                              + Add Instruction
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {clippedRecipePreview.image_url && (
+                          <div className="recipe-preview-image">
+                            <h4>Recipe Image</h4>
+                            <img 
+                              src={clippedRecipePreview.image_url} 
+                              alt={clippedRecipePreview.name}
+                              className="preview-image"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="recipe-preview-source">
+                          <h4>Source</h4>
+                          <p><a href={clippedRecipePreview.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{clippedRecipePreview.source_url}</a></p>
+                        </div>
                       </div>
-                    )}
-                    
-                    <div className="recipe-preview-source">
-                      <h4>Source</h4>
-                      <p><a href={clippedRecipePreview.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{clippedRecipePreview.source_url}</a></p>
-                    </div>
+                      
+                      <div className="form-actions">
+                        <button onClick={updatePreview} className="update-btn" disabled={isSavingRecipe}>
+                          ✓ Update Preview
+                        </button>
+                        <button onClick={cancelEditPreview} className="cancel-btn" disabled={isSavingRecipe}>
+                          Cancel Edit
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show Clip Recipe Form when active */}
+        {isClipping && !clippedRecipePreview && (
+          <div className="overlay">
+            <div className="overlay-content">
+              <div className="form-panel glass">
+                <div className="form-panel-header">
+                  <h2>Clip Recipe from Website</h2>
+                  <button 
+                    className="close-btn" 
+                    onClick={() => {
+                      setIsClipping(false);
+                      setClipError('');
+                    }}
+                    title="Close"
+                  >×</button>
+                </div>
+                <div className="form-panel-content">
+                  <div className="recipe-preview-section">
+                    <h4>Recipe URL</h4>
+                    <input
+                      type="text"
+                      placeholder="Recipe URL"
+                      value={clipUrl}
+                      onChange={e => setClipUrl(e.target.value)}
+                      className="preview-edit-input"
+                    />
                   </div>
-                  
+                  {clipError && (
+                    <p className="error-message">{clipError}</p>
+                  )}
                   <div className="form-actions">
-                    <button onClick={editPreview} className="edit-btn" disabled={isSavingRecipe}>
-                      ✏️ Edit Recipe
-                    </button>
                     <button 
                       onClick={async () => {
-                        // Prevent rapid successive saves (debounce)
-                        const now = Date.now();
-                        if (now - lastSaveTime < 2000) { // 2 second debounce
-                          alert('Please wait a moment before trying to save again.');
-                          return;
-                        }
-                        
-                        if (isSavingRecipe) return; // Prevent double saves
-                        setIsSavingRecipe(true);
-                        setLastSaveTime(now);
-                        
+                        if (!isValidUrl(clipUrl)) return;
                         try {
-                          // Check if recipe with same name and source already exists
-                          const duplicates = checkForDuplicates(clippedRecipePreview);
-                          
-                          if (duplicates.length > 0) {
-                            const duplicateNames = duplicates.map(d => d.name).join(', ');
-                            if (confirm(`Potential duplicate detected:\n\n${duplicateNames}\n\nDo you want to save this recipe anyway?`)) {
-                              await saveRecipeToDatabase();
+                          setIsClipping(true);
+                          const res = await fetch(`${CLIPPER_API_URL}/clip`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: clipUrl })
+                          });
+                          if (!res.ok) {
+                            if (res.status === 404) {
+                              setClipError('No recipe found on this page');
+                            } else {
+                              const msg = await res.text();
+                              setClipError(msg || 'Failed to clip recipe');
                             }
-                          } else {
-                            await saveRecipeToDatabase();
+                            return;
                           }
-                        } catch (error) {
-                          console.error('Error saving recipe:', error);
-                          alert('Failed to save recipe. Please try again.');
+                          const result = await res.json();
+                          setClippedRecipePreview(result);
+                          setClipError('');
+                        } catch (e) {
+                          setClipError('Failed to clip recipe. Please try again.');
                         } finally {
-                          setIsSavingRecipe(false);
+                          // Keep panel open until preview shows
                         }
-                      }} 
+                      }}
                       className="add-btn"
-                      disabled={isSavingRecipe}
+                      aria-label="Submit Clip Recipe"
                     >
-                      {isSavingRecipe ? '🔄 Saving...' : 'Save Recipe'}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!isSavingRecipe) {
-                          // Store the current URL to retry with
-                          const currentUrl = clippedRecipePreview.source_url;
-                          setClippedRecipePreview(null);
-                          setClipUrl(currentUrl);
-                          setClipError('');
-                          setIsEditingPreview(false);
-                          setEditablePreview(null);
-                          setShowClipForm(true);
-                          // Show a brief message that this is a retry
-                          setTimeout(() => {
-                            const urlInput = document.querySelector('input[placeholder="Recipe URL"]');
-                            if (urlInput) {
-                              urlInput.focus();
-                              urlInput.select();
-                            }
-                          }, 100);
-                        }
-                      }} 
-                      className="try-again-btn"
-                      disabled={isSavingRecipe}
-                      title="Try clipping this recipe again"
-                    >
-                      🔄 Try Again
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!isSavingRecipe) {
-                          setClippedRecipePreview(null);
-                          setClipUrl('');
-                          setClipError('');
-                          setIsEditingPreview(false);
-                          setEditablePreview(null);
-                        }
-                      }} 
-                      className="cancel-btn"
-                      disabled={isSavingRecipe}
-                    >
-                      Cancel
+                      Clip Recipe
                     </button>
                   </div>
-                </>
-              ) : (
-                // Edit Mode
-                <>
-                  <div className="recipe-preview-content">
-                    <div className="recipe-preview-section">
-                      <h4>Recipe Name</h4>
-                      <input 
-                        type="text" 
-                        value={editablePreview.name} 
-                        onChange={e => setEditablePreview({...editablePreview, name: e.target.value})}
-                        className="preview-edit-input"
-                      />
-                    </div>
-                    
-                    <div className="recipe-preview-section">
-                      <h4>Description</h4>
-                      <textarea 
-                        value={editablePreview.description} 
-                        onChange={e => setEditablePreview({...editablePreview, description: e.target.value})}
-                        className="preview-edit-textarea"
-                        placeholder="Recipe description..."
-                      />
-                    </div>
-                    
-                    <div className="recipe-preview-section">
-                      <h4>Ingredients</h4>
-                      <div className="ingredients-edit-container">
-                        {editablePreview.ingredients.map((ingredient, index) => (
-                          <div key={index} className="ingredient-edit-row">
-                            <input 
-                              type="text" 
-                              value={ingredient} 
-                              onChange={e => {
-                                const newIngredients = [...editablePreview.ingredients];
-                                newIngredients[index] = e.target.value;
-                                setEditablePreview({...editablePreview, ingredients: newIngredients});
-                              }}
-                              className="preview-edit-input ingredient-input"
-                            />
-                            <button 
-                              onClick={() => {
-                                const newIngredients = editablePreview.ingredients.filter((_, i) => i !== index);
-                                setEditablePreview({...editablePreview, ingredients: newIngredients});
-                              }}
-                              className="remove-ingredient-btn"
-                              title="Remove ingredient"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <button 
-                          onClick={() => {
-                            setEditablePreview({
-                              ...editablePreview, 
-                              ingredients: [...editablePreview.ingredients, '']
-                            });
-                          }}
-                          className="add-ingredient-btn"
-                        >
-                          + Add Ingredient
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="recipe-preview-section">
-                      <h4>Instructions</h4>
-                      <div className="instructions-edit-container">
-                        {editablePreview.instructions.map((instruction, index) => (
-                          <div key={index} className="instruction-edit-row">
-                            <textarea 
-                              value={instruction} 
-                              onChange={e => {
-                                const newInstructions = [...editablePreview.instructions];
-                                newInstructions[index] = e.target.value;
-                                setEditablePreview({...editablePreview, instructions: newInstructions});
-                              }}
-                              className="preview-edit-textarea instruction-textarea"
-                              placeholder={`Step ${index + 1}`}
-                            />
-                            <button 
-                              onClick={() => {
-                                const newInstructions = editablePreview.instructions.filter((_, i) => i !== index);
-                                setEditablePreview({...editablePreview, instructions: newInstructions});
-                              }}
-                              className="remove-instruction-btn"
-                              title="Remove instruction"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <button 
-                          onClick={() => {
-                            setEditablePreview({
-                              ...editablePreview, 
-                              instructions: [...editablePreview.instructions, '']
-                            });
-                          }}
-                          className="add-instruction-btn"
-                        >
-                          + Add Instruction
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {clippedRecipePreview.image_url && (
-                      <div className="recipe-preview-image">
-                        <h4>Recipe Image</h4>
-                        <img 
-                          src={clippedRecipePreview.image_url} 
-                          alt={clippedRecipePreview.name}
-                          className="preview-image"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="recipe-preview-source">
-                      <h4>Source</h4>
-                      <p><a href={clippedRecipePreview.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{clippedRecipePreview.source_url}</a></p>
-                    </div>
-                  </div>
-                  
-                  <div className="form-actions">
-                    <button onClick={updatePreview} className="update-btn" disabled={isSavingRecipe}>
-                      ✓ Update Preview
-                    </button>
-                    <button onClick={cancelEditPreview} className="cancel-btn" disabled={isSavingRecipe}>
-                      Cancel Edit
-                    </button>
-                  </div>
-                </>
-              )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1603,7 +1975,7 @@ function App() {
                 className="edit-btn fullscreen-edit-btn" 
                 onClick={() => {
                   editRecipe(selectedRecipe);
-                  setSelectedRecipe(null);
+                  // Don't close the recipe view when editing
                   setShowAddForm(true);
                 }}
                 title="Edit Recipe"
@@ -1739,7 +2111,8 @@ function App() {
           onClose={() => setShowVideoPopup(false)} 
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
