@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-worker.nolanfoster.workers.dev'; // Main recipe worker
@@ -313,11 +312,9 @@ function App() {
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [clipUrl, setClipUrl] = useState('');
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showClipForm, setShowClipForm] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [clippedRecipePreview, setClippedRecipePreview] = useState(null);
@@ -818,53 +815,7 @@ function App() {
     }
   }
 
-  async function clipRecipe() {
-    if (!clipUrl) return;
-    setIsClipping(true);
-    setClipError(''); // Clear any previous errors
-    
-    try {
-      const res = await fetch(`${CLIPPER_API_URL}/clip`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: clipUrl }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        console.log('Recipe clipped successfully:', result);
-        setClippedRecipePreview(result); // Store preview instead of saving immediately
-        setShowClipForm(false);
-      } else {
-        const errorText = await res.text();
-        console.error('Clip failed:', res.status, errorText);
-        
-        // Provide more specific error messages
-        if (res.status === 404) {
-          setClipError('No recipe found on this page. Please check if the URL contains a recipe.');
-        } else if (res.status === 500) {
-          setClipError('Recipe extraction failed. The page might be too complex or the recipe format is not supported.');
-        } else if (res.status === 0 || res.status === 503) {
-          setClipError('Clipper service is temporarily unavailable. Please try again later.');
-        } else {
-          setClipError(`Failed to clip recipe: ${errorText}`);
-        }
-      }
-    } catch (e) {
-      console.error('Error clipping recipe:', e);
-      
-      // Provide user-friendly error messages for network issues
-      if (e.name === 'TypeError' && e.message.includes('fetch')) {
-        setClipError('Unable to connect to the clipper service. Please check your internet connection and try again.');
-      } else if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
-        setClipError('Clipper service is currently unavailable. Please try again later.');
-      } else {
-        setClipError(`Error clipping recipe: ${e.message}`);
-      }
-    } finally {
-      setIsClipping(false);
-    }
-  }
+
 
   async function handleSearchBarClip() {
     if (!isValidUrl(searchInput) || clipperStatus !== 'available') return;
@@ -1028,7 +979,6 @@ function App() {
         console.log('Recipe saved successfully:', id);
         fetchRecipes(); // Refresh the recipe list
         setClippedRecipePreview(null);
-        setClipUrl('');
         setClipError('');
         setIsEditingPreview(false);
         setEditablePreview(null);
@@ -1195,16 +1145,6 @@ function App() {
       
       {/* Floating Action Buttons - outside container to ensure proper fixed positioning */}
       <div className="fab-container">
-        <button 
-          className={`fab fab-clip ${clipperStatus === 'unavailable' ? 'fab-unavailable' : clipperStatus === 'available' ? 'fab-available' : 'fab-checking'}`} 
-          onClick={() => setShowClipForm(true)}
-          disabled={clipperStatus === 'unavailable'}
-          title={clipperStatus === 'unavailable' ? 'Clipper service unavailable' : 'Clip recipe from website'}
-        >
-          <span className="fab-icon">
-            <img src="/scissor.svg" alt="Clip" style={{ width: '24px', height: '24px' }} />
-          </span>
-        </button>
         <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
         </button>
@@ -1214,7 +1154,7 @@ function App() {
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
         <div className="recipes-list">
         {/* Show recipe cards only when no forms are active and no recipe is selected */}
-        {!showAddForm && !showClipForm && !clippedRecipePreview && !selectedRecipe && (
+        {!showAddForm && !clippedRecipePreview && !selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
             {recipes.map((recipe) => {
               console.log('Recipe data:', recipe);
@@ -1636,84 +1576,6 @@ function App() {
           </div>
         )}
 
-        {/* Show Clip Recipe Form when active */}
-                  {showClipForm && (
-            <div className="form-panel glass clipper-form">
-            <div className="form-panel-header">
-              <h2>Clip Recipe from Website</h2>
-              <button className="close-btn" onClick={() => {
-                setShowClipForm(false);
-                setClipUrl('');
-                setClipError('');
-              }}>×</button>
-            </div>
-            <div className="form-panel-content">
-              {/* Clipper Status Indicator */}
-              <div className="clipper-status">
-                {clipperStatus === 'checking' && (
-                  <div className="status-message checking">
-                    <span className="status-icon">⏳</span>
-                    Checking clipper service...
-                  </div>
-                )}
-                {clipperStatus === 'available' && (
-                  <div className="status-message available">
-                    <span className="status-icon">✓</span>
-                    Clipper service is available
-                  </div>
-                )}
-                {clipperStatus === 'unavailable' && (
-                  <div className="status-message unavailable">
-                    <span className="status-icon">⚠️</span>
-                    Clipper service is currently unavailable
-                    <button 
-                      onClick={checkClipperHealth} 
-                      className="retry-btn"
-                      title="Retry connection"
-                    >
-                      🔄 Retry
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              <input 
-                type="text" 
-                placeholder="Recipe URL" 
-                value={clipUrl} 
-                onChange={e => setClipUrl(e.target.value)} 
-              />
-              
-              {/* Help Text */}
-              <div className="clip-help-text">
-                <p>💡 <strong>How it works:</strong> Paste a URL from any recipe website and our AI will automatically extract the recipe details including ingredients, instructions, and cooking times.</p>
-                <p>✨ <strong>Supported sites:</strong> AllRecipes, Food Network, Epicurious, and most recipe blogs</p>
-              </div>
-              
-              {clipError && (
-                <div className="error-message">
-                  <span className="error-icon">⚠️</span>
-                  {clipError}
-                </div>
-              )}
-              <div className="form-actions">
-                <button 
-                  onClick={clipRecipe} 
-                  className="add-btn" 
-                  disabled={isClipping || clipperStatus === 'unavailable'}
-                >
-                  {isClipping ? '🔄 Clipping...' : (
-                    <>
-                      <img src="/scissor.svg" alt="Clip" style={{ width: '16px', height: '16px', marginRight: '8px', verticalAlign: 'middle' }} />
-                      Clip Recipe
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Show Clipped Recipe Preview when active */}
         {clippedRecipePreview && (
           <div className="form-panel glass recipe-preview-panel">
@@ -1843,19 +1705,18 @@ function App() {
                           // Store the current URL to retry with
                           const currentUrl = clippedRecipePreview.source_url;
                           setClippedRecipePreview(null);
-                          setClipUrl(currentUrl);
+                          setSearchInput(currentUrl);
                           setClipError('');
                           setIsEditingPreview(false);
                           setEditablePreview(null);
-                          setShowClipForm(true);
-                          // Show a brief message that this is a retry
-                          setTimeout(() => {
-                            const urlInput = document.querySelector('input[placeholder="Recipe URL"]');
-                            if (urlInput) {
-                              urlInput.focus();
-                              urlInput.select();
-                            }
-                          }, 100);
+                                                      // Focus on search bar for retry
+                            setTimeout(() => {
+                              const searchInput = document.querySelector('.title-search-input');
+                              if (searchInput) {
+                                searchInput.focus();
+                                searchInput.select();
+                              }
+                            }, 100);
                         }
                       }} 
                       className="try-again-btn"
@@ -1868,7 +1729,6 @@ function App() {
                       onClick={() => {
                         if (!isSavingRecipe) {
                           setClippedRecipePreview(null);
-                          setClipUrl('');
                           setClipError('');
                           setIsEditingPreview(false);
                           setEditablePreview(null);
