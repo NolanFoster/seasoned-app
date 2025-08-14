@@ -167,6 +167,7 @@ body {
   transition: background $transition-normal, border $transition-normal;
   min-width: 320px;
   height: 40px; // Set consistent height
+  gap: 4px; // Add gap between buttons
   
   &:hover {
     background: rgba(255, 255, 255, 0.25);
@@ -249,6 +250,7 @@ body {
   transition: width $transition-normal;
   border-radius: calc(#{$border-radius-lg} - 9px); // Match inner curve
   height: 100%; // Fill parent height
+  flex: 1; // Take remaining space
   
   &::placeholder {
     color: rgba(255, 255, 255, 0.7);
@@ -322,6 +324,39 @@ body {
   }
 }
 
+// Add button styles - matching search button
+.title-add-button {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(#{$border-radius-lg} - 9px); // 16px for inner element
+  transition: background $transition-normal, transform $transition-fast;
+  height: 100%; // Fill parent height
+  aspect-ratio: 1; // Make button square
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95);
+  }
+  
+  .add-icon {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1;
+    display: block;
+  }
+}
+
 // Spin animation for loading
 @keyframes spin {
   from {
@@ -370,6 +405,18 @@ body {
     }
   }
   
+  .title-add-button {
+    color: #ecf0f1;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    &:active {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+  
   // Enhanced glow effects in dark mode
   .title-search {
     &.clipping {
@@ -403,6 +450,7 @@ body {
     margin-left: 0;
     width: 100%;
     margin-top: 4px;
+    min-width: unset;
   }
   
   .title-search-input {
@@ -415,12 +463,17 @@ body {
     }
   }
   
-  .title-search-button {
+  .title-search-button,
+  .title-add-button {
     padding: 4px 8px;
     
     svg, img {
       width: 16px;
       height: 16px;
+    }
+    
+    .add-icon {
+      font-size: 1.2rem;
     }
   }
   
@@ -456,6 +509,7 @@ body {
     margin-left: 0;
     min-width: unset;
     flex-basis: 100%; /* Force search bar to new line */
+    height: 36px; /* Slightly smaller height on mobile */
   }
   
   .title-search-input {
@@ -463,12 +517,17 @@ body {
     padding: 4px 8px;
   }
   
-  .title-search-button {
+  .title-search-button,
+  .title-add-button {
     padding: 4px 6px;
     
     svg, img {
       width: 14px;
       height: 14px;
+    }
+    
+    .add-icon {
+      font-size: 1.1rem;
     }
   }
   
