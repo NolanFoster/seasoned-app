@@ -46,7 +46,7 @@ body {
 /* Dark mode styles */
 @include dark-mode {
   body {
-    background: $gradient-dark;
+    background: $gradient-dark !important;
     background-size: 300% 300%;
     animation: dark-aura-move 180s ease-in-out infinite;
     color: $dark-text;
