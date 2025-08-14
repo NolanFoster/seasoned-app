@@ -165,7 +165,7 @@ body {
   border-radius: $border-radius-lg;
   padding: 4px;
   transition: background $transition-normal, border $transition-normal;
-  min-width: 250px;
+  min-width: 320px;
   
   &:hover {
     background: rgba(255, 255, 255, 0.25);
@@ -186,7 +186,7 @@ body {
   padding: 6px 12px;
   font-size: 0.875rem;
   outline: none;
-  width: 200px;
+  width: 280px;
   transition: width $transition-normal;
   
   &::placeholder {
@@ -194,7 +194,7 @@ body {
   }
   
   &:focus {
-    width: 250px;
+    width: 350px;
   }
 }
 

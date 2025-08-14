@@ -1082,7 +1082,7 @@ function App() {
           <input 
             type="text" 
             className="title-search-input" 
-            placeholder="Search recipes..."
+            placeholder="Search recipes or paste a URL to clip..."
             aria-label="Search recipes"
           />
           <button className="title-search-button" aria-label="Search">
