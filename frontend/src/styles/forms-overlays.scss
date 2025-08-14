@@ -202,6 +202,7 @@
   background: rgba(255, 255, 255, 0.15);
   color: white;
   font-size: 1rem;
+  line-height: 1.5;
   transition: all 0.3s ease;
   position: relative;
   box-sizing: border-box;
@@ -416,7 +417,8 @@
   border-radius: 8px;
   padding: 10px 12px;
   font-family: inherit;
-  font-size: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
   color: white;
   width: 100%;
   box-sizing: border-box;
@@ -435,6 +437,7 @@
   min-height: 80px;
   resize: vertical;
   font-family: inherit;
+  line-height: 1.5;
 }
 
 .ingredients-edit-container,
