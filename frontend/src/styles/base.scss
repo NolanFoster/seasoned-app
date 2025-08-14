@@ -105,6 +105,41 @@ body {
   position: relative;
 }
 
+/* Header container for title and FAB */
+.header-container {
+  position: fixed;
+  top: $spacing-md;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: $z-overlay;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  max-width: calc(100% - #{$spacing-md * 2});
+  
+  /* Fade effect controlled by JS */
+  &.fade-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+    pointer-events: none;
+    
+    .title-search {
+      opacity: 0;
+    }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 900px) {
+    max-width: calc(100% - #{$spacing-sm * 2});
+    gap: $spacing-sm;
+  }
+  
+  @media (max-width: 640px) {
+    width: calc(100% - #{$spacing-sm * 2});
+    max-width: none;
+  }
+}
+
 .title {
   font-size: 2rem;
   margin: 0;
@@ -115,19 +150,14 @@ body {
   align-items: center;
   gap: 12px;
   
-  /* Fixed positioning at top center */
-  position: fixed;
-  top: $spacing-md;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: $z-overlay;
+  /* Remove fixed positioning since parent handles it now */
+  position: relative;
   
   /* Add width to ensure search bar has space */
   width: auto;
-  max-width: calc(100% - #{$spacing-md * 2});
   
-  /* Fade effect controlled by JS */
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  /* Fade effect controlled by parent now */
+  transition: opacity 0.3s ease-in-out;
   opacity: 1;
   
   /* Optional: add a subtle background for better readability */
@@ -136,16 +166,6 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border-radius: $border-radius-lg;
   padding: $spacing-sm; // Even padding on all sides
-  
-  &.fade-out {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-    pointer-events: none;
-    
-    .title-search {
-      opacity: 0;
-    }
-  }
 }
 
 .title-icon {

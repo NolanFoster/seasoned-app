@@ -383,12 +383,12 @@ function App() {
       scrollY = window.scrollY;
       
       // Fade title based on scroll position
-      const titleElement = document.querySelector('.title');
-      if (titleElement) {
+      const headerElement = document.querySelector('.header-container');
+      if (headerElement) {
         if (scrollY > 50) {
-          titleElement.classList.add('fade-out');
+          headerElement.classList.add('fade-out');
         } else {
-          titleElement.classList.remove('fade-out');
+          headerElement.classList.remove('fade-out');
         }
       }
       
@@ -1088,69 +1088,71 @@ function App() {
         }}
       />
       
-      {/* Fixed title - outside container to ensure proper fixed positioning */}
-      <h1 className="title">
-        <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
-        Seasoned
-        {/* Search bar in the same panel */}
-        <div className={`title-search ${isSearchBarClipping ? 'clipping' : ''} ${searchBarClipError ? 'clip-error' : ''}`}>
-          <input 
-            type="text" 
-            className="title-search-input" 
-            placeholder="Search recipes or paste a URL to clip..."
-            aria-label="Search recipes"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && isValidUrl(searchInput) && clipperStatus === 'available') {
-                handleSearchBarClip();
-              }
-            }}
-            disabled={isSearchBarClipping}
-          />
-          <button 
-            className="title-search-button" 
-            aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
-            title="Clip recipe from website"
-            onClick={() => {
-              if (isValidUrl(searchInput) && clipperStatus === 'available') {
-                handleSearchBarClip();
-              } else {
-                setIsClipping(true);
-              }
-            }}
-            disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
-          >
-            {isSearchBarClipping ? (
-              <div className="loading-spinner">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 11-6.219-8.56" />
+      {/* Fixed header container */}
+      <div className="header-container">
+        <h1 className="title">
+          <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
+          Seasoned
+          {/* Search bar in the same panel */}
+          <div className={`title-search ${isSearchBarClipping ? 'clipping' : ''} ${searchBarClipError ? 'clip-error' : ''}`}>
+            <input 
+              type="text" 
+              className="title-search-input" 
+              placeholder="Search recipes or paste a URL to clip..."
+              aria-label="Search recipes"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && isValidUrl(searchInput) && clipperStatus === 'available') {
+                  handleSearchBarClip();
+                }
+              }}
+              disabled={isSearchBarClipping}
+            />
+            <button 
+              className="title-search-button" 
+              aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
+              title="Clip recipe from website"
+              onClick={() => {
+                if (isValidUrl(searchInput) && clipperStatus === 'available') {
+                  handleSearchBarClip();
+                } else {
+                  setIsClipping(true);
+                }
+              }}
+              disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
+            >
+              {isSearchBarClipping ? (
+                <div className="loading-spinner">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56" />
+                  </svg>
+                </div>
+              ) : isValidUrl(searchInput) ? (
+                <img 
+                  src="/scissor.svg" 
+                  alt="Clip" 
+                  style={{ 
+                    width: '18px', 
+                    height: '18px'
+                  }} 
+                  className={clipperStatus === 'available' ? 'clip-icon-available' : 'clip-icon'}
+                />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
                 </svg>
-              </div>
-            ) : isValidUrl(searchInput) ? (
-              <img 
-                src="/scissor.svg" 
-                alt="Clip" 
-                style={{ 
-                  width: '18px', 
-                  height: '18px'
-                }} 
-                className={clipperStatus === 'available' ? 'clip-icon-available' : 'clip-icon'}
-              />
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-            )}
-          </button>
-        </div>
-      </h1>
-      
-      {/* Add button placed just to the right of the search panel */}
-      <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
-        <span className="fab-icon">+</span>
-      </button>
+              )}
+            </button>
+          </div>
+        </h1>
+        
+        {/* Add button placed just to the right of the search panel */}
+        <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
+          <span className="fab-icon">+</span>
+        </button>
+      </div>
       
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>

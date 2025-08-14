@@ -257,39 +257,46 @@
 
 /* Standalone FAB positioned next to the title panel */
 .fab-standalone {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(calc(320px / 2 + 20px)); // Half of search bar width + gap
-  z-index: 1100; // Above title but below modals
+  // Remove fixed positioning since parent handles layout
+  position: relative;
   width: 48px;
   height: 40px;
   border-radius: 20px;
+  flex-shrink: 0; // Prevent shrinking in flex container
   
-  /* Responsive positioning */
-  @media (max-width: 768px) {
-    transform: translateX(calc(320px / 2 + 15px)); // Slightly closer on tablets
-  }
-  
+  /* Mobile responsiveness handled by parent container */
   @media (max-width: 640px) {
-    // Move below the title/search bar on mobile
-    top: 70px;
-    left: 50%;
-    transform: translateX(-24px); // Center the button (48px/2)
-  }
-  
-  @media (max-width: 480px) {
-    top: 65px;
-    transform: translateX(-24px); // Keep centered
-  }
-  
-  @media (max-width: 360px) {
-    transform: translateX(-22px); // Center the smaller button (44px/2)
+    // Hide on mobile to avoid crowding
+    display: none;
   }
 }
 
 .fab-standalone .fab-icon {
   font-size: 1.6em;
+}
+
+/* Mobile FAB positioning - show as fixed element on mobile */
+@media (max-width: 640px) {
+  .header-container::after {
+    content: '';
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-24px);
+    width: 48px;
+    height: 40px;
+    pointer-events: none; // Placeholder only
+  }
+  
+  // Create a mobile version of the FAB
+  .fab-standalone {
+    display: block;
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-24px);
+    z-index: 1100;
+  }
 }
 
 /* Mobile responsiveness for FAB */
