@@ -115,10 +115,11 @@ body {
   align-items: center;
   gap: 12px;
   
-  /* Fixed positioning at top left */
+  /* Fixed positioning at top center */
   position: fixed;
   top: $spacing-md;
-  left: $spacing-md;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: $z-overlay;
   
   /* Add width to ensure search bar has space */
@@ -128,7 +129,6 @@ body {
   /* Fade effect controlled by JS */
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
-  transform: translateY(0);
   
   /* Optional: add a subtle background for better readability */
   background: rgba(255, 255, 255, 0.05);
@@ -139,7 +139,7 @@ body {
   
   &.fade-out {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateX(-50%) translateY(-20px);
     pointer-events: none;
     
     .title-search {
@@ -324,39 +324,6 @@ body {
   }
 }
 
-// Add button styles - matching search button
-.title-add-button {
-  background: transparent;
-  border: none;
-  color: white;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: calc(#{$border-radius-lg} - 9px); // 16px for inner element
-  transition: background $transition-normal, transform $transition-fast;
-  height: 100%; // Fill parent height
-  aspect-ratio: 1; // Make button square
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.05);
-  }
-  
-  &:active {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(0.95);
-  }
-  
-  .add-icon {
-    font-size: 1.5rem;
-    font-weight: 600;
-    line-height: 1;
-    display: block;
-  }
-}
-
 // Spin animation for loading
 @keyframes spin {
   from {
@@ -405,18 +372,6 @@ body {
     }
   }
   
-  .title-add-button {
-    color: #ecf0f1;
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-    
-    &:active {
-      background: rgba(255, 255, 255, 0.25);
-    }
-  }
-  
   // Enhanced glow effects in dark mode
   .title-search {
     &.clipping {
@@ -436,9 +391,14 @@ body {
     font-size: 1.5rem;
     padding: $spacing-xs $spacing-sm;
     top: $spacing-sm;
-    left: $spacing-sm;
+    left: 50%;
+    transform: translateX(-50%);
     flex-wrap: wrap;
     gap: 8px;
+    
+    &.fade-out {
+      transform: translateX(-50%) translateY(-20px);
+    }
   }
   
   .title-icon {
@@ -463,17 +423,12 @@ body {
     }
   }
   
-  .title-search-button,
-  .title-add-button {
+  .title-search-button {
     padding: 4px 8px;
     
     svg, img {
       width: 16px;
       height: 16px;
-    }
-    
-    .add-icon {
-      font-size: 1.2rem;
     }
   }
   
@@ -489,6 +444,12 @@ body {
     flex-wrap: wrap;
     width: calc(100% - #{$spacing-sm * 2});
     gap: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    
+    &.fade-out {
+      transform: translateX(-50%) translateY(-20px);
+    }
     
     /* Keep the text "Seasoned" as a flex item */
     > img, 
@@ -517,17 +478,12 @@ body {
     padding: 4px 8px;
   }
   
-  .title-search-button,
-  .title-add-button {
+  .title-search-button {
     padding: 4px 6px;
     
     svg, img {
       width: 14px;
       height: 14px;
-    }
-    
-    .add-icon {
-      font-size: 1.1rem;
     }
   }
   

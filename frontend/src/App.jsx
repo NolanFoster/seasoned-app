@@ -1140,16 +1140,15 @@ function App() {
               </svg>
             )}
           </button>
-          <button 
-            className="title-add-button"
-            aria-label="Add new recipe"
-            onClick={() => setShowAddForm(true)}
-            title="Add new recipe"
-          >
-            <span className="add-icon">+</span>
-          </button>
         </div>
       </h1>
+      
+      {/* Floating Action Button - centered next to search panel */}
+      <div className="fab-container centered">
+        <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
+          <span className="fab-icon">+</span>
+        </button>
+      </div>
       
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>

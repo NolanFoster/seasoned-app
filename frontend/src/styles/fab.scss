@@ -15,6 +15,27 @@
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  
+  /* Centered variant - positions FAB next to centered search bar */
+  &.centered {
+    top: $spacing-md;
+    left: 50%;
+    right: auto;
+    transform: translateX(calc(50% + 200px)); // Position to the right of search bar
+    
+    @media (max-width: 768px) {
+      transform: translateX(calc(50% + 160px));
+    }
+    
+    @media (max-width: 640px) {
+      top: $spacing-md + 50px; // Move below search bar on mobile
+      transform: translateX(-50%);
+    }
+    
+    @media (max-width: 480px) {
+      top: $spacing-md + 45px;
+    }
+  }
 }
 
 .fab {
