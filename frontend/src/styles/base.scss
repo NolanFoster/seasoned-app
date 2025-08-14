@@ -516,8 +516,9 @@ body {
 /* Glass morphism effect */
 .glass {
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* Glass effect without blur - keeping saturation for color enhancement */
+  backdrop-filter: saturate(180%);
+  -webkit-backdrop-filter: saturate(180%);
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 
