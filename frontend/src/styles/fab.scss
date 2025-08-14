@@ -21,19 +21,24 @@
     top: $spacing-md;
     left: 50%;
     right: auto;
-    transform: translateX(calc(50% + 200px)); // Position to the right of search bar
+    transform: translateX(180px); // Half of search panel width (320px/2) + gap (20px)
     
     @media (max-width: 768px) {
-      transform: translateX(calc(50% + 160px));
+      transform: translateX(170px); // Slightly closer on tablets
     }
     
     @media (max-width: 640px) {
       top: $spacing-md + 50px; // Move below search bar on mobile
-      transform: translateX(-50%);
+      transform: translateX(-28px); // Center the FAB below search (56px/2)
     }
     
     @media (max-width: 480px) {
       top: $spacing-md + 45px;
+      transform: translateX(-24px); // Center the smaller FAB (48px/2)
+    }
+    
+    @media (max-width: 360px) {
+      transform: translateX(-22px); // Center the smallest FAB (44px/2)
     }
   }
 }
