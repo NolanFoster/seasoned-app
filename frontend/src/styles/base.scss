@@ -122,6 +122,10 @@ body {
   left: $spacing-md;
   z-index: $z-overlay;
   
+  /* Add width to ensure search bar has space */
+  width: auto;
+  max-width: calc(100% - #{$spacing-md * 2});
+  
   /* Fade effect controlled by JS */
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
@@ -156,17 +160,21 @@ body {
   display: flex;
   align-items: center;
   margin-left: auto;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: $border-radius-lg;
   padding: 4px;
-  transition: background $transition-normal;
+  transition: background $transition-normal, border $transition-normal;
+  min-width: 250px;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
   }
   
   &:focus-within {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
   }
 }
