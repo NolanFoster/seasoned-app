@@ -1157,8 +1157,8 @@ function App() {
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
         <div className="recipes-list">
-        {/* Show recipe cards only when no forms are active and no recipe is selected */}
-        {!showAddForm && !clippedRecipePreview && !selectedRecipe && (
+        {/* Show recipe cards unless recipe is selected */}
+        {!selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
             {(Array.isArray(recipes) ? recipes : []).map((recipe) => {
               console.log('Recipe data:', recipe);

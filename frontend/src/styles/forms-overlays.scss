@@ -8,8 +8,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  /* Removed backdrop-filter blur */
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,12 +118,17 @@
   margin: 0 auto;
   padding: 2rem;
   border-radius: 16px;
-  /* Glass effect without blur */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  /* Enhanced glass effect with blur */
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: slideInUp 0.3s ease-out;
   position: relative;
-  background: rgba(255, 255, 255, 0.9);
+  z-index: 2001;
 }
 
 /* Form panel inside overlay should have full width */
@@ -386,7 +392,8 @@
 .preview-edit-input,
 .preview-edit-textarea {
   background: rgba(255, 255, 255, 0.15);
-  /* Removed backdrop-filter blur */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   padding: 10px 12px;
@@ -678,9 +685,13 @@ button:disabled:hover {
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .form-panel {
-    background: rgba(30, 30, 30, 0.95);
+    background: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   }
   
   .form-panel::before {
