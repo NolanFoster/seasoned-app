@@ -1111,9 +1111,12 @@ function App() {
           <button 
             className="title-search-button" 
             aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
+            title="Clip recipe from website"
             onClick={() => {
               if (isValidUrl(searchInput) && clipperStatus === 'available') {
                 handleSearchBarClip();
+              } else {
+                setIsClipping(true);
               }
             }}
             disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
@@ -1145,18 +1148,6 @@ function App() {
         {/* Add button placed just to the right of the search panel */}
         <button className="fab fab-add" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
-        </button>
-        {/* Clip button to open clip form */}
-        <button
-          className="fab fab-clip"
-          title="Clip recipe from website"
-          aria-label="Open clip panel"
-          onClick={() => setIsClipping(true)}
-          style={{ marginLeft: '8px' }}
-        >
-          <span className="fab-icon">
-            <img src="/scissor.svg" alt="" aria-hidden="true" />
-          </span>
         </button>
       </h1>
       
