@@ -2,6 +2,10 @@
 @use 'mixins' as *;
 
 /* Base styles and global resets */
+* {
+  box-sizing: border-box;
+}
+
 html {
   /* Prevent overscroll bounce and flickering */
   overscroll-behavior: none;
