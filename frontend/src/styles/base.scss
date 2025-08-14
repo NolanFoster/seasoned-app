@@ -228,11 +228,17 @@ body {
     width: 18px;
     height: 18px;
     display: block;
-    transition: transform $transition-fast;
+    transition: transform $transition-fast, filter $transition-normal;
   }
   
-  img {
-    filter: brightness(0) invert(1); // Make scissor icon white
+  img.clip-icon {
+    filter: brightness(0) invert(1); // White by default
+  }
+  
+  img.clip-icon-available {
+    // Green color filter
+    filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 3px rgba(76, 175, 80, 0.6));
+    transition: filter $transition-normal;
   }
   
   &:hover {
@@ -273,6 +279,11 @@ body {
   
   .title-search-button {
     color: #ecf0f1;
+    
+    img.clip-icon-available {
+      // Same green color in dark mode
+      filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 4px rgba(76, 175, 80, 0.8));
+    }
   }
 }
 
