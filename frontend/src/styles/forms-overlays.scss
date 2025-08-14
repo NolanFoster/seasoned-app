@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 4000; /* Higher than recipe fullscreen (3000) to appear on top */
   padding: 20px;
 }
 
@@ -128,7 +128,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: slideInUp 0.3s ease-out;
   position: relative;
-  z-index: 2001;
+  z-index: 4001;
 }
 
 /* Form panel inside overlay should have full width */
@@ -496,7 +496,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: 4010;
   border-radius: 12px;
 }
 

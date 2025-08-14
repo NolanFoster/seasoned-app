@@ -1975,7 +1975,7 @@ function App() {
                 className="edit-btn fullscreen-edit-btn" 
                 onClick={() => {
                   editRecipe(selectedRecipe);
-                  setSelectedRecipe(null);
+                  // Don't close the recipe view when editing
                   setShowAddForm(true);
                 }}
                 title="Edit Recipe"
