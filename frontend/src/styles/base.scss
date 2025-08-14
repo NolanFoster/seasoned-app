@@ -302,6 +302,16 @@ body {
 @media (max-width: 480px) {
   .title {
     font-size: 1.25rem;
+    padding: $spacing-xs;
+    flex-wrap: wrap;
+    width: calc(100% - #{$spacing-sm * 2});
+    gap: 8px;
+    
+    /* Keep the text "Seasoned" as a flex item */
+    > img, 
+    > .title-search {
+      flex-shrink: 0;
+    }
   }
   
   .title-icon {
@@ -310,11 +320,30 @@ body {
   }
   
   .title-search {
-    display: none; /* Hide search bar on very small screens */
+    display: flex; /* Show search bar on mobile */
+    width: 100%;
+    margin-top: 4px;
+    margin-left: 0;
+    min-width: unset;
+    flex-basis: 100%; /* Force search bar to new line */
+  }
+  
+  .title-search-input {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+  
+  .title-search-button {
+    padding: 4px 6px;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
   }
   
   .container {
-    padding-top: $spacing-md + $spacing-sm; /* Further reduced padding for small mobile */
+    padding-top: $spacing-xl + $spacing-xl; /* Increased padding to account for stacked layout */
   }
 }
 
