@@ -554,7 +554,10 @@ function App() {
       const animate = () => {
         if (!seasoningRef.current) return; // Stop if cleaned up
         
+        // Clear canvas with transparent background
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'transparent';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         seasoningParticles.forEach(particle => {
           // Move particle
@@ -1084,7 +1087,8 @@ function App() {
           width: '100vw',
           height: '100vh',
           zIndex: -1,
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          backgroundColor: 'transparent'
         }}
       />
       
