@@ -334,6 +334,7 @@ function App() {
   const [searchInput, setSearchInput] = useState(''); // New state for search input
   const [isSearchBarClipping, setIsSearchBarClipping] = useState(false); // Loading state for search bar
   const [searchBarClipError, setSearchBarClipError] = useState(false); // Error state for search bar
+  const [clipUrl, setClipUrl] = useState('');
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -1149,11 +1150,12 @@ function App() {
         <button
           className="fab fab-clip"
           title="Clip recipe from website"
+          aria-label="Open clip panel"
           onClick={() => setIsClipping(true)}
           style={{ marginLeft: '8px' }}
         >
           <span className="fab-icon">
-            <img src="/scissor.svg" alt="Clip recipe from website" />
+            <img src="/scissor.svg" alt="" aria-hidden="true" />
           </span>
         </button>
       </h1>
@@ -1906,8 +1908,8 @@ function App() {
                 <input
                   type="text"
                   placeholder="Recipe URL"
-                  value={searchInput}
-                  onChange={e => setSearchInput(e.target.value)}
+                  value={clipUrl}
+                  onChange={e => setClipUrl(e.target.value)}
                   className="preview-edit-input"
                 />
               </div>
@@ -1917,17 +1919,21 @@ function App() {
               <div className="form-actions">
                 <button 
                   onClick={async () => {
-                    if (!isValidUrl(searchInput)) return;
+                    if (!isValidUrl(clipUrl)) return;
                     try {
                       setIsClipping(true);
                       const res = await fetch(`${CLIPPER_API_URL}/clip`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: searchInput })
+                        body: JSON.stringify({ url: clipUrl })
                       });
                       if (!res.ok) {
-                        const msg = await res.text();
-                        setClipError(msg || 'Failed to clip recipe');
+                        if (res.status === 404) {
+                          setClipError('No recipe found on this page');
+                        } else {
+                          const msg = await res.text();
+                          setClipError(msg || 'Failed to clip recipe');
+                        }
                         return;
                       }
                       const result = await res.json();
@@ -1940,6 +1946,7 @@ function App() {
                     }
                   }}
                   className="add-btn"
+                  aria-label="Submit Clip Recipe"
                 >
                   Clip Recipe
                 </button>
