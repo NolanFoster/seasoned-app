@@ -335,6 +335,8 @@ function App() {
   const [editableRecipe, setEditableRecipe] = useState(null);
   const [isEditingRecipe, setIsEditingRecipe] = useState(false);
   const [searchInput, setSearchInput] = useState(''); // New state for search input
+  const [isSearchBarClipping, setIsSearchBarClipping] = useState(false); // Loading state for search bar
+  const [searchBarClipError, setSearchBarClipError] = useState(false); // Error state for search bar
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -864,6 +866,48 @@ function App() {
     }
   }
 
+  async function handleSearchBarClip() {
+    if (!isValidUrl(searchInput) || clipperStatus !== 'available') return;
+    
+    setIsSearchBarClipping(true);
+    setSearchBarClipError(false);
+    
+    try {
+      const res = await fetch(`${CLIPPER_API_URL}/clip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: searchInput }),
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        console.log('Recipe clipped successfully from search bar:', result);
+        setClippedRecipePreview(result);
+        setSearchInput(''); // Clear search input on success
+        setIsSearchBarClipping(false);
+        setSearchBarClipError(false);
+      } else {
+        console.error('Search bar clip failed:', res.status);
+        setSearchBarClipError(true);
+        
+        // Keep error state for 3 seconds then reset
+        setTimeout(() => {
+          setSearchBarClipError(false);
+          setIsSearchBarClipping(false);
+        }, 3000);
+      }
+    } catch (e) {
+      console.error('Error clipping from search bar:', e);
+      setSearchBarClipError(true);
+      
+      // Keep error state for 3 seconds then reset
+      setTimeout(() => {
+        setSearchBarClipError(false);
+        setIsSearchBarClipping(false);
+      }, 3000);
+    }
+  }
+
   function editRecipe(recipe) {
     setEditingRecipe(recipe);
     // Handle both old and new schema field names
@@ -1098,7 +1142,7 @@ function App() {
         <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
         Seasoned
         {/* Search bar in the same panel */}
-        <div className="title-search">
+        <div className={`title-search ${isSearchBarClipping ? 'clipping' : ''} ${searchBarClipError ? 'clip-error' : ''}`}>
           <input 
             type="text" 
             className="title-search-input" 
@@ -1106,9 +1150,30 @@ function App() {
             aria-label="Search recipes"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && isValidUrl(searchInput) && clipperStatus === 'available') {
+                handleSearchBarClip();
+              }
+            }}
+            disabled={isSearchBarClipping}
           />
-          <button className="title-search-button" aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}>
-            {isValidUrl(searchInput) ? (
+          <button 
+            className="title-search-button" 
+            aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
+            onClick={() => {
+              if (isValidUrl(searchInput) && clipperStatus === 'available') {
+                handleSearchBarClip();
+              }
+            }}
+            disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
+          >
+            {isSearchBarClipping ? (
+              <div className="loading-spinner">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 11-6.219-8.56" />
+                </svg>
+              </div>
+            ) : isValidUrl(searchInput) ? (
               <img 
                 src="/scissor.svg" 
                 alt="Clip" 
