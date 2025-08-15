@@ -248,10 +248,25 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
+    // CORS headers
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+    
     // Handle /scrape endpoint
     if (url.pathname === '/scrape') {
       if (request.method !== 'GET' && request.method !== 'POST') {
-        return new Response('Method not allowed', { status: 405 });
+        return new Response('Method not allowed', { 
+          status: 405,
+          headers: corsHeaders
+        });
       }
       
       let urls = [];
@@ -262,12 +277,12 @@ export default {
       if (request.method === 'GET') {
         const targetUrl = url.searchParams.get('url');
         if (!targetUrl) {
-          return new Response(JSON.stringify({
-            error: 'Missing url parameter'
-          }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+                  return new Response(JSON.stringify({
+          error: 'Missing url parameter'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
         }
         urls = [targetUrl];
       }
@@ -281,12 +296,12 @@ export default {
           } else if (body.url) {
             urls = [body.url];
           } else {
-            return new Response(JSON.stringify({
-              error: 'Missing url or urls in request body'
-            }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
-            });
+                      return new Response(JSON.stringify({
+            error: 'Missing url or urls in request body'
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
           }
           saveToKV = body.save === true;
           avoidOverwrite = body.avoidOverwrite === true;
@@ -295,7 +310,7 @@ export default {
             error: 'Invalid JSON in request body'
           }), {
             status: 400,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
       }
@@ -353,7 +368,7 @@ export default {
           savedToKV: results.filter(r => r.savedToKV).length
         }
       }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
@@ -366,12 +381,12 @@ export default {
       if (!result.success) {
         return new Response(JSON.stringify(result), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
       
       return new Response(JSON.stringify(result), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
@@ -384,14 +399,14 @@ export default {
         // Return raw compressed data for compression analysis
         const rawData = await env.RECIPE_STORAGE.get(recipeId);
         if (!rawData) {
-          return new Response(JSON.stringify({ error: 'Recipe not found' }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json' }
-          });
+                  return new Response(JSON.stringify({ error: 'Recipe not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
         }
         
         return new Response(rawData, {
-          headers: { 'Content-Type': 'text/plain' }
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
         });
       }
       
@@ -399,12 +414,12 @@ export default {
       if (!result.success) {
         return new Response(JSON.stringify(result), {
           status: 404,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
       
       return new Response(JSON.stringify(result.recipe), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
@@ -416,7 +431,7 @@ export default {
           error: 'Missing id parameter'
         }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
       
@@ -429,7 +444,7 @@ export default {
       }
       
       return new Response(JSON.stringify({ message: 'Recipe deleted successfully' }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
@@ -440,7 +455,7 @@ export default {
         service: 'recipe-scraper',
         features: ['scraping', 'kv-storage']
       }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
@@ -462,7 +477,7 @@ export default {
         getRecipe: 'GET /recipes?id=<hashed-url-id>'
       }
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 };
