@@ -281,7 +281,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 350px; /* Fixed height to stop before ingredients */
+  height: 280px; /* Height to extend under description */
   z-index: 0;
   overflow: hidden;
 }
@@ -302,7 +302,8 @@
     rgba(0, 0, 0, 0.2) 0%,
     rgba(0, 0, 0, 0.3) 20%,
     rgba(0, 0, 0, 0.5) 50%,
-    rgba(0, 0, 0, 0.8) 80%,
+    rgba(0, 0, 0, 0.7) 70%,
+    rgba(0, 0, 0, 0.85) 85%,
     rgba(0, 0, 0, 0.95) 95%,
     rgba(0, 0, 0, 1) 100%
   );
@@ -344,30 +345,47 @@
   z-index: 5;
 }
 
-/* Hero text styling when image is present */
-.recipe-preview-hero-text {
+/* Header section with title and description */
+.recipe-preview-header-section {
   position: relative;
   z-index: 2;
-  margin-top: 180px; /* Position text in lower part of hero image */
-  margin-bottom: 30px;
-  padding: 0 30px; /* Match panel padding */
+  padding: 30px 30px 40px;
+  margin: 0 -30px 30px; /* Negative margins to extend to panel edges */
 }
 
-.recipe-preview-hero-text .recipe-preview-title {
+/* Title styling - works with or without image */
+.recipe-preview-header-section .recipe-preview-title {
   color: white;
   font-size: 2em;
   font-weight: 600;
-  margin: 0 0 10px 0;
+  margin: 0 0 15px 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.recipe-preview-hero-text .recipe-preview-description {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.1em;
-  line-height: 1.4;
+/* Description styling - works with or without image */
+.recipe-preview-header-section .recipe-preview-description {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.15em;
+  line-height: 1.5;
   margin: 0;
   font-style: italic;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* When no image is present, adjust text colors */
+.recipe-preview-panel:not(:has(.recipe-preview-image-hero-full)) .recipe-preview-header-section .recipe-preview-title {
+  color: white;
+  text-shadow: none;
+}
+
+.recipe-preview-panel:not(:has(.recipe-preview-image-hero-full)) .recipe-preview-header-section .recipe-preview-description {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: none;
+}
+
+/* Remove old hero text styles */
+.recipe-preview-hero-text {
+  display: none;
 }
 
 /* Enhanced button styles for form panels */
@@ -403,31 +421,7 @@
   margin-bottom: 20px;
 }
 
-/* Hero Image with Overlay */
-.recipe-preview-image-hero {
-  display: none;
-}
-
-.recipe-preview-header {
-  margin-bottom: 25px;
-  text-align: center;
-}
-
-.recipe-preview-title {
-  color: white;
-  font-size: 1.8em;
-  font-weight: 600;
-  margin: 0 0 15px 0;
-  line-height: 1.3;
-}
-
-.recipe-preview-description {
-  color: white;
-  font-size: 1.1em;
-  line-height: 1.5;
-  margin: 0;
-  font-style: italic;
-}
+/* Removed old hero and header styles */
 
 .recipe-preview-sections {
   display: grid;
@@ -436,11 +430,6 @@
   margin-bottom: 25px;
   position: relative;
   z-index: 2;
-  background: rgba(0, 0, 0, 0.3); /* Subtle background for sections */
-  padding: 20px;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .recipe-preview-section {
@@ -1040,20 +1029,19 @@ button:disabled:hover {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .recipe-preview-image-hero-full {
-    height: 280px; /* Smaller height on mobile */
+    height: 240px; /* Smaller height on mobile */
   }
   
-  .recipe-preview-hero-text {
-    margin-top: 140px; /* Adjust for smaller image */
-    margin-bottom: 20px;
-    padding: 0 20px;
+  .recipe-preview-header-section {
+    padding: 20px 20px 30px;
+    margin: 0 -20px 20px;
   }
   
-  .recipe-preview-hero-text .recipe-preview-title {
+  .recipe-preview-header-section .recipe-preview-title {
     font-size: 1.5em;
   }
   
-  .recipe-preview-hero-text .recipe-preview-description {
+  .recipe-preview-header-section .recipe-preview-description {
     font-size: 1em;
   }
   .recipe-preview-overlay {

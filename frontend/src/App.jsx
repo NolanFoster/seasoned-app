@@ -1678,25 +1678,13 @@ function App() {
                     // Preview Mode
                     <>
                       <div className="recipe-preview-content">
-                        {/* Title and description overlay for when there's an image */}
-                        {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                          <div className="recipe-preview-hero-text">
-                            <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
-                            {clippedRecipePreview.description && (
-                              <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* If no image, show title and description normally */}
-                        {!(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                          <div className="recipe-preview-header">
-                            <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
-                            {clippedRecipePreview.description && (
-                              <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
-                            )}
-                          </div>
-                        )}
+                        {/* Title and description - always shown */}
+                        <div className="recipe-preview-header-section">
+                          <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
+                          {clippedRecipePreview.description && (
+                            <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
+                          )}
+                        </div>
                         
                         <div className="recipe-preview-sections">
                           <div className="recipe-preview-section">
