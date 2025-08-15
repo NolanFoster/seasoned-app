@@ -20,39 +20,6 @@ async function testHealthEndpoint() {
   }
 }
 
-// Test recipe clipping endpoint
-async function testRecipeClipping() {
-  console.log('\n🧪 Testing Recipe Clipping Endpoint');
-  
-  try {
-    const testUrl = 'https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/';
-    
-    const response = await fetch(`${WORKER_URL}/clip`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: testUrl })
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Recipe clipping successful:');
-      console.log(JSON.stringify(data, null, 2));
-      return data;
-    } else {
-      const errorText = await response.text();
-      console.log('❌ Recipe clipping failed:');
-      console.log('Status:', response.status);
-      console.log('Error:', errorText);
-      return null;
-    }
-  } catch (error) {
-    console.error('❌ Recipe clipping error:', error.message);
-    return null;
-  }
-}
-
 // Test invalid URL
 async function testInvalidURL() {
   console.log('\n🧪 Testing Invalid URL Handling');
@@ -141,15 +108,11 @@ async function runEndpointTests() {
   // Test CORS
   await testCORS();
   
-  // Test recipe clipping (this will fail without AI binding, but tests the endpoint)
-  await testRecipeClipping();
-  
   // Test error handling
   await testInvalidURL();
   await testMissingURL();
   
   console.log('\n🎯 Endpoint tests completed!');
-  console.log('💡 Note: Recipe clipping will fail without proper AI binding setup');
 }
 
 // Check if worker is running
@@ -185,7 +148,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
 export { 
   testHealthEndpoint, 
-  testRecipeClipping, 
   testInvalidURL, 
   testMissingURL, 
   testCORS,

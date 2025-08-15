@@ -17,6 +17,35 @@ export default {
     }
 
     try {
+      // Health check endpoint
+      if (pathname === '/health' && request.method === 'GET') {
+        try {
+          // Perform health checks
+          const healthStatus = await checkSystemHealth(env);
+          
+          return new Response(JSON.stringify(healthStatus), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console.error('Health check error:', error);
+          const unhealthyStatus = {
+            status: 'UNHEALTHY',
+            timestamp: new Date().toISOString(),
+            checks: {
+              database: { status: 'UNHEALTHY', error: error.message },
+              r2: { status: 'UNHEALTHY', error: 'Health check failed' }
+            },
+            message: 'System health check failed'
+          };
+          
+          return new Response(JSON.stringify(unhealthyStatus), {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       // Get all recipes
       if (pathname === '/recipes' && request.method === 'GET') {
         const recipes = await getRecipes(env);
@@ -811,5 +840,103 @@ async function extractRecipeFromUrl(pageUrl) {
   } catch (error) {
     console.error('Error extracting recipe:', error);
     throw error;
+  }
+}
+
+// Health check function
+async function checkSystemHealth(env) {
+  const checks = {};
+  let overallStatus = 'HEALTHY';
+  
+  try {
+    // Check database connectivity
+    try {
+      if (env.DB) {
+        // Try a simple query to check database health
+        const result = await env.DB.prepare('SELECT 1 as health_check').first();
+        checks.database = { 
+          status: 'HEALTHY', 
+          message: 'Database connection successful',
+          response_time: Date.now()
+        };
+      } else {
+        checks.database = { 
+          status: 'DEGRADED', 
+          message: 'Database binding not available',
+          response_time: Date.now()
+        };
+        overallStatus = 'DEGRADED';
+      }
+    } catch (error) {
+      checks.database = { 
+        status: 'UNHEALTHY', 
+        error: error.message,
+        response_time: Date.now()
+      };
+      overallStatus = 'UNHEALTHY';
+    }
+    
+    // Check R2 bucket accessibility
+    try {
+      if (env.IMAGES) {
+        // Try to list objects (this is a lightweight operation)
+        await env.IMAGES.list({ limit: 1 });
+        checks.r2 = { 
+          status: 'HEALTHY', 
+          message: 'R2 bucket accessible',
+          response_time: Date.now()
+        };
+      } else {
+        checks.r2 = { 
+          status: 'DEGRADED', 
+          message: 'R2 binding not available',
+          response_time: Date.now()
+        };
+        if (overallStatus === 'HEALTHY') {
+          overallStatus = 'DEGRADED';
+        }
+      }
+    } catch (error) {
+      checks.r2 = { 
+        status: 'UNHEALTHY', 
+        error: error.message,
+        response_time: Date.now()
+      };
+      overallStatus = 'UNHEALTHY';
+    }
+    
+    // Check environment variables
+    const requiredEnvVars = ['DB', 'IMAGES'];
+    const envCheck = {};
+    requiredEnvVars.forEach(varName => {
+      if (env[varName]) {
+        envCheck[varName] = { status: 'HEALTHY', message: 'Available' };
+      } else {
+        envCheck[varName] = { status: 'DEGRADED', message: 'Not available' };
+        if (overallStatus === 'HEALTHY') {
+          overallStatus = 'DEGRADED';
+        }
+      }
+    });
+    checks.environment = envCheck;
+    
+    return {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      checks: checks,
+      message: overallStatus === 'HEALTHY' ? 'All systems operational' : 
+               overallStatus === 'DEGRADED' ? 'Some systems degraded' : 
+               'Critical systems unavailable'
+    };
+    
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return {
+      status: 'UNHEALTHY',
+      timestamp: new Date().toISOString(),
+      checks: checks,
+      error: error.message,
+      message: 'Health check failed'
+    };
   }
 }
