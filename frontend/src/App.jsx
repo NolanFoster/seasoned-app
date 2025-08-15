@@ -334,9 +334,7 @@ function App() {
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const [editableRecipe, setEditableRecipe] = useState(null);
   const [isEditingRecipe, setIsEditingRecipe] = useState(false);
-  const [searchInput, setSearchInput] = useState(''); // New state for search input
-  const [isSearchBarClipping, setIsSearchBarClipping] = useState(false); // Loading state for search bar
-  const [searchBarClipError, setSearchBarClipError] = useState(false); // Error state for search bar
+  const [searchInput, setSearchInput] = useState(''); // State for search input
   const [clipUrl, setClipUrl] = useState('');
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
@@ -824,48 +822,6 @@ function App() {
 
 
 
-  async function handleSearchBarClip() {
-    if (!isValidUrl(searchInput) || clipperStatus !== 'available') return;
-    
-    setIsSearchBarClipping(true);
-    setSearchBarClipError(false);
-    
-    try {
-      const res = await fetch(`${CLIPPER_API_URL}/clip`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: searchInput }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        console.log('Recipe clipped successfully from search bar:', result);
-        setClippedRecipePreview(result);
-        setSearchInput(''); // Clear search input on success
-        setIsSearchBarClipping(false);
-        setSearchBarClipError(false);
-      } else {
-        console.error('Search bar clip failed:', res.status);
-        setSearchBarClipError(true);
-        
-        // Keep error state for 3 seconds then reset
-        setTimeout(() => {
-          setSearchBarClipError(false);
-          setIsSearchBarClipping(false);
-        }, 3000);
-      }
-    } catch (e) {
-      console.error('Error clipping from search bar:', e);
-      setSearchBarClipError(true);
-      
-      // Keep error state for 3 seconds then reset
-      setTimeout(() => {
-        setSearchBarClipError(false);
-        setIsSearchBarClipping(false);
-      }, 3000);
-    }
-  }
-
   function editRecipe(recipe) {
     setEditingRecipe(recipe);
     // Handle both old and new schema field names
@@ -1102,57 +1058,35 @@ function App() {
         <h1 className="title">
           <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
           Seasoned
-          {/* Search bar in the same panel */}
-          <div className={`title-search ${isSearchBarClipping ? 'clipping' : ''} ${searchBarClipError ? 'clip-error' : ''}`}>
+          {/* Search bar in the same panel - removed clip functionality */}
+          <div className="title-search">
             <input 
               type="text" 
               className="title-search-input" 
-              placeholder="Search recipes or paste a URL to clip..."
+              placeholder="Search recipes..."
               aria-label="Search recipes"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={(e) => {
-                if (e.key === 'Enter' && isValidUrl(searchInput) && clipperStatus === 'available') {
-                  handleSearchBarClip();
+                if (e.key === 'Enter') {
+                  // TODO: Implement search functionality
+                  console.log('Search for:', searchInput);
                 }
               }}
-              disabled={isSearchBarClipping}
             />
             <button 
               className="title-search-button" 
-              aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
-              title="Clip recipe from website"
+              aria-label="Search"
+              title="Search recipes"
               onClick={() => {
-                if (isValidUrl(searchInput) && clipperStatus === 'available') {
-                  handleSearchBarClip();
-                } else {
-                  setIsClipping(true);
-                }
+                // TODO: Implement search functionality
+                console.log('Search for:', searchInput);
               }}
-              disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
             >
-              {isSearchBarClipping ? (
-                <div className="loading-spinner">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12a9 9 0 11-6.219-8.56" />
-                  </svg>
-                </div>
-              ) : isValidUrl(searchInput) ? (
-                <img 
-                  src="/scissor.svg" 
-                  alt="Clip" 
-                  style={{ 
-                    width: '18px', 
-                    height: '18px'
-                  }} 
-                  className={clipperStatus === 'available' ? 'clip-icon-available' : 'clip-icon'}
-                />
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
-              )}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
             </button>
           </div>
         </h1>
@@ -1160,6 +1094,25 @@ function App() {
         {/* Add button placed just to the right of the search panel */}
         <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
           <span className="fab-icon">+</span>
+        </button>
+        
+        {/* Clip FAB with glass theme and green color when available */}
+        <button 
+          className={`fab fab-clip fab-standalone ${clipperStatus === 'available' ? 'fab-clip-available' : clipperStatus === 'checking' ? 'fab-clip-checking' : 'fab-clip-unavailable'}`}
+          onClick={() => setIsClipping(true)}
+          disabled={clipperStatus !== 'available'}
+          title={clipperStatus === 'available' ? 'Clip recipe from website' : clipperStatus === 'checking' ? 'Checking clipper status...' : 'Clipper unavailable'}
+        >
+          <span className="fab-icon">
+            <img 
+              src="/scissor.svg" 
+              alt="Clip" 
+              style={{ 
+                width: '24px', 
+                height: '24px'
+              }} 
+            />
+          </span>
         </button>
       </div>
       

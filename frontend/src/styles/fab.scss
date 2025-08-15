@@ -82,11 +82,16 @@
 .fab-clip {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
+  
+  img {
+    filter: brightness(0) invert(1); // White icon by default
+  }
 }
 
 .fab-clip:hover {
-  background: linear-gradient(135deg, #ff6b6b, #ff8e53);
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
 }
 
 .fab-add {
@@ -242,6 +247,41 @@
     border-color: rgba(220, 53, 69, 0.8) !important;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 30px rgba(220, 53, 69, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
+  
+  /* Dark mode clip FAB states */
+  .fab-clip-available {
+    background: rgba(40, 167, 69, 0.5) !important;
+    border-color: rgba(40, 167, 69, 0.8) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 20px rgba(40, 167, 69, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    
+    &:hover {
+      background: rgba(40, 167, 69, 0.7) !important;
+      border-color: rgba(40, 167, 69, 1) !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 30px rgba(40, 167, 69, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+  }
+  
+  .fab-clip-checking {
+    background: rgba(255, 193, 7, 0.3) !important;
+    border-color: rgba(255, 193, 7, 0.6) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 20px rgba(255, 193, 7, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    
+    &:hover {
+      background: rgba(255, 193, 7, 0.4) !important;
+      border-color: rgba(255, 193, 7, 0.8) !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 30px rgba(255, 193, 7, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+  }
+  
+  .fab-clip-unavailable {
+    background: rgba(220, 53, 69, 0.3) !important;
+    border-color: rgba(220, 53, 69, 0.6) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 20px rgba(220, 53, 69, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    
+    &:hover {
+      background: rgba(220, 53, 69, 0.3) !important;
+    }
+  }
 }
 
 /* Compact FAB used adjacent to the search bar in the title */
@@ -283,29 +323,39 @@
     content: '';
     position: fixed;
     bottom: 20px;
-    left: 20px;  // Changed from right: 20px
+    left: 20px;
     width: 56px;
     height: 56px;
     pointer-events: none; // Placeholder only
   }
   
-  // Create a mobile version of the FAB - bottom left corner
+  // Create mobile versions of FABs - positioned at bottom
   .fab-standalone {
     display: block !important;
     position: fixed !important;
     bottom: 20px !important;
-    left: 20px !important;  // Changed from right: 20px
-    right: auto !important;
-    top: auto !important;  // Override any top positioning
-    transform: none !important;  // Remove centering transform
-    z-index: 9999 !important;  // Ensure it's above everything
-    width: 56px;  // Make it circular on mobile
-    height: 56px;  // Make it circular on mobile
-    border-radius: 50%;  // Circular button
+    top: auto !important;
+    transform: none !important;
+    z-index: 9999 !important;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
     
     &:hover {
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    // Position add FAB on left
+    &.fab-add {
+      left: 20px !important;
+      right: auto !important;
+    }
+    
+    // Position clip FAB next to add FAB
+    &.fab-clip {
+      left: 88px !important; // 20px (left margin) + 56px (FAB width) + 12px (gap)
+      right: auto !important;
     }
   }
 }
@@ -371,12 +421,12 @@
   
   // Override for standalone add button to keep it at bottom left
   .fab-standalone {
-    bottom: 16px !important;
-    left: 16px !important;  // Changed from right: 16px
+    bottom: 12px !important;
+    left: 12px !important;  // Changed from right: 12px
     right: auto !important;
     top: auto !important;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
   }
 }
 
@@ -408,13 +458,80 @@
     font-size: 9px;
   }
   
-  // Override for standalone add button to keep it at bottom left
+  // Override for standalone FABs at smallest viewport
   .fab-standalone {
     bottom: 12px !important;
-    left: 12px !important;  // Changed from right: 12px
-    right: auto !important;
     top: auto !important;
     width: 44px;
     height: 44px;
+    
+    &.fab-add {
+      left: 12px !important;
+      right: auto !important;
+    }
+    
+    &.fab-clip {
+      left: 68px !important; // 12px + 44px + 12px gap
+      right: auto !important;
+    }
+  }
+}
+
+/* Clip FAB States - Green when available */
+.fab-clip-available {
+  background: rgba(40, 167, 69, 0.4) !important;
+  border-color: rgba(40, 167, 69, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.15), 0 0 20px rgba(40, 167, 69, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  
+  &:hover {
+    background: rgba(40, 167, 69, 0.6) !important;
+    border-color: rgba(40, 167, 69, 0.9) !important;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.25), 0 0 30px rgba(40, 167, 69, 0.5);
+  }
+  
+  img {
+    filter: brightness(0) invert(1); // Keep white icon on green background
+  }
+}
+
+.fab-clip-checking {
+  background: rgba(255, 193, 7, 0.2) !important;
+  border-color: rgba(255, 193, 7, 0.4) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.15), 0 0 20px rgba(255, 193, 7, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: wait;
+  
+  &:hover {
+    background: rgba(255, 193, 7, 0.3) !important;
+    border-color: rgba(255, 193, 7, 0.6) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.25), 0 0 30px rgba(255, 193, 7, 0.3);
+  }
+  
+  img {
+    filter: brightness(0) invert(1);
+  }
+}
+
+.fab-clip-unavailable {
+  background: rgba(220, 53, 69, 0.2) !important;
+  border-color: rgba(220, 53, 69, 0.4) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.15), 0 0 20px rgba(220, 53, 69, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+  opacity: 0.7;
+  
+  &:hover {
+    transform: none;
+    background: rgba(220, 53, 69, 0.2) !important;
+  }
+  
+  img {
+    filter: brightness(0) invert(1) opacity(0.5);
   }
 }

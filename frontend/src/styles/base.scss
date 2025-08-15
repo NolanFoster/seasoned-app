@@ -115,7 +115,7 @@ body {
   position: relative;
 }
 
-/* Header container for title and FAB */
+/* Header container for title and FABs */
 .header-container {
   position: fixed;
   top: $spacing-md;
@@ -124,7 +124,7 @@ body {
   z-index: $z-overlay;
   display: flex;
   align-items: center;
-  gap: $spacing-md; // Reduced from $spacing-lg + $spacing-sm (40px) to match search panel
+  gap: $spacing-sm; // Consistent small gap between elements
   max-width: calc(100% - #{$spacing-md * 2});
   
   /* Fade effect controlled by JS */
@@ -141,13 +141,15 @@ body {
   /* Responsive adjustments */
   @media (max-width: 900px) {
     max-width: calc(100% - #{$spacing-sm * 2});
-    gap: $spacing-md; // Keep reasonable gap on smaller screens
+    gap: $spacing-sm; // Keep consistent gap
   }
   
   @media (max-width: 640px) {
     width: calc(100% - #{$spacing-sm * 2});
     max-width: none;
-    gap: $spacing-sm; // Smaller gap on mobile
+    gap: $spacing-xs; // Even smaller gap on mobile
+    flex-wrap: wrap; // Allow wrapping on small screens
+    justify-content: center;
   }
 }
 
@@ -319,17 +321,7 @@ body {
     width: 18px;
     height: 18px;
     display: block;
-    transition: transform $transition-fast, filter $transition-normal;
-  }
-  
-  img.clip-icon {
-    filter: brightness(0) invert(1); // White by default
-  }
-  
-  img.clip-icon-available {
-    // Green color filter
-    filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 3px rgba(76, 175, 80, 0.6));
-    transition: filter $transition-normal;
+    transition: transform $transition-fast;
   }
   
   &:hover {
@@ -397,21 +389,16 @@ body {
   .title-search-button {
     color: #ecf0f1;
     
-    img.clip-icon-available {
-      // Same green color in dark mode
-      filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 4px rgba(76, 175, 80, 0.8));
-    }
-  }
-  
-  // Enhanced glow effects in dark mode
-  .title-search {
-    &.clipping {
-      box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
-    }
-    
-    &.clip-error {
-      background: rgba(244, 67, 54, 0.3);
-      box-shadow: 0 0 15px rgba(244, 67, 54, 0.7);
+    // Enhanced glow effects in dark mode
+    .title-search {
+      &.clipping {
+        box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+      }
+      
+      &.clip-error {
+        background: rgba(244, 67, 54, 0.3);
+        box-shadow: 0 0 15px rgba(244, 67, 54, 0.7);
+      }
     }
   }
 }
