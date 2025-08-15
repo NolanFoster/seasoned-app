@@ -282,24 +282,30 @@
   .header-container::after {
     content: '';
     position: fixed;
-    top: 70px;
-    left: 50%;
-    transform: translateX(-24px);
-    width: 48px;
-    height: 40px;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
     pointer-events: none; // Placeholder only
   }
   
-  // Create a mobile version of the FAB
+  // Create a mobile version of the FAB - bottom right corner
   .fab-standalone {
     display: block;
     position: fixed;
-    top: 70px;
-    left: 50%;
-    transform: translateX(-28px);  // Updated from -24px to center the wider button
+    bottom: 20px;
+    right: 20px;
+    left: auto;
+    transform: none;  // Remove centering transform
     z-index: 1100;
-    width: 56px;  // Match desktop width
-    height: 40px;  // Keep consistent height
+    width: 56px;  // Make it circular on mobile
+    height: 56px;  // Make it circular on mobile
+    border-radius: 50%;  // Circular button
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+    
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
   }
 }
 
@@ -361,6 +367,14 @@
     width: 18px;
     height: 18px;
   }
+  
+  // Override for standalone add button to keep it at bottom right
+  .fab-standalone {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -389,5 +403,13 @@
     width: 14px;
     height: 14px;
     font-size: 9px;
+  }
+  
+  // Override for standalone add button to keep it at bottom right
+  .fab-standalone {
+    bottom: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
   }
 }
