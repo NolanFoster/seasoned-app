@@ -310,8 +310,8 @@ function App() {
   const [recipes, setRecipes] = useState([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [ingredients, setIngredients] = useState('');
-  const [instructions, setInstructions] = useState('');
+  const [ingredients, setIngredients] = useState([]);
+  const [instructions, setInstructions] = useState([]);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -716,11 +716,11 @@ function App() {
       name,
       description,
       image: '', // Will be updated after image upload
-      recipeIngredient: ingredients.split('\n').filter(i => i.trim()),
-      recipeInstructions: instructions.split('\n').filter(i => i.trim()),
+      recipeIngredient: ingredients.filter(i => i.trim()),
+      recipeInstructions: instructions.filter(i => i.trim()),
       // Backward compatibility
-      ingredients: ingredients.split('\n').filter(i => i.trim()),
-      instructions: instructions.split('\n').filter(i => i.trim()),
+      ingredients: ingredients.filter(i => i.trim()),
+      instructions: instructions.filter(i => i.trim()),
     };
     try {
       const res = await fetch(`${API_URL}/recipe`, {
@@ -888,8 +888,8 @@ function App() {
   function resetForm() {
     setName('');
     setDescription('');
-    setIngredients('');
-    setInstructions('');
+    setIngredients([]);
+    setInstructions([]);
     setSelectedImage(null);
     setEditingRecipe(null);
     setEditableRecipe(null);
@@ -1460,40 +1460,36 @@ function App() {
                         <div className="recipe-preview-section">
                           <h4>Ingredients</h4>
                           <div className="ingredients-edit-container">
-                            {ingredients.split('\n').map((ingredient, actualIndex) => {
-                              if (!ingredient.trim()) return null;
-                              return (
-                                <div key={actualIndex} className="ingredient-edit-row">
-                                  <input 
-                                    type="text" 
-                                    value={ingredient} 
-                                    onChange={e => {
-                                      const lines = ingredients.split('\n');
-                                      lines[actualIndex] = e.target.value;
-                                      setIngredients(lines.join('\n'));
-                                    }}
-                                    className="preview-edit-input ingredient-input"
-                                  />
-                                  <button 
-                                    onClick={() => {
-                                      const lines = ingredients.split('\n');
-                                      lines.splice(actualIndex, 1);
-                                      setIngredients(lines.join('\n'));
-                                    }}
-                                    className="remove-ingredient-btn"
-                                    title="Remove ingredient"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              );
-                            })}
-                            {ingredients.split('\n').filter(i => i.trim()).length === 0 && (
+                            {ingredients.map((ingredient, index) => (
+                              <div key={index} className="ingredient-edit-row">
+                                <input 
+                                  type="text" 
+                                  value={ingredient} 
+                                  onChange={e => {
+                                    const newIngredients = [...ingredients];
+                                    newIngredients[index] = e.target.value;
+                                    setIngredients(newIngredients);
+                                  }}
+                                  className="preview-edit-input ingredient-input"
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const newIngredients = ingredients.filter((_, i) => i !== index);
+                                    setIngredients(newIngredients);
+                                  }}
+                                  className="remove-ingredient-btn"
+                                  title="Remove ingredient"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            {ingredients.length === 0 && (
                               <div className="ingredient-edit-row">
                                 <input 
                                   type="text" 
                                   value="" 
-                                  onChange={e => setIngredients(e.target.value)}
+                                  onChange={e => setIngredients([e.target.value])}
                                   className="preview-edit-input ingredient-input"
                                   placeholder="Add first ingredient"
                                 />
@@ -1501,13 +1497,7 @@ function App() {
                             )}
                             <button 
                               onClick={() => {
-                                // If ingredients is empty or only has empty lines, set a single space
-                                // Otherwise add a newline with a space to ensure it's not filtered out
-                                if (!ingredients || ingredients.split('\n').filter(i => i.trim()).length === 0) {
-                                  setIngredients(' ');
-                                } else {
-                                  setIngredients(ingredients + '\n ');
-                                }
+                                setIngredients([...ingredients, '']);
                               }}
                               className="add-ingredient-btn"
                             >
@@ -1519,40 +1509,35 @@ function App() {
                         <div className="recipe-preview-section">
                           <h4>Instructions</h4>
                           <div className="instructions-edit-container">
-                            {instructions.split('\n').map((instruction, actualIndex) => {
-                              if (!instruction.trim()) return null;
-                              const displayIndex = instructions.split('\n').slice(0, actualIndex + 1).filter(i => i.trim()).length;
-                              return (
-                                <div key={actualIndex} className="instruction-edit-row">
-                                  <textarea 
-                                    value={instruction} 
-                                    onChange={e => {
-                                      const lines = instructions.split('\n');
-                                      lines[actualIndex] = e.target.value;
-                                      setInstructions(lines.join('\n'));
-                                    }}
-                                    className="preview-edit-textarea instruction-textarea"
-                                    placeholder={`Step ${displayIndex}`}
-                                  />
-                                  <button 
-                                    onClick={() => {
-                                      const lines = instructions.split('\n');
-                                      lines.splice(actualIndex, 1);
-                                      setInstructions(lines.join('\n'));
-                                    }}
-                                    className="remove-instruction-btn"
-                                    title="Remove instruction"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              );
-                            })}
-                            {instructions.split('\n').filter(i => i.trim()).length === 0 && (
+                            {instructions.map((instruction, index) => (
+                              <div key={index} className="instruction-edit-row">
+                                <textarea 
+                                  value={instruction} 
+                                  onChange={e => {
+                                    const newInstructions = [...instructions];
+                                    newInstructions[index] = e.target.value;
+                                    setInstructions(newInstructions);
+                                  }}
+                                  className="preview-edit-textarea instruction-textarea"
+                                  placeholder={`Step ${index + 1}`}
+                                />
+                                <button 
+                                  onClick={() => {
+                                    const newInstructions = instructions.filter((_, i) => i !== index);
+                                    setInstructions(newInstructions);
+                                  }}
+                                  className="remove-instruction-btn"
+                                  title="Remove instruction"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            {instructions.length === 0 && (
                               <div className="instruction-edit-row">
                                 <textarea 
                                   value="" 
-                                  onChange={e => setInstructions(e.target.value)}
+                                  onChange={e => setInstructions([e.target.value])}
                                   className="preview-edit-textarea instruction-textarea"
                                   placeholder="Step 1"
                                 />
@@ -1560,13 +1545,7 @@ function App() {
                             )}
                             <button 
                               onClick={() => {
-                                // If instructions is empty or only has empty lines, set a single space
-                                // Otherwise add a newline with a space to ensure it's not filtered out
-                                if (!instructions || instructions.split('\n').filter(i => i.trim()).length === 0) {
-                                  setInstructions(' ');
-                                } else {
-                                  setInstructions(instructions + '\n ');
-                                }
+                                setInstructions([...instructions, '']);
                               }}
                               className="add-instruction-btn"
                             >
