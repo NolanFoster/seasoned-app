@@ -1,4 +1,11 @@
 // Recipe Clipper Worker using Cloudflare Workers AI with GPT-4o-mini model
+import { 
+  generateRecipeId, 
+  saveRecipeToKV, 
+  getRecipeFromKV, 
+  deleteRecipeFromKV 
+} from '../../shared/kv-storage.js';
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -17,7 +24,7 @@ export default {
     }
 
     try {
-              // Clip recipe from URL using GPT-OSS-20B
+      // Clip recipe from URL using GPT-OSS-20B
       if (pathname === '/clip' && request.method === 'POST') {
         const body = await request.json();
         const pageUrl = body.url;
@@ -30,6 +37,26 @@ export default {
         }
         
         try {
+          // First, check if recipe already exists in KV store
+          const recipeId = await generateRecipeId(pageUrl);
+          const existingRecipe = await getRecipeFromKV(env, recipeId);
+          
+          if (existingRecipe.success) {
+            console.log('Recipe found in KV store, returning cached version');
+            return new Response(JSON.stringify({
+              ...existingRecipe.recipe.data,
+              cached: true,
+              recipeId: recipeId,
+              scrapedAt: existingRecipe.recipe.scrapedAt
+            }), { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          console.log('Recipe not found in KV store, proceeding with clipping');
+          
+          // Proceed with recipe extraction
           const recipe = await extractRecipeWithGPT(pageUrl, env);
           if (!recipe) {
             return new Response('No recipe could be extracted', { 
@@ -38,10 +65,36 @@ export default {
             });
           }
           
-          return new Response(JSON.stringify(recipe), { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          // Save the extracted recipe to KV store
+          const saveResult = await saveRecipeToKV(env, recipeId, {
+            url: pageUrl,
+            data: recipe
           });
+          
+          if (saveResult.success) {
+            console.log('Recipe saved to KV store successfully');
+            return new Response(JSON.stringify({
+              ...recipe,
+              cached: false,
+              recipeId: recipeId,
+              savedToKV: true
+            }), { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            console.warn('Failed to save recipe to KV store:', saveResult.error);
+            // Still return the recipe even if KV save failed
+            return new Response(JSON.stringify({
+              ...recipe,
+              cached: false,
+              savedToKV: false,
+              kvError: saveResult.error
+            }), { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
         } catch (e) {
           console.error('Recipe extraction error:', e);
           return new Response('Error extracting recipe: ' + e.message, { 
@@ -51,9 +104,94 @@ export default {
         }
       }
 
+      // Get cached recipe by URL
+      if (pathname === '/cached' && request.method === 'GET') {
+        const pageUrl = url.searchParams.get('url');
+        
+        if (!pageUrl) {
+          return new Response('URL parameter is required', { 
+            status: 400,
+            headers: corsHeaders
+          });
+        }
+        
+        try {
+          const recipeId = await generateRecipeId(pageUrl);
+          const existingRecipe = await getRecipeFromKV(env, recipeId);
+          
+          if (existingRecipe.success) {
+            return new Response(JSON.stringify({
+              ...existingRecipe.recipe.data,
+              cached: true,
+              recipeId: recipeId,
+              scrapedAt: existingRecipe.recipe.scrapedAt
+            }), { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            return new Response(JSON.stringify({ 
+              error: 'Recipe not found in cache',
+              url: pageUrl
+            }), { 
+              status: 404,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (e) {
+          console.error('Error retrieving cached recipe:', e);
+          return new Response('Error retrieving cached recipe: ' + e.message, { 
+            status: 500,
+            headers: corsHeaders
+          });
+        }
+      }
+
+      // Clear cached recipe by URL
+      if (pathname === '/cached' && request.method === 'DELETE') {
+        const pageUrl = url.searchParams.get('url');
+        
+        if (!pageUrl) {
+          return new Response('URL parameter is required', { 
+            status: 400,
+            headers: corsHeaders
+          });
+        }
+        
+        try {
+          const recipeId = await generateRecipeId(pageUrl);
+          await env.RECIPE_STORAGE.delete(recipeId);
+          
+          return new Response(JSON.stringify({ 
+            message: 'Recipe cache cleared successfully',
+            url: pageUrl,
+            recipeId: recipeId
+          }), { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (e) {
+          console.error('Error clearing cached recipe:', e);
+          return new Response('Error clearing cached recipe: ' + e.message, { 
+            status: 500,
+            headers: corsHeaders
+          });
+        }
+      }
+
       // Health check endpoint
       if (pathname === '/health' && request.method === 'GET') {
-        return new Response(JSON.stringify({ status: 'healthy', service: 'recipe-clipper' }), {
+        return new Response(JSON.stringify({ 
+          status: 'healthy', 
+          service: 'recipe-clipper',
+          features: ['ai-extraction', 'kv-storage', 'caching'],
+          endpoints: {
+            'POST /clip': 'Extract recipe from URL (checks cache first)',
+            'GET /cached?url=<recipe-url>': 'Get cached recipe by URL',
+            'DELETE /cached?url=<recipe-url>': 'Clear cached recipe by URL',
+            'GET /health': 'Health check'
+          }
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
@@ -71,6 +209,8 @@ export default {
     }
   }
 };
+
+// KV Storage functions are now imported from shared/kv-storage.js
 
 // Extract recipe using GPT-OSS-20B model
 async function extractRecipeWithGPT(pageUrl, env) {

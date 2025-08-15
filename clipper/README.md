@@ -12,6 +12,8 @@ The Recipe Clipper Worker is a standalone service that extracts structured recip
 - Parse ingredients, instructions, and metadata
 - Support for multiple recipe formats
 - AI-powered content extraction
+- **NEW**: KV storage integration with automatic caching
+- **NEW**: Cache management endpoints
 
 ## Project Structure
 
@@ -74,6 +76,17 @@ Or use the deployment script:
 ## API Documentation
 
 See `docs/README-clipper.md` for detailed API documentation.
+
+## KV Integration
+
+The clipper now includes KV storage integration for automatic caching. See `KV_INTEGRATION_README.md` for detailed information about the new caching features.
+
+### Quick Start with Caching
+
+1. The clipper automatically caches recipes on first extraction
+2. Subsequent requests for the same URL return cached results instantly
+3. Use `/cached?url=<recipe-url>` to check if a recipe is cached
+4. Use `DELETE /cached?url=<recipe-url>` to clear cache entries
 
 ## License
 

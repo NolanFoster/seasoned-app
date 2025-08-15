@@ -1,0 +1,28 @@
+{
+  "name": "recipe-app-shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for recipe app workers",
+  "type": "module",
+  "main": "kv-storage.js",
+  "exports": {
+    ".": "./kv-storage.js",
+    "./kv-storage": "./kv-storage.js"
+  },
+  "scripts": {
+    "test": "node test-simple.js",
+    "test:jest": "jest test-kv-storage.js",
+    "test:all": "node ../test-refactoring-complete.js"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "kv",
+    "storage",
+    "recipes"
+  ],
+  "author": "Recipe App Team",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
