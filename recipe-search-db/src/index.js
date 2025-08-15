@@ -50,6 +50,10 @@ export default {
         return new Response(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
+      } else if (path === '/api/migrate-kv' && method === 'POST') {
+        return await migrateKVToSearch(request, env, corsHeaders);
+      } else if (path === '/api/debug-kv' && method === 'GET') {
+        return await debugKVStorage(request, env, corsHeaders);
       } else {
         return new Response(JSON.stringify({ error: 'Not found' }), {
           status: 404,
@@ -380,4 +384,498 @@ async function getGraph(request, env, corsHeaders) {
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
+}
+
+// Migration operations
+async function migrateKVToSearch(request, env, corsHeaders) {
+  try {
+    console.log('🚀 Starting KV to Search Database Migration...');
+    
+    // Get all recipe keys from KV
+    const keys = await env.RECIPE_STORAGE.list();
+    
+    if (!keys.keys || keys.keys.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'No recipes found in KV storage' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log(`📊 Found ${keys.keys.length} recipes to migrate`);
+    
+    // Process recipes in batches
+    const batchSize = 5; // Smaller batch size for worker environment
+    const batches = chunkArray(keys.keys, batchSize);
+    let totalProcessed = 0;
+    let totalSuccessful = 0;
+    let totalFailed = 0;
+    let totalSkipped = 0;
+    
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      console.log(`🔄 Processing batch ${i + 1}/${batches.length} (${batch.length} recipes)`);
+      
+      // Process batch sequentially to avoid overwhelming the system
+      for (const key of batch) {
+        try {
+          const result = await processKVRecipe(key, env);
+          totalProcessed++;
+          
+          if (result.success) {
+            if (result.skipped) {
+              totalSkipped++;
+            } else {
+              totalSuccessful++;
+            }
+          } else {
+            totalFailed++;
+          }
+        } catch (error) {
+          totalProcessed++;
+          totalFailed++;
+          console.error(`Failed to process recipe ${key.name}:`, error);
+        }
+      }
+      
+      // Small delay between batches
+      if (i < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    const stats = {
+      total: keys.keys.length,
+      processed: totalProcessed,
+      successful: totalSuccessful,
+      failed: totalFailed,
+      skipped: totalSkipped
+    };
+    
+    console.log('✅ Migration complete:', stats);
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Migration completed successfully',
+      stats
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function processKVRecipe(key, env) {
+  try {
+    // Get recipe from KV - handle both compressed and uncompressed data
+    let recipe;
+    try {
+      // First try to get as JSON (uncompressed)
+      recipe = await env.RECIPE_STORAGE.get(key.name, 'json');
+    } catch (jsonError) {
+      // If JSON fails, try to get as text and decompress
+      const compressedData = await env.RECIPE_STORAGE.get(key.name, 'text');
+      if (compressedData && compressedData.startsWith('H4sI')) {
+        // This looks like compressed data, try to decompress
+        try {
+          recipe = await decompressKVData(compressedData);
+        } catch (decompressError) {
+          throw new Error(`Failed to decompress recipe data: ${decompressError.message}`);
+        }
+      } else {
+        throw new Error(`Invalid recipe data format: ${jsonError.message}`);
+      }
+    }
+    
+    if (!recipe) {
+      throw new Error('Recipe not found in KV');
+    }
+    
+    // Check if recipe already exists in search database
+    const existingNode = await checkExistingNode(key.name, env);
+    if (existingNode) {
+      return { success: true, skipped: true, reason: 'Already exists' };
+    }
+    
+    // Extract recipe data from the nested structure
+    const recipeData = recipe.data || recipe;
+    
+    // Create recipe node
+    const recipeNode = await createRecipeNodeFromKV(key.name, recipeData, env);
+    if (!recipeNode.success) {
+      throw new Error(`Failed to create recipe node: ${recipeNode.error}`);
+    }
+    
+    // Create ingredient nodes and relationships
+    if (recipeData.ingredients && Array.isArray(recipeData.ingredients)) {
+      await createIngredientNodesFromKV(recipeNode.nodeId, recipeData.ingredients, env);
+    }
+    
+    // Create tag relationships from multiple sources
+    const tags = [];
+    if (recipeData.recipeCategory && Array.isArray(recipeData.recipeCategory)) {
+      tags.push(...recipeData.recipeCategory);
+    }
+    if (recipeData.recipeCuisine && Array.isArray(recipeData.recipeCuisine)) {
+      tags.push(...recipeData.recipeCuisine);
+    }
+    if (recipeData.keywords && recipeData.keywords.trim()) {
+      tags.push(...recipeData.keywords.split(',').map(k => k.trim()).filter(k => k));
+    }
+    
+    if (tags.length > 0) {
+      await createTagNodesFromKV(recipeNode.nodeId, tags, env);
+    }
+    
+    return { success: true, nodeId: recipeNode.nodeId };
+    
+  } catch (error) {
+    throw error;
+  }
+}
+
+async function createRecipeNodeFromKV(recipeId, recipeData, env) {
+  const nodeData = {
+    id: recipeId,
+    type: 'RECIPE',
+    properties: {
+      title: recipeData.name || recipeData.title || 'Untitled Recipe',
+      description: recipeData.description || '',
+      ingredients: recipeData.ingredients || [],
+      instructions: recipeData.instructions || [],
+      url: recipeData.url || '',
+      scrapedAt: recipeData.scrapedAt || new Date().toISOString(),
+      prepTime: recipeData.prepTime || null,
+      cookTime: recipeData.cookTime || null,
+      servings: recipeData.recipeYield ? recipeData.recipeYield[0] : null,
+      difficulty: recipeData.difficulty || null,
+      cuisine: recipeData.recipeCuisine ? recipeData.recipeCuisine[0] : null,
+      category: recipeData.recipeCategory ? recipeData.recipeCategory[0] : null,
+      author: recipeData.author ? recipeData.author[0]?.name : null,
+      image: recipeData.image || null,
+      rating: recipeData.aggregateRating ? recipeData.aggregateRating.ratingValue : null,
+      ratingCount: recipeData.aggregateRating ? recipeData.aggregateRating.ratingCount : null,
+      nutrition: recipeData.nutrition || null
+    }
+  };
+  
+  try {
+    const result = await env.SEARCH_DB.prepare(`
+      INSERT INTO nodes (id, type, properties) 
+      VALUES (?, ?, ?)
+    `).bind(nodeData.id, nodeData.type, JSON.stringify(nodeData.properties)).run();
+    
+    return { success: true, nodeId: nodeData.id };
+    
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function createIngredientNodesFromKV(recipeNodeId, ingredients, env) {
+  for (const ingredient of ingredients) {
+    try {
+      // Normalize ingredient name
+      const ingredientName = normalizeIngredientName(ingredient);
+      const ingredientId = `ingredient_${ingredientName.toLowerCase().replace(/\s+/g, '_')}`;
+      
+      // Create ingredient node if it doesn't exist
+      const ingredientNode = await createOrGetNodeFromKV(env, {
+        id: ingredientId,
+        type: 'INGREDIENT',
+        properties: {
+          name: ingredientName,
+          category: categorizeIngredient(ingredientName)
+        }
+      });
+      
+      if (ingredientNode.success) {
+        // Create HAS_INGREDIENT relationship
+        await createEdgeFromKV(env, {
+          from_id: recipeNodeId,
+          to_id: ingredientNode.nodeId,
+          type: 'HAS_INGREDIENT',
+          properties: {
+            originalText: ingredient,
+            quantity: extractQuantity(ingredient),
+            unit: extractUnit(ingredient)
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.warn(`Failed to create ingredient node for "${ingredient}":`, error.message);
+    }
+  }
+}
+
+async function createTagNodesFromKV(recipeNodeId, tags, env) {
+  for (const tag of tags) {
+    try {
+      const tagName = tag.trim().toLowerCase();
+      const tagId = `tag_${tagName.replace(/\s+/g, '_')}`;
+      
+      // Create tag node if it doesn't exist
+      const tagNode = await createOrGetNodeFromKV(env, {
+        id: tagId,
+        type: 'TAG',
+        properties: {
+          name: tagName,
+          category: categorizeTag(tagName)
+        }
+      });
+      
+      if (tagNode.success) {
+        // Create HAS_TAG relationship
+        await createEdgeFromKV(env, {
+          from_id: recipeNodeId,
+          to_id: tagNode.nodeId,
+          type: 'HAS_TAG'
+        });
+      }
+      
+    } catch (error) {
+      console.warn(`Failed to create tag node for "${tag}":`, error.message);
+    }
+  }
+}
+
+async function createOrGetNodeFromKV(env, nodeData) {
+  try {
+    // Try to get existing node first
+    const existingNode = await env.SEARCH_DB.prepare(`
+      SELECT id FROM nodes WHERE id = ?
+    `).bind(nodeData.id).first();
+    
+    if (existingNode) {
+      // Node exists, return it
+      return { success: true, nodeId: existingNode.id };
+    }
+    
+    // Node doesn't exist, create it
+    await env.SEARCH_DB.prepare(`
+      INSERT INTO nodes (id, type, properties) 
+      VALUES (?, ?, ?)
+    `).bind(nodeData.id, nodeData.type, JSON.stringify(nodeData.properties)).run();
+    
+    return { success: true, nodeId: nodeData.id };
+    
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function createEdgeFromKV(env, edgeData) {
+  try {
+    await env.SEARCH_DB.prepare(`
+      INSERT INTO edges (from_id, to_id, type, properties) 
+      VALUES (?, ?, ?, ?)
+    `).bind(
+      edgeData.from_id, 
+      edgeData.to_id, 
+      edgeData.type, 
+      edgeData.properties ? JSON.stringify(edgeData.properties) : null
+    ).run();
+    
+    return { success: true };
+    
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function checkExistingNode(nodeId, env) {
+  try {
+    const result = await env.SEARCH_DB.prepare(`
+      SELECT id FROM nodes WHERE id = ?
+    `).bind(nodeId).first();
+    
+    return !!result;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Utility functions for KV migration
+function chunkArray(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function normalizeIngredientName(ingredient) {
+  return ingredient
+    .replace(/^\d+\/\d+|\d+\.?\d*\s*(cup|tbsp|tsp|oz|lb|g|kg|ml|l|pound|ounce|gram|kilogram|milliliter|liter)s?\.?\s*/gi, '')
+    .replace(/^\d+\s*/, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function categorizeIngredient(ingredientName) {
+  const categories = {
+    'vegetables': ['tomato', 'onion', 'garlic', 'carrot', 'celery', 'bell pepper', 'mushroom', 'spinach', 'lettuce'],
+    'fruits': ['apple', 'banana', 'orange', 'lemon', 'lime', 'strawberry', 'blueberry'],
+    'proteins': ['chicken', 'beef', 'pork', 'fish', 'shrimp', 'tofu', 'egg', 'beans'],
+    'dairy': ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'sour cream'],
+    'grains': ['rice', 'pasta', 'bread', 'flour', 'quinoa', 'oats'],
+    'herbs_spices': ['basil', 'oregano', 'thyme', 'rosemary', 'cumin', 'paprika', 'cinnamon']
+  };
+  
+  for (const [category, ingredients] of Object.entries(categories)) {
+    if (ingredients.some(ing => ingredientName.includes(ing))) {
+      return category;
+    }
+  }
+  
+  return 'other';
+}
+
+function categorizeTag(tagName) {
+  const categories = {
+    'cuisine': ['italian', 'mexican', 'chinese', 'indian', 'french', 'japanese', 'thai'],
+    'meal_type': ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'appetizer'],
+    'dietary': ['vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'paleo'],
+    'cooking_method': ['baked', 'fried', 'grilled', 'roasted', 'steamed', 'slow-cooked'],
+    'difficulty': ['easy', 'medium', 'hard', 'beginner', 'advanced']
+  };
+  
+  for (const [category, tags] of Object.entries(categories)) {
+    if (tags.some(t => tagName.includes(t))) {
+      return category;
+    }
+  }
+  
+  return 'other';
+}
+
+function extractQuantity(ingredient) {
+  const match = ingredient.match(/^(\d+\/\d+|\d+\.?\d*)/);
+  return match ? match[1] : null;
+}
+
+function extractUnit(ingredient) {
+  const units = ['cup', 'tbsp', 'tsp', 'oz', 'lb', 'g', 'kg', 'ml', 'l', 'pound', 'ounce', 'gram', 'kilogram', 'milliliter', 'liter'];
+  const lowerIngredient = ingredient.toLowerCase();
+  
+  for (const unit of units) {
+    if (lowerIngredient.includes(unit)) {
+      return unit;
+    }
+  }
+  
+  return null;
+}
+
+// Decompress KV data (similar to shared/kv-storage.js)
+async function decompressKVData(compressedBase64) {
+  try {
+    // Convert base64 string back to Uint8Array
+    const compressedData = new Uint8Array(
+      atob(compressedBase64).split('').map(char => char.charCodeAt(0))
+    );
+    
+    // Use DecompressionStream for gzip decompression
+    const ds = new DecompressionStream('gzip');
+    const writer = ds.writable.getWriter();
+    const reader = ds.readable.getReader();
+    
+    writer.write(compressedData);
+    writer.close();
+    
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    
+    // Combine chunks and decode to string
+    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const decompressedBytes = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      decompressedBytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    
+    const decoder = new TextDecoder();
+    const jsonString = decoder.decode(decompressedBytes);
+    return JSON.parse(jsonString);
+    
+  } catch (error) {
+    throw new Error(`Decompression failed: ${error.message}`);
+  }
+}
+
+// Debug function to inspect KV storage
+async function debugKVStorage(request, env, corsHeaders) {
+  try {
+    // Get a few recipe keys to inspect
+    const keys = await env.RECIPE_STORAGE.list({ limit: 3 });
+    
+    if (!keys.keys || keys.keys.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'No recipes found in KV storage' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Get the first recipe to see its structure
+    const firstKey = keys.keys[0];
+    let firstRecipe;
+    try {
+      firstRecipe = await env.RECIPE_STORAGE.get(firstKey.name, 'json');
+    } catch (jsonError) {
+      // Try to get as text and decompress
+      const compressedData = await env.RECIPE_STORAGE.get(firstKey.name, 'text');
+      if (compressedData && compressedData.startsWith('H4sI')) {
+        firstRecipe = await decompressKVData(compressedData);
+      } else {
+        firstRecipe = { error: 'Failed to parse recipe data' };
+      }
+    }
+    
+    const debugInfo = {
+      totalKeys: keys.keys.length,
+      sampleKey: firstKey.name,
+      sampleRecipe: firstRecipe,
+      keyStructure: keys.keys.map(k => ({
+        name: k.name,
+        expiration: k.expiration,
+        metadata: k.metadata
+      }))
+    };
+    
+    return new Response(JSON.stringify(debugInfo, null, 2), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }

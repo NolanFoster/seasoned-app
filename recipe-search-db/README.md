@@ -30,6 +30,7 @@ The search database uses a graph structure with three main components:
 - **Transaction Support**: Multi-row operations with consistency
 - **Soft Deletes**: Maintain data integrity while allowing removal
 - **RESTful API**: Clean HTTP endpoints for all operations
+- **KV Migration**: Import recipes from Cloudflare KV storage with automatic graph building
 
 ## 📊 Database Schema
 
@@ -81,6 +82,7 @@ CREATE VIRTUAL TABLE nodes_fts USING fts5(
 - Node.js 18+ installed
 - Wrangler CLI installed (`npm install -g wrangler`)
 - Cloudflare account with D1 access
+- Cloudflare KV namespace for recipe storage
 
 ### 2. Create Database
 ```bash
@@ -91,12 +93,16 @@ wrangler d1 create recipe-search-db
 ```
 
 ### 3. Update Configuration
-Edit `wrangler.toml` and add your database ID:
+Edit `wrangler.toml` and add your database ID and KV namespace:
 ```toml
 [[d1_databases]]
 binding = "SEARCH_DB"
 database_name = "recipe-search-db"
 database_id = "your-actual-database-id-here"
+
+[[kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "your-recipe-kv-namespace-id"
 ```
 
 ### 4. Initialize Schema
@@ -273,6 +279,9 @@ curl http://localhost:8787/api/health
 ### Health
 - `GET /api/health` - Service health check
 
+### Migration
+- `POST /api/migrate-kv` - Migrate all recipes from KV storage to search database
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -282,6 +291,70 @@ curl http://localhost:8787/api/health
 - Database binding and ID
 - KV namespaces (optional, for caching)
 - R2 buckets (optional, for search indexes)
+
+## 🔄 KV Migration
+
+### Overview
+The search database includes a powerful migration system that can import all recipes from your Cloudflare KV storage and automatically build a rich graph structure with:
+
+- **Recipe Nodes**: Full recipe data with title, ingredients, instructions, etc.
+- **Ingredient Nodes**: Normalized ingredients with categorization
+- **Tag Nodes**: Recipe tags and categories
+- **Graph Relationships**: Automatic edge creation between recipes and ingredients/tags
+
+### How It Works
+1. **Batch Processing**: Recipes are processed in small batches to avoid overwhelming the system
+2. **Smart Deduplication**: Existing nodes are reused, preventing duplicates
+3. **Intelligent Categorization**: Ingredients and tags are automatically categorized
+4. **Relationship Building**: Edges are created to connect recipes with their components
+5. **Progress Tracking**: Real-time progress updates and detailed statistics
+
+### Usage
+
+#### Start Migration
+```bash
+# Trigger migration via HTTP endpoint
+curl -X POST http://localhost:8787/api/migrate-kv
+```
+
+#### Migration Response
+```json
+{
+  "success": true,
+  "message": "Migration completed successfully",
+  "stats": {
+    "total": 150,
+    "processed": 150,
+    "successful": 148,
+    "failed": 2,
+    "skipped": 0
+  }
+}
+```
+
+#### Test Migration
+```bash
+# Run migration tests
+node test-migration.js
+
+# Test with your actual data
+npm run test:migration
+```
+
+### Configuration
+Ensure your `wrangler.toml` includes the KV binding:
+```toml
+[[kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "your-recipe-kv-namespace-id"
+```
+
+### Benefits After Migration
+- **Full-Text Search**: Search recipes by any text content
+- **Ingredient Discovery**: Find recipes by ingredients
+- **Category Browsing**: Explore recipes by tags and categories
+- **Graph Traversal**: Navigate recipe relationships
+- **Advanced Queries**: Complex search combinations
 
 ## 🚀 Deployment
 

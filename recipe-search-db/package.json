@@ -10,6 +10,7 @@
     "db:info": "wrangler d1 execute recipe-search-db --command=\"PRAGMA table_info(nodes);\"",
     "test": "node test-search-db.js",
     "test:example": "node test-example.js",
+    "test:migration": "node test-migration.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
@@ -28,7 +29,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.30.0"
   },
   "engines": {
     "node": ">=18.0.0"
