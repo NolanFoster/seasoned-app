@@ -76,6 +76,12 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .add-btn:hover {
@@ -91,6 +97,12 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .update-btn:hover {
@@ -106,6 +118,12 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .cancel-btn:hover {
@@ -464,9 +482,11 @@
 
 .remove-ingredient-btn,
 .remove-instruction-btn {
-  background: rgba(220, 53, 69, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -478,19 +498,23 @@
   font-weight: bold;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .remove-ingredient-btn:hover,
 .remove-instruction-btn:hover {
-  background: rgba(220, 53, 69, 1);
+  background: rgba(255, 255, 255, 0.2);
   transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .add-ingredient-btn,
 .add-instruction-btn {
-  background: rgba(40, 167, 69, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
@@ -498,12 +522,14 @@
   font-weight: 500;
   transition: all 0.3s ease;
   align-self: flex-start;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .add-ingredient-btn:hover,
 .add-instruction-btn:hover {
-  background: rgba(40, 167, 69, 1);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* Save Progress Overlay */
@@ -782,22 +808,26 @@ button:disabled:hover {
   
   .remove-ingredient-btn,
   .remove-instruction-btn {
-    background: rgba(220, 53, 69, 0.6);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   .remove-ingredient-btn:hover,
   .remove-instruction-btn:hover {
-    background: rgba(220, 53, 69, 0.8);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
   }
   
   .add-ingredient-btn,
   .add-instruction-btn {
-    background: rgba(40, 167, 69, 0.6);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   .add-ingredient-btn:hover,
   .add-instruction-btn:hover {
-    background: rgba(40, 167, 69, 0.8);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
   }
   
   .clip-help-text {
