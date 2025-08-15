@@ -1460,30 +1460,34 @@ function App() {
                         <div className="recipe-preview-section">
                           <h4>Ingredients</h4>
                           <div className="ingredients-edit-container">
-                            {ingredients.split('\n').filter(i => i.trim()).map((ingredient, index) => (
-                              <div key={index} className="ingredient-edit-row">
-                                <input 
-                                  type="text" 
-                                  value={ingredient} 
-                                  onChange={e => {
-                                    const lines = ingredients.split('\n');
-                                    lines[index] = e.target.value;
-                                    setIngredients(lines.join('\n'));
-                                  }}
-                                  className="preview-edit-input ingredient-input"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const lines = ingredients.split('\n').filter((_, i) => i !== index);
-                                    setIngredients(lines.join('\n'));
-                                  }}
-                                  className="remove-ingredient-btn"
-                                  title="Remove ingredient"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                            {ingredients.split('\n').map((ingredient, actualIndex) => {
+                              if (!ingredient.trim()) return null;
+                              return (
+                                <div key={actualIndex} className="ingredient-edit-row">
+                                  <input 
+                                    type="text" 
+                                    value={ingredient} 
+                                    onChange={e => {
+                                      const lines = ingredients.split('\n');
+                                      lines[actualIndex] = e.target.value;
+                                      setIngredients(lines.join('\n'));
+                                    }}
+                                    className="preview-edit-input ingredient-input"
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      const lines = ingredients.split('\n');
+                                      lines.splice(actualIndex, 1);
+                                      setIngredients(lines.join('\n'));
+                                    }}
+                                    className="remove-ingredient-btn"
+                                    title="Remove ingredient"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
                             {ingredients.split('\n').filter(i => i.trim()).length === 0 && (
                               <div className="ingredient-edit-row">
                                 <input 
@@ -1497,7 +1501,13 @@ function App() {
                             )}
                             <button 
                               onClick={() => {
-                                setIngredients(ingredients + (ingredients ? '\n' : ''));
+                                // If ingredients is empty or only has empty lines, set a single space
+                                // Otherwise add a newline with a space to ensure it's not filtered out
+                                if (!ingredients || ingredients.split('\n').filter(i => i.trim()).length === 0) {
+                                  setIngredients(' ');
+                                } else {
+                                  setIngredients(ingredients + '\n ');
+                                }
                               }}
                               className="add-ingredient-btn"
                             >
@@ -1509,30 +1519,35 @@ function App() {
                         <div className="recipe-preview-section">
                           <h4>Instructions</h4>
                           <div className="instructions-edit-container">
-                            {instructions.split('\n').filter(i => i.trim()).map((instruction, index) => (
-                              <div key={index} className="instruction-edit-row">
-                                <textarea 
-                                  value={instruction} 
-                                  onChange={e => {
-                                    const lines = instructions.split('\n');
-                                    lines[index] = e.target.value;
-                                    setInstructions(lines.join('\n'));
-                                  }}
-                                  className="preview-edit-textarea instruction-textarea"
-                                  placeholder={`Step ${index + 1}`}
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const lines = instructions.split('\n').filter((_, i) => i !== index);
-                                    setInstructions(lines.join('\n'));
-                                  }}
-                                  className="remove-instruction-btn"
-                                  title="Remove instruction"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                            {instructions.split('\n').map((instruction, actualIndex) => {
+                              if (!instruction.trim()) return null;
+                              const displayIndex = instructions.split('\n').slice(0, actualIndex + 1).filter(i => i.trim()).length;
+                              return (
+                                <div key={actualIndex} className="instruction-edit-row">
+                                  <textarea 
+                                    value={instruction} 
+                                    onChange={e => {
+                                      const lines = instructions.split('\n');
+                                      lines[actualIndex] = e.target.value;
+                                      setInstructions(lines.join('\n'));
+                                    }}
+                                    className="preview-edit-textarea instruction-textarea"
+                                    placeholder={`Step ${displayIndex}`}
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      const lines = instructions.split('\n');
+                                      lines.splice(actualIndex, 1);
+                                      setInstructions(lines.join('\n'));
+                                    }}
+                                    className="remove-instruction-btn"
+                                    title="Remove instruction"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
                             {instructions.split('\n').filter(i => i.trim()).length === 0 && (
                               <div className="instruction-edit-row">
                                 <textarea 
@@ -1545,7 +1560,13 @@ function App() {
                             )}
                             <button 
                               onClick={() => {
-                                setInstructions(instructions + (instructions ? '\n' : ''));
+                                // If instructions is empty or only has empty lines, set a single space
+                                // Otherwise add a newline with a space to ensure it's not filtered out
+                                if (!instructions || instructions.split('\n').filter(i => i.trim()).length === 0) {
+                                  setInstructions(' ');
+                                } else {
+                                  setInstructions(instructions + '\n ');
+                                }
                               }}
                               className="add-instruction-btn"
                             >
