@@ -1,5 +1,5 @@
 {
-  "name": "recipe-index-db-worker",
+  "name": "recipe-scraper",
   "version": "1.0.0",
   "description": "Cloudflare Worker for scraping and indexing recipe data from URLs",
   "main": "worker.js",

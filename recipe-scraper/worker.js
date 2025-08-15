@@ -1,5 +1,5 @@
 /**
- * Recipe Index DB Worker
+ * Recipe Scraper
  * Scrapes recipe data from URLs using JSON-LD structured data
  */
 
@@ -269,14 +269,14 @@ export default {
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({
         status: 'healthy',
-        service: 'recipe-index-db-worker'
+        service: 'recipe-scraper'
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
     
     // Default response
-    return new Response('Recipe Index DB Worker - Use /scrape?url=<recipe-url> to scrape recipes', {
+    return new Response('Recipe Scraper - Use /scrape?url=<recipe-url> to scrape recipes', {
       headers: { 'Content-Type': 'text/plain' }
     });
   }
