@@ -1644,6 +1644,18 @@ function App() {
                   </div>
                 )}
                 
+                {/* Hero Image that extends under header */}
+                {!isEditingPreview && (clippedRecipePreview.image || clippedRecipePreview.image_url) && (
+                  <div className="recipe-preview-image-hero-full">
+                    <img 
+                      src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
+                      alt={clippedRecipePreview.name}
+                      className="preview-hero-image"
+                    />
+                    <div className="recipe-preview-hero-gradient"></div>
+                  </div>
+                )}
+                
                 <div className="form-panel-header">
                   <h2>Clipped Recipe Preview</h2>
                   <button 
@@ -1666,20 +1678,13 @@ function App() {
                     // Preview Mode
                     <>
                       <div className="recipe-preview-content">
-                        {/* Image with overlay at the top */}
+                        {/* Title and description overlay for when there's an image */}
                         {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                          <div className="recipe-preview-image-hero">
-                            <img 
-                              src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
-                              alt={clippedRecipePreview.name}
-                              className="preview-hero-image"
-                            />
-                            <div className="recipe-preview-hero-overlay">
-                              <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
-                              {clippedRecipePreview.description && (
-                                <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
-                              )}
-                            </div>
+                          <div className="recipe-preview-hero-text">
+                            <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
+                            {clippedRecipePreview.description && (
+                              <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
+                            )}
                           </div>
                         )}
                         
