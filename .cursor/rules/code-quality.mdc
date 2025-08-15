@@ -1,0 +1,27 @@
+---
+name: Code Quality Standards
+glob: "**/*"
+priority: 2
+type: always
+---
+
+# Code Quality Standards
+
+## Always Include in Code Changes:
+- Proper error handling and logging
+- Input validation and sanitization
+- Security best practices
+- Performance considerations
+- Accessibility requirements (for frontend)
+
+## Documentation Requirements:
+- Update README if adding new features
+- Document API changes
+- Include JSDoc/TSDoc for public functions
+- Update environment variable documentation
+
+## Git Commit Standards:
+- Use conventional commits (feat:, fix:, docs:, etc.)
+- Keep commits atomic and focused
+- Write clear, descriptive commit messages
+- Reference issue numbers when applicable

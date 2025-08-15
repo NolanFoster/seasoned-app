@@ -1,0 +1,22 @@
+---
+name: Automated Workflows
+glob: "**/*"
+priority: 3
+type: agent-requested
+description: Guidelines for suggesting CI/CD integration and testing strategies in the project
+---
+
+# Automated Workflows
+
+## Suggest CI/CD Integration:
+When implementing features, consider:
+- GitHub Actions for automated testing
+- Pre-commit hooks for linting
+- Automated staging deployments
+- Dependency vulnerability scanning
+
+## Testing Strategy:
+- Unit tests for individual functions
+- Integration tests for API endpoints
+- E2E tests for critical user flows
+- Performance tests for heavy operations
