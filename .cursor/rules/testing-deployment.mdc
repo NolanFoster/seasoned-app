@@ -1,14 +1,19 @@
-# Cursor Rules
+---
+name: Testing and Deployment Workflow
+glob: "**/*"
+priority: 1
+type: always
+---
 
-## Testing and Deployment Workflow
+# Testing and Deployment Workflow
 
-### Always Test Before Committing
+## Always Test Before Committing
 - Run all relevant tests before committing any code changes
 - For frontend changes: Run `npm test` or `yarn test` in the frontend directory
 - For worker changes: Run the appropriate test command in the worker directory
 - Never skip tests, even for "minor" changes
 
-### Staging Branch Workflow
+## Staging Branch Workflow
 When tests pass:
 1. Commit changes with descriptive commit messages
 2. Push to a feature branch first (never directly to main/master)
@@ -20,13 +25,13 @@ When tests pass:
    ```
 4. Only merge to main/master after staging validation
 
-### Test Coverage Requirements
+## Test Coverage Requirements
 - Ensure new features have corresponding tests
 - Maintain or improve existing test coverage
 - Include unit tests for critical functions
 - Add integration tests for API endpoints
 
-### Pre-commit Checklist
+## Pre-commit Checklist
 Before any commit:
 - [ ] All tests pass locally
 - [ ] Code follows project linting rules
@@ -34,14 +39,14 @@ Before any commit:
 - [ ] Environment variables are properly documented
 - [ ] Dependencies are up to date and secure
 
-### Staging Environment Validation
+## Staging Environment Validation
 After pushing to staging:
 - Verify deployment succeeds
 - Run smoke tests on staging environment
 - Check for any performance regressions
 - Validate all integrations work correctly
 
-### Emergency Hotfix Protocol
+## Emergency Hotfix Protocol
 For critical production issues only:
 1. Create hotfix branch from main/master
 2. Apply minimal fix
@@ -49,40 +54,4 @@ For critical production issues only:
 4. Push to staging for quick validation
 5. Fast-track to production with proper documentation
 
-## Code Quality Standards
-
-### Always Include in Code Changes:
-- Proper error handling and logging
-- Input validation and sanitization
-- Security best practices
-- Performance considerations
-- Accessibility requirements (for frontend)
-
-### Documentation Requirements:
-- Update README if adding new features
-- Document API changes
-- Include JSDoc/TSDoc for public functions
-- Update environment variable documentation
-
-### Git Commit Standards:
-- Use conventional commits (feat:, fix:, docs:, etc.)
-- Keep commits atomic and focused
-- Write clear, descriptive commit messages
-- Reference issue numbers when applicable
-
-## Automated Workflows
-
-### Suggest CI/CD Integration:
-When implementing features, consider:
-- GitHub Actions for automated testing
-- Pre-commit hooks for linting
-- Automated staging deployments
-- Dependency vulnerability scanning
-
-### Testing Strategy:
-- Unit tests for individual functions
-- Integration tests for API endpoints
-- E2E tests for critical user flows
-- Performance tests for heavy operations
-
-Remember: The staging branch is your safety net. Always validate there before production!
+**Remember: The staging branch is your safety net. Always validate there before production!**
