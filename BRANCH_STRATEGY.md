@@ -113,7 +113,7 @@ npm run deploy
 
 ### Backend
 ```bash
-cd worker
+cd clipped-recipe-db-worker
 npm run deploy
 ```
 
@@ -140,7 +140,7 @@ npm run deploy
 - Or redeploy a previous commit:
   ```bash
   git checkout <previous-commit-hash>
-  cd worker && npm run deploy
+  cd clipped-recipe-db-worker && npm run deploy
   ```
 
 ## Environment Variables
