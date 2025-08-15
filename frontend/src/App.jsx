@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper-worker.nolanfoster.workers.dev'; // Main recipe worker with KV storage
+const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper.nolanfoster.workers.dev'; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 
 // Function to convert ISO 8601 duration to human readable format
