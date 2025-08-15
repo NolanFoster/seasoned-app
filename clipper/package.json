@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Cloudflare Worker for extracting recipes from URLs using GPT-OSS-20B",
   "main": "src/recipe-clipper.js",
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

@@ -5,7 +5,7 @@
  * This simulates the AI response that would be generated from the actual webpage
  */
 
-import { extractRecipeFromAIResponse } from './src/recipe-clipper.js';
+import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
 console.log('🍳 AllRecipes Recipe Clipper Demo\n');
 console.log('Testing against: https://www.allrecipes.com/recipe/235171/chef-johns-salt-roasted-chicken/\n');

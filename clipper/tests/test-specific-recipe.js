@@ -1,7 +1,7 @@
 // Test script for the specific AllRecipes URL
 // Tests the recipe extraction logic with the actual URL structure
 
-import { extractRecipeFromAIResponse } from './src/recipe-clipper.js';
+import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
 // Mock AI response based on the actual AllRecipes page structure
 const mockAllRecipesResponse = {
