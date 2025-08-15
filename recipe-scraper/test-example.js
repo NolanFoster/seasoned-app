@@ -1,5 +1,5 @@
 /**
- * Example test file for Recipe Index DB Worker
+ * Example test file for Recipe Scraper
  * This demonstrates how to test the worker locally
  */
 
@@ -82,7 +82,7 @@ async function runTests() {
   // Use localhost for local testing or your deployed worker URL
   const workerUrl = process.env.WORKER_URL || 'http://localhost:8787';
   
-  console.log(`Testing Recipe Index DB Worker at: ${workerUrl}\n`);
+  console.log(`Testing Recipe Scraper at: ${workerUrl}\n`);
   
   await testHealth(workerUrl);
   await testSingleUrl(workerUrl);

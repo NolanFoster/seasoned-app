@@ -1,4 +1,4 @@
-# Recipe Index DB Worker
+# Recipe Scraper
 
 A Cloudflare Worker that scrapes recipe data from URLs using JSON-LD structured data. This worker efficiently extracts recipe information without full DOM parsing using Cloudflare's HTMLRewriter API.
 
@@ -106,7 +106,7 @@ Response:
 ```json
 {
   "status": "healthy",
-  "service": "recipe-index-db-worker"
+  "service": "recipe-scraper"
 }
 ```
 
