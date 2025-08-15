@@ -1,4 +1,4 @@
-import { extractRecipeFromAIResponse } from './src/recipe-clipper.js';
+import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
 // Mock Cloudflare AI response structure for null case
 const mockNullResponse = {
