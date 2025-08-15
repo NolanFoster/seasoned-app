@@ -291,13 +291,14 @@
   
   // Create a mobile version of the FAB - bottom left corner
   .fab-standalone {
-    display: block;
-    position: fixed;
-    bottom: 20px;
-    left: 20px;  // Changed from right: 20px
-    right: auto;
-    transform: none;  // Remove centering transform
-    z-index: 1100;
+    display: block !important;
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 20px !important;  // Changed from right: 20px
+    right: auto !important;
+    top: auto !important;  // Override any top positioning
+    transform: none !important;  // Remove centering transform
+    z-index: 9999 !important;  // Ensure it's above everything
     width: 56px;  // Make it circular on mobile
     height: 56px;  // Make it circular on mobile
     border-radius: 50%;  // Circular button
@@ -370,9 +371,10 @@
   
   // Override for standalone add button to keep it at bottom left
   .fab-standalone {
-    bottom: 16px;
-    left: 16px;  // Changed from right: 16px
-    right: auto;
+    bottom: 16px !important;
+    left: 16px !important;  // Changed from right: 16px
+    right: auto !important;
+    top: auto !important;
     width: 48px;
     height: 48px;
   }
@@ -408,9 +410,10 @@
   
   // Override for standalone add button to keep it at bottom left
   .fab-standalone {
-    bottom: 12px;
-    left: 12px;  // Changed from right: 12px
-    right: auto;
+    bottom: 12px !important;
+    left: 12px !important;  // Changed from right: 12px
+    right: auto !important;
+    top: auto !important;
     width: 44px;
     height: 44px;
   }
