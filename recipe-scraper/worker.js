@@ -1,6 +1,7 @@
 /**
  * Recipe Scraper
  * Scrapes recipe data from URLs using JSON-LD structured data
+ * Stores recipes in KV database with hashed URL as key
  */
 
 // Utility function to generate a unique ID from URL
@@ -14,16 +15,215 @@ function generateRecipeId(url) {
     });
 }
 
+// Compress data using gzip and encode as base64
+async function compressData(data) {
+  const encoder = new TextEncoder();
+  const jsonString = JSON.stringify(data);
+  const jsonBytes = encoder.encode(jsonString);
+  
+  // Use CompressionStream for gzip compression
+  const cs = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  const reader = cs.readable.getReader();
+  
+  writer.write(jsonBytes);
+  writer.close();
+  
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  
+  // Combine chunks into a single Uint8Array
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const compressedData = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    compressedData.set(chunk, offset);
+    offset += chunk.length;
+  }
+  
+  // Convert to base64 string for storage
+  return btoa(String.fromCharCode(...compressedData));
+}
+
+// Decompress data using gzip from base64
+async function decompressData(compressedBase64) {
+  // Convert base64 string back to Uint8Array
+  const compressedData = new Uint8Array(
+    atob(compressedBase64).split('').map(char => char.charCodeAt(0))
+  );
+  
+  // Use DecompressionStream for gzip decompression
+  const ds = new DecompressionStream('gzip');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+  
+  writer.write(compressedData);
+  writer.close();
+  
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  
+  // Combine chunks and decode to string
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const decompressedBytes = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    decompressedBytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  
+  const decoder = new TextDecoder();
+  const jsonString = decoder.decode(decompressedBytes);
+  return JSON.parse(jsonString);
+}
+
+// Save recipe to KV storage
+async function saveRecipeToKV(env, recipeId, recipeData) {
+  try {
+    const recipeRecord = {
+      id: recipeId,
+      url: recipeData.url,
+      data: recipeData.data,
+      scrapedAt: new Date().toISOString(),
+      version: '1.1' // Updated version to indicate compression
+    };
+    
+    // Compress the recipe record before saving
+    const compressedData = await compressData(recipeRecord);
+    await env.RECIPE_STORAGE.put(recipeId, compressedData);
+    return { success: true, id: recipeId };
+  } catch (error) {
+    console.error('Error saving recipe to KV:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Get recipe from KV storage
+async function getRecipeFromKV(env, recipeId) {
+  try {
+    const recipeData = await env.RECIPE_STORAGE.get(recipeId);
+    if (!recipeData) {
+      return { success: false, error: 'Recipe not found' };
+    }
+    
+    let recipe;
+    
+    // Try to parse as JSON first (uncompressed data)
+    try {
+      recipe = JSON.parse(recipeData);
+    } catch (parseError) {
+      // If JSON parsing fails, try to decompress (compressed data)
+      try {
+        recipe = await decompressData(recipeData);
+      } catch (decompressError) {
+        console.error('Failed to parse or decompress recipe data:', parseError, decompressError);
+        return { success: false, error: 'Invalid recipe data format' };
+      }
+    }
+    
+    return { success: true, recipe };
+  } catch (error) {
+    console.error('Error retrieving recipe from KV:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// List all recipes from KV storage (with pagination)
+async function listRecipesFromKV(env, cursor = null, limit = 50) {
+  try {
+    const listOptions = { limit };
+    if (cursor) {
+      listOptions.cursor = cursor;
+    }
+    
+    const result = await env.RECIPE_STORAGE.list(listOptions);
+    
+    const recipes = [];
+    for (const key of result.keys) {
+      const recipeData = await env.RECIPE_STORAGE.get(key.name);
+      if (recipeData) {
+        let recipe;
+        
+        // Try to parse as JSON first (uncompressed data)
+        try {
+          recipe = JSON.parse(recipeData);
+        } catch (parseError) {
+          // If JSON parsing fails, try to decompress (compressed data)
+          try {
+            recipe = await decompressData(recipeData);
+          } catch (decompressError) {
+            console.error('Failed to parse or decompress recipe data:', parseError, decompressError);
+            continue; // Skip this recipe and continue with others
+          }
+        }
+        
+        recipes.push(recipe);
+      }
+    }
+    
+    return {
+      success: true,
+      recipes,
+      cursor: result.cursor,
+      list_complete: result.list_complete
+    };
+  } catch (error) {
+    console.error('Error listing recipes from KV:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Delete recipe from KV storage
+async function deleteRecipeFromKV(env, recipeId) {
+  try {
+    await env.RECIPE_STORAGE.delete(recipeId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting recipe from KV:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Decode HTML entities
+function decodeHtmlEntities(text) {
+  if (typeof text !== 'string') return text;
+  
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&nbsp;': ' ',
+    '&copy;': '©',
+    '&reg;': '®',
+    '&trade;': '™'
+  };
+  
+  return text.replace(/&[#\w]+;/g, entity => {
+    return entities[entity] || entity;
+  });
+}
+
 // Normalize ingredients to ensure they're always arrays
 function normalizeIngredients(ingredients) {
   if (!ingredients) return [];
-  if (typeof ingredients === 'string') return [ingredients];
+  if (typeof ingredients === 'string') return [decodeHtmlEntities(ingredients)];
   if (Array.isArray(ingredients)) {
     return ingredients.map(ing => {
-      if (typeof ing === 'string') return ing;
-      if (ing.name) return ing.name;
-      if (ing.text) return ing.text;
-      return String(ing);
+      if (typeof ing === 'string') return decodeHtmlEntities(ing);
+      if (ing.name) return decodeHtmlEntities(ing.name);
+      if (ing.text) return decodeHtmlEntities(ing.text);
+      return decodeHtmlEntities(String(ing));
     }).filter(Boolean);
   }
   return [];
@@ -32,14 +232,14 @@ function normalizeIngredients(ingredients) {
 // Normalize instructions
 function normalizeInstructions(instructions) {
   if (!instructions) return [];
-  if (typeof instructions === 'string') return [instructions];
+  if (typeof instructions === 'string') return [decodeHtmlEntities(instructions)];
   if (Array.isArray(instructions)) {
     return instructions.map(inst => {
-      if (typeof inst === 'string') return inst;
-      if (inst.name) return inst.name;
-      if (inst.text) return inst.text;
-      if (inst['@type'] === 'HowToStep' && inst.text) return inst.text;
-      return String(inst);
+      if (typeof inst === 'string') return decodeHtmlEntities(inst);
+      if (inst.name) return decodeHtmlEntities(inst.name);
+      if (inst.text) return decodeHtmlEntities(inst.text);
+      if (inst['@type'] === 'HowToStep' && inst.text) return decodeHtmlEntities(inst.text);
+      return decodeHtmlEntities(String(inst));
     }).filter(Boolean);
   }
   if (instructions['@type'] === 'HowToSection' && instructions.itemListElement) {
@@ -115,19 +315,19 @@ function extractRecipeData(jsonLd, url) {
   
   // Extract and normalize recipe data
   return {
-    name: recipe.name || '',
-    description: recipe.description || '',
+    name: decodeHtmlEntities(recipe.name || ''),
+    description: decodeHtmlEntities(recipe.description || ''),
     url: url,
     image: recipe.image?.url || recipe.image || '',
-    author: recipe.author?.name || recipe.author || '',
+    author: decodeHtmlEntities(recipe.author?.name || recipe.author || ''),
     datePublished: recipe.datePublished || '',
     prepTime: recipe.prepTime || '',
     cookTime: recipe.cookTime || '',
     totalTime: recipe.totalTime || '',
-    recipeYield: recipe.recipeYield || '',
-    recipeCategory: recipe.recipeCategory || '',
-    recipeCuisine: recipe.recipeCuisine || '',
-    keywords: recipe.keywords || '',
+    recipeYield: decodeHtmlEntities(recipe.recipeYield || ''),
+    recipeCategory: decodeHtmlEntities(recipe.recipeCategory || ''),
+    recipeCuisine: decodeHtmlEntities(recipe.recipeCuisine || ''),
+    keywords: decodeHtmlEntities(recipe.keywords || ''),
     ingredients: normalizeIngredients(recipe.recipeIngredient),
     instructions: normalizeInstructions(recipe.recipeInstructions),
     nutrition: recipe.nutrition || {},
@@ -151,7 +351,12 @@ class JSONLDExtractor {
     if (text.lastInTextNode) {
       try {
         const parsed = JSON.parse(this.currentScript);
-        this.jsonLdScripts.push(parsed);
+        // Handle both single objects and arrays of JSON-LD
+        if (Array.isArray(parsed)) {
+          this.jsonLdScripts.push(...parsed);
+        } else {
+          this.jsonLdScripts.push(parsed);
+        }
       } catch (e) {
         console.error('Failed to parse JSON-LD:', e);
       }
@@ -230,6 +435,8 @@ export default {
       }
       
       let urls = [];
+      let saveToKV = url.searchParams.get('save') === 'true';
+      let avoidOverwrite = url.searchParams.get('avoidOverwrite') === 'true';
       
       // GET request with single URL
       if (request.method === 'GET') {
@@ -261,6 +468,8 @@ export default {
               headers: { 'Content-Type': 'application/json' }
             });
           }
+          saveToKV = body.save === true;
+          avoidOverwrite = body.avoidOverwrite === true;
         } catch (e) {
           return new Response(JSON.stringify({
             error: 'Invalid JSON in request body'
@@ -273,7 +482,45 @@ export default {
       
       // Process URLs
       const results = await Promise.all(
-        urls.map(url => processRecipeUrl(url))
+        urls.map(async (targetUrl) => {
+          const result = await processRecipeUrl(targetUrl);
+          
+          // Save to KV if requested and successful
+          if (saveToKV && result.success && env.RECIPE_STORAGE) {
+            const recipeId = await generateRecipeId(targetUrl);
+            
+            // Check if recipe already exists when avoidOverwrite is true
+            if (avoidOverwrite) {
+              const existingRecipe = await getRecipeFromKV(env, recipeId);
+              if (existingRecipe.success) {
+                // Recipe already exists, return existing data instead of overwriting
+                return {
+                  success: true,
+                  url: targetUrl,
+                  data: existingRecipe.recipe.data,
+                  alreadyExists: true,
+                  existingRecipe: {
+                    id: existingRecipe.recipe.id,
+                    scrapedAt: existingRecipe.recipe.scrapedAt,
+                    version: existingRecipe.recipe.version
+                  },
+                  recipeId: recipeId,
+                  savedToKV: false,
+                  message: 'Recipe already exists, not overwritten'
+                };
+              }
+            }
+            
+            const saveResult = await saveRecipeToKV(env, recipeId, result);
+            result.savedToKV = saveResult.success;
+            result.recipeId = recipeId;
+            if (!saveResult.success) {
+              result.kvError = saveResult.error;
+            }
+          }
+          
+          return result;
+        })
       );
       
       // Return results
@@ -282,9 +529,86 @@ export default {
         summary: {
           total: results.length,
           successful: results.filter(r => r.success).length,
-          failed: results.filter(r => !r.success).length
+          failed: results.filter(r => !r.success).length,
+          savedToKV: results.filter(r => r.savedToKV).length
         }
       }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Handle /recipes endpoint - List all recipes (when no id parameter)
+    if (url.pathname === '/recipes' && request.method === 'GET' && !url.searchParams.has('id')) {
+      const cursor = url.searchParams.get('cursor');
+      const limit = parseInt(url.searchParams.get('limit') || '50');
+      
+      const result = await listRecipesFromKV(env, cursor, limit);
+      if (!result.success) {
+        return new Response(JSON.stringify(result), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      return new Response(JSON.stringify(result), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Handle /recipes endpoint - Get recipe by ID
+    if (url.pathname === '/recipes' && request.method === 'GET' && url.searchParams.has('id')) {
+      const recipeId = url.searchParams.get('id');
+      const raw = url.searchParams.get('raw') === 'true';
+      
+      if (raw) {
+        // Return raw compressed data for compression analysis
+        const rawData = await env.RECIPE_STORAGE.get(recipeId);
+        if (!rawData) {
+          return new Response(JSON.stringify({ error: 'Recipe not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        return new Response(rawData, {
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      }
+      
+      const result = await getRecipeFromKV(env, recipeId);
+      if (!result.success) {
+        return new Response(JSON.stringify(result), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      return new Response(JSON.stringify(result.recipe), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Handle DELETE /recipes endpoint
+    if (url.pathname === '/recipes' && request.method === 'DELETE') {
+      const recipeId = url.searchParams.get('id');
+      if (!recipeId) {
+        return new Response(JSON.stringify({
+          error: 'Missing id parameter'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const result = await deleteRecipeFromKV(env, recipeId);
+      if (!result.success) {
+        return new Response(JSON.stringify(result), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      return new Response(JSON.stringify({ message: 'Recipe deleted successfully' }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -293,15 +617,32 @@ export default {
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({
         status: 'healthy',
-        service: 'recipe-scraper'
+        service: 'recipe-scraper',
+        features: ['scraping', 'kv-storage']
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
     
-    // Default response
-    return new Response('Recipe Scraper - Use /scrape?url=<recipe-url> to scrape recipes', {
-      headers: { 'Content-Type': 'text/plain' }
+    // Default response with API documentation
+    return new Response(JSON.stringify({
+      service: 'Recipe Scraper with KV Storage',
+      endpoints: {
+        'GET /scrape?url=<recipe-url>&save=true': 'Scrape a recipe and optionally save to KV',
+        'GET /scrape?url=<recipe-url>&save=true&avoidOverwrite=true': 'Scrape a recipe but avoid overwriting existing ones',
+        'POST /scrape': 'Scrape multiple recipes (JSON body with urls array, save boolean, and avoidOverwrite boolean)',
+        'GET /recipes': 'List all stored recipes (supports cursor and limit params)',
+        'GET /recipes?id=<recipe-id>': 'Get a specific recipe by ID',
+        'DELETE /recipes?id=<recipe-id>': 'Delete a recipe by ID',
+        'GET /health': 'Health check'
+      },
+      example: {
+        scrape: 'GET /scrape?url=https://example.com/recipe&save=true',
+        scrapeNoOverwrite: 'GET /scrape?url=https://example.com/recipe&save=true&avoidOverwrite=true',
+        getRecipe: 'GET /recipes?id=<hashed-url-id>'
+      }
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 };

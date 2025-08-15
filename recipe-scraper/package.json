@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "setup-kv": "node setup-kv.js",
+    "test-kv": "node test-kv.js"
   },
   "keywords": [
     "cloudflare-worker",
@@ -18,6 +20,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.30.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.0"
   }
 }
