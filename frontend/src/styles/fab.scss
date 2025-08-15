@@ -283,19 +283,19 @@
     content: '';
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px;  // Changed from right: 20px
     width: 56px;
     height: 56px;
     pointer-events: none; // Placeholder only
   }
   
-  // Create a mobile version of the FAB - bottom right corner
+  // Create a mobile version of the FAB - bottom left corner
   .fab-standalone {
     display: block;
     position: fixed;
     bottom: 20px;
-    right: 20px;
-    left: auto;
+    left: 20px;  // Changed from right: 20px
+    right: auto;
     transform: none;  // Remove centering transform
     z-index: 1100;
     width: 56px;  // Make it circular on mobile
@@ -368,10 +368,11 @@
     height: 18px;
   }
   
-  // Override for standalone add button to keep it at bottom right
+  // Override for standalone add button to keep it at bottom left
   .fab-standalone {
     bottom: 16px;
-    right: 16px;
+    left: 16px;  // Changed from right: 16px
+    right: auto;
     width: 48px;
     height: 48px;
   }
@@ -405,10 +406,11 @@
     font-size: 9px;
   }
   
-  // Override for standalone add button to keep it at bottom right
+  // Override for standalone add button to keep it at bottom left
   .fab-standalone {
     bottom: 12px;
-    right: 12px;
+    left: 12px;  // Changed from right: 12px
+    right: auto;
     width: 44px;
     height: 44px;
   }
