@@ -312,6 +312,9 @@ function App() {
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState([]);
   const [instructions, setInstructions] = useState([]);
+  const [prepTime, setPrepTime] = useState('');
+  const [cookTime, setCookTime] = useState('');
+  const [recipeYield, setRecipeYield] = useState('');
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -721,6 +724,9 @@ function App() {
       // Backward compatibility
       ingredients: ingredients.filter(i => i.trim()),
       instructions: instructions.filter(i => i.trim()),
+      prep_time: prepTime ? parseInt(prepTime) : null,
+      cook_time: cookTime ? parseInt(cookTime) : null,
+      recipe_yield: recipeYield || null,
     };
     try {
       const res = await fetch(`${API_URL}/recipe`, {
@@ -890,6 +896,9 @@ function App() {
     setDescription('');
     setIngredients([]);
     setInstructions([]);
+    setPrepTime('');
+    setCookTime('');
+    setRecipeYield('');
     setSelectedImage(null);
     setEditingRecipe(null);
     setEditableRecipe(null);
@@ -1552,6 +1561,41 @@ function App() {
                               + Add Instruction
                             </button>
                           </div>
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Prep Time (minutes)</h4>
+                          <input 
+                            type="number" 
+                            value={prepTime} 
+                            onChange={e => setPrepTime(e.target.value)}
+                            className="preview-edit-input"
+                            placeholder="Prep time in minutes"
+                            min="0"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Cook Time (minutes)</h4>
+                          <input 
+                            type="number" 
+                            value={cookTime} 
+                            onChange={e => setCookTime(e.target.value)}
+                            className="preview-edit-input"
+                            placeholder="Cook time in minutes"
+                            min="0"
+                          />
+                        </div>
+                        
+                        <div className="recipe-preview-section">
+                          <h4>Yield</h4>
+                          <input 
+                            type="text" 
+                            value={recipeYield} 
+                            onChange={e => setRecipeYield(e.target.value)}
+                            className="preview-edit-input"
+                            placeholder="e.g., 4 servings, 1 loaf"
+                          />
                         </div>
                         
                         <div className="recipe-preview-section">
