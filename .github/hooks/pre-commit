@@ -27,9 +27,9 @@ if git diff --cached --name-only | grep -q "^frontend/"; then
 fi
 
 # Check if we're in the worker directory or have worker changes
-if git diff --cached --name-only | grep -q "^worker/"; then
-    echo "Worker changes detected. Running worker tests..."
-    cd worker
+if git diff --cached --name-only | grep -q "^clipped-recipe-db-worker/"; then
+      echo "Worker changes detected. Running worker tests..."
+      cd clipped-recipe-db-worker
     if [ -f "package.json" ]; then
         # Check if test script exists
         if npm run | grep -q " test"; then

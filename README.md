@@ -59,10 +59,10 @@ For detailed workflow rules, see `.cursorrules` in the project root.
 
 ### 1. Backend Setup
 
-Navigate to the `worker` directory:
+Navigate to the `clipped-recipe-db-worker` directory:
 
 ```bash
-cd worker
+cd clipped-recipe-db-worker
 ```
 
 Install dependencies:
@@ -133,7 +133,7 @@ npm run dev
 1. **Copy example environment files:**
    ```bash
    # Worker
-   cp worker/.dev.vars.example worker/.dev.vars.local
+   cp clipped-recipe-db-worker/.dev.vars.example clipped-recipe-db-worker/.dev.vars.local
    
    # Frontend  
    cp frontend/.env.example frontend/.env.local
@@ -145,7 +145,7 @@ npm run dev
 
 #### Update wrangler.toml
 
-Replace the placeholder values in `worker/wrangler.toml`:
+Replace the placeholder values in `clipped-recipe-db-worker/wrangler.toml`:
 
 ```toml
 [[d1_databases]]
@@ -164,7 +164,7 @@ If you want direct image URLs:
 
 1. Go to Cloudflare Dashboard > R2 > recipe-images
 2. Enable public access
-3. Update the image URL in `worker/src/index.js`:
+3. Update the image URL in `clipped-recipe-db-worker/src/index.js`:
 
 ```javascript
 return `https://your-custom-domain.com/${fileName}`;
@@ -209,7 +209,7 @@ CREATE TABLE recipes (
 ### Backend Development
 
 ```bash
-cd worker
+cd clipped-recipe-db-worker
 npm run dev
 ```
 
@@ -235,7 +235,7 @@ wrangler d1 execute recipe-db --file=./schema.sql
 ### Backend
 
 ```bash
-cd worker
+cd clipped-recipe-db-worker
 npm run deploy
 ```
 

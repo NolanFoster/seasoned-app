@@ -55,14 +55,14 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: worker/package-lock.json
+        cache-dependency-path: clipped-recipe-db-worker/package-lock.json
     
     - name: Install Worker Dependencies
-      working-directory: ./worker
+      working-directory: ./clipped-recipe-db-worker
       run: npm ci
     
     - name: Run Worker Tests
-      working-directory: ./worker
+      working-directory: ./clipped-recipe-db-worker
       run: |
         # Run tests if test script exists, otherwise skip
         if npm run | grep -q "test"; then
@@ -90,7 +90,7 @@ jobs:
         npm run lint || echo "Linting completed with warnings"
     
     - name: Lint Worker
-      working-directory: ./worker
+      working-directory: ./clipped-recipe-db-worker
       run: |
         npm ci
         if npm run | grep -q "lint"; then

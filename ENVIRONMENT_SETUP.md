@@ -14,14 +14,14 @@ The Recipe App has been updated to use environment variables instead of hardcode
 
 ### Worker Directory (`.dev.vars`)
 
-Create a `.dev.vars` file in the `worker/` directory for local development:
+Create a `.dev.vars` file in the `clipped-recipe-db-worker/` directory for local development:
 
 ```bash
 # Copy the example file
-cp worker/.dev.vars.example worker/.dev.vars.local
+cp clipped-recipe-db-worker/.dev.vars.example clipped-recipe-db-worker/.dev.vars.local
 
 # Edit with your actual values
-nano worker/.dev.vars.local
+nano clipped-recipe-db-worker/.dev.vars.local
 ```
 
 **Required Variables:**
@@ -142,7 +142,7 @@ Test your environment setup:
 
 ```bash
 # Worker
-cd worker
+cd clipped-recipe-db-worker
 npm run dev
 
 # Frontend
@@ -154,7 +154,7 @@ npm run dev
 
 ```
 recipe-app/
-├── worker/
+├── clipped-recipe-db-worker/
 │   ├── .dev.vars.example          # Example environment variables
 │   ├── .dev.vars.local            # Local development variables (not committed)
 │   ├── wrangler.toml              # Production configuration
