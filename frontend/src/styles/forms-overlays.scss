@@ -267,10 +267,125 @@
 /* Recipe Preview Panel */
 .recipe-preview-panel {
   max-width: 900px;
+  position: relative;
+  overflow: hidden;
 }
 
 .recipe-preview-panel .form-panel-content {
   gap: 2rem;
+}
+
+/* Full Panel Hero Image */
+.recipe-preview-image-hero-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 280px; /* Height to extend under description */
+  z-index: 0;
+  overflow: hidden;
+}
+
+.recipe-preview-image-hero-full .preview-hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recipe-preview-hero-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, 
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.3) 20%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.7) 70%,
+    rgba(0, 0, 0, 0.85) 85%,
+    rgba(0, 0, 0, 0.95) 95%,
+    rgba(0, 0, 0, 1) 100%
+  );
+}
+
+/* Ensure header appears above image */
+.recipe-preview-panel .form-panel-header {
+  position: relative;
+  z-index: 10;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recipe-preview-panel .form-panel-header h2 {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Enhanced close button for visibility over image */
+.recipe-preview-panel .close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.recipe-preview-panel .close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Content positioning when image is present */
+.recipe-preview-panel .form-panel-content {
+  position: relative;
+  z-index: 5;
+}
+
+/* Header section with title and description */
+.recipe-preview-header-section {
+  position: relative;
+  z-index: 2;
+  padding: 30px 30px 40px;
+  margin: 0 -30px 30px; /* Negative margins to extend to panel edges */
+}
+
+/* Title styling - works with or without image */
+.recipe-preview-header-section .recipe-preview-title {
+  color: white;
+  font-size: 2em;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Description styling - works with or without image */
+.recipe-preview-header-section .recipe-preview-description {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.15em;
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* When no image is present, adjust text colors */
+.recipe-preview-panel:not(:has(.recipe-preview-image-hero-full)) .recipe-preview-header-section .recipe-preview-title {
+  color: white;
+  text-shadow: none;
+}
+
+.recipe-preview-panel:not(:has(.recipe-preview-image-hero-full)) .recipe-preview-header-section .recipe-preview-description {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: none;
+}
+
+/* Remove old hero text styles */
+.recipe-preview-hero-text {
+  display: none;
 }
 
 /* Enhanced button styles for form panels */
@@ -306,32 +421,15 @@
   margin-bottom: 20px;
 }
 
-.recipe-preview-header {
-  margin-bottom: 25px;
-  text-align: center;
-}
-
-.recipe-preview-title {
-  color: white;
-  font-size: 1.8em;
-  font-weight: 600;
-  margin: 0 0 15px 0;
-  line-height: 1.3;
-}
-
-.recipe-preview-description {
-  color: white;
-  font-size: 1.1em;
-  line-height: 1.5;
-  margin: 0;
-  font-style: italic;
-}
+/* Removed old hero and header styles */
 
 .recipe-preview-sections {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 30px;
   margin-bottom: 25px;
+  position: relative;
+  z-index: 2;
 }
 
 .recipe-preview-section {
@@ -406,6 +504,8 @@
   background: rgba(52, 152, 219, 0.1);
   border-radius: 10px;
   border: 1px solid rgba(52, 152, 219, 0.2);
+  position: relative;
+  z-index: 2;
 }
 
 .recipe-preview-source p {
@@ -869,10 +969,81 @@ button:disabled:hover {
     background: rgba(0, 0, 0, 0.4);
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
   }
+  
+  /* Dark mode for hero image overlay */
+  .recipe-preview-hero-gradient {
+    background: linear-gradient(to bottom, 
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.6) 30%,
+      rgba(0, 0, 0, 0.85) 70%,
+      rgba(0, 0, 0, 0.98) 100%
+    );
+  }
+  
+  .recipe-preview-panel .form-panel-header {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  /* Dark mode for recipe preview panel buttons */
+  .recipe-preview-panel .form-actions button {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .recipe-preview-panel .form-actions button:hover {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  
+  .recipe-preview-panel .add-btn {
+    background: rgba(52, 152, 219, 0.2);
+    border-color: rgba(52, 152, 219, 0.3);
+  }
+  
+  .recipe-preview-panel .add-btn:hover {
+    background: rgba(52, 152, 219, 0.3);
+    border-color: rgba(52, 152, 219, 0.4);
+  }
+  
+  .recipe-preview-panel .edit-btn {
+    background: rgba(155, 89, 182, 0.2);
+    border-color: rgba(155, 89, 182, 0.3);
+  }
+  
+  .recipe-preview-panel .edit-btn:hover {
+    background: rgba(155, 89, 182, 0.3);
+    border-color: rgba(155, 89, 182, 0.4);
+  }
+  
+  .recipe-preview-panel .try-again-btn {
+    background: rgba(241, 196, 15, 0.2);
+    border-color: rgba(241, 196, 15, 0.3);
+  }
+  
+  .recipe-preview-panel .try-again-btn:hover {
+    background: rgba(241, 196, 15, 0.3);
+    border-color: rgba(241, 196, 15, 0.4);
+  }
 }
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
+  .recipe-preview-image-hero-full {
+    height: 240px; /* Smaller height on mobile */
+  }
+  
+  .recipe-preview-header-section {
+    padding: 20px 20px 30px;
+    margin: 0 -20px 20px;
+  }
+  
+  .recipe-preview-header-section .recipe-preview-title {
+    font-size: 1.5em;
+  }
+  
+  .recipe-preview-header-section .recipe-preview-description {
+    font-size: 1em;
+  }
   .recipe-preview-overlay {
     max-width: 95vw !important;
     margin: 20px;
@@ -919,3 +1090,94 @@ button:disabled:hover {
     width: 100%;
   }
 }
+
+/* Recipe Preview Button Styles */
+.recipe-preview-panel .form-actions button {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.recipe-preview-panel .form-actions button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.recipe-preview-panel .form-actions button:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Specific button accents */
+.recipe-preview-panel .add-btn {
+  background: rgba(52, 152, 219, 0.15);
+  border-color: rgba(52, 152, 219, 0.3);
+}
+
+.recipe-preview-panel .add-btn:hover {
+  background: rgba(52, 152, 219, 0.25);
+  border-color: rgba(52, 152, 219, 0.4);
+}
+
+.recipe-preview-panel .edit-btn {
+  background: rgba(155, 89, 182, 0.15);
+  border-color: rgba(155, 89, 182, 0.3);
+}
+
+.recipe-preview-panel .edit-btn:hover {
+  background: rgba(155, 89, 182, 0.25);
+  border-color: rgba(155, 89, 182, 0.4);
+}
+
+.recipe-preview-panel .try-again-btn {
+  background: rgba(241, 196, 15, 0.15);
+  border-color: rgba(241, 196, 15, 0.3);
+}
+
+.recipe-preview-panel .try-again-btn:hover {
+  background: rgba(241, 196, 15, 0.25);
+  border-color: rgba(241, 196, 15, 0.4);
+}
+
+.recipe-preview-panel .cancel-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.recipe-preview-panel .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Disabled state for glass buttons */
+.recipe-preview-panel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.recipe-preview-panel button:disabled:hover {
+  background: inherit;
+  border-color: inherit;
+  transform: none;
+  box-shadow: inherit;
+}
+
+/* Source link styling */

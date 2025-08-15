@@ -1644,6 +1644,18 @@ function App() {
                   </div>
                 )}
                 
+                {/* Hero Image that extends under header */}
+                {!isEditingPreview && (clippedRecipePreview.image || clippedRecipePreview.image_url) && (
+                  <div className="recipe-preview-image-hero-full">
+                    <img 
+                      src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
+                      alt={clippedRecipePreview.name}
+                      className="preview-hero-image"
+                    />
+                    <div className="recipe-preview-hero-gradient"></div>
+                  </div>
+                )}
+                
                 <div className="form-panel-header">
                   <h2>Clipped Recipe Preview</h2>
                   <button 
@@ -1666,7 +1678,8 @@ function App() {
                     // Preview Mode
                     <>
                       <div className="recipe-preview-content">
-                        <div className="recipe-preview-header">
+                        {/* Title and description - always shown */}
+                        <div className="recipe-preview-header-section">
                           <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
                           {clippedRecipePreview.description && (
                             <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
@@ -1694,17 +1707,6 @@ function App() {
                             </ol>
                           </div>
                         </div>
-                        
-                        {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                          <div className="recipe-preview-image">
-                            <h4>Recipe Image</h4>
-                            <img 
-                              src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
-                              alt={clippedRecipePreview.name}
-                              className="preview-image"
-                            />
-                          </div>
-                        )}
                         
                         <div className="recipe-preview-source">
                           <h4>Source</h4>
