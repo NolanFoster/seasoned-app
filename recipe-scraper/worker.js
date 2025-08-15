@@ -248,6 +248,8 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
+    console.log('Request received:', request.method, url.pathname, url.search);
+    
     // CORS headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -374,9 +376,11 @@ export default {
     
     // Handle /recipes endpoint - List all recipes (when no id parameter)
     if (url.pathname === '/recipes' && request.method === 'GET' && !url.searchParams.has('id')) {
+      console.log('Handling GET /recipes (list all)');
       const cursor = url.searchParams.get('cursor');
       const limit = parseInt(url.searchParams.get('limit') || '50');
       
+      console.log('Calling listRecipesFromKV with cursor:', cursor, 'limit:', limit);
       const result = await listRecipesFromKV(env, cursor, limit);
       if (!result.success) {
         return new Response(JSON.stringify(result), {
