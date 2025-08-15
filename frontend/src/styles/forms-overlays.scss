@@ -269,7 +269,6 @@
   max-width: 900px;
   position: relative;
   overflow: hidden;
-  min-height: 600px;
 }
 
 .recipe-preview-panel .form-panel-content {
@@ -282,7 +281,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 50%; /* Cover top half of panel */
+  height: 350px; /* Fixed height to stop before ingredients */
   z-index: 0;
   overflow: hidden;
 }
@@ -300,10 +299,12 @@
   right: 0;
   bottom: 0;
   background: linear-gradient(to bottom, 
-    rgba(0, 0, 0, 0.3) 0%,
-    rgba(0, 0, 0, 0.5) 30%,
-    rgba(0, 0, 0, 0.8) 70%,
-    rgba(0, 0, 0, 0.95) 100%
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.3) 20%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.8) 80%,
+    rgba(0, 0, 0, 0.95) 95%,
+    rgba(0, 0, 0, 1) 100%
   );
 }
 
@@ -345,8 +346,11 @@
 
 /* Hero text styling when image is present */
 .recipe-preview-hero-text {
+  position: relative;
+  z-index: 2;
+  margin-top: 180px; /* Position text in lower part of hero image */
   margin-bottom: 30px;
-  padding-top: 20px;
+  padding: 0 30px; /* Match panel padding */
 }
 
 .recipe-preview-hero-text .recipe-preview-title {
@@ -430,6 +434,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 30px;
   margin-bottom: 25px;
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.3); /* Subtle background for sections */
+  padding: 20px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .recipe-preview-section {
@@ -504,6 +515,8 @@
   background: rgba(52, 152, 219, 0.1);
   border-radius: 10px;
   border: 1px solid rgba(52, 152, 219, 0.2);
+  position: relative;
+  z-index: 2;
 }
 
 .recipe-preview-source p {
@@ -1027,12 +1040,13 @@ button:disabled:hover {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .recipe-preview-image-hero-full {
-    height: 40%; /* Slightly less on mobile */
+    height: 280px; /* Smaller height on mobile */
   }
   
   .recipe-preview-hero-text {
-    padding-top: 10px;
+    margin-top: 140px; /* Adjust for smaller image */
     margin-bottom: 20px;
+    padding: 0 20px;
   }
   
   .recipe-preview-hero-text .recipe-preview-title {
