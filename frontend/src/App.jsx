@@ -1666,12 +1666,32 @@ function App() {
                     // Preview Mode
                     <>
                       <div className="recipe-preview-content">
-                        <div className="recipe-preview-header">
-                          <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
-                          {clippedRecipePreview.description && (
-                            <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
-                          )}
-                        </div>
+                        {/* Image with overlay at the top */}
+                        {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
+                          <div className="recipe-preview-image-hero">
+                            <img 
+                              src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
+                              alt={clippedRecipePreview.name}
+                              className="preview-hero-image"
+                            />
+                            <div className="recipe-preview-hero-overlay">
+                              <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
+                              {clippedRecipePreview.description && (
+                                <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* If no image, show title and description normally */}
+                        {!(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
+                          <div className="recipe-preview-header">
+                            <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
+                            {clippedRecipePreview.description && (
+                              <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="recipe-preview-sections">
                           <div className="recipe-preview-section">
@@ -1694,17 +1714,6 @@ function App() {
                             </ol>
                           </div>
                         </div>
-                        
-                        {(clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                          <div className="recipe-preview-image">
-                            <h4>Recipe Image</h4>
-                            <img 
-                              src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
-                              alt={clippedRecipePreview.name}
-                              className="preview-image"
-                            />
-                          </div>
-                        )}
                         
                         <div className="recipe-preview-source">
                           <h4>Source</h4>
