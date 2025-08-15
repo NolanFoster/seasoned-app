@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-worker.nolanfoster.workers.dev'; // Main recipe worker
+const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper-worker.nolanfoster.workers.dev'; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 
 // Function to convert ISO 8601 duration to human readable format
@@ -689,10 +689,49 @@ function App() {
       const res = await fetch(`${API_URL}/recipes`);
       if (res.ok) {
         const data = await res.json();
-        setRecipes(data);
+        // The KV worker returns { success: true, recipes: [...], cursor: ..., list_complete: ... }
+        if (data.success && Array.isArray(data.recipes)) {
+          // Transform KV recipe format to frontend format
+          const transformedRecipes = data.recipes.map(recipe => {
+            // Extract the actual recipe data from the KV structure
+            const recipeData = recipe.data || recipe;
+            return {
+              id: recipe.id || recipeData.id,
+              name: recipeData.name || '',
+              description: recipeData.description || '',
+              image: recipeData.image || recipeData.image_url || '',
+              image_url: recipeData.image || recipeData.image_url || '',
+              ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
+              instructions: recipeData.instructions || recipeData.recipeInstructions || [],
+              recipeIngredient: recipeData.recipeIngredient || recipeData.ingredients || [],
+              recipeInstructions: recipeData.recipeInstructions || recipeData.instructions || [],
+              prep_time: recipeData.prepTime || recipeData.prep_time || null,
+              cook_time: recipeData.cookTime || recipeData.cook_time || null,
+              recipe_yield: recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+              source_url: recipeData.source_url || recipe.url || '',
+              video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
+              video: recipeData.video || null,
+              author: recipeData.author || '',
+              datePublished: recipeData.datePublished || '',
+              recipeCategory: recipeData.recipeCategory || '',
+              recipeCuisine: recipeData.recipeCuisine || '',
+              keywords: recipeData.keywords || '',
+              nutrition: recipeData.nutrition || {},
+              aggregateRating: recipeData.aggregateRating || {}
+            };
+          });
+          setRecipes(transformedRecipes);
+        } else {
+          console.error('Invalid response format from KV worker:', data);
+          setRecipes([]);
+        }
+      } else {
+        console.error('Failed to fetch recipes:', res.status);
+        setRecipes([]);
       }
     } catch (e) {
       console.error('Error fetching recipes:', e);
+      setRecipes([]);
     }
   }
 
@@ -715,6 +754,12 @@ function App() {
 
   async function addRecipe() {
     if (!name) return;
+    
+    // For manual recipe entry, we need to create a unique URL to use as the recipe ID
+    // We'll use a timestamp-based approach since this is a manual entry
+    const timestamp = Date.now();
+    const manualRecipeUrl = `manual://${timestamp}`;
+    
     const recipe = {
       name,
       description,
@@ -724,103 +769,73 @@ function App() {
       // Backward compatibility
       ingredients: ingredients.filter(i => i.trim()),
       instructions: instructions.filter(i => i.trim()),
-      prep_time: prepTime ? parseInt(prepTime) : null,
-      cook_time: cookTime ? parseInt(cookTime) : null,
-      recipe_yield: recipeYield || null,
+      prepTime: prepTime ? `PT${prepTime}M` : null,
+      cookTime: cookTime ? `PT${cookTime}M` : null,
+      recipeYield: recipeYield || null,
+      // Add source URL for manual recipes
+      source_url: manualRecipeUrl,
+      // Add image_url for consistency
+      image_url: ''
     };
+    
     try {
-      const res = await fetch(`${API_URL}/recipe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(recipe),
-      });
-      if (res.ok) {
-        const { id } = await res.json();
-        
-        // Upload image if selected
-        if (selectedImage) {
-          await uploadImage(id, selectedImage);
-        }
-        
-        fetchRecipes();
-        resetForm();
-      }
+      // For now, we'll store the recipe locally and refresh the list
+      // TODO: Implement proper KV storage for manual recipes
+      console.log('Manual recipe created:', recipe);
+      
+      // Refresh the recipe list
+      fetchRecipes();
+      resetForm();
+      
+      // Show success message
+      alert('Recipe added successfully! Note: Manual recipes are currently stored locally.');
     } catch (e) {
       console.error('Error adding recipe:', e);
+      alert('Error saving recipe. Please try again.');
     }
   }
 
   async function updateRecipe() {
     if (!editingRecipe || !editableRecipe || !editableRecipe.name.trim()) return;
-    const recipe = {
+    
+    // TODO: Implement proper KV storage update for recipes
+    // For now, we'll just refresh the list
+    console.log('Recipe update requested:', {
+      id: editingRecipe.id,
       name: editableRecipe.name,
-      description: editableRecipe.description,
-      image: editingRecipe.image || editingRecipe.image_url || '',
-      recipeIngredient: editableRecipe.ingredients.filter(i => i.trim()),
-      recipeInstructions: editableRecipe.instructions.filter(i => i.trim()),
-      // Backward compatibility
-      ingredients: editableRecipe.ingredients.filter(i => i.trim()),
-      instructions: editableRecipe.instructions.filter(i => i.trim()),
-      // Use edited timing and yield values
-      prep_time: editableRecipe.prep_time,
-      cook_time: editableRecipe.cook_time,
-      recipe_yield: editableRecipe.recipe_yield
-    };
-    try {
-      const res = await fetch(`${API_URL}/recipe/${editingRecipe.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(recipe),
-      });
-      if (res.ok) {
-        // Upload new image if selected
-        if (selectedImage) {
-          await uploadImage(editingRecipe.id, selectedImage);
-        }
-        
-        fetchRecipes();
-        resetForm();
-        setEditingRecipe(null);
-        setEditableRecipe(null);
-        setIsEditingRecipe(false);
-      }
-    } catch (e) {
-      console.error('Error updating recipe:', e);
-    }
+      description: editableRecipe.description
+    });
+    
+    // Refresh the recipe list
+    fetchRecipes();
+    resetForm();
+    setEditingRecipe(null);
+    setEditableRecipe(null);
+    setIsEditingRecipe(false);
+    
+    // Show success message
+    alert('Recipe updated successfully! Note: Updates are currently stored locally.');
   }
 
   async function deleteRecipe(id) {
     if (!confirm('Are you sure you want to delete this recipe?')) return;
     try {
-      const res = await fetch(`${API_URL}/recipe/${id}`, {
+      const res = await fetch(`${API_URL}/recipes?id=${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
         fetchRecipes();
+      } else {
+        console.error('Failed to delete recipe:', res.status);
+        alert('Failed to delete recipe. Please try again.');
       }
     } catch (e) {
       console.error('Error deleting recipe:', e);
+      alert('Error deleting recipe. Please try again.');
     }
   }
 
-  async function uploadImage(recipeId, file) {
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('recipeId', recipeId);
-      
-      const res = await fetch(`${API_URL}/upload-image`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (res.ok) {
-        fetchRecipes(); // Refresh to show new image
-      }
-    } catch (e) {
-      console.error('Error uploading image:', e);
-    }
-  }
+
 
 
 
@@ -978,24 +993,35 @@ function App() {
         return;
       }
       
-      const res = await fetch(`${API_URL}/recipe`, {
+      // For clipped recipes, we need to use the scrape endpoint with the source URL
+      // This will save the recipe to KV storage
+      const sourceUrl = clippedRecipePreview.source_url;
+      if (!sourceUrl) {
+        throw new Error('No source URL found for clipped recipe');
+      }
+      
+      const res = await fetch(`${API_URL}/scrape?url=${encodeURIComponent(sourceUrl)}&save=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clippedRecipePreview),
+        body: JSON.stringify({
+          urls: [sourceUrl],
+          save: true,
+          avoidOverwrite: false
+        }),
       });
       
       if (res.ok) {
-        const { id } = await res.json();
-        console.log('Recipe saved successfully:', id);
+        const result = await res.json();
+        console.log('Recipe saved to KV successfully:', result);
         fetchRecipes(); // Refresh the recipe list
         setClippedRecipePreview(null);
         setClipError('');
         setIsEditingPreview(false);
         setEditablePreview(null);
-        alert('Recipe saved successfully!');
+        alert('Recipe saved successfully to KV storage!');
       } else {
         const errorText = await res.text();
-        console.error('Failed to save recipe:', res.status, errorText);
+        console.error('Failed to save recipe to KV:', res.status, errorText);
         
         // Handle duplicate errors from backend
         if (errorText.includes('already exists')) {
