@@ -1,0 +1,36 @@
+{
+  "name": "recipe-search-db",
+  "version": "1.0.0",
+  "description": "Graph-based search database for recipes using Cloudflare D1",
+  "main": "src/index.js",
+  "scripts": {
+    "setup": "node setup.js",
+    "db:create": "wrangler d1 create recipe-search-db",
+    "db:migrate": "wrangler d1 execute recipe-search-db --file=./schema.sql",
+    "db:info": "wrangler d1 execute recipe-search-db --command=\"PRAGMA table_info(nodes);\"",
+    "test": "node test-search-db.js",
+    "test:example": "node test-example.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "recipe",
+    "search",
+    "graph",
+    "database",
+    "d1",
+    "cloudflare",
+    "sqlite"
+  ],
+  "author": "Recipe App Team",
+  "license": "MIT",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

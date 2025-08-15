@@ -1,0 +1,26 @@
+name = "recipe-search-db"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables
+[vars]
+# Add any environment variables here
+
+# D1 Database for search graph
+[[d1_databases]]
+binding = "SEARCH_DB"
+database_name = "recipe-search-db"
+database_id = "69a59404-ca73-4760-bb87-0ac910752ca9"
+
+# KV Namespaces (if needed for caching)
+# [[kv_namespaces]]
+# binding = "SEARCH_CACHE"
+# id = "your-kv-namespace-id"
+
+# R2 Buckets (if needed for storing search indexes)
+# [[r2_buckets]]
+# binding = "search_indexes"
+# bucket_name = "recipe-search-indexes"
+
+[observability.logs]
+enabled = true
