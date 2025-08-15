@@ -48,23 +48,46 @@ function normalizeInstructions(instructions) {
   return [];
 }
 
-// Validate if the JSON-LD object is a valid Recipe schema
+// Helper to check if a type value represents a schema.org/Recipe
+function isRecipeType(typeValue) {
+  if (typeof typeValue === 'string') {
+    return typeValue === 'Recipe' || 
+           typeValue === 'schema:Recipe' || 
+           typeValue === 'https://schema.org/Recipe' ||
+           typeValue === 'http://schema.org/Recipe';
+  }
+  return false;
+}
+
+// Validate if the JSON-LD object is a valid schema.org/Recipe
 function validateRecipeSchema(jsonLd) {
   if (!jsonLd) return false;
   
-  // Check if it's a Recipe type
+  // Check for proper @context (schema.org)
+  const context = jsonLd['@context'];
+  const hasSchemaContext = context && (
+    context === 'https://schema.org' ||
+    context === 'http://schema.org' ||
+    context === 'https://schema.org/' ||
+    context === 'http://schema.org/' ||
+    (typeof context === 'object' && context['@vocab'] && context['@vocab'].includes('schema.org'))
+  );
+  
+  // Check if it's a Recipe type (with or without namespace)
   const type = jsonLd['@type'];
-  if (type === 'Recipe') return true;
+  
+  if (isRecipeType(type)) return true;
   
   // Check if it's an array of types including Recipe
-  if (Array.isArray(type) && type.includes('Recipe')) return true;
+  if (Array.isArray(type) && type.some(isRecipeType)) return true;
   
   // Check if it's nested in @graph
   if (jsonLd['@graph'] && Array.isArray(jsonLd['@graph'])) {
-    return jsonLd['@graph'].some(item => 
-      item['@type'] === 'Recipe' || 
-      (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))
-    );
+    return jsonLd['@graph'].some(item => {
+      const itemType = item['@type'];
+      return isRecipeType(itemType) || 
+             (Array.isArray(itemType) && itemType.some(isRecipeType));
+    });
   }
   
   return false;
@@ -75,16 +98,17 @@ function extractRecipeData(jsonLd, url) {
   let recipe = null;
   
   // Direct Recipe object
-  if (jsonLd['@type'] === 'Recipe' || 
-      (Array.isArray(jsonLd['@type']) && jsonLd['@type'].includes('Recipe'))) {
+  const type = jsonLd['@type'];
+  if (isRecipeType(type) || (Array.isArray(type) && type.some(isRecipeType))) {
     recipe = jsonLd;
   }
   // Recipe in @graph
   else if (jsonLd['@graph'] && Array.isArray(jsonLd['@graph'])) {
-    recipe = jsonLd['@graph'].find(item => 
-      item['@type'] === 'Recipe' || 
-      (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))
-    );
+    recipe = jsonLd['@graph'].find(item => {
+      const itemType = item['@type'];
+      return isRecipeType(itemType) || 
+             (Array.isArray(itemType) && itemType.some(isRecipeType));
+    });
   }
   
   if (!recipe) return null;

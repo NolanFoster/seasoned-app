@@ -6,10 +6,11 @@ A Cloudflare Worker that scrapes recipe data from URLs using JSON-LD structured 
 
 - **Efficient HTML Parsing**: Uses Cloudflare's native HTMLRewriter for fast, streaming HTML processing
 - **JSON-LD Extraction**: Extracts and validates Recipe schema from `<script type="application/ld+json">` tags
+- **Schema.org Compliance**: Validates against [schema.org/Recipe](https://schema.org/Recipe) standards
 - **Batch Processing**: Supports both single URL and batch URL processing
 - **Data Normalization**: Normalizes ingredients and instructions into consistent arrays
 - **Unique ID Generation**: Creates SHA-256 hash-based IDs for each recipe URL
-- **Schema Validation**: Validates extracted data against Recipe schema standards
+- **Flexible Type Recognition**: Handles various Recipe type formats (`Recipe`, `schema:Recipe`, `https://schema.org/Recipe`)
 
 ## Setup
 
@@ -139,12 +140,26 @@ The worker extracts and normalizes the following Recipe schema fields:
 2. **Instructions**: Converted to array of strings, handling HowToStep and HowToSection formats
 3. **Unique ID**: SHA-256 hash of the recipe URL for consistent identification
 
-### Schema Validation
+### Schema.org Validation
 
-The worker validates JSON-LD data to ensure it contains valid Recipe schema:
-- Direct Recipe objects
-- Recipe objects within `@graph` arrays
-- Mixed type arrays containing "Recipe"
+The worker validates JSON-LD data to ensure it conforms to [schema.org/Recipe](https://schema.org/Recipe) standards:
+
+1. **Type Recognition**: Accepts various Recipe type formats:
+   - `"@type": "Recipe"`
+   - `"@type": "schema:Recipe"`
+   - `"@type": "https://schema.org/Recipe"`
+   - `"@type": "http://schema.org/Recipe"`
+   - Arrays containing any of the above
+
+2. **Context Validation**: Checks for proper schema.org context:
+   - `"@context": "https://schema.org"`
+   - `"@context": "http://schema.org"`
+   - Complex contexts with `@vocab` referencing schema.org
+
+3. **Structure Support**:
+   - Direct Recipe objects
+   - Recipe objects within `@graph` arrays
+   - Nested Recipe structures
 
 ## Error Handling
 
