@@ -91,6 +91,53 @@ async function extractRecipeWithGPT(pageUrl, env) {
     const html = await response.text();
     console.log('HTML fetched, length:', html.length);
     
+    // First, try to extract recipe from JSON-LD
+    console.log('Checking for JSON-LD recipe data...');
+    const jsonLdRecipe = extractRecipeFromJsonLd(html);
+    
+    if (jsonLdRecipe) {
+      console.log('Found recipe in JSON-LD! Skipping LLM call.');
+      console.log('Recipe extracted from JSON-LD:', {
+        name: jsonLdRecipe.name,
+        ingredients: jsonLdRecipe.recipeIngredient?.length || 0,
+        instructions: jsonLdRecipe.recipeInstructions?.length || 0
+      });
+      
+      // Add source_url and ensure backward compatibility fields
+      jsonLdRecipe.source_url = pageUrl;
+      
+      // Ensure backward compatibility fields exist
+      if (!jsonLdRecipe.ingredients && jsonLdRecipe.recipeIngredient) {
+        jsonLdRecipe.ingredients = Array.isArray(jsonLdRecipe.recipeIngredient) 
+          ? jsonLdRecipe.recipeIngredient 
+          : [jsonLdRecipe.recipeIngredient];
+      }
+      
+      if (!jsonLdRecipe.instructions && jsonLdRecipe.recipeInstructions) {
+        jsonLdRecipe.instructions = Array.isArray(jsonLdRecipe.recipeInstructions)
+          ? jsonLdRecipe.recipeInstructions.map(instruction => {
+              if (typeof instruction === 'string') return instruction;
+              if (instruction.text) return instruction.text;
+              if (instruction.name) return instruction.name;
+              return String(instruction);
+            })
+          : [jsonLdRecipe.recipeInstructions];
+      }
+      
+      if (!jsonLdRecipe.image_url && jsonLdRecipe.image) {
+        // Handle image field which could be a string or an object
+        if (typeof jsonLdRecipe.image === 'string') {
+          jsonLdRecipe.image_url = jsonLdRecipe.image;
+        } else if (jsonLdRecipe.image && typeof jsonLdRecipe.image === 'object') {
+          jsonLdRecipe.image_url = jsonLdRecipe.image.url || jsonLdRecipe.image['@id'] || '';
+        }
+      }
+      
+      return jsonLdRecipe;
+    }
+    
+    console.log('No JSON-LD recipe data found, proceeding with LLM extraction...');
+    
     // Clean HTML content for GPT processing - optimized for token reduction
     const cleanedHtml = cleanHtmlForGPT(html);
     console.log('Cleaned HTML length:', cleanedHtml.length);
@@ -1687,3 +1734,256 @@ function extractRecipeFromAIResponse(response, pageUrl) {
 
 // Export the function for testing
 export { extractRecipeFromAIResponse }; 
+
+// Extract recipe from JSON-LD structured data
+function extractRecipeFromJsonLd(html) {
+  try {
+    // Find all script tags with type="application/ld+json"
+    const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+    
+    if (!jsonLdMatches || jsonLdMatches.length === 0) {
+      console.log('No JSON-LD scripts found in HTML');
+      return null;
+    }
+    
+    console.log(`Found ${jsonLdMatches.length} JSON-LD script(s)`);
+    
+    for (const match of jsonLdMatches) {
+      try {
+        // Extract the JSON content from the script tag
+        const jsonContent = match.replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>/i, '')
+                                 .replace(/<\/script>/i, '')
+                                 .trim();
+        
+        if (!jsonContent) continue;
+        
+        // Parse the JSON
+        const jsonLd = JSON.parse(jsonContent);
+        
+        // Check if it's a Recipe or contains a Recipe
+        const recipe = findRecipeInJsonLd(jsonLd);
+        
+        if (recipe) {
+          console.log('Found Recipe in JSON-LD!');
+          return normalizeJsonLdRecipe(recipe);
+        }
+      } catch (parseError) {
+        console.error('Error parsing JSON-LD:', parseError);
+        // Continue to next JSON-LD script
+      }
+    }
+    
+    console.log('No Recipe found in JSON-LD scripts');
+    return null;
+  } catch (error) {
+    console.error('Error extracting JSON-LD:', error);
+    return null;
+  }
+}
+
+// Find Recipe object in JSON-LD data (handles nested structures)
+function findRecipeInJsonLd(jsonLd) {
+  // Direct Recipe object
+  if (jsonLd['@type'] === 'Recipe' || 
+      (Array.isArray(jsonLd['@type']) && jsonLd['@type'].includes('Recipe'))) {
+    return jsonLd;
+  }
+  
+  // Check if it's an array of objects
+  if (Array.isArray(jsonLd)) {
+    for (const item of jsonLd) {
+      const recipe = findRecipeInJsonLd(item);
+      if (recipe) return recipe;
+    }
+  }
+  
+  // Check if it's a graph
+  if (jsonLd['@graph'] && Array.isArray(jsonLd['@graph'])) {
+    for (const item of jsonLd['@graph']) {
+      if (item['@type'] === 'Recipe' || 
+          (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))) {
+        return item;
+      }
+    }
+  }
+  
+  // Check nested objects
+  if (typeof jsonLd === 'object' && jsonLd !== null) {
+    for (const key of Object.keys(jsonLd)) {
+      if (typeof jsonLd[key] === 'object' && jsonLd[key] !== null) {
+        const recipe = findRecipeInJsonLd(jsonLd[key]);
+        if (recipe) return recipe;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Normalize JSON-LD recipe to our expected format
+function normalizeJsonLdRecipe(recipe) {
+  try {
+    const normalized = {
+      // Required fields
+      name: recipe.name || '',
+      image: normalizeImage(recipe.image),
+      
+      // Description
+      description: recipe.description || '',
+      
+      // Author
+      author: normalizeAuthor(recipe.author),
+      
+      // Dates
+      datePublished: recipe.datePublished || '',
+      dateModified: recipe.dateModified || '',
+      
+      // Times (already in ISO 8601 format in JSON-LD)
+      prepTime: recipe.prepTime || '',
+      cookTime: recipe.cookTime || '',
+      totalTime: recipe.totalTime || '',
+      
+      // Yield/Servings
+      recipeYield: normalizeYield(recipe.recipeYield),
+      
+      // Category and Cuisine
+      recipeCategory: recipe.recipeCategory || '',
+      recipeCuisine: recipe.recipeCuisine || '',
+      
+      // Keywords
+      keywords: normalizeKeywords(recipe.keywords),
+      
+      // Ingredients
+      recipeIngredient: normalizeIngredients(recipe.recipeIngredient),
+      
+      // Instructions
+      recipeInstructions: normalizeInstructions(recipe.recipeInstructions),
+      
+      // Nutrition
+      nutrition: recipe.nutrition || null,
+      
+      // Ratings
+      aggregateRating: recipe.aggregateRating || null,
+      
+      // Video
+      video: recipe.video || null
+    };
+    
+    // Validate required fields
+    if (!normalized.name || !normalized.image || 
+        !normalized.recipeIngredient || normalized.recipeIngredient.length === 0 ||
+        !normalized.recipeInstructions || normalized.recipeInstructions.length === 0) {
+      console.log('JSON-LD recipe missing required fields:', {
+        hasName: !!normalized.name,
+        hasImage: !!normalized.image,
+        hasIngredients: normalized.recipeIngredient?.length > 0,
+        hasInstructions: normalized.recipeInstructions?.length > 0
+      });
+      return null;
+    }
+    
+    return normalized;
+  } catch (error) {
+    console.error('Error normalizing JSON-LD recipe:', error);
+    return null;
+  }
+}
+
+// Helper function to normalize image field
+function normalizeImage(image) {
+  if (typeof image === 'string') return image;
+  if (Array.isArray(image) && image.length > 0) {
+    // Return the first image if it's an array
+    return normalizeImage(image[0]);
+  }
+  if (image && typeof image === 'object') {
+    return image.url || image['@id'] || image.contentUrl || '';
+  }
+  return '';
+}
+
+// Helper function to normalize author field
+function normalizeAuthor(author) {
+  if (typeof author === 'string') return author;
+  if (author && typeof author === 'object') {
+    return author.name || '';
+  }
+  return '';
+}
+
+// Helper function to normalize yield field
+function normalizeYield(yield_) {
+  if (typeof yield_ === 'string') return yield_;
+  if (typeof yield_ === 'number') return String(yield_);
+  if (Array.isArray(yield_) && yield_.length > 0) {
+    return String(yield_[0]);
+  }
+  return '';
+}
+
+// Helper function to normalize keywords
+function normalizeKeywords(keywords) {
+  if (typeof keywords === 'string') return keywords;
+  if (Array.isArray(keywords)) {
+    return keywords.join(', ');
+  }
+  return '';
+}
+
+// Helper function to normalize ingredients
+function normalizeIngredients(ingredients) {
+  if (!ingredients) return [];
+  if (!Array.isArray(ingredients)) {
+    return [String(ingredients)];
+  }
+  return ingredients.map(ing => String(ing)).filter(ing => ing.length > 0);
+}
+
+// Helper function to normalize instructions
+function normalizeInstructions(instructions) {
+  if (!instructions) return [];
+  
+  // Handle string
+  if (typeof instructions === 'string') {
+    return [{ "@type": "HowToStep", text: instructions }];
+  }
+  
+  // Handle array
+  if (Array.isArray(instructions)) {
+    return instructions.map((instruction, index) => {
+      // Handle string instruction
+      if (typeof instruction === 'string') {
+        return { "@type": "HowToStep", text: instruction };
+      }
+      
+      // Handle HowToStep object
+      if (instruction['@type'] === 'HowToStep') {
+        return {
+          "@type": "HowToStep",
+          text: instruction.text || instruction.name || ''
+        };
+      }
+      
+      // Handle HowToSection with steps
+      if (instruction['@type'] === 'HowToSection' && instruction.itemListElement) {
+        // Flatten sections into steps
+        return instruction.itemListElement.map(step => ({
+          "@type": "HowToStep",
+          text: (instruction.name ? instruction.name + ': ' : '') + (step.text || step.name || '')
+        }));
+      }
+      
+      // Handle other objects
+      if (typeof instruction === 'object') {
+        return {
+          "@type": "HowToStep",
+          text: instruction.text || instruction.name || instruction.description || ''
+        };
+      }
+      
+      return null;
+    }).flat().filter(step => step && step.text);
+  }
+  
+  return [];
+}
