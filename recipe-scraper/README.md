@@ -11,6 +11,9 @@ A Cloudflare Worker that scrapes recipe data from URLs using JSON-LD structured 
 - **Data Normalization**: Normalizes ingredients and instructions into consistent arrays
 - **Unique ID Generation**: Creates SHA-256 hash-based IDs for each recipe URL
 - **Flexible Type Recognition**: Handles various Recipe type formats (`Recipe`, `schema:Recipe`, `https://schema.org/Recipe`)
+- **KV Storage**: Persistent storage of scraped recipes in Cloudflare KV database
+- **CRUD Operations**: Create, read, update, and delete recipes from storage
+- **Pagination Support**: Efficient listing of stored recipes with pagination
 
 ## Setup
 
@@ -29,7 +32,12 @@ account_id = "your-account-id"
 npm run dev
 ```
 
-4. Deploy to Cloudflare:
+4. Set up KV storage (optional but recommended):
+```bash
+npm run setup-kv
+```
+
+5. Deploy to Cloudflare:
 ```bash
 npm run deploy
 ```
@@ -107,9 +115,49 @@ Response:
 ```json
 {
   "status": "healthy",
-  "service": "recipe-scraper"
+  "service": "recipe-scraper",
+  "features": ["scraping", "kv-storage"]
 }
 ```
+
+## KV Storage Endpoints
+
+If KV storage is configured, the following endpoints are available:
+
+### `/scrape` with KV Storage
+Add `save=true` parameter to store scraped recipes:
+
+```bash
+# Scrape and save single recipe
+curl "https://your-worker.workers.dev/scrape?url=https://example.com/recipe&save=true"
+
+# Scrape and save multiple recipes
+curl -X POST "https://your-worker.workers.dev/scrape" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "urls": ["https://example.com/recipe1", "https://example.com/recipe2"],
+    "save": true
+  }'
+```
+
+### `/recipes` - Manage Stored Recipes
+
+#### Get Recipe by ID
+```bash
+curl "https://your-worker.workers.dev/recipes?id=<hashed-url-id>"
+```
+
+#### List All Recipes
+```bash
+curl "https://your-worker.workers.dev/recipes?limit=50&cursor=<cursor>"
+```
+
+#### Delete Recipe
+```bash
+curl -X DELETE "https://your-worker.workers.dev/recipes?id=<hashed-url-id>"
+```
+
+For detailed KV setup instructions, see [KV_SETUP.md](./KV_SETUP.md).
 
 ## Data Processing
 
