@@ -33,14 +33,14 @@
 
 /* Back Button */
 .back-btn {
-  width: 70px;
+  width: 50px;
   height: 50px;
-  border-radius: 25px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: none;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -50,8 +50,9 @@
 
 .back-btn:hover {
   transform: translateX(-2px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 .back-arrow {
@@ -63,30 +64,32 @@
   transform: translateY(-1px);
 }
 
-/* Recipe Title Section */
+/* Recipe Title Section - Now overlaid on image */
 .recipe-title-section {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
-  padding-top: 100px;
-  z-index: 2;
+  z-index: 3;
   text-align: center;
-  padding-left: 40px;
-  padding-right: 40px;
-  padding-bottom: 20px;
+  padding: 40px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
 }
 
 .recipe-fullscreen-title {
   color: white;
-  font-size: 2.5em;
-  font-weight: 600;
+  font-size: 3em;
+  font-weight: 700;
   margin: 0 auto;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.8);
   padding: 15px 25px;
   display: inline-block;
   width: fit-content;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
+  margin-bottom: 20px;
 }
 
 /* Recipe Timing Info */
@@ -141,7 +144,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   background: rgba(255, 255, 255, 0.1);
   color: white;
   text-decoration: none;
@@ -149,110 +152,89 @@
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  font-family: inherit;
-  line-height: normal;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  outline: none;
-  margin: 0;
 }
 
 .recipe-link:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .recipe-link.source-link {
-  background: rgba(52, 152, 219, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
-  border: 1px solid rgba(52, 152, 219, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .recipe-link.source-link:hover {
-  background: rgba(52, 152, 219, 0.4);
-  border-color: rgba(52, 152, 219, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .recipe-link.video-link {
-  background: rgba(231, 76, 60, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
-  border: 1px solid rgba(231, 76, 60, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .recipe-link.video-link:hover {
-  background: rgba(231, 76, 60, 0.4);
-  border-color: rgba(231, 76, 60, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Full Screen Recipe Actions */
+/* Action Buttons (Edit/Delete) */
 .recipe-fullscreen-actions {
   display: flex;
-  gap: 15px;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .fullscreen-edit-btn,
 .fullscreen-delete-btn {
-  padding: 12px 24px;
-  font-size: 1em;
-  font-weight: 600;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   color: white;
-}
-
-.fullscreen-delete-btn {
-  width: 60px;
-  height: 40px;
-  padding: 0;
-  border-radius: 20px;
-  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2em;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.fullscreen-delete-btn {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .fullscreen-edit-btn {
-  width: 60px;
-  height: 40px;
-  padding: 0;
-  border-radius: 20px;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2em;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .fullscreen-edit-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.fullscreen-delete-btn {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(231, 76, 60, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .fullscreen-delete-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(231, 76, 60, 0.6);
+  background: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.4);
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 /* Recipe Content */
@@ -263,7 +245,7 @@
   padding: 40px;
   max-width: 1200px; // Reduced from 1400px for better fit on smaller screens
   margin: 0 auto;
-  margin-top: 30px;
+  margin-top: 0;
   position: relative;
   z-index: 1;
   width: 100%;
@@ -332,14 +314,14 @@
   border-bottom: none;
 }
 
-/* Full Background Image */
+/* Full Background Image - Now positioned at top */
 .recipe-full-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  min-height: 500px;
+  overflow: hidden;
+  z-index: 0;
 }
 
 .recipe-full-background::after {
@@ -349,7 +331,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.6) 100%);
   z-index: 1;
   pointer-events: none;
 }
@@ -358,6 +340,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .recipe-full-background-placeholder {

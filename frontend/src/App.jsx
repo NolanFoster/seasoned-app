@@ -423,8 +423,8 @@ function App() {
           }
 
           const scrollTop = recipeFullscreenRef.current.scrollTop;
-          const fadeStartOffset = 50; // Start fading after 50px of scroll
-          const fadeEndOffset = 150; // Fully fade by 150px
+          const fadeStartOffset = 200; // Start fading after 200px of scroll (adjusted for new layout)
+          const fadeEndOffset = 400; // Fully fade by 400px
 
           // Calculate opacity based on scroll position
           let opacity = 1;
@@ -2041,72 +2041,7 @@ function App() {
             </div>
           </div>
           
-          {/* Title Section - moved below header */}
-          <div className="recipe-title-section" style={{ opacity: titleOpacity, transition: 'opacity 0.2s ease-out' }}>
-            <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
-            
-            {/* Recipe Timing Info - prep time, cook time, yield */}
-            {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
-              selectedRecipe.cook_time || selectedRecipe.cookTime || 
-              selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) ? (
-              <div className="recipe-card-time">
-                <div className="time-item">
-                  <span className="time-label">Prep</span>
-                  <span className="time-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime) || '-'}</span>
-                </div>
-                <div className="time-divider"></div>
-                <div className="time-item">
-                  <span className="time-label">Cook</span>
-                  <span className="time-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime) || '-'}</span>
-                </div>
-                {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
-                  <>
-                    <div className="time-divider"></div>
-                    <div className="time-item">
-                      <span className="time-label">Yield</span>
-                      <span className="time-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <p className="recipe-card-time">
-                <span className="time-icon">⏱️</span>
-                <span className="no-time">-</span>
-              </p>
-            )}
-            
-            {/* Recipe Links - under title */}
-            {(selectedRecipe.source_url || selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-              <div className="recipe-links">
-                {selectedRecipe.source_url && (
-                  <a 
-                    href={selectedRecipe.source_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="recipe-link source-link"
-                    title="View original recipe"
-                  >
-                    🌐 Source Recipe
-                  </a>
-                )}
-                {(selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                  <button 
-                    className="recipe-link video-link"
-                    title="Watch recipe video"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openVideoPopup(selectedRecipe.video_url !== undefined ? selectedRecipe.video_url : (selectedRecipe.video && selectedRecipe.video.contentUrl));
-                    }}
-                  >
-                    🎥 Watch Video
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {/* Full Background Image */}
+          {/* Full Background Image with Title Overlay */}
           <div className="recipe-full-background">
             {(selectedRecipe.image || selectedRecipe.image_url) ? (
               <img 
@@ -2119,6 +2054,71 @@ function App() {
                 <div className="placeholder-gradient"></div>
               </div>
             )}
+            
+            {/* Title Section - Now inside the image as overlay */}
+            <div className="recipe-title-section" style={{ opacity: titleOpacity, transition: 'opacity 0.2s ease-out' }}>
+              <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
+              
+              {/* Recipe Timing Info - prep time, cook time, yield */}
+              {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
+                selectedRecipe.cook_time || selectedRecipe.cookTime || 
+                selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) ? (
+                <div className="recipe-card-time">
+                  <div className="time-item">
+                    <span className="time-label">Prep</span>
+                    <span className="time-value">{formatDuration(selectedRecipe.prep_time || selectedRecipe.prepTime) || '-'}</span>
+                  </div>
+                  <div className="time-divider"></div>
+                  <div className="time-item">
+                    <span className="time-label">Cook</span>
+                    <span className="time-value">{formatDuration(selectedRecipe.cook_time || selectedRecipe.cookTime) || '-'}</span>
+                  </div>
+                  {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+                    <>
+                      <div className="time-divider"></div>
+                      <div className="time-item">
+                        <span className="time-label">Yield</span>
+                        <span className="time-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <p className="recipe-card-time">
+                  <span className="time-icon">⏱️</span>
+                  <span className="no-time">-</span>
+                </p>
+              )}
+              
+              {/* Recipe Links - under title */}
+              {(selectedRecipe.source_url || selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                <div className="recipe-links">
+                  {selectedRecipe.source_url && (
+                    <a 
+                      href={selectedRecipe.source_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="recipe-link source-link"
+                      title="View original recipe"
+                    >
+                      🌐 Source Recipe
+                    </a>
+                  )}
+                  {(selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
+                    <button 
+                      className="recipe-link video-link"
+                      title="Watch recipe video"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVideoPopup(selectedRecipe.video_url !== undefined ? selectedRecipe.video_url : (selectedRecipe.video && selectedRecipe.video.contentUrl));
+                      }}
+                    >
+                      🎥 Watch Video
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           
           {/* Recipe Content */}
