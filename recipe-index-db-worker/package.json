@@ -1,0 +1,23 @@
+{
+  "name": "recipe-index-db-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for scraping and indexing recipe data from URLs",
+  "main": "worker.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "cloudflare-worker",
+    "recipe",
+    "scraper",
+    "json-ld"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

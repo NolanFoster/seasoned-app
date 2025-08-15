@@ -1,0 +1,33 @@
+name = "recipe-index-db-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Uncomment and set your account_id to deploy
+# account_id = "your-account-id"
+
+# Worker configuration
+workers_dev = true
+
+# Environment variables (if needed)
+[vars]
+# Add any environment variables here
+
+# Routes (optional - for custom domains)
+# [[routes]]
+# pattern = "example.com/api/*"
+# zone_id = "your-zone-id"
+
+# KV Namespaces (if you want to cache recipes)
+# [[kv_namespaces]]
+# binding = "RECIPE_CACHE"
+# id = "your-kv-namespace-id"
+
+# Durable Objects (if you want persistent storage)
+# [[durable_objects.bindings]]
+# name = "RECIPE_STORAGE"
+# class_name = "RecipeStorage"
+
+# R2 Buckets (if you want to store recipe images)
+# [[r2_buckets]]
+# binding = "RECIPE_IMAGES"
+# bucket_name = "recipe-images"
