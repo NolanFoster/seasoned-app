@@ -1,0 +1,151 @@
+name: Deploy Frontend to Staging
+
+on:
+  push:
+    branches: [ staging, main ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend-staging.yml'
+  pull_request:
+    branches: [ staging ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend-staging.yml'
+
+jobs:
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Run linting
+      working-directory: frontend
+      run: npm run lint
+    
+    - name: Run tests
+      working-directory: frontend
+      run: npm test
+    
+    - name: Build frontend
+      working-directory: frontend
+      run: npm run build
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: test-frontend
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/staging' && 
+      github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Deploy to Cloudflare Pages Staging
+      working-directory: frontend
+      env:
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🚀 Deploying frontend to staging environment..."
+        npm run deploy:staging
+    
+    - name: Wait for deployment
+      run: sleep 30
+    
+    - name: Verify deployment
+      run: |
+        echo "🔍 Verifying staging deployment..."
+        # Add your staging URL here once configured
+        # STAGING_URL="https://staging.seasoned-frontend.pages.dev"
+        # response=$(curl -s -o /dev/null -w "%{http_code}" $STAGING_URL)
+        # if [ $response -eq 200 ]; then
+        #   echo "✅ Staging deployment verified successfully!"
+        # else
+        #   echo "❌ Staging deployment verification failed with status code: $response"
+        #   exit 1
+        # fi
+    
+    - name: Add deployment comment to PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const comment = `🚀 Frontend deployed to staging environment!
+          
+          **Deployment Details:**
+          - Branch: \`${{ github.head_ref || github.ref_name }}\`
+          - Commit: \`${{ github.sha }}\`
+          - Time: \`${new Date().toISOString()}\`
+          
+          Please verify the staging deployment before merging.`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  deploy-production:
+    name: Deploy to Production
+    needs: test-frontend
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main' && 
+      github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Deploy to Cloudflare Pages Production
+      working-directory: frontend
+      env:
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🚀 Deploying frontend to production environment..."
+        npm run deploy:prod
+    
+    - name: Create deployment notification
+      run: |
+        echo "✅ Frontend successfully deployed to production!"
+        echo "Deployment completed at: $(date)"
