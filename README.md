@@ -7,10 +7,12 @@ A modern recipe management application with SQLite backend and image upload supp
 
 - ✨ **Recipe Management**: Create, read, update, and delete recipes
 - 🖼️ **Image Upload**: Upload and store recipe images using Cloudflare R2
-- 📋 **Recipe Clipping**: Automatically extract recipes from recipe websites
+- 📋 **Recipe Clipping**: Automatically extract recipes from recipe websites with AI
 - 💾 **SQLite Database**: Persistent storage using Cloudflare D1
 - 🎨 **Modern UI**: Beautiful glassmorphism design with responsive layout
 - 🔄 **Real-time Updates**: Instant updates across the application
+- 🚀 **Smart Caching**: KV-based caching for improved performance and cost savings
+- 📚 **Shared Libraries**: Reusable utilities across multiple workers
 
 ## Architecture
 
@@ -18,6 +20,8 @@ A modern recipe management application with SQLite backend and image upload supp
 - **Backend**: Cloudflare Workers
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2 for images
+- **KV Storage**: Cloudflare KV for recipe caching
+- **Shared Libraries**: Common utilities shared across workers
 - **Deployment**: Cloudflare Workers
 
 ## Development Workflow
