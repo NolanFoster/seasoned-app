@@ -1,0 +1,27 @@
+{
+  "name": "seasoned-docs-scripts",
+  "version": "1.0.0",
+  "description": "Documentation generation scripts for Seasoned Recipe App",
+  "type": "module",
+  "main": "generate-docs.js",
+  "scripts": {
+    "generate": "node generate-docs.js",
+    "watch": "node watch-docs.js",
+    "test": "node generate-docs.js && echo 'Documentation generation test completed'"
+  },
+  "keywords": [
+    "documentation",
+    "generator",
+    "auto-update",
+    "cloudflare-workers"
+  ],
+  "author": "Seasoned Recipe App Team",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

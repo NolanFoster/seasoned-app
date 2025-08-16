@@ -1,0 +1,37 @@
+{
+  "name": "seasoned-recipe-app-docs",
+  "version": "1.0.0",
+  "description": "Developer documentation for the Seasoned Recipe App (Auto-generated)",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000",
+    "deploy": "./deploy.sh",
+    "deploy:wrangler": "wrangler pages deploy . --project-name=seasoned-docs",
+    "build": "echo 'No build step required - static HTML documentation'",
+    "preview": "python3 -m http.server 8000",
+    "docs:generate": "node ../scripts/generate-docs.js",
+    "docs:watch": "nodemon ../scripts/generate-docs.js --watch ../src --watch ../clipped-recipe-db-worker/src --watch ../recipe-scraper --watch ../clipper/src --watch ../shared"
+  },
+  "keywords": [
+    "documentation",
+    "cloudflare-workers",
+    "recipe-app",
+    "api-docs",
+    "developer-docs",
+    "auto-generated"
+  ],
+  "author": "Seasoned Recipe App Team",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/recipe-app.git",
+    "directory": "docs"
+  },
+  "homepage": "https://your-docs-project.pages.dev"
+}

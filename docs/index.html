@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seasoned Recipe App - Developer Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="generated" content="2025-08-16T00:59:53.310Z">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">🍳 Seasoned Recipe App</h1>
+                <p class="subtitle">Developer Documentation & API Reference</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-16T00:59:53.310Z</p>
+            </div>
+        </header>
+
+        <nav class="sidebar">
+            <div class="sidebar-content">
+                <div class="nav-section">
+                    <h3>Overview</h3>
+                    <ul>
+                        <li><a href="#introduction">Introduction</a></li>
+                        <li><a href="#architecture">Architecture</a></li>
+                        <li><a href="#getting-started">Getting Started</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Workers</h3>
+                    <ul>
+                        <li><a href="#recipe-search-db">Recipe Search DB</a></li><li><a href="#clipped-recipe-db">Clipped Recipe DB</a></li><li><a href="#recipe-scraper">Recipe Scraper</a></li><li><a href="#recipe-clipper">Recipe Clipper</a></li><li><a href="#recipe-crawler">Recipe Crawler</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Shared Libraries</h3>
+                    <ul>
+                        <li><a href="#kv-storage">KV Storage</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3>Development</h3>
+                    <ul>
+                        <li><a href="#testing">Testing</a></li>
+                        <li><a href="#deployment">Deployment</a></li>
+                        <li><a href="#troubleshooting">Troubleshooting</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section id="introduction" class="section">
+                <h2>Introduction</h2>
+                <p>Seasoned is a modern recipe management application built with a microservices architecture using Cloudflare Workers. The application provides recipe clipping, storage, search, and management capabilities through a collection of specialized workers.</p>
+                
+                <div class="auto-update-info">
+                    <h3>🔄 Auto-Update Information</h3>
+                    <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
+                    <pre><code>npm run docs:generate</code></pre>
+                    <p><strong>Last Generated:</strong> 2025-08-16T00:59:53.310Z</p>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>🎯 Recipe Clipping</h4>
+                        <p>AI-powered recipe extraction from any recipe website</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔍 Graph Search</h4>
+                        <p>Advanced recipe search with ingredient and tag relationships</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>💾 Multi-Storage</h4>
+                        <p>Hybrid storage using KV, D1, and R2 for optimal performance</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🚀 Edge Computing</h4>
+                        <p>Global deployment with Cloudflare Workers for low latency</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="architecture" class="section">
+                <h2>Architecture Overview</h2>
+                <div class="architecture-diagram">
+                    <div class="arch-layer">
+                        <h4>Frontend (React + Vite)</h4>
+                        <p>Modern web interface for recipe management</p>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>API Gateway & Workers</h4>
+                        <ul>
+                            <li><strong>Recipe Search DB:</strong> Graph Search, FTS, Node/Edge Management</li><li><strong>Clipped Recipe DB:</strong> Recipe CRUD, Image Uploads, Health Monitoring</li><li><strong>Recipe Scraper:</strong> JSON-LD Extraction, Batch Processing, KV Storage</li><li><strong>Recipe Clipper:</strong> AI Extraction, GPT-4o-mini, Smart Caching</li><li><strong>Recipe Crawler:</strong> Batch Processing, Health Monitoring, Progress Tracking</li>
+                        </ul>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>Storage Layer</h4>
+                        <ul>
+                            <li><strong>Cloudflare KV:</strong> Caching and temporary storage</li>
+                            <li><strong>Cloudflare D1:</strong> SQLite database for recipes</li>
+                            <li><strong>Cloudflare R2:</strong> Image storage</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            
+            <section id="recipe-search-db" class="section">
+                <h2>Recipe Search DB Worker</h2>
+                <p>Graph Search, FTS, Node/Edge Management</p>
+                
+                <div class="worker-info">
+                    <div class="info-card">
+                        <h4>📍 Location</h4>
+                        <p><code>recipe-search-db/</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🗄️ Database</h4>
+                        <p>D1</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔧 Main Features</h4>
+                        <p>Graph Search, FTS, Node/Edge Management</p>
+                    </div>
+                </div>
+
+                
+
+                
+                <h3>Key Functions</h3>
+                <div class="function-grid">
+                    
+                    <div class="function">
+                        <h4><code>createNode()</code></h4>
+                        <p>Node operations</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getNodes()</code></h4>
+                        <p>Function getNodes</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getNode()</code></h4>
+                        <p>Function getNode</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>updateNode()</code></h4>
+                        <p>Function updateNode</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>deleteNode()</code></h4>
+                        <p>Function deleteNode</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createEdge()</code></h4>
+                        <p>Edge operations</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getEdges()</code></h4>
+                        <p>Function getEdges</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>deleteEdge()</code></h4>
+                        <p>Function deleteEdge</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>searchNodes()</code></h4>
+                        <p>Search operations</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getGraph()</code></h4>
+                        <p>Graph operations</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>migrateKVToSearch()</code></h4>
+                        <p>Migration operations</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>processKVRecipe()</code></h4>
+                        <p>Function processKVRecipe</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createRecipeNodeFromKV()</code></h4>
+                        <p>Function createRecipeNodeFromKV</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createIngredientNodesFromKV()</code></h4>
+                        <p>Function createIngredientNodesFromKV</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createTagNodesFromKV()</code></h4>
+                        <p>Function createTagNodesFromKV</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createOrGetNodeFromKV()</code></h4>
+                        <p>Function createOrGetNodeFromKV</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createEdgeFromKV()</code></h4>
+                        <p>Function createEdgeFromKV</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>checkExistingNode()</code></h4>
+                        <p>Function checkExistingNode</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>chunkArray()</code></h4>
+                        <p>Utility functions for KV migration</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeIngredientName()</code></h4>
+                        <p>Function normalizeIngredientName</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>categorizeIngredient()</code></h4>
+                        <p>Function categorizeIngredient</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>categorizeTag()</code></h4>
+                        <p>Function categorizeTag</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractQuantity()</code></h4>
+                        <p>Function extractQuantity</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractUnit()</code></h4>
+                        <p>Function extractUnit</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>decompressKVData()</code></h4>
+                        <p>Decompress KV data (similar to shared/kv-storage.js)</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>debugKVStorage()</code></h4>
+                        <p>Debug function to inspect KV storage</p>
+                    </div>
+                    
+                </div>
+                
+
+                <div class="source-code-preview">
+                    <h3>Source Code Preview</h3>
+                    <pre><code>// Recipe Search Database Worker
+// Provides graph-based search capabilities for recipes
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method;
+
+    // CORS headers
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    try {
+
+      // Handle preflight requests
+      if (method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+      }
+
+      // Route handling
+      if (path === '/api/nodes' && method === 'POST') {
+        return await createNode(request, env, corsHeaders);
+      } else if (path === '/api/nodes' && method === 'GET') {
+        return await getNodes(request, env, corsHeaders);
+      } else if (path.startsWith('/api/nodes/') && method === 'GET') {
+        const nodeId = path.split(...</code></pre>
+                </div>
+            </section>
+            <section id="clipped-recipe-db" class="section">
+                <h2>Clipped Recipe DB Worker</h2>
+                <p>Recipe CRUD, Image Uploads, Health Monitoring</p>
+                
+                <div class="worker-info">
+                    <div class="info-card">
+                        <h4>📍 Location</h4>
+                        <p><code>clipped-recipe-db-worker/</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🗄️ Database</h4>
+                        <p>D1</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔧 Main Features</h4>
+                        <p>Recipe CRUD, Image Uploads, Health Monitoring</p>
+                    </div>
+                </div>
+
+                
+                <h3>API Endpoints</h3>
+                <div class="endpoint-grid">
+                    
+                    <div class="endpoint">
+                        <h4>GET /health</h4>
+                        <p>Health check endpoint</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>GET /recipes</h4>
+                        <p>Get all recipes</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>POST /recipe</h4>
+                        <p>Get all recipes</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>POST /upload-image</h4>
+                        <p>Upload image</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>POST /clip</h4>
+                        <p>Clip recipe from URL</p>
+                    </div>
+                    
+                </div>
+                
+
+                
+                <h3>Key Functions</h3>
+                <div class="function-grid">
+                    
+                    <div class="function">
+                        <h4><code>getRecipes()</code></h4>
+                        <p>Database functions</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getRecipeById()</code></h4>
+                        <p>Function getRecipeById</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>createRecipe()</code></h4>
+                        <p>Function createRecipe</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>updateRecipe()</code></h4>
+                        <p>Function updateRecipe</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>deleteRecipe()</code></h4>
+                        <p>Function deleteRecipe</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>updateRecipeImage()</code></h4>
+                        <p>Function updateRecipeImage</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>uploadImage()</code></h4>
+                        <p>Image upload function</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractRecipeFromUrl()</code></h4>
+                        <p>Recipe extraction from URL</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>decodeHtmlEntities()</code></h4>
+                        <p>Helper function to decode HTML entities</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>checkSystemHealth()</code></h4>
+                        <p>Health check function</p>
+                    </div>
+                    
+                </div>
+                
+
+                <div class="source-code-preview">
+                    <h3>Source Code Preview</h3>
+                    <pre><code>// Recipe API with SQLite (D1) and image upload support
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+
+    // CORS headers
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    try {
+      // Health check endpoint
+      if (pathname === '/health' && request.method === 'GET') {
+        try {
+          // Perform health checks
+          const healthStatus = await checkSystemHealth(env);
+          
+          return new Response(JSON.stringify(healthStatus), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console...</code></pre>
+                </div>
+            </section>
+            <section id="recipe-scraper" class="section">
+                <h2>Recipe Scraper Worker</h2>
+                <p>JSON-LD Extraction, Batch Processing, KV Storage</p>
+                
+                <div class="worker-info">
+                    <div class="info-card">
+                        <h4>📍 Location</h4>
+                        <p><code>recipe-scraper/</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🗄️ Database</h4>
+                        <p>KV</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔧 Main Features</h4>
+                        <p>JSON-LD Extraction, Batch Processing, KV Storage</p>
+                    </div>
+                </div>
+
+                
+
+                
+                <h3>Key Functions</h3>
+                <div class="function-grid">
+                    
+                    <div class="function">
+                        <h4><code>decodeHtmlEntities()</code></h4>
+                        <p>Decode HTML entities</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeIngredients()</code></h4>
+                        <p>Normalize ingredients to ensure they're always arrays</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeInstructions()</code></h4>
+                        <p>Normalize instructions</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>isRecipeType()</code></h4>
+                        <p>Helper to check if a type value represents a schema.org/Recipe</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>validateRecipeSchema()</code></h4>
+                        <p>Validate if the JSON-LD object is a valid schema.org/Recipe</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractRecipeData()</code></h4>
+                        <p>Extract recipe data from JSON-LD</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>processRecipeUrl()</code></h4>
+                        <p>Process a single URL</p>
+                    </div>
+                    
+                </div>
+                
+
+                <div class="source-code-preview">
+                    <h3>Source Code Preview</h3>
+                    <pre><code>/**
+ * Recipe Scraper
+ * Scrapes recipe data from URLs using JSON-LD structured data
+ * Stores recipes in KV database with hashed URL as key
+ */
+
+import { 
+  generateRecipeId, 
+  saveRecipeToKV, 
+  getRecipeFromKV, 
+  listRecipesFromKV, 
+  deleteRecipeFromKV 
+} from '../shared/kv-storage.js';
+
+// Decode HTML entities
+function decodeHtmlEntities(text) {
+  if (typeof text !== 'string') return text;
+  
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&nbsp;': ' ',
+    '&copy;': '©',
+    '&reg;': '®',
+    '&trade;': '™'
+  };
+  
+  return text.replace(/&[#\w]+;/g, entity => {
+    return entities[entity] || entity;
+  });
+}
+
+// Normalize ingredients to ensure they're always arrays
+function normalizeIngredients(ingredients) {
+  if (!ingredients) return [];
+  if (typeof ingredients === 'string') return [decodeHtmlEntities(ingredients)];
+  if (Array.isArray(ingredients)) {
+    return ingredients.map(ing => {
+    ...</code></pre>
+                </div>
+            </section>
+            <section id="recipe-clipper" class="section">
+                <h2>Recipe Clipper Worker</h2>
+                <p>AI Extraction, GPT-4o-mini, Smart Caching</p>
+                
+                <div class="worker-info">
+                    <div class="info-card">
+                        <h4>📍 Location</h4>
+                        <p><code>clipper/</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🗄️ Database</h4>
+                        <p>KV + AI</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔧 Main Features</h4>
+                        <p>AI Extraction, GPT-4o-mini, Smart Caching</p>
+                    </div>
+                </div>
+
+                
+                <h3>API Endpoints</h3>
+                <div class="endpoint-grid">
+                    
+                    <div class="endpoint">
+                        <h4>POST /clip</h4>
+                        <p>Clip recipe from URL using GPT-OSS-20B</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>GET /cached</h4>
+                        <p>Get cached recipe by URL</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>DELETE /cached</h4>
+                        <p>Get cached recipe by URL</p>
+                    </div>
+                    
+                    <div class="endpoint">
+                        <h4>GET /health</h4>
+                        <p>Health check endpoint</p>
+                    </div>
+                    
+                </div>
+                
+
+                
+                <h3>Key Functions</h3>
+                <div class="function-grid">
+                    
+                    <div class="function">
+                        <h4><code>extractRecipeWithGPT()</code></h4>
+                        <p>Extract recipe using GPT-OSS-20B model</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractDescriptionFromHTML()</code></h4>
+                        <p>Extract description from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractAuthorFromHTML()</code></h4>
+                        <p>Extract author from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractDateFromHTML()</code></h4>
+                        <p>Extract publication date from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractYieldFromHTML()</code></h4>
+                        <p>Extract recipe yield (servings) from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractCategoryFromHTML()</code></h4>
+                        <p>Extract recipe category from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractCuisineFromHTML()</code></h4>
+                        <p>Extract recipe cuisine from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractPrepTimeFromHTML()</code></h4>
+                        <p>Extract prep time from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractCookTimeFromHTML()</code></h4>
+                        <p>Extract cook time from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractTotalTimeFromHTML()</code></h4>
+                        <p>Extract total time from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>convertTimeToISO8601()</code></h4>
+                        <p>Convert time string to ISO 8601 format</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractKeywordsFromHTML()</code></h4>
+                        <p>Extract keywords from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractNutritionFromHTML()</code></h4>
+                        <p>Extract nutrition information from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractRatingFromHTML()</code></h4>
+                        <p>Extract rating information from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractVideoFromHTML()</code></h4>
+                        <p>Extract video information from HTML</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractInstructionsFromHTML()</code></h4>
+                        <p>Fallback function to extract instructions from HTML when AI model fails</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>cleanJsonContent()</code></h4>
+                        <p>Clean up common JSON formatting issues</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>cleanHtmlForGPT()</code></h4>
+                        <p>Clean HTML content for GPT processing - optimized for token reduction</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractRecipeContent()</code></h4>
+                        <p>Extract recipe-specific content to prioritize important parts</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>callGPTModel()</code></h4>
+                        <p>Call GPT-OSS-20B model using Cloudflare Workers AI</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractRecipeFromAIResponse()</code></h4>
+                        <p>Extract recipe data from AI response (for testing)</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>extractRecipeFromJsonLd()</code></h4>
+                        <p>Extract recipe from JSON-LD structured data</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>findRecipeInJsonLd()</code></h4>
+                        <p>Find Recipe object in JSON-LD data (handles nested structures)</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeJsonLdRecipe()</code></h4>
+                        <p>Normalize JSON-LD recipe to our expected format</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeImage()</code></h4>
+                        <p>Helper function to normalize image field</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeAuthor()</code></h4>
+                        <p>Helper function to normalize author field</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeYield()</code></h4>
+                        <p>Helper function to normalize yield field</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeKeywords()</code></h4>
+                        <p>Helper function to normalize keywords</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeIngredients()</code></h4>
+                        <p>Helper function to normalize ingredients</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>normalizeInstructions()</code></h4>
+                        <p>Helper function to normalize instructions</p>
+                    </div>
+                    
+                </div>
+                
+
+                <div class="source-code-preview">
+                    <h3>Source Code Preview</h3>
+                    <pre><code>// Recipe Clipper Worker using Cloudflare Workers AI with GPT-4o-mini model
+import { 
+  generateRecipeId, 
+  saveRecipeToKV, 
+  getRecipeFromKV, 
+  deleteRecipeFromKV 
+} from '../../shared/kv-storage.js';
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+
+    // CORS headers
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    try {
+      // Clip recipe from URL using GPT-OSS-20B
+      if (pathname === '/clip' && request.method === 'POST') {
+        const body = await request.json();
+        const pageUrl = body.url;
+        
+        if (!pageUrl) {
+          return new Response('URL is required', { 
+            s...</code></pre>
+                </div>
+            </section>
+            <section id="recipe-crawler" class="section">
+                <h2>Recipe Crawler Worker</h2>
+                <p>Batch Processing, Health Monitoring, Progress Tracking</p>
+                
+                <div class="worker-info">
+                    <div class="info-card">
+                        <h4>📍 Location</h4>
+                        <p><code>crawler/</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🗄️ Database</h4>
+                        <p>N/A</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔧 Main Features</h4>
+                        <p>Batch Processing, Health Monitoring, Progress Tracking</p>
+                    </div>
+                </div>
+
+                
+
+                
+
+                <div class="source-code-preview">
+                    <h3>Source Code Preview</h3>
+                    <pre><code>#!/usr/bin/env python3
+"""
+Recipe Crawler
+A Python script that can pass a list of URLs to the recipe scraper
+"""
+
+import requests
+import json
+import time
+import argparse
+import sys
+from typing import List, Dict, Any
+from urllib.parse import urlparse, urljoin
+import logging
+import re
+from bs4 import BeautifulSoup
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('crawler.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+class RecipeCrawler:
+    def __init__(self, scraper_url: str = "https://recipe-scraper.nolanfoster.workers.dev"):
+        """
+        Initialize the recipe crawler
+        
+        Args:
+            scraper_url: URL of the recipe scraper worker
+        """
+        self.scraper_url = scraper_url.rstrip('/')
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Re...</code></pre>
+                </div>
+            </section>
+            
+            
+            <section id="kv-storage" class="section">
+                <h2>KV Storage Library</h2>
+                <p>Compression, ID Generation, CRUD Operations</p>
+                
+                <div class="worker-info">
+                    <div class="info-card">
+                        <h4>📍 Location</h4>
+                        <p><code>shared/</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔧 Main Features</h4>
+                        <p>Compression, ID Generation, CRUD Operations</p>
+                    </div>
+                </div>
+
+                
+                <h3>Key Functions</h3>
+                <div class="function-grid">
+                    
+                    <div class="function">
+                        <h4><code>generateRecipeId()</code></h4>
+                        <p>Utility function to generate a unique ID from URL</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>compressData()</code></h4>
+                        <p>Compress data using gzip and encode as base64</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>decompressData()</code></h4>
+                        <p>Decompress data using gzip from base64</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>saveRecipeToKV()</code></h4>
+                        <p>Save recipe to KV storage</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getRecipeFromKV()</code></h4>
+                        <p>Get recipe from KV storage</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>listRecipesFromKV()</code></h4>
+                        <p>List all recipes from KV storage (with pagination)</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>deleteRecipeFromKV()</code></h4>
+                        <p>Delete recipe from KV storage</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>recipeExistsInKV()</code></h4>
+                        <p>Check if recipe exists in KV storage</p>
+                    </div>
+                    
+                    <div class="function">
+                        <h4><code>getRecipeMetadata()</code></h4>
+                        <p>Get recipe metadata without full data</p>
+                    </div>
+                    
+                </div>
+                
+
+                <div class="source-code-preview">
+                    <h3>Source Code Preview</h3>
+                    <pre><code>/**
+ * Shared KV Storage Library
+ * Common functions for recipe storage and retrieval using Cloudflare KV
+ * Used by both recipe-clipper and recipe-scraper workers
+ */
+
+// Utility function to generate a unique ID from URL
+export function generateRecipeId(url) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(url);
+  return crypto.subtle.digest('SHA-256', data)
+    .then(hash => {
+      const hashArray = Array.from(new Uint8Array(hash));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    });
+}
+
+// Compress data using gzip and encode as base64
+export async function compressData(data) {
+  const encoder = new TextEncoder();
+  const jsonString = JSON.stringify(data);
+  const jsonBytes = encoder.encode(jsonString);
+  
+  // Use CompressionStream for gzip compression
+  const cs = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  const reader = cs.readable.getReader();
+  
+  writer.write(jsonBytes);
+  writer.close();
+  
+  co...</code></pre>
+                </div>
+            </section>
+
+            <section id="testing" class="section">
+                <h2>Testing</h2>
+                <p>Each worker includes comprehensive testing to ensure reliability and functionality.</p>
+                
+                <h3>Test Structure</h3>
+                <div class="test-grid">
+                    <div class="test-section">
+                        <h4>Unit Tests</h4>
+                        <ul>
+                            <li>Core functionality testing</li>
+                            <li>API endpoint validation</li>
+                            <li>Error handling verification</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="test-section">
+                        <h4>Integration Tests</h4>
+                        <ul>
+                            <li>Worker-to-worker communication</li>
+                            <li>Database operations</li>
+                            <li>Storage system integration</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="test-section">
+                        <h4>End-to-End Tests</h4>
+                        <ul>
+                            <li>Complete workflow testing</li>
+                            <li>Real URL processing</li>
+                            <li>Performance validation</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Running Tests</h3>
+                <div class="example-section">
+                    
+                    <h4>Recipe Search DB</h4>
+                    <pre><code>cd recipe-search-db
+npm test</code></pre>
+                    
+                    <h4>Clipped Recipe DB</h4>
+                    <pre><code>cd clipped-recipe-db-worker
+npm test</code></pre>
+                    
+                    <h4>Recipe Scraper</h4>
+                    <pre><code>cd recipe-scraper
+npm test</code></pre>
+                    
+                    <h4>Recipe Clipper</h4>
+                    <pre><code>cd clipper
+npm test</code></pre>
+                    
+                    <h4>Recipe Crawler</h4>
+                    <pre><code>cd crawler
+npm test</code></pre>
+                    
+                </div>
+            </section>
+
+            <section id="deployment" class="section">
+                <h2>Deployment</h2>
+                <p>All workers are designed for easy deployment to Cloudflare Workers with proper environment configuration.</p>
+                
+                <h3>Deployment Commands</h3>
+                <div class="deployment-grid">
+                    <div class="deployment-step">
+                        <h4>1. Build & Deploy</h4>
+                        <pre><code>npm run deploy</code></pre>
+                    </div>
+                    
+                    <div class="deployment-step">
+                        <h4>2. Environment Variables</h4>
+                        <pre><code>wrangler secret put MY_SECRET</code></pre>
+                    </div>
+                    
+                    <div class="deployment-step">
+                        <h4>3. Database Binding</h4>
+                        <pre><code>wrangler d1 execute DB --file=./schema.sql</code></pre>
+                    </div>
+                </div>
+
+                <h3>Environment Configuration</h3>
+                <p>Each worker requires specific environment variables and bindings:</p>
+                <ul>
+                    <li><strong>D1 Databases:</strong> For SQLite storage</li>
+                    <li><strong>KV Namespaces:</strong> For caching and temporary storage</li>
+                    <li><strong>R2 Buckets:</strong> For image storage</li>
+                    <li><strong>AI Bindings:</strong> For Workers AI functionality</li>
+                </ul>
+            </section>
+
+            <section id="troubleshooting" class="section">
+                <h2>Troubleshooting</h2>
+                <p>Common issues and solutions for the Seasoned recipe app workers.</p>
+                
+                <div class="troubleshooting-grid">
+                    <div class="issue">
+                        <h4>Database Connection Errors</h4>
+                        <p><strong>Symptoms:</strong> 500 errors, database not found</p>
+                        <p><strong>Solutions:</strong></p>
+                        <ul>
+                            <li>Verify D1 database ID in wrangler.toml</li>
+                            <li>Check database binding names</li>
+                            <li>Ensure database exists and is accessible</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="issue">
+                        <h4>KV Storage Issues</h4>
+                        <p><strong>Symptoms:</strong> Storage failures, data corruption</p>
+                        <p><strong>Solutions:</strong></p>
+                        <ul>
+                            <li>Check KV namespace bindings</li>
+                            <li>Verify namespace permissions</li>
+                            <li>Check for data compression issues</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="issue">
+                        <h4>CORS Errors</h4>
+                        <p><strong>Symptoms:</strong> Frontend can't access API</p>
+                        <p><strong>Solutions:</strong></p>
+                        <ul>
+                            <li>Verify CORS headers in worker responses</li>
+                            <li>Check frontend origin configuration</li>
+                            <li>Ensure preflight requests are handled</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="issue">
+                        <h4>Image Upload Failures</h4>
+                        <p><strong>Symptoms:</strong> 500 errors on image upload</p>
+                        <p><strong>Solutions:</strong></p>
+                        <ul>
+                            <li>Check R2 bucket permissions</li>
+                            <li>Verify bucket binding names</li>
+                            <li>Check file size limits</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Debug Mode</h3>
+                <p>Enable debug logging to troubleshoot issues:</p>
+                <pre><code># Enable worker logging
+wrangler tail
+
+# Check worker logs
+wrangler logs tail
+
+# Test endpoints locally
+wrangler dev</code></pre>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
