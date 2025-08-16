@@ -166,11 +166,14 @@ body {
     padding: $spacing-xs;
     
     /* Add border-bottom on mobile to separate from content */
-    border-bottom: 2px solid rgba(255, 255, 255, 0.25);
+    border-bottom: 3px solid rgba(255, 255, 255, 0.4);
     box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.08),
-      0 2px 8px rgba(0, 0, 0, 0.05),
-      0 4px 8px rgba(0, 0, 0, 0.1); /* Extra shadow for separation */
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 4px 16px rgba(0, 0, 0, 0.08),
+      0 2px 8px rgba(0, 0, 0, 0.05); /* Enhanced shadow for better separation */
+    
+    /* Ensure minimum height when search results are not shown */
+    min-height: auto;
   }
 }
 
@@ -399,12 +402,12 @@ body {
     
     /* Add border-bottom on mobile for dark mode */
     @media (max-width: 640px) {
-      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 3px solid rgba(255, 255, 255, 0.3);
       box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.4),
-        0 2px 8px rgba(0, 0, 0, 0.3),
-        0 4px 8px rgba(0, 0, 0, 0.2), /* Extra shadow for separation */
-        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2), /* Enhanced shadow for separation */
+        inset 0 0 0 1px rgba(255, 255, 255, 0.15);
     }
   }
 
@@ -510,8 +513,23 @@ body {
 }
 
 @media (max-width: 640px) {
+  .title {
+    font-size: 1.4rem; /* Slightly smaller on 640px breakpoint */
+    padding: $spacing-xs;
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    /* Ensure consistent height */
+    min-height: 40px;
+    align-items: center;
+  }
+  
+  .title-icon {
+    width: 30px;
+    height: 30px;
+  }
   .container {
-    padding-top: $spacing-xl + $spacing-lg + $spacing-sm; /* Extra padding to account for fixed header with border */
+    padding-top: calc(#{$spacing-xl} + #{$spacing-xl} + #{$spacing-lg}); /* Increased padding to ensure no overlap */
   }
 }
 
@@ -566,7 +584,7 @@ body {
   }
   
   .container {
-    padding-top: $spacing-xl + $spacing-xl + $spacing-md; /* Increased padding to prevent overlap with fixed header */
+    padding-top: calc(#{$spacing-xl} + #{$spacing-xl} + #{$spacing-xl}); /* Further increased padding for small screens */
   }
 }
 
