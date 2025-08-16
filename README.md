@@ -26,6 +26,10 @@ A modern recipe management application with SQLite backend and image upload supp
 
 ## Development Workflow
 
+### Preview Deployments
+
+When you create a pull request, the system automatically deploys preview versions of both the frontend and all backend workers. This allows you to test your changes in an isolated environment before merging. See [PREVIEW_DEPLOYMENTS.md](./PREVIEW_DEPLOYMENTS.md) for details.
+
 ### Testing and Staging Deployment
 
 This project follows a strict testing and staging deployment workflow to ensure code quality:
@@ -34,6 +38,7 @@ This project follows a strict testing and staging deployment workflow to ensure 
 2. **Feature Branches**: Work on feature branches, never directly on main
 3. **Staging Validation**: Changes must be validated in staging before production
 4. **Automated Testing**: Pre-commit hooks and GitHub Actions enforce testing
+5. **Preview Deployments**: Each PR gets its own isolated preview environment
 
 #### Quick Start
 

@@ -1,0 +1,149 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - staging
+
+jobs:
+  deploy-preview-workers:
+    runs-on: ubuntu-latest
+    name: Deploy Preview Workers
+    
+    outputs:
+      recipe-scraper-url: ${{ steps.deploy-recipe-scraper.outputs.url }}
+      clipper-url: ${{ steps.deploy-clipper.outputs.url }}
+      search-db-url: ${{ steps.deploy-search-db.outputs.url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Deploy Recipe Scraper Preview
+        id: deploy-recipe-scraper
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.preview.toml
+          workingDirectory: ./recipe-scraper
+          
+      - name: Get Recipe Scraper Preview URL
+        id: get-recipe-scraper-url
+        working-directory: ./recipe-scraper
+        run: |
+          echo "url=https://recipe-scraper-preview.nolanfoster.workers.dev" >> $GITHUB_OUTPUT
+          
+      - name: Deploy Clipper Preview
+        id: deploy-clipper
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.preview.toml
+          workingDirectory: ./clipper
+          secrets: |
+            GPT_API_KEY
+        env:
+          GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
+          
+      - name: Get Clipper Preview URL
+        id: get-clipper-url
+        working-directory: ./clipper
+        run: |
+          echo "url=https://recipe-clipper-worker-preview.nolanfoster.workers.dev" >> $GITHUB_OUTPUT
+          
+      - name: Deploy Recipe Search DB Preview
+        id: deploy-search-db
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.preview.toml
+          workingDirectory: ./recipe-search-db
+          
+      - name: Get Search DB Preview URL
+        id: get-search-db-url
+        working-directory: ./recipe-search-db
+        run: |
+          echo "url=https://recipe-search-db-preview.nolanfoster.workers.dev" >> $GITHUB_OUTPUT
+          
+      - name: Deploy Clipped Recipe DB Worker Preview
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.preview.toml
+          workingDirectory: ./clipped-recipe-db-worker
+
+  deploy-preview-frontend:
+    runs-on: ubuntu-latest
+    needs: deploy-preview-workers
+    name: Deploy Preview Frontend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+          
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+        
+      - name: Build frontend with preview URLs
+        working-directory: ./frontend
+        env:
+          VITE_API_URL: ${{ needs.deploy-preview-workers.outputs.recipe-scraper-url }}
+          VITE_CLIPPER_API_URL: ${{ needs.deploy-preview-workers.outputs.clipper-url }}
+          VITE_SEARCH_DB_URL: ${{ needs.deploy-preview-workers.outputs.search-db-url }}
+        run: |
+          echo "Building with preview worker URLs:"
+          echo "Recipe Scraper: $VITE_API_URL"
+          echo "Clipper: $VITE_CLIPPER_API_URL"
+          echo "Search DB: $VITE_SEARCH_DB_URL"
+          npm run build
+        
+      - name: Deploy to Cloudflare Pages Preview
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: seasoned-frontend
+          directory: frontend/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          deployment-name: preview-${{ github.event.pull_request.number }}
+          
+      - name: Comment Preview URLs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `### 🚀 Preview Deployment Ready!
+            
+            **Frontend Preview:** https://preview-${{ github.event.pull_request.number }}.seasoned-frontend.pages.dev
+            
+            **Preview Worker Endpoints:**
+            - Recipe Scraper: ${{ needs.deploy-preview-workers.outputs.recipe-scraper-url }}
+            - Clipper: ${{ needs.deploy-preview-workers.outputs.clipper-url }}
+            - Search DB: ${{ needs.deploy-preview-workers.outputs.search-db-url }}
+            
+            These preview deployments will be automatically cleaned up when the PR is closed.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

@@ -31,6 +31,10 @@ jobs:
         
       - name: Build frontend
         working-directory: ./frontend
+        env:
+          VITE_API_URL: https://recipe-scraper.nolanfoster.workers.dev
+          VITE_CLIPPER_API_URL: https://recipe-clipper-worker.nolanfoster.workers.dev
+          VITE_SEARCH_DB_URL: https://recipe-search-db.nolanfoster.workers.dev
         run: npm run build
         
       - name: Deploy to Cloudflare Pages
