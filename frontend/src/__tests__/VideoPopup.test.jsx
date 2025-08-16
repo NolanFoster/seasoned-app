@@ -6,16 +6,43 @@ import App from '../App';
 global.fetch = jest.fn();
 
 describe('VideoPopup Component', () => {
+  // Helper function to create mock fetch implementation
+  const createMockFetch = (recipeOverrides = {}) => {
+    return (url) => {
+      if (url.includes('/recipes')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            recipes: [{
+              id: 1,
+              data: {
+                id: 1,
+                name: 'Test Recipe',
+                ingredients: [],
+                instructions: [],
+                ...recipeOverrides
+              }
+            }]
+          })
+        });
+      }
+      if (url.includes('/health')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ status: 'healthy' })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({})
+      });
+    };
+  };
+
   beforeEach(() => {
     fetch.mockClear();
-    fetch.mockResolvedValue({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video_url: 'https://www.youtube.com/watch?v=test123'
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ video_url: 'https://www.youtube.com/watch?v=test123' }));
   });
 
   test('opens video popup when video link is clicked', async () => {
@@ -38,14 +65,7 @@ describe('VideoPopup Component', () => {
   });
 
   test('converts YouTube URL to embed format', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }));
 
     render(<App />);
     
@@ -64,14 +84,7 @@ describe('VideoPopup Component', () => {
   });
 
   test('converts YouTube short URL to embed format', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video_url: 'https://youtu.be/dQw4w9WgXcQ'
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ video_url: 'https://youtu.be/dQw4w9WgXcQ' }));
 
     render(<App />);
     
@@ -90,14 +103,7 @@ describe('VideoPopup Component', () => {
   });
 
   test('converts Vimeo URL to embed format', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video_url: 'https://vimeo.com/123456789'
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ video_url: 'https://vimeo.com/123456789' }));
 
     render(<App />);
     
@@ -116,14 +122,7 @@ describe('VideoPopup Component', () => {
   });
 
   test('handles invalid URL gracefully', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video_url: 'not-a-valid-url'
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ video_url: 'not-a-valid-url' }));
 
     render(<App />);
     
@@ -275,16 +274,11 @@ describe('VideoPopup Component', () => {
   });
 
   test('handles video with contentUrl format', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video: {
-          contentUrl: 'https://www.youtube.com/watch?v=test456'
-        }
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ 
+      video: {
+        contentUrl: 'https://www.youtube.com/watch?v=test456'
+      }
+    }));
 
     render(<App />);
     
@@ -303,14 +297,7 @@ describe('VideoPopup Component', () => {
   });
 
   test('shows error message when video fails to load', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [{
-        id: 1,
-        name: 'Test Recipe',
-        video_url: ''
-      }]
-    });
+    fetch.mockImplementation(createMockFetch({ video_url: '' }));
 
     render(<App />);
     

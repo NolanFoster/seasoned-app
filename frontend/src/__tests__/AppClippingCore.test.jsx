@@ -34,11 +34,14 @@ describe('App Component - Core Clipping Functionality', () => {
 
     // Mock all fetch calls in sequence
     fetch
-      .mockResolvedValueOnce({ ok: true, json: async () => [] }) // fetchRecipes
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, recipes: [] }) }) // fetchRecipes
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'healthy' }) }) // checkClipperHealth
       .mockResolvedValueOnce({ ok: true, json: async () => mockRecipe }) // clipRecipe
       .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 1 }) }) // saveRecipe
-      .mockResolvedValueOnce({ ok: true, json: async () => [{ ...mockRecipe, id: 1 }] }); // fetchRecipes after save
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ 
+        success: true, 
+        recipes: [{ id: 1, data: { ...mockRecipe, id: 1 } }] 
+      }) }); // fetchRecipes after save
 
     const user = userEvent.setup();
     render(<App />);
@@ -70,13 +73,13 @@ describe('App Component - Core Clipping Functionality', () => {
 
     // Verify success
     await waitFor(() => {
-      expect(alert).toHaveBeenCalledWith('Recipe saved successfully!');
+      expect(alert).toHaveBeenCalledWith('Recipe saved successfully to KV storage!');
     });
   });
 
   test('handles clipping errors gracefully', async () => {
     fetch
-      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, recipes: [] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'healthy' }) })
       .mockResolvedValueOnce({ 
         ok: false, 
@@ -108,7 +111,7 @@ describe('App Component - Core Clipping Functionality', () => {
     };
 
     fetch
-      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, recipes: [] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'healthy' }) })
       .mockResolvedValueOnce({ ok: true, json: async () => mockRecipe });
 
