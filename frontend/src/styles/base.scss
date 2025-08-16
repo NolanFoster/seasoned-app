@@ -177,6 +177,14 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border-radius: $border-radius-lg;
   padding: $spacing-sm; // Even padding on all sides
+  
+  /* Add border on mobile to separate from content */
+  @media (max-width: 640px) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 32px 0 rgba(31, 38, 135, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .title-icon {
@@ -371,6 +379,14 @@ body {
     color: #ecf0f1;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
     background: rgba(0, 0, 0, 0.3);
+    
+    /* Add border on mobile for dark mode too */
+    @media (max-width: 640px) {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 
+        0 8px 32px 0 rgba(0, 0, 0, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2);
+    }
   }
   
   .title-search {
@@ -468,6 +484,12 @@ body {
   }
 }
 
+@media (max-width: 640px) {
+  .container {
+    padding-top: $spacing-xl + $spacing-lg + $spacing-sm; /* Extra padding to account for fixed header with border */
+  }
+}
+
 @media (max-width: 480px) {
   .title {
     font-size: 1.25rem;
@@ -519,7 +541,7 @@ body {
   }
   
   .container {
-    padding-top: $spacing-xl + $spacing-xl; /* Increased padding to account for stacked layout */
+    padding-top: $spacing-xl + $spacing-xl + $spacing-md; /* Increased padding to prevent overlap with fixed header */
   }
 }
 

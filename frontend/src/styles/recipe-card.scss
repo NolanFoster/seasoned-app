@@ -432,7 +432,7 @@
 
 @media (max-width: 480px) {
   .recipe-grid {
-    margin-top: $spacing-md + $spacing-sm; /* Further reduced margin for small mobile */
+    margin-top: 0; /* Remove top margin as container already has sufficient padding */
     gap: $spacing-sm;
   }
 }
