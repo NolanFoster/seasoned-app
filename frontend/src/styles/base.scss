@@ -123,9 +123,25 @@ body {
   transform: translateX(-50%);
   z-index: $z-overlay;
   display: flex;
-  align-items: center;
-  gap: $spacing-md; // Reduced from $spacing-lg + $spacing-sm (40px) to match search panel
-  max-width: calc(100% - #{$spacing-md * 2});
+  flex-direction: column; // Changed to column to stack search results below
+  align-items: stretch; // Changed from center to stretch for full width children
+  gap: 0; // Remove gap since we'll handle spacing differently
+  max-width: 600px; // Set a fixed max-width to match search panel
+  width: calc(100% - #{$spacing-md * 2});
+  
+  // Glass effect for the entire container
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: $border-radius-xl;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+              0 2px 8px rgba(0, 0, 0, 0.05),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  padding: $spacing-sm;
+  
+  transition: all $transition-normal;
+  overflow: hidden; // Ensure content stays within rounded corners
   
   /* Fade effect controlled by JS */
   &.fade-out {
@@ -141,13 +157,13 @@ body {
   /* Responsive adjustments */
   @media (max-width: 900px) {
     max-width: calc(100% - #{$spacing-sm * 2});
-    gap: $spacing-md; // Keep reasonable gap on smaller screens
+    width: calc(100% - #{$spacing-sm * 2});
   }
   
   @media (max-width: 640px) {
     width: calc(100% - #{$spacing-sm * 2});
     max-width: none;
-    gap: $spacing-sm; // Smaller gap on mobile
+    padding: $spacing-xs;
   }
 }
 
@@ -164,19 +180,19 @@ body {
   /* Remove fixed positioning since parent handles it now */
   position: relative;
   
-  /* Add width to ensure search bar has space */
-  width: auto;
+  /* Full width to contain search bar */
+  width: 100%;
   
   /* Fade effect controlled by parent now */
   transition: opacity 0.3s ease-in-out;
   opacity: 1;
   
-  /* Optional: add a subtle background for better readability */
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: $border-radius-lg;
-  padding: $spacing-sm; // Even padding on all sides
+  /* Remove individual glass effect since parent has it */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 0;
+  padding: 0; // Remove padding since parent has it
 }
 
 .title-icon {
@@ -367,10 +383,18 @@ body {
 
 /* Dark mode title */
 @media (prefers-color-scheme: dark) {
+  .header-container {
+    background: rgba(30, 30, 30, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                0 2px 8px rgba(0, 0, 0, 0.3),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
   .title {
     color: #ecf0f1;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
-    background: rgba(0, 0, 0, 0.3);
+    background: transparent; // Keep transparent in dark mode
   }
   
   .title-search {

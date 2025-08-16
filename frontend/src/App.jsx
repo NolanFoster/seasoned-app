@@ -1313,70 +1313,70 @@ function App() {
           </div>
         </h1>
         
-        {/* Add button placed just to the right of the search panel */}
-        <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
-          <span className="fab-icon">+</span>
-        </button>
+        {/* Search Results Dropdown - now inside the header container */}
+        {showSearchResults && (
+          <div className="search-results-dropdown">
+            {isSearching ? (
+              <div className="search-loading">
+                <div className="loading-spinner">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56" />
+                  </svg>
+                </div>
+                <span>Searching recipes...</span>
+              </div>
+            ) : searchResults.length > 0 ? (
+              <div className="search-results-list">
+                {searchResults.map((recipe) => (
+                  <div 
+                    key={recipe.id} 
+                    className="search-result-item"
+                    onClick={() => {
+                      // For now, just log the selection as requested
+                      console.log('Selected recipe:', recipe);
+                      // Clear search
+                      setSearchInput('');
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }}
+                  >
+                    <div className="search-result-title">{recipe.name}</div>
+                    <div className="search-result-meta">
+                      {recipe.prep_time && (
+                        <span className="search-meta-item">
+                          <span className="meta-label">Prep:</span> {formatDuration(recipe.prep_time)}
+                        </span>
+                      )}
+                      {recipe.cook_time && (
+                        <span className="search-meta-item">
+                          <span className="meta-label">Cook:</span> {formatDuration(recipe.cook_time)}
+                        </span>
+                      )}
+                      {recipe.recipe_yield && (
+                        <span className="search-meta-item">
+                          <span className="meta-label">Yield:</span> {recipe.recipe_yield}
+                        </span>
+                      )}
+                      {!recipe.prep_time && !recipe.cook_time && !recipe.recipe_yield && (
+                        <span className="search-meta-item no-meta">No timing information</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="search-no-results">
+                No recipes found for "{searchInput}"
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
-      {/* Search Results Dropdown */}
-      {showSearchResults && (
-        <div className="search-results-container">
-          {isSearching ? (
-            <div className="search-loading">
-              <div className="loading-spinner">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 11-6.219-8.56" />
-                </svg>
-              </div>
-              <span>Searching recipes...</span>
-            </div>
-          ) : searchResults.length > 0 ? (
-            <div className="search-results-list">
-              {searchResults.map((recipe) => (
-                <div 
-                  key={recipe.id} 
-                  className="search-result-item"
-                  onClick={() => {
-                    // For now, just log the selection as requested
-                    console.log('Selected recipe:', recipe);
-                    // Clear search
-                    setSearchInput('');
-                    setSearchResults([]);
-                    setShowSearchResults(false);
-                  }}
-                >
-                  <div className="search-result-title">{recipe.name}</div>
-                  <div className="search-result-meta">
-                    {recipe.prep_time && (
-                      <span className="search-meta-item">
-                        <span className="meta-label">Prep:</span> {formatDuration(recipe.prep_time)}
-                      </span>
-                    )}
-                    {recipe.cook_time && (
-                      <span className="search-meta-item">
-                        <span className="meta-label">Cook:</span> {formatDuration(recipe.cook_time)}
-                      </span>
-                    )}
-                    {recipe.recipe_yield && (
-                      <span className="search-meta-item">
-                        <span className="meta-label">Yield:</span> {recipe.recipe_yield}
-                      </span>
-                    )}
-                    {!recipe.prep_time && !recipe.cook_time && !recipe.recipe_yield && (
-                      <span className="search-meta-item no-meta">No timing information</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="search-no-results">
-              No recipes found for "{searchInput}"
-            </div>
-          )}
-        </div>
-      )}
+      {/* Add button placed just to the right of the search panel */}
+      <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
+        <span className="fab-icon">+</span>
+      </button>
       
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
