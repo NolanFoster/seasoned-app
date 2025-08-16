@@ -67,16 +67,29 @@ function formatDuration(duration) {
 function isValidUrl(string) {
   try {
     // Check if it starts with http://, https://, or www.
-    if (string.match(/^(https?:\/\/)|(www\.)/i)) {
+    if (string.match(/^(https?:\/\/)/i)) {
+      new URL(string);
       return true;
     }
-    // Check if it looks like a domain (contains dot and has valid TLD-like ending)
-    if (string.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}.*$/)) {
+    
+    if (string.match(/^www\./i)) {
+      new URL(`https://${string}`);
       return true;
     }
-    // Try to construct a URL to validate
-    new URL(string.startsWith('http') ? string : `https://${string}`);
-    return true;
+    
+    // Check if it looks like a domain with TLD
+    // Must have at least one dot and a valid TLD (2+ chars)
+    // Must not contain spaces
+    if (!string.includes(' ') && string.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9][a-zA-Z0-9-]*)*\.[a-zA-Z]{2,}$/)) {
+      // Additional check: the part before the last dot should have at least 2 characters
+      const parts = string.split('.');
+      if (parts.length >= 2 && parts[parts.length - 2].length >= 2) {
+        new URL(`https://${string}`);
+        return true;
+      }
+    }
+    
+    return false;
   } catch (e) {
     return false;
   }
@@ -1244,13 +1257,13 @@ function App() {
                   if (isValidUrl(searchInput) && clipperStatus === 'available') {
                     handleSearchBarClip();
                   } else if (!isValidUrl(searchInput) && searchInput.trim()) {
-                    // Just trigger search, don't open clip dialog
+                    // Trigger search for non-URL inputs
                     searchRecipes(searchInput);
                   } else if (isValidUrl(searchInput) && clipperStatus !== 'available') {
                     // Clipper not available, do nothing
                     console.warn('Clipper service is not available');
                   } else if (!searchInput.trim()) {
-                    // Empty search, open the clip dialog
+                    // Only open clip dialog if input is empty
                     setIsClipping(true);
                   }
                 }
@@ -1260,11 +1273,15 @@ function App() {
             <button 
               className="title-search-button" 
               aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
-              title="Clip recipe from website"
+              title={isValidUrl(searchInput) ? "Clip recipe from website" : "Search recipes"}
               onClick={() => {
                 if (isValidUrl(searchInput) && clipperStatus === 'available') {
                   handleSearchBarClip();
-                } else {
+                } else if (!isValidUrl(searchInput) && searchInput.trim()) {
+                  // Trigger search for non-URL inputs
+                  searchRecipes(searchInput);
+                } else if (!searchInput.trim()) {
+                  // Only open clip dialog if input is empty
                   setIsClipping(true);
                 }
               }}
