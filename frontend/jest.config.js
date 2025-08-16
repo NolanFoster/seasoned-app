@@ -28,5 +28,13 @@ module.exports = {
       VITE_API_URL: 'https://test-api.example.com',
       VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com'
     }
+  },
+  coverageThreshold: {
+    global: {
+      branches: 50,
+      functions: 50,
+      lines: 50,
+      statements: 50
+    }
   }
 };
