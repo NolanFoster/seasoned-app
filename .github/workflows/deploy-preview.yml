@@ -13,9 +13,9 @@ jobs:
     name: Deploy Preview Workers
     
     outputs:
-      recipe-scraper-url: ${{ steps.deploy-recipe-scraper.outputs.url }}
-      clipper-url: ${{ steps.deploy-clipper.outputs.url }}
-      search-db-url: ${{ steps.deploy-search-db.outputs.url }}
+      recipe-scraper-url: ${{ steps.get-recipe-scraper-url.outputs.url }}
+      clipper-url: ${{ steps.get-clipper-url.outputs.url }}
+      search-db-url: ${{ steps.get-search-db-url.outputs.url }}
     
     steps:
       - name: Checkout code
@@ -25,6 +25,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          
+      - name: Install Recipe Scraper dependencies
+        working-directory: ./recipe-scraper
+        run: npm ci
           
       - name: Deploy Recipe Scraper Preview
         id: deploy-recipe-scraper
@@ -39,7 +43,12 @@ jobs:
         id: get-recipe-scraper-url
         working-directory: ./recipe-scraper
         run: |
+          # The deployed URL will be recipe-scraper-preview.{subdomain}.workers.dev
           echo "url=https://recipe-scraper-preview.nolanfoster.workers.dev" >> $GITHUB_OUTPUT
+          
+      - name: Install Clipper dependencies
+        working-directory: ./clipper
+        run: npm ci
           
       - name: Deploy Clipper Preview
         id: deploy-clipper
@@ -60,6 +69,10 @@ jobs:
         run: |
           echo "url=https://recipe-clipper-worker-preview.nolanfoster.workers.dev" >> $GITHUB_OUTPUT
           
+      - name: Install Search DB dependencies
+        working-directory: ./recipe-search-db
+        run: npm ci
+          
       - name: Deploy Recipe Search DB Preview
         id: deploy-search-db
         uses: cloudflare/wrangler-action@v3
@@ -74,6 +87,10 @@ jobs:
         working-directory: ./recipe-search-db
         run: |
           echo "url=https://recipe-search-db-preview.nolanfoster.workers.dev" >> $GITHUB_OUTPUT
+          
+      - name: Install Clipped Recipe DB dependencies
+        working-directory: ./clipped-recipe-db-worker
+        run: npm ci
           
       - name: Deploy Clipped Recipe DB Worker Preview
         uses: cloudflare/wrangler-action@v3

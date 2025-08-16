@@ -6,6 +6,41 @@ This document describes the preview deployment system for the Seasoned Recipe Ma
 
 When you create a pull request targeting the `main` or `staging` branches, the system automatically deploys preview versions of both the frontend and all backend workers. This allows you to test your changes in an isolated environment before merging.
 
+## Required Setup
+
+### GitHub Secrets
+
+Before the preview deployment system can work, you need to set up the following GitHub secrets in your repository:
+
+1. **CLOUDFLARE_API_TOKEN** - Required for all Cloudflare deployments
+   - Go to [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)
+   - Click "Create Token"
+   - Use the "Edit Cloudflare Workers" template or create a custom token with these permissions:
+     - Account: Cloudflare Workers Scripts:Edit
+     - Account: Cloudflare Pages:Edit
+     - Account: Worker KV Storage:Edit
+     - Account: D1:Edit
+     - Account: R2:Edit
+   - Copy the token value
+
+2. **CLOUDFLARE_ACCOUNT_ID** - Your Cloudflare account ID
+   - Find this in your Cloudflare dashboard URL or account settings
+   - Format: 32 character alphanumeric string
+
+3. **GPT_API_KEY** - Required for the clipper worker
+   - Get from [OpenAI API Keys](https://platform.openai.com/api-keys)
+   - Required for recipe clipping functionality
+
+### Setting GitHub Secrets
+
+1. Go to your GitHub repository
+2. Navigate to Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Add each secret with its corresponding value:
+   - Name: `CLOUDFLARE_API_TOKEN`, Value: Your Cloudflare API token
+   - Name: `CLOUDFLARE_ACCOUNT_ID`, Value: Your Cloudflare account ID
+   - Name: `GPT_API_KEY`, Value: Your OpenAI API key
+
 ## How It Works
 
 ### 1. Preview Workers
