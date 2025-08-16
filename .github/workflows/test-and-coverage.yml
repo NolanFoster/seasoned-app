@@ -27,7 +27,9 @@ jobs:
     
     - name: Run Frontend Tests with Coverage
       working-directory: ./frontend
-      run: npm run test:coverage -- --passWithNoTests
+      run: |
+        npm run test:coverage -- --passWithNoTests
+        # Jest will automatically fail if coverage thresholds are not met
     
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
@@ -41,6 +43,40 @@ jobs:
         if [ -f coverage/lcov-report/index.html ]; then
           echo "### Frontend Coverage Summary" >> $GITHUB_STEP_SUMMARY
           echo "Coverage report generated at coverage/lcov-report/index.html" >> $GITHUB_STEP_SUMMARY
+          
+          # Extract coverage percentages from lcov.info if available
+          if [ -f coverage/lcov.info ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Calculate line coverage
+            LINES_FOUND=$(grep -E "^LF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+            LINES_HIT=$(grep -E "^LH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+            if [ "$LINES_FOUND" -gt 0 ]; then
+              LINE_COVERAGE=$(awk "BEGIN {printf \"%.1f\", ($LINES_HIT/$LINES_FOUND)*100}")
+              echo "| Lines | $LINE_COVERAGE% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Calculate function coverage
+            FUNCS_FOUND=$(grep -E "^FNF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+            FUNCS_HIT=$(grep -E "^FNH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+            if [ "$FUNCS_FOUND" -gt 0 ]; then
+              FUNC_COVERAGE=$(awk "BEGIN {printf \"%.1f\", ($FUNCS_HIT/$FUNCS_FOUND)*100}")
+              echo "| Functions | $FUNC_COVERAGE% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Calculate branch coverage
+            BRANCHES_FOUND=$(grep -E "^BRF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+            BRANCHES_HIT=$(grep -E "^BRH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+            if [ "$BRANCHES_FOUND" -gt 0 ]; then
+              BRANCH_COVERAGE=$(awk "BEGIN {printf \"%.1f\", ($BRANCHES_HIT/$BRANCHES_FOUND)*100}")
+              echo "| Branches | $BRANCH_COVERAGE% |" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Minimum Required Coverage: 50%**" >> $GITHUB_STEP_SUMMARY
+          fi
         fi
 
   test-worker:
@@ -64,6 +100,8 @@ jobs:
     - name: Run Worker Tests
       working-directory: ./clipped-recipe-db-worker
       run: |
+        # Note: Worker uses a custom test runner without coverage reporting
+        # Coverage threshold enforcement is only available for the frontend
         # Run tests if test script exists, otherwise skip
         if npm run | grep -q "test"; then
           npm test || echo "No tests found or test script not configured"
@@ -120,9 +158,14 @@ jobs:
         
         if [ -d ./coverage-reports/frontend ]; then
           echo "✅ Frontend coverage reports available" >> $GITHUB_STEP_SUMMARY
+          echo "   - **Minimum required coverage: 50%**" >> $GITHUB_STEP_SUMMARY
+          echo "   - Coverage thresholds are enforced via Jest configuration" >> $GITHUB_STEP_SUMMARY
+          echo "   - Tests will fail if coverage drops below 50%" >> $GITHUB_STEP_SUMMARY
         else
           echo "⚠️ No frontend coverage reports found" >> $GITHUB_STEP_SUMMARY
         fi
         
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "ℹ️ **Note:** Worker tests use a custom test runner without coverage reporting." >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Coverage artifacts have been uploaded and are available in the workflow run." >> $GITHUB_STEP_SUMMARY
