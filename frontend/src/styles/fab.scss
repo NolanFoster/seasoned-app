@@ -257,19 +257,52 @@
 
 /* Standalone FAB positioned next to the title panel */
 .fab-standalone {
-  // Remove fixed positioning since parent handles layout
-  position: relative;
-  width: 56px;  // Increased from 48px for better proportions
-  height: 40px;
-  border-radius: 20px;
-  flex-shrink: 0; // Prevent shrinking in flex container
-  margin-left: $spacing-xs; // Add small extra margin for safety
+  // Desktop: Fixed position next to the header
+  position: fixed;
+  top: $spacing-md;
+  left: calc(50% + 300px + 20px); // Center + half header width + gap
+  transform: translateX(-50%); // Center the FAB itself
+  width: 56px;
+  height: 56px;
+  border-radius: 50%; // Circular FAB
+  flex-shrink: 0;
+  z-index: $z-overlay; // Same as header container
+  
+  // Enhanced shadow for FAB
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 
+              0 2px 8px rgba(0, 0, 0, 0.1),
+              0 1px 3px rgba(0, 0, 0, 0.08);
+  
+  &:hover {
+    transform: translateX(-50%) translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 
+                0 4px 12px rgba(0, 0, 0, 0.15),
+                0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  // Responsive adjustments
+  @media (max-width: 900px) {
+    // Position at right edge with padding
+    left: auto;
+    right: $spacing-md;
+    transform: none;
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.05);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    // Slightly smaller on tablets
+    width: 48px;
+    height: 48px;
+    right: $spacing-sm;
+  }
   
   /* Mobile responsiveness handled by parent container */
   @media (max-width: 640px) {
     // Hide on mobile to avoid crowding
     display: none;
-    margin-left: 0; // Reset margin on mobile
   }
 }
 
