@@ -1244,13 +1244,13 @@ function App() {
                   if (isValidUrl(searchInput) && clipperStatus === 'available') {
                     handleSearchBarClip();
                   } else if (!isValidUrl(searchInput) && searchInput.trim()) {
-                    // Just trigger search, don't open clip dialog
+                    // Trigger search for non-URL inputs
                     searchRecipes(searchInput);
                   } else if (isValidUrl(searchInput) && clipperStatus !== 'available') {
                     // Clipper not available, do nothing
                     console.warn('Clipper service is not available');
                   } else if (!searchInput.trim()) {
-                    // Empty search, open the clip dialog
+                    // Only open clip dialog if input is empty
                     setIsClipping(true);
                   }
                 }
@@ -1260,11 +1260,15 @@ function App() {
             <button 
               className="title-search-button" 
               aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
-              title="Clip recipe from website"
+              title={isValidUrl(searchInput) ? "Clip recipe from website" : "Search recipes"}
               onClick={() => {
                 if (isValidUrl(searchInput) && clipperStatus === 'available') {
                   handleSearchBarClip();
-                } else {
+                } else if (!isValidUrl(searchInput) && searchInput.trim()) {
+                  // Trigger search for non-URL inputs
+                  searchRecipes(searchInput);
+                } else if (!searchInput.trim()) {
+                  // Only open clip dialog if input is empty
                   setIsClipping(true);
                 }
               }}
