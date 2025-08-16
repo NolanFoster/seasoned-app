@@ -1873,7 +1873,7 @@ function extractRecipeFromAIResponse(response, pageUrl) {
 }
 
 // Export the function for testing
-export { extractRecipeFromAIResponse }; 
+// Removed duplicate export - see end of file for all exports 
 
 // Extract recipe from JSON-LD structured data
 function extractRecipeFromJsonLd(html) {
@@ -2081,42 +2081,16 @@ function normalizeIngredients(ingredients) {
 
 // Helper function to normalize instructions
 function normalizeInstructions(instructions) {
-  if (!instructions) return [];
-  
-  // Handle string
-  if (typeof instructions === 'string') {
-    return [{ "@type": "HowToStep", text: instructions }];
-  }
-  
-  // Handle array
   if (Array.isArray(instructions)) {
-    return instructions.map((instruction, index) => {
-      // Handle string instruction
+    return instructions.map(instruction => {
       if (typeof instruction === 'string') {
-        return { "@type": "HowToStep", text: instruction };
-      }
-      
-      // Handle HowToStep object
-      if (instruction['@type'] === 'HowToStep') {
         return {
-          "@type": "HowToStep",
-          text: instruction.text || instruction.name || ''
+          '@type': 'HowToStep',
+          text: instruction
         };
-      }
-      
-      // Handle HowToSection with steps
-      if (instruction['@type'] === 'HowToSection' && instruction.itemListElement) {
-        // Flatten sections into steps
-        return instruction.itemListElement.map(step => ({
-          "@type": "HowToStep",
-          text: (instruction.name ? instruction.name + ': ' : '') + (step.text || step.name || '')
-        }));
-      }
-      
-      // Handle other objects
-      if (typeof instruction === 'object') {
+      } else if (typeof instruction === 'object') {
         return {
-          "@type": "HowToStep",
+          '@type': 'HowToStep',
           text: instruction.text || instruction.name || instruction.description || ''
         };
       }
@@ -2127,3 +2101,35 @@ function normalizeInstructions(instructions) {
   
   return [];
 }
+
+// Export all functions for testing
+export {
+  extractRecipeFromAIResponse,
+  extractRecipeFromJsonLd,
+  cleanJsonContent,
+  cleanHtmlForGPT,
+  extractDescriptionFromHTML,
+  extractAuthorFromHTML,
+  extractDateFromHTML,
+  extractYieldFromHTML,
+  extractCategoryFromHTML,
+  extractCuisineFromHTML,
+  extractPrepTimeFromHTML,
+  extractCookTimeFromHTML,
+  extractTotalTimeFromHTML,
+  convertTimeToISO8601,
+  extractKeywordsFromHTML,
+  extractNutritionFromHTML,
+  extractRatingFromHTML,
+  extractVideoFromHTML,
+  extractInstructionsFromHTML,
+  extractRecipeContent,
+  normalizeJsonLdRecipe,
+  normalizeImage,
+  normalizeAuthor,
+  normalizeYield,
+  normalizeKeywords,
+  normalizeIngredients,
+  normalizeInstructions,
+  findRecipeInJsonLd
+};

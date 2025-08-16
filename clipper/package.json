@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node tests/run-tests.js"
+    "test": "node tests/run-tests.js",
+    "test:coverage": "c8 --reporter=text --reporter=lcov node tests/run-tests.js",
+    "coverage": "c8 --reporter=text --reporter=html node tests/run-tests.js"
   },
   "keywords": [
     "cloudflare",
@@ -20,6 +22,7 @@
   "author": "Recipe App Team",
   "license": "MIT",
   "devDependencies": {
+    "c8": "^10.1.3",
     "wrangler": "^3.0.0"
   },
   "engines": {
