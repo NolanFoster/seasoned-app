@@ -1,0 +1,73 @@
+name: Cleanup Preview
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - staging
+
+jobs:
+  cleanup-preview:
+    runs-on: ubuntu-latest
+    name: Cleanup Preview Deployments
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Delete Recipe Scraper Preview
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: delete --name recipe-scraper-preview --force
+          workingDirectory: ./recipe-scraper
+          
+      - name: Delete Clipper Preview
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: delete --name recipe-clipper-worker-preview --force
+          workingDirectory: ./clipper
+          
+      - name: Delete Recipe Search DB Preview
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: delete --name recipe-search-db-preview --force
+          workingDirectory: ./recipe-search-db
+          
+      - name: Delete Clipped Recipe DB Worker Preview
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: delete --name recipe-worker-preview --force
+          workingDirectory: ./clipped-recipe-db-worker
+          
+      - name: Comment Cleanup Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `### 🧹 Preview Deployments Cleaned Up
+            
+            All preview deployments for this PR have been removed.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

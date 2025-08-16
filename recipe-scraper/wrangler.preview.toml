@@ -1,0 +1,19 @@
+name = "recipe-scraper-preview"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Worker configuration
+workers_dev = true
+
+# Environment variables (if needed)
+[vars]
+# Add any environment variables here
+
+# KV Namespaces for storing recipes (using preview_id)
+[[kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+preview_id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+
+[observability.logs]
+enabled = true
