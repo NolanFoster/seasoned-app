@@ -53,3 +53,4 @@ beforeEach(() => {
 // Mock import.meta.env -> process.env for tests
 process.env.VITE_API_URL = 'https://test-api.example.com';
 process.env.VITE_CLIPPER_API_URL = 'https://test-clipper-api.example.com';
+process.env.VITE_SEARCH_DB_URL = 'https://test-search-db.example.com';
