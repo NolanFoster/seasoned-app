@@ -1,3 +1,7 @@
+// Import variables and mixins
+@use 'variables' as *;
+@use 'mixins' as *;
+
 // Search Results Dropdown - integrated within header container
 .search-results-dropdown {
   // No positioning needed since it's inside the header container

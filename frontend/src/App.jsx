@@ -371,7 +371,7 @@ function App() {
     const handleClickOutside = (event) => {
       // Check if the click is outside the search bar and search results
       const searchBar = document.querySelector('.title-search');
-      const searchResults = document.querySelector('.search-results-container');
+      const searchResults = document.querySelector('.search-results-dropdown');
       
       if (searchBar && !searchBar.contains(event.target) && 
           searchResults && !searchResults.contains(event.target)) {
