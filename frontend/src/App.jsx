@@ -780,7 +780,6 @@ function App() {
       const res = await fetch(`${CLIPPER_API_URL}/health`);
       if (res.ok) {
         const health = await res.json();
-        console.log('Clipper worker health:', health);
         setClipperStatus('available');
       } else {
         console.warn('Clipper worker health check failed:', res.status);
@@ -821,8 +820,6 @@ function App() {
     try {
       // For now, we'll store the recipe locally and refresh the list
       // TODO: Implement proper KV storage for manual recipes
-      console.log('Manual recipe created:', recipe);
-      
       // Refresh the recipe list
       fetchRecipes();
       resetForm();
@@ -840,11 +837,7 @@ function App() {
     
     // TODO: Implement proper KV storage update for recipes
     // For now, we'll just refresh the list
-    console.log('Recipe update requested:', {
-      id: editingRecipe.id,
-      name: editableRecipe.name,
-      description: editableRecipe.description
-    });
+    // Recipe update requested
     
     // Refresh the recipe list
     fetchRecipes();
@@ -894,7 +887,6 @@ function App() {
       
       if (res.ok) {
         const result = await res.json();
-        console.log('Recipe clipped successfully from search bar:', result);
         setClippedRecipePreview(result);
         setSearchInput(''); // Clear search input on success
         setIsSearchBarClipping(false);
@@ -1029,7 +1021,6 @@ function App() {
     try {
       // Double-check that we're not already saving
       if (isSavingRecipe) {
-        console.log('Save operation already in progress, skipping...');
         return;
       }
       
@@ -1052,7 +1043,6 @@ function App() {
       
       if (res.ok) {
         const result = await res.json();
-        console.log('Recipe saved to KV successfully:', result);
         fetchRecipes(); // Refresh the recipe list
         setClippedRecipePreview(null);
         setClipError('');
@@ -1160,8 +1150,6 @@ function App() {
       
       if (res.ok) {
         const result = await res.json();
-        console.log('Search results:', result);
-        
         // Transform search results to match the frontend format
         const transformedResults = result.results.map(node => {
           const properties = node.properties;
@@ -1331,14 +1319,12 @@ function App() {
                   <div 
                     key={recipe.id} 
                     className="search-result-item"
-                    onClick={() => {
-                      // For now, just log the selection as requested
-                      console.log('Selected recipe:', recipe);
-                      // Clear search
-                      setSearchInput('');
-                      setSearchResults([]);
-                      setShowSearchResults(false);
-                    }}
+                                      onClick={() => {
+                    // Clear search
+                    setSearchInput('');
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }}
                   >
                     <div className="search-result-title">{recipe.name}</div>
                     <div className="search-result-meta">
@@ -1385,8 +1371,6 @@ function App() {
         {!selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
             {(Array.isArray(recipes) ? recipes.slice(0, 10) : []).map((recipe) => {
-              console.log('Recipe data:', recipe);
-              console.log('Image URL:', recipe.image_url);
               return (
                 <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
                   <div className="recipe-card-image">
@@ -1396,6 +1380,7 @@ function App() {
                       <img 
                         src={recipe.image || recipe.image_url} 
                         alt={recipe.name}
+                        loading="lazy"
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -1407,10 +1392,7 @@ function App() {
                           borderRadius: '20px 20px 0 0',
                           opacity: 0.85
                         }}
-                        onLoad={() => console.log('Image loaded successfully:', recipe.image || recipe.image_url)}
                         onError={(e) => {
-                          console.error('Image failed to load:', recipe.image || recipe.image_url);
-                          console.error('Error details:', e);
                           // Fallback to gradient if image fails
                           e.target.style.display = 'none';
                         }}
