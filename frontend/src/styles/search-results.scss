@@ -1,68 +1,29 @@
-// Search Results Container
-.search-results-container {
-  position: fixed;
-  // Position relative to header search bar
-  top: calc(80px + 8px); // Below the header with small gap
-  left: 50%;
-  transform: translateX(-50%);
+// Import variables and mixins
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Search Results Dropdown - integrated within header container
+.search-results-dropdown {
+  // No positioning needed since it's inside the header container
+  width: 100%;
   
   // Animation for smooth appearance
-  animation: slideDown 0.2s ease-out forwards;
+  animation: expandDown 0.2s ease-out forwards;
   transform-origin: top center;
   
-  // Calculate width based on search bar positioning
-  // The search bar is inside a panel that's centered with max-width
-  width: min(600px, calc(100vw - 32px)); // Match search panel max-width
+  // Subtle separation from search bar
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: $spacing-xs;
+  padding-top: $spacing-xs;
   
-  // Enhanced glass effect
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  
-  // Subtle border and shadow for depth
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
-              0 2px 8px rgba(0, 0, 0, 0.05),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-  
-  border-radius: 16px; // Slightly smaller than search panel
-  z-index: 1000;
   max-height: 400px;
   overflow-y: auto;
   
-  // Add subtle glow for glass effect
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0) 50%,
-      rgba(255, 255, 255, 0.05) 100%
-    );
-    border-radius: inherit;
-    pointer-events: none;
-  }
-
+  // Ensure content respects parent's rounded corners
+  border-radius: 0 0 calc(#{$border-radius-xl} - #{$spacing-sm}) calc(#{$border-radius-xl} - #{$spacing-sm});
+  
   @media (prefers-color-scheme: dark) {
-    background: rgba(30, 30, 30, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                0 2px 8px rgba(0, 0, 0, 0.3),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-    
-    &::before {
-      background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        rgba(255, 255, 255, 0) 50%,
-        rgba(255, 255, 255, 0.02) 100%
-      );
-    }
+    border-top-color: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -210,28 +171,24 @@
 }
 
 // Animation for search results appearance
-@keyframes slideDown {
+@keyframes expandDown {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.98);
+    max-height: 0;
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    max-height: 400px;
+    transform: translateY(0);
   }
 }
 
 // Mobile Responsive
 @media (max-width: 768px) {
-  .search-results-container {
-    width: calc(100vw - 16px);
-    top: calc(70px + 8px); // Adjust for smaller header
+  .search-results-dropdown {
     max-height: 60vh;
-    border-radius: 12px;
-    
-    // Slightly reduce glass effect on mobile for performance
-    backdrop-filter: blur(15px) saturate(150%);
-    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    border-radius: 0 0 calc(#{$border-radius-lg} - #{$spacing-xs}) calc(#{$border-radius-lg} - #{$spacing-xs});
   }
 
   .search-result-item {
@@ -252,24 +209,13 @@
 
 // Extra small mobile
 @media (max-width: 480px) {
-  .search-results-container {
-    width: calc(100vw - 12px);
-    top: calc(65px + 6px);
+  .search-results-dropdown {
     max-height: 50vh;
-    
-    // Simplify glass effect for performance
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.9);
-    
-    @media (prefers-color-scheme: dark) {
-      background: rgba(30, 30, 30, 0.9);
-    }
   }
 }
 
 // Smooth scrollbar for search results
-.search-results-container {
+.search-results-dropdown {
   &::-webkit-scrollbar {
     width: 6px;
   }
