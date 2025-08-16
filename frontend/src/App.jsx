@@ -355,6 +355,7 @@ function App() {
   const [searchResults, setSearchResults] = useState([]); // New state for search results
   const [isSearching, setIsSearching] = useState(false); // New state for search loading
   const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
+  const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -387,6 +388,27 @@ function App() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showSearchResults]);
+
+  // Close share panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const sharePanel = document.querySelector('.share-panel');
+      const shareTrigger = document.querySelector('.fab-share-trigger');
+      
+      if (sharePanel && !sharePanel.contains(event.target) && 
+          shareTrigger && !shareTrigger.contains(event.target)) {
+        setShowSharePanel(false);
+      }
+    };
+
+    if (showSharePanel) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSharePanel]);
 
   // Scroll-based glass reflection effect
   useEffect(() => {
@@ -2210,34 +2232,75 @@ function App() {
         <div className="recipe-fullscreen" ref={recipeFullscreenRef}>
           {/* Top Header with Back Button and Action Buttons */}
           <div className="recipe-top-header">
-            <button className="back-btn" onClick={() => setSelectedRecipe(null)}>
+            <button className="back-btn" onClick={() => {
+              setSelectedRecipe(null);
+              setShowSharePanel(false); // Reset share panel when closing recipe view
+            }}>
               <span className="back-arrow">←</span>
             </button>
-            <div className="recipe-fullscreen-actions">
-              <button 
-                className="edit-btn fullscreen-edit-btn" 
-                onClick={() => {
-                  editRecipe(selectedRecipe);
-                  // Don't close the recipe view when editing
-                  setShowAddForm(true);
-                }}
-                title="Edit Recipe"
-              >
-                ✏️
-              </button>
-              <button 
-                className="delete-btn fullscreen-delete-btn" 
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete this recipe?')) {
-                    deleteRecipe(selectedRecipe.id);
-                    setSelectedRecipe(null);
-                  }
-                }}
-                title="Delete Recipe"
-              >
-                🗑️
-              </button>
-            </div>
+            
+            {/* Share/More Actions FAB */}
+            <button 
+              className="fab-share-trigger"
+              onClick={() => setShowSharePanel(!showSharePanel)}
+              title="More actions"
+            >
+              <span className="share-icon">⋮</span>
+            </button>
+          </div>
+          
+          {/* Share Panel */}
+          <div className={`share-panel ${showSharePanel ? 'visible' : ''}`}>
+            <button 
+              className="share-panel-item edit-action"
+              onClick={() => {
+                editRecipe(selectedRecipe);
+                setShowAddForm(true);
+                setShowSharePanel(false);
+              }}
+            >
+              <span className="action-icon">✏️</span>
+              <span className="action-label">Edit Recipe</span>
+            </button>
+            
+            <button 
+              className="share-panel-item delete-action"
+              onClick={() => {
+                if (confirm('Are you sure you want to delete this recipe?')) {
+                  deleteRecipe(selectedRecipe.id);
+                  setSelectedRecipe(null);
+                  setShowSharePanel(false);
+                }
+              }}
+            >
+              <span className="action-icon">🗑️</span>
+              <span className="action-label">Delete Recipe</span>
+            </button>
+            
+            <button 
+              className="share-panel-item share-action"
+              onClick={() => {
+                // Share functionality - could be expanded later
+                if (navigator.share && selectedRecipe.source_url) {
+                  navigator.share({
+                    title: selectedRecipe.name,
+                    text: `Check out this recipe: ${selectedRecipe.name}`,
+                    url: selectedRecipe.source_url
+                  }).catch(() => {
+                    // Fallback to copy link
+                    navigator.clipboard.writeText(selectedRecipe.source_url);
+                    alert('Recipe link copied to clipboard!');
+                  });
+                } else if (selectedRecipe.source_url) {
+                  navigator.clipboard.writeText(selectedRecipe.source_url);
+                  alert('Recipe link copied to clipboard!');
+                }
+                setShowSharePanel(false);
+              }}
+            >
+              <span className="action-icon">🔗</span>
+              <span className="action-label">Share Recipe</span>
+            </button>
           </div>
           
           {/* Title Section - moved below header */}

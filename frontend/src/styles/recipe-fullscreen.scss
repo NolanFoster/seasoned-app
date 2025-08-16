@@ -191,12 +191,127 @@
   border-color: rgba(231, 76, 60, 0.5);
 }
 
-/* Full Screen Recipe Actions */
+/* Recipe Fullscreen Actions */
 .recipe-fullscreen-actions {
   display: flex;
   gap: 15px;
 }
 
+/* Share FAB Trigger Button */
+.fab-share-trigger {
+  width: 60px;
+  height: 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: none;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.fab-share-trigger:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.share-icon {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-2px);
+}
+
+/* Share Panel */
+.share-panel {
+  position: absolute;
+  top: 70px;
+  right: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.4), 0 10px 40px rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 101;
+}
+
+.share-panel.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Share Panel Items */
+.share-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+
+.share-panel-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(2px);
+}
+
+.share-panel-item:active {
+  transform: translateX(0) scale(0.98);
+}
+
+.action-icon {
+  font-size: 1.2em;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.action-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+/* Specific action styles */
+.edit-action:hover {
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.delete-action:hover {
+  background: rgba(231, 76, 60, 0.2);
+}
+
+.share-action:hover {
+  background: rgba(46, 204, 113, 0.2);
+}
+
+/* Legacy styles for old buttons - can be removed */
 .fullscreen-edit-btn,
 .fullscreen-delete-btn {
   padding: 12px 24px;
@@ -424,6 +539,40 @@
     background: rgba(0, 0, 0, 0.4) !important;
   }
   
+  .fab-share-trigger {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
+  }
+  
+  .fab-share-trigger:hover {
+    background: rgba(0, 0, 0, 0.4) !important;
+  }
+  
+  .share-panel {
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  }
+  
+  .share-panel-item {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+  
+  .share-panel-item:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .edit-action:hover {
+    background: rgba(52, 152, 219, 0.15) !important;
+  }
+  
+  .delete-action:hover {
+    background: rgba(231, 76, 60, 0.15) !important;
+  }
+  
+  .share-action:hover {
+    background: rgba(46, 204, 113, 0.15) !important;
+  }
+  
   .fullscreen-edit-btn,
   .fullscreen-delete-btn {
     background: rgba(0, 0, 0, 0.3);
@@ -535,6 +684,29 @@
     gap: 10px;
   }
   
+  .fab-share-trigger {
+    width: 45px;
+    height: 36px;
+    font-size: 1.2em;
+  }
+  
+  .share-panel {
+    top: 60px;
+    right: 20px;
+    min-width: 180px;
+    padding: 10px;
+  }
+  
+  .share-panel-item {
+    padding: 10px 14px;
+    font-size: 0.95em;
+  }
+  
+  .action-icon {
+    font-size: 1.1em;
+    width: 20px;
+  }
+  
   .fullscreen-edit-btn {
     width: 45px;
     height: 36px;
@@ -632,6 +804,31 @@
   
   .timing-label {
     font-size: 0.8em;
+  }
+  
+  .fab-share-trigger {
+    width: 40px;
+    height: 32px;
+    font-size: 1em;
+  }
+  
+  .share-panel {
+    top: 55px;
+    right: 15px;
+    min-width: 160px;
+    padding: 8px;
+    gap: 6px;
+  }
+  
+  .share-panel-item {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    gap: 10px;
+  }
+  
+  .action-icon {
+    font-size: 1em;
+    width: 18px;
   }
   
   .fullscreen-edit-btn,
