@@ -273,6 +273,16 @@ async function searchNodes(request, env, corsHeaders) {
     throw new Error('Search query parameter "q" is required');
   }
 
+  // Transform the query to support prefix matching
+  // Split the query into words and add * to each word for prefix matching
+  const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
+  const ftsQuery = searchTerms.map(term => {
+    // Escape special characters and add prefix wildcard
+    // Don't add * if the term already ends with *
+    const escapedTerm = term.replace(/['"]/g, '');
+    return escapedTerm.endsWith('*') ? escapedTerm : escapedTerm + '*';
+  }).join(' ');
+
   let sqlQuery = `
     SELECT n.*, m.status, m.version
     FROM nodes n
@@ -281,7 +291,7 @@ async function searchNodes(request, env, corsHeaders) {
     WHERE fts.properties MATCH ? AND m.status = 'ACTIVE'
   `;
   
-  let params = [query];
+  let params = [ftsQuery];
 
   if (type) {
     sqlQuery += ' AND n.type = ?';
@@ -295,6 +305,7 @@ async function searchNodes(request, env, corsHeaders) {
   
   return new Response(JSON.stringify({
     query,
+    ftsQuery, // Include the transformed query for debugging
     results: result.results.map(node => ({
       ...node,
       properties: JSON.parse(node.properties)
