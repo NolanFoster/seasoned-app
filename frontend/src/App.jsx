@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper.nolanfoster.workers.dev'; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
+const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev'; // Search database worker
 
 // Function to convert ISO 8601 duration to human readable format
 function formatDuration(duration) {
@@ -338,15 +339,41 @@ function App() {
   const [isSearchBarClipping, setIsSearchBarClipping] = useState(false); // Loading state for search bar
   const [searchBarClipError, setSearchBarClipError] = useState(false); // Error state for search bar
   const [clipUrl, setClipUrl] = useState('');
+  const [searchResults, setSearchResults] = useState([]); // New state for search results
+  const [isSearching, setIsSearching] = useState(false); // New state for search loading
+  const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
   const recipeFullscreenRef = useRef(null);
+  const searchTimeoutRef = useRef(null); // Add ref for debounce timeout
 
   useEffect(() => {
     fetchRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if the click is outside the search bar and search results
+      const searchBar = document.querySelector('.title-search');
+      const searchResults = document.querySelector('.search-results-container');
+      
+      if (searchBar && !searchBar.contains(event.target) && 
+          searchResults && !searchResults.contains(event.target)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    if (showSearchResults) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSearchResults]);
 
   // Scroll-based glass reflection effect
   useEffect(() => {
@@ -1105,6 +1132,57 @@ function App() {
     return matrix[str2.length][str1.length];
   }
 
+  async function searchRecipes(query) {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    
+    setIsSearching(true);
+    setShowSearchResults(true);
+    
+    try {
+      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=RECIPE&limit=20`);
+      
+      if (res.ok) {
+        const result = await res.json();
+        console.log('Search results:', result);
+        
+        // Transform search results to match the frontend format
+        const transformedResults = result.results.map(node => {
+          const properties = node.properties;
+          return {
+            id: node.id,
+            name: properties.title || properties.name || 'Untitled Recipe',
+            description: properties.description || '',
+            image: properties.image || properties.image_url || '',
+            image_url: properties.image || properties.image_url || '',
+            prep_time: properties.prepTime || properties.prep_time || null,
+            cook_time: properties.cookTime || properties.cook_time || null,
+            recipe_yield: properties.servings || properties.recipeYield || properties.recipe_yield || null,
+            source_url: properties.url || properties.source_url || '',
+            // Include full recipe data for when user selects a result
+            ingredients: properties.ingredients || [],
+            instructions: properties.instructions || [],
+            recipeIngredient: properties.ingredients || [],
+            recipeInstructions: properties.instructions || []
+          };
+        });
+        
+        setSearchResults(transformedResults);
+      } else {
+        console.error('Search failed:', res.status);
+        setSearchResults([]);
+      }
+    } catch (e) {
+      console.error('Error searching recipes:', e);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
   return (
     <>
       {/* Seasoning background canvas for both light and dark modes */}
@@ -1136,13 +1214,48 @@ function App() {
               placeholder="Search recipes or paste a URL to clip..."
               aria-label="Search recipes"
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && isValidUrl(searchInput) && clipperStatus === 'available') {
-                  handleSearchBarClip();
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                // Clear any existing timeout
+                if (searchTimeoutRef.current) {
+                  clearTimeout(searchTimeoutRef.current);
+                }
+                
+                // Trigger search if not a URL
+                if (!isValidUrl(e.target.value)) {
+                  if (e.target.value.trim().length >= 2) {
+                    // Debounce search with 300ms delay
+                    searchTimeoutRef.current = setTimeout(() => {
+                      searchRecipes(e.target.value);
+                    }, 300);
+                  } else {
+                    // Clear results if query is too short
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }
+                } else {
+                  // Clear search results if it's a URL
+                  setSearchResults([]);
+                  setShowSearchResults(false);
                 }
               }}
-              disabled={isSearchBarClipping}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  if (isValidUrl(searchInput) && clipperStatus === 'available') {
+                    handleSearchBarClip();
+                  } else if (!isValidUrl(searchInput) && searchInput.trim()) {
+                    // Just trigger search, don't open clip dialog
+                    searchRecipes(searchInput);
+                  } else if (isValidUrl(searchInput) && clipperStatus !== 'available') {
+                    // Clipper not available, do nothing
+                    console.warn('Clipper service is not available');
+                  } else if (!searchInput.trim()) {
+                    // Empty search, open the clip dialog
+                    setIsClipping(true);
+                  }
+                }
+              }}
+              disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
             />
             <button 
               className="title-search-button" 
@@ -1188,6 +1301,65 @@ function App() {
           <span className="fab-icon">+</span>
         </button>
       </div>
+      
+      {/* Search Results Dropdown */}
+      {showSearchResults && (
+        <div className="search-results-container">
+          {isSearching ? (
+            <div className="search-loading">
+              <div className="loading-spinner">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 11-6.219-8.56" />
+                </svg>
+              </div>
+              <span>Searching recipes...</span>
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="search-results-list">
+              {searchResults.map((recipe) => (
+                <div 
+                  key={recipe.id} 
+                  className="search-result-item"
+                  onClick={() => {
+                    // For now, just log the selection as requested
+                    console.log('Selected recipe:', recipe);
+                    // Clear search
+                    setSearchInput('');
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }}
+                >
+                  <div className="search-result-title">{recipe.name}</div>
+                  <div className="search-result-meta">
+                    {recipe.prep_time && (
+                      <span className="search-meta-item">
+                        <span className="meta-label">Prep:</span> {formatDuration(recipe.prep_time)}
+                      </span>
+                    )}
+                    {recipe.cook_time && (
+                      <span className="search-meta-item">
+                        <span className="meta-label">Cook:</span> {formatDuration(recipe.cook_time)}
+                      </span>
+                    )}
+                    {recipe.recipe_yield && (
+                      <span className="search-meta-item">
+                        <span className="meta-label">Yield:</span> {recipe.recipe_yield}
+                      </span>
+                    )}
+                    {!recipe.prep_time && !recipe.cook_time && !recipe.recipe_yield && (
+                      <span className="search-meta-item no-meta">No timing information</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="search-no-results">
+              No recipes found for "{searchInput}"
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
