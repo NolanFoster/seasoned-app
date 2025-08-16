@@ -17,8 +17,12 @@ module.exports = {
     '!babel-plugin-transform-import-meta.js'
   ],
   testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.{js,jsx}',
+    '<rootDir>/src/**/__tests__/**/*.{test,spec}.{js,jsx}',
     '<rootDir>/src/**/*.{spec,test}.{js,jsx}'
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/helpers/'
   ],
   transformIgnorePatterns: [
     'node_modules/(?!(starback)/)'
@@ -26,7 +30,8 @@ module.exports = {
   globals: {
     'import.meta.env': {
       VITE_API_URL: 'https://test-api.example.com',
-      VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com'
+      VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com',
+      VITE_SEARCH_DB_URL: 'https://test-search-db.example.com'
     }
   }
 };

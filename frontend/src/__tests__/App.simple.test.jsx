@@ -25,7 +25,16 @@ HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
   translate: jest.fn(),
   rotate: jest.fn(),
   drawImage: jest.fn(),
-  canvas: { width: 100, height: 100 },
+  moveTo: jest.fn(),
+  lineTo: jest.fn(),
+  closePath: jest.fn(),
+  stroke: jest.fn(),
+  font: '',
+  fillStyle: '',
+  strokeStyle: '',
+  lineWidth: 1,
+  globalAlpha: 1,
+  canvas: { width: 1024, height: 768 },
 }));
 
 global.IntersectionObserver = jest.fn(() => ({
