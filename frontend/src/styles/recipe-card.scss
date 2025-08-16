@@ -425,14 +425,21 @@
 /* Responsive adjustments for recipe grid */
 @media (max-width: 768px) {
   .recipe-grid {
-    margin-top: $spacing-lg + $spacing-md; /* Reduced margin for mobile */
+    margin-top: $spacing-md; /* Reduced margin since container has padding */
+    gap: $spacing-md;
+  }
+}
+
+@media (max-width: 640px) {
+  .recipe-grid {
+    margin-top: $spacing-sm; /* Small margin to add some separation */
     gap: $spacing-md;
   }
 }
 
 @media (max-width: 480px) {
   .recipe-grid {
-    margin-top: $spacing-md + $spacing-sm; /* Further reduced margin for small mobile */
+    margin-top: 0; /* Remove top margin as container already has sufficient padding */
     gap: $spacing-sm;
   }
 }

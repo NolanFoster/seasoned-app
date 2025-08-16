@@ -1319,12 +1319,12 @@ function App() {
                   <div 
                     key={recipe.id} 
                     className="search-result-item"
-                                      onClick={() => {
-                    // Clear search
-                    setSearchInput('');
-                    setSearchResults([]);
-                    setShowSearchResults(false);
-                  }}
+                    onClick={() => {
+                      // Clear search
+                      setSearchInput('');
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }}
                   >
                     <div className="search-result-title">{recipe.name}</div>
                     <div className="search-result-meta">
