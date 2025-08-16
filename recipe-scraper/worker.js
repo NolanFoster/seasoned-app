@@ -40,6 +40,7 @@ function normalizeIngredients(ingredients) {
   if (typeof ingredients === 'string') return [decodeHtmlEntities(ingredients)];
   if (Array.isArray(ingredients)) {
     return ingredients.map(ing => {
+      if (!ing) return null;
       if (typeof ing === 'string') return decodeHtmlEntities(ing);
       if (ing.name) return decodeHtmlEntities(ing.name);
       if (ing.text) return decodeHtmlEntities(ing.text);
@@ -55,6 +56,7 @@ function normalizeInstructions(instructions) {
   if (typeof instructions === 'string') return [decodeHtmlEntities(instructions)];
   if (Array.isArray(instructions)) {
     return instructions.map(inst => {
+      if (!inst) return null;
       if (typeof inst === 'string') return decodeHtmlEntities(inst);
       if (inst.name) return decodeHtmlEntities(inst.name);
       if (inst.text) return decodeHtmlEntities(inst.text);
@@ -92,6 +94,9 @@ function validateRecipeSchema(jsonLd) {
     context === 'http://schema.org/' ||
     (typeof context === 'object' && context['@vocab'] && context['@vocab'].includes('schema.org'))
   );
+  
+  // If no valid schema context, return false
+  if (!hasSchemaContext) return false;
   
   // Check if it's a Recipe type (with or without namespace)
   const type = jsonLd['@type'];
@@ -243,12 +248,22 @@ async function processRecipeUrl(url) {
   }
 }
 
+// Export utility functions for testing
+export {
+  decodeHtmlEntities,
+  normalizeIngredients,
+  normalizeInstructions,
+  isRecipeType,
+  validateRecipeSchema,
+  extractRecipeData,
+  JSONLDExtractor,
+  processRecipeUrl
+};
+
 // Main request handler
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    
-    console.log('Request received:', request.method, url.pathname, url.search);
     
     // CORS headers
     const corsHeaders = {
