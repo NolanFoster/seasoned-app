@@ -686,7 +686,7 @@ function App() {
 
   async function fetchRecipes() {
     try {
-      const res = await fetch(`${API_URL}/recipes`);
+      const res = await fetch(`${API_URL}/recipes?limit=10`);
       if (res.ok) {
         const data = await res.json();
         // The KV worker returns { success: true, recipes: [...], cursor: ..., list_complete: ... }
@@ -1195,7 +1195,7 @@ function App() {
         {/* Show recipe cards unless recipe is selected */}
         {!selectedRecipe && (
           <div className="recipe-grid" ref={recipeGridRef}>
-            {(Array.isArray(recipes) ? recipes : []).map((recipe) => {
+            {(Array.isArray(recipes) ? recipes.slice(0, 10) : []).map((recipe) => {
               console.log('Recipe data:', recipe);
               console.log('Image URL:', recipe.image_url);
               return (

@@ -48,7 +48,8 @@ export default {
 
       // Get all recipes
       if (pathname === '/recipes' && request.method === 'GET') {
-        const recipes = await getRecipes(env);
+        const limit = url.searchParams.get('limit');
+        const recipes = await getRecipes(env, limit);
         return new Response(JSON.stringify(recipes), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -250,10 +251,16 @@ export default {
 };
 
 // Database functions
-async function getRecipes(env) {
-  const { results } = await env.DB.prepare(
-    'SELECT * FROM recipes ORDER BY created_at DESC'
-  ).all();
+async function getRecipes(env, limit) {
+  let query = 'SELECT * FROM recipes ORDER BY created_at DESC';
+  let params = [];
+  
+  if (limit && !isNaN(parseInt(limit))) {
+    query += ' LIMIT ?';
+    params.push(parseInt(limit));
+  }
+  
+  const { results } = await env.DB.prepare(query).bind(...params).all();
   
   return results.map(recipe => ({
     ...recipe,
