@@ -1,7 +1,7 @@
 // Test script for verifying prefix search functionality
 // This tests that partial word searches now work correctly
 
-const SEARCH_DB_URL = 'https://recipe-search-db.kyle-schick80.workers.dev';
+const SEARCH_DB_URL = 'https://recipe-search-db.nolanfoster.workers.dev';
 
 async function testPrefixSearch() {
   console.log('🧪 Testing Prefix Search Functionality\n');
