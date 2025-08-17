@@ -6,8 +6,7 @@
 
 import { 
   generateRecipeId, 
-  getRecipeFromKV, 
-  listRecipesFromKV
+  getRecipeFromKV
 } from '../shared/kv-storage.js';
 
 import {
@@ -436,15 +435,28 @@ export default {
       const cursor = url.searchParams.get('cursor');
       const limit = parseInt(url.searchParams.get('limit') || '50');
       
-      console.log('Calling listRecipesFromKV with cursor:', cursor, 'limit:', limit);
-      const result = await listRecipesFromKV(env, cursor, limit);
-      if (!result.success) {
-        return new Response(JSON.stringify(result), {
+      console.log('Calling recipe-save-worker to list recipes');
+      // Use recipe-save-worker to list recipes
+      const listResponse = await fetch(`https://recipe-save-worker.nolanfoster.workers.dev/recipes?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!listResponse.ok) {
+        const errorText = await listResponse.text();
+        console.error('Failed to list recipes:', listResponse.status, errorText);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: `Failed to list recipes: ${listResponse.status} ${errorText}` 
+        }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
       
+      const result = await listResponse.json();
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -456,7 +468,8 @@ export default {
       const raw = url.searchParams.get('raw') === 'true';
       
       if (raw) {
-        // Return raw compressed data for compression analysis
+        // For raw data, we still need direct KV access for compression analysis
+        // This is a special debug endpoint
         const rawData = await env.RECIPE_STORAGE.get(recipeId);
         if (!rawData) {
           return new Response(JSON.stringify({ error: 'Recipe not found' }), {
@@ -470,15 +483,28 @@ export default {
         });
       }
       
-      const result = await getRecipeFromKV(env, recipeId);
-      if (!result.success) {
-        return new Response(JSON.stringify(result), {
-          status: 404,
+      // Use recipe-save-worker to get the recipe
+      const getResponse = await fetch(`https://recipe-save-worker.nolanfoster.workers.dev/recipes?id=${recipeId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!getResponse.ok) {
+        const errorText = await getResponse.text();
+        console.error('Failed to get recipe:', getResponse.status, errorText);
+        return new Response(JSON.stringify({
+          success: false,
+          error: getResponse.status === 404 ? 'Recipe not found' : `Failed to get recipe: ${getResponse.status} ${errorText}`
+        }), {
+          status: getResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
       
-      return new Response(JSON.stringify(result.recipe), {
+      const result = await getResponse.json();
+      return new Response(JSON.stringify(result.recipe || result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

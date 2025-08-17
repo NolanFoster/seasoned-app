@@ -86,24 +86,9 @@ export async function decompressData(compressedBase64) {
 }
 
 // Save recipe to KV storage
+// DEPRECATED: Use recipe-save-worker API instead
 export async function saveRecipeToKV(env, recipeId, recipeData) {
-  try {
-    const recipeRecord = {
-      id: recipeId,
-      url: recipeData.url,
-      data: recipeData.data,
-      scrapedAt: new Date().toISOString(),
-      version: '1.1' // Updated version to indicate compression
-    };
-    
-    // Compress the recipe record before saving
-    const compressedData = await compressData(recipeRecord);
-    await env.RECIPE_STORAGE.put(recipeId, compressedData);
-    return { success: true, id: recipeId };
-  } catch (error) {
-    console.error('Error saving recipe to KV:', error);
-    return { success: false, error: error.message };
-  }
+  throw new Error('Direct KV save is deprecated. Use recipe-save-worker API instead: POST https://recipe-save-worker.nolanfoster.workers.dev/recipe/save');
 }
 
 // Get recipe from KV storage
@@ -137,59 +122,15 @@ export async function getRecipeFromKV(env, recipeId) {
 }
 
 // List all recipes from KV storage (with pagination)
+// DEPRECATED: Use recipe-save-worker API instead
 export async function listRecipesFromKV(env, cursor = null, limit = 50) {
-  try {
-    const listOptions = { limit };
-    if (cursor) {
-      listOptions.cursor = cursor;
-    }
-    
-    const result = await env.RECIPE_STORAGE.list(listOptions);
-    
-    const recipes = [];
-    for (const key of result.keys) {
-      const recipeData = await env.RECIPE_STORAGE.get(key.name);
-      if (recipeData) {
-        let recipe;
-        
-        // Try to parse as JSON first (uncompressed data)
-        try {
-          recipe = JSON.parse(recipeData);
-        } catch (parseError) {
-          // If JSON parsing fails, try to decompress (compressed data)
-          try {
-            recipe = await decompressData(recipeData);
-          } catch (decompressError) {
-            console.error('Failed to parse or decompress recipe data:', parseError, decompressError);
-            continue; // Skip this recipe and continue with others
-          }
-        }
-        
-        recipes.push(recipe);
-      }
-    }
-    
-    return {
-      success: true,
-      recipes,
-      cursor: result.cursor,
-      list_complete: result.list_complete
-    };
-  } catch (error) {
-    console.error('Error listing recipes from KV:', error);
-    return { success: false, error: error.message };
-  }
+  throw new Error('Direct KV list is deprecated. Use recipe-save-worker API instead: GET https://recipe-save-worker.nolanfoster.workers.dev/recipes');
 }
 
 // Delete recipe from KV storage
+// DEPRECATED: Use recipe-save-worker API instead
 export async function deleteRecipeFromKV(env, recipeId) {
-  try {
-    await env.RECIPE_STORAGE.delete(recipeId);
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting recipe from KV:', error);
-    return { success: false, error: error.message };
-  }
+  throw new Error('Direct KV delete is deprecated. Use recipe-save-worker API instead: DELETE https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete');
 }
 
 // Check if recipe exists in KV storage

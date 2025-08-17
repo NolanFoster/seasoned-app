@@ -39,15 +39,35 @@ export default {
         if (clearCache) {
           try {
             const recipeId = await generateRecipeId(pageUrl);
-            await env.RECIPE_STORAGE.delete(recipeId);
-            return new Response(JSON.stringify({ 
-              message: 'Recipe cache cleared successfully',
-              url: pageUrl,
-              recipeId: recipeId
-            }), { 
-              status: 200, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            
+            // Use recipe-save-worker to delete the recipe
+            const deleteResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                recipeId: recipeId
+              })
             });
+            
+            if (deleteResponse.ok) {
+              return new Response(JSON.stringify({ 
+                message: 'Recipe cache cleared successfully',
+                url: pageUrl,
+                recipeId: recipeId
+              }), { 
+                status: 200, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            } else {
+              const errorText = await deleteResponse.text();
+              console.error('Failed to clear recipe cache:', deleteResponse.status, errorText);
+              return new Response('Error clearing cached recipe: ' + errorText, { 
+                status: 500,
+                headers: corsHeaders
+              });
+            }
           } catch (e) {
             console.error('Error clearing cached recipe:', e);
             return new Response('Error clearing cached recipe: ' + e.message, { 
