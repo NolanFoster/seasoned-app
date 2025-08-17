@@ -799,7 +799,16 @@ function App() {
 
   async function checkClipperHealth() {
     try {
-      const res = await fetch(`${CLIPPER_API_URL}/health`);
+      setClipperStatus('checking');
+      
+      const res = await fetch(`${CLIPPER_API_URL}/health`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
       if (res.ok) {
         const health = await res.json();
         setClipperStatus('available');
@@ -1269,9 +1278,6 @@ function App() {
                   } else if (!isValidUrl(searchInput) && searchInput.trim()) {
                     // Trigger search for non-URL inputs
                     searchRecipes(searchInput);
-                  } else if (isValidUrl(searchInput) && clipperStatus !== 'available') {
-                    // Clipper not available, do nothing
-                    console.warn('Clipper service is not available');
                   } else if (!searchInput.trim()) {
                     // Only open clip dialog if input is empty
                     setIsClipping(true);
@@ -1283,8 +1289,14 @@ function App() {
             <button 
               className="title-search-button" 
               aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
-              title={isValidUrl(searchInput) ? "Clip recipe from website" : "Search recipes"}
+              title={isValidUrl(searchInput) ? 
+                (clipperStatus === 'available' ? "Clip recipe from website" : "Recipe clipper service is currently unavailable") : 
+                "Search recipes"
+              }
               onClick={() => {
+                console.log('Button clicked, searchInput:', searchInput);
+                console.log('isValidUrl result:', isValidUrl(searchInput));
+                console.log('clipperStatus:', clipperStatus);
                 if (isValidUrl(searchInput) && clipperStatus === 'available') {
                   handleSearchBarClip();
                 } else if (!isValidUrl(searchInput) && searchInput.trim()) {
@@ -1309,7 +1321,8 @@ function App() {
                   alt="Clip" 
                   style={{ 
                     width: '18px', 
-                    height: '18px'
+                    height: '18px',
+                    opacity: clipperStatus === 'available' ? 1 : 0.3
                   }} 
                   className={clipperStatus === 'available' ? 'clip-icon-available' : 'clip-icon'}
                 />
