@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="generated" content="2025-08-17T22:24:19.949Z">
+    <meta name="generated" content="2025-08-17T22:48:46.133Z">
 </head>
 <body>
     <div class="container">
@@ -16,7 +16,7 @@
             <div class="header-content">
                 <h1 class="title">🍳 Seasoned Recipe App</h1>
                 <p class="subtitle">Developer Documentation & API Reference</p>
-                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-17T22:24:19.949Z</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-17T22:48:46.133Z</p>
             </div>
         </header>
 
@@ -65,7 +65,7 @@
                     <h3>🔄 Auto-Update Information</h3>
                     <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
                     <pre><code>npm run docs:generate</code></pre>
-                    <p><strong>Last Generated:</strong> 2025-08-17T22:24:19.949Z</p>
+                    <p><strong>Last Generated:</strong> 2025-08-17T22:48:46.133Z</p>
                 </div>
                 
                 <div class="feature-grid">
@@ -376,26 +376,6 @@ export default {
                     </div>
                     
                     <div class="function">
-                        <h4><code>createRecipe()</code></h4>
-                        <p>Function createRecipe</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>updateRecipe()</code></h4>
-                        <p>Function updateRecipe</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>deleteRecipe()</code></h4>
-                        <p>Function deleteRecipe</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>updateRecipeImage()</code></h4>
-                        <p>Function updateRecipeImage</p>
-                    </div>
-                    
-                    <div class="function">
                         <h4><code>uploadImage()</code></h4>
                         <p>Image upload function</p>
                     </div>
@@ -526,8 +506,7 @@ export default {
 
 import { 
   generateRecipeId, 
-  getRecipeFromKV, 
-  listRecipesFromKV
+  getRecipeFromKV
 } from '../shared/kv-storage.js';
 
 import {
@@ -560,7 +539,7 @@ function decodeHtmlEntities(text) {
 function normalizeIngredients(ingredients) {
   if (!ingredients) return [];
   if (typeof ingredients === 'string') return [decodeHtmlEntities(ingredients)];
-  if (Ar...</code></pre>
+  if (Array.isArray(ingredient...</code></pre>
                 </div>
             </section>
             <section id="recipe-clipper" class="section">
@@ -903,7 +882,7 @@ class RecipeCrawler:
                     
                     <div class="function">
                         <h4><code>saveRecipeToKV()</code></h4>
-                        <p>Save recipe to KV storage</p>
+                        <p>DEPRECATED: Use recipe-save-worker API instead</p>
                     </div>
                     
                     <div class="function">
@@ -913,12 +892,12 @@ class RecipeCrawler:
                     
                     <div class="function">
                         <h4><code>listRecipesFromKV()</code></h4>
-                        <p>List all recipes from KV storage (with pagination)</p>
+                        <p>DEPRECATED: Use recipe-save-worker API instead</p>
                     </div>
                     
                     <div class="function">
                         <h4><code>deleteRecipeFromKV()</code></h4>
-                        <p>Delete recipe from KV storage</p>
+                        <p>DEPRECATED: Use recipe-save-worker API instead</p>
                     </div>
                     
                     <div class="function">
