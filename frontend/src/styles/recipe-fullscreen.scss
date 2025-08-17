@@ -258,6 +258,10 @@
 .nutrition-icon {
   display: inline-block;
   line-height: 1;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Make the icon white */
 }
 
 /* Share Panel */
@@ -1129,6 +1133,11 @@ body.dark-mode {
     margin-right: 8px;
   }
 
+  .nutrition-icon {
+    width: 20px;
+    height: 20px;
+  }
+
   .nutrition-panel {
     max-width: 350px;
   }
@@ -1160,6 +1169,11 @@ body.dark-mode {
     height: 32px;
     font-size: 1em;
     margin-right: 6px;
+  }
+
+  .nutrition-icon {
+    width: 18px;
+    height: 18px;
   }
 
   .nutrition-panel {

@@ -2581,7 +2581,13 @@ function App() {
                 onClick={() => setShowNutrition(!showNutrition)}
                 title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
               >
-                <span className="nutrition-icon">📊</span>
+                <img 
+                  src="/nutrition-label.png" 
+                  alt="Nutrition" 
+                  className="nutrition-icon"
+                  width="24"
+                  height="24"
+                />
               </button>
             )}
             
