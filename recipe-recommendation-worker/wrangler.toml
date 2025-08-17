@@ -2,6 +2,10 @@ name = "recipe-recommendation-worker"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
+# AI binding for Cloudflare Workers AI
+[ai]
+binding = "AI"
+
 [env.production]
 vars = { }
 
@@ -9,6 +13,5 @@ vars = { }
 # [env.staging]
 # vars = { }
 
-# Secrets should be added via wrangler secret put OPENAI_API_KEY
-# For local development, create a .dev.vars file:
-# OPENAI_API_KEY=your-api-key-here
+# Note: With Cloudflare AI binding, you don't need OpenAI API keys
+# The AI models are provided by Cloudflare Workers AI

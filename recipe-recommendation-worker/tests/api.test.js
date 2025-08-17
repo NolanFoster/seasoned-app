@@ -35,7 +35,7 @@ export async function runTests() {
       scriptPath: path.join(__dirname, '../src/index.js'),
       modules: true,
       bindings: {
-        OPENAI_API_KEY: null // Testing without API key
+        AI: null // Testing without AI binding
       }
     });
   } catch (error) {

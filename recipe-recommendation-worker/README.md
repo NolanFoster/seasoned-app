@@ -1,14 +1,15 @@
 # Recipe Recommendation Worker
 
-A Cloudflare Worker that provides recipe recommendations based on location and date using OpenAI's language models.
+A Cloudflare Worker that provides recipe recommendations based on location and date using Cloudflare's Workers AI with the GPT-OSS-20B model.
 
 ## Features
 
 - 🌍 Location-based recommendations
 - 📅 Seasonal and date-aware suggestions
 - 🏷️ Returns categorized recipe tags
-- 🤖 Powered by OpenAI GPT models
-- 🔄 Fallback to curated mock data when API is unavailable
+- 🤖 Powered by Cloudflare Workers AI (GPT-OSS-20B model)
+- 🔄 Fallback to curated mock data when AI is unavailable
+- 🔐 No API keys required - uses Cloudflare's AI binding
 - 🚀 Deployed on Cloudflare's edge network
 
 ## API Endpoints
@@ -57,27 +58,19 @@ Health check endpoint.
    npm install
    ```
 
-2. **Configure OpenAI API Key:**
-   
-   For local development, create a `.dev.vars` file:
-   ```
-   OPENAI_API_KEY=your-api-key-here
-   ```
-   
-   For production:
-   ```bash
-   wrangler secret put OPENAI_API_KEY
-   ```
-
-3. **Run locally:**
+2. **Run locally:**
    ```bash
    npm run dev
    ```
+   
+   Note: The AI binding will be automatically configured by Wrangler.
 
-4. **Deploy:**
+3. **Deploy:**
    ```bash
    npm run deploy
    ```
+   
+   The worker will automatically use Cloudflare's Workers AI - no API keys needed!
 
 ## Testing
 
@@ -96,22 +89,23 @@ The test suite includes:
 ## Architecture
 
 The worker uses:
-- **OpenAI GPT-3.5-turbo** for generating contextual recommendations
-- **Fallback mock data** for reliability when API is unavailable
+- **Cloudflare Workers AI** with GPT-OSS-20B model for generating contextual recommendations
+- **Fallback mock data** for reliability when AI is unavailable
 - **Edge deployment** for low latency worldwide
+- **No external API dependencies** - runs entirely on Cloudflare's infrastructure
 
 ## How It Works
 
 1. Receives location and date from the client
 2. Determines the season based on the date
 3. Constructs a prompt with location, date, and seasonal context
-4. Calls OpenAI API to generate relevant recipe categories and tags
-5. Falls back to curated seasonal recommendations if API fails
+4. Calls Cloudflare Workers AI to generate relevant recipe categories and tags
+5. Falls back to curated seasonal recommendations if AI fails
 6. Returns structured JSON with categorized recipe tags
 
 ## Mock Data
 
-When OpenAI API is not available, the worker returns curated recommendations based on season:
+When Cloudflare AI is not available, the worker returns curated recommendations based on season:
 
 - **Spring**: Fresh herbs, asparagus, strawberries, salads
 - **Summer**: BBQ items, tomatoes, corn, refreshing dishes
@@ -120,7 +114,7 @@ When OpenAI API is not available, the worker returns curated recommendations bas
 
 ## Environment Variables
 
-- `OPENAI_API_KEY`: Your OpenAI API key (required for AI recommendations)
+No environment variables required! The worker uses Cloudflare's built-in AI binding.
 
 ## Development
 

@@ -1,7 +1,7 @@
 {
   "name": "recipe-recommendation-worker",
   "version": "1.0.0",
-  "description": "Recipe recommendation worker using OpenAI OSS model based on location and date",
+  "description": "Recipe recommendation worker using Cloudflare Workers AI (GPT-OSS-20B) based on location and date",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -15,8 +15,9 @@
     "workers",
     "recipes",
     "recommendations",
-    "openai",
-    "llm"
+    "ai",
+    "llm",
+    "gpt-oss"
   ],
   "author": "",
   "license": "MIT",
@@ -25,8 +26,5 @@
     "miniflare": "^3.20231218.0",
     "node-fetch": "^3.3.2",
     "nodemon": "^3.0.2"
-  },
-  "dependencies": {
-    "openai": "^4.20.0"
   }
 }

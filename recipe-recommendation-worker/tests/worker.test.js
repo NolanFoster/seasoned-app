@@ -25,7 +25,7 @@ function assertDeepEquals(actual, expected, message) {
 
 // Mock environment
 const mockEnv = {
-  OPENAI_API_KEY: null
+  AI: null
 };
 
 // Test suite
@@ -61,9 +61,9 @@ export async function runTests() {
     }
   });
 
-  // Test 3: getRecipeRecommendations without API key
+  // Test 3: getRecipeRecommendations without AI binding
   tests.push({
-    name: 'getRecipeRecommendations should return mock data when no API key',
+    name: 'getRecipeRecommendations should return mock data when no AI binding',
     fn: async () => {
       const result = await getRecipeRecommendations('Boston', '2024-03-15', mockEnv);
       assert(result.note && result.note.includes('mock'), 'Should indicate mock data');

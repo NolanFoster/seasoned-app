@@ -83,9 +83,9 @@ async function handleRecommendations(request, env, corsHeaders) {
 }
 
 async function getRecipeRecommendations(location, date, env) {
-  // Check if we have an API key
-  if (!env.OPENAI_API_KEY) {
-    console.warn('OPENAI_API_KEY not configured, returning mock data');
+  // Check if we have AI binding
+  if (!env.AI) {
+    console.warn('AI binding not configured, returning mock data');
     return getMockRecommendations(location, date);
   }
 
@@ -107,52 +107,66 @@ Example format:
 }`;
 
   try {
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful culinary assistant that provides recipe recommendations based on location and season. Always respond with valid JSON.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
+    console.log('Calling Cloudflare AI with prompt for recommendations');
+    
+    // Use Cloudflare Workers AI binding
+    const response = await env.AI.run('@cf/openai/gpt-oss-20b', {
+      instructions: 'You are a helpful culinary assistant that provides recipe recommendations based on location and season. Always respond with valid JSON only, no extra text.',
+      input: prompt
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+    console.log('Cloudflare AI response received. Response type:', typeof response);
+
+    if (!response || typeof response !== 'object') {
+      throw new Error('Invalid response from Cloudflare AI');
     }
 
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    // Extract the text content from the response
+    let content;
+    if (response.response) {
+      content = response.response;
+    } else if (response.result) {
+      content = response.result;
+    } else if (response.text) {
+      content = response.text;
+    } else if (typeof response === 'string') {
+      content = response;
+    } else {
+      console.error('Unexpected response structure:', response);
+      throw new Error('Could not extract content from AI response');
+    }
+
+    console.log('Extracted content:', content);
 
     // Parse the JSON response
     try {
-      const parsed = JSON.parse(content);
-      return parsed;
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', content);
-      // Try to extract JSON from the response
+      // Try to extract JSON from the response if it contains extra text
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Add metadata to the response
+        return {
+          ...parsed,
+          location: location,
+          date: date,
+          season: season
+        };
       }
+      
+      // If the entire response is valid JSON
+      const parsed = JSON.parse(content);
+      return {
+        ...parsed,
+        location: location,
+        date: date,
+        season: season
+      };
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', content);
       throw parseError;
     }
   } catch (error) {
-    console.error('OpenAI API error:', error);
+    console.error('Cloudflare AI error:', error);
     // Fallback to mock data
     return getMockRecommendations(location, date);
   }
@@ -200,7 +214,7 @@ function getMockRecommendations(location, date) {
     location: location,
     date: date,
     season: season,
-    note: 'These are mock recommendations. Configure OPENAI_API_KEY for AI-powered suggestions.'
+    note: 'These are mock recommendations. Deploy to Cloudflare Workers for AI-powered suggestions.'
   };
 }
 
