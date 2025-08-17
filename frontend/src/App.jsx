@@ -1829,95 +1829,16 @@ function App() {
                   
                   console.log(`Processing category: ${categoryName} with tags:`, tags);
                   
-                  // First, try to find matching recipes from user's saved recipes
-                  const localCategoryRecipes = recipes.filter(recipe => {
-                    // Skip if already shown in another category
-                    if (shownRecipeIds.has(recipe.id)) {
-                      return false;
-                    }
-                    // Check if recipe matches any tag (case-insensitive)
-                    const recipeName = (typeof recipe.name === 'string' ? recipe.name : '').toLowerCase();
-                    const recipeDescription = (typeof recipe.description === 'string' ? recipe.description : '').toLowerCase();
-                    
-                    // Handle recipeCategory - could be string or array
-                    let recipeCategory = '';
-                    if (typeof recipe.recipeCategory === 'string') {
-                      recipeCategory = recipe.recipeCategory.toLowerCase();
-                    } else if (Array.isArray(recipe.recipeCategory)) {
-                      recipeCategory = recipe.recipeCategory.join(' ').toLowerCase();
-                    }
-                    
-                    // Handle recipeCuisine - could be string or array
-                    let recipeCuisine = '';
-                    if (typeof recipe.recipeCuisine === 'string') {
-                      recipeCuisine = recipe.recipeCategory.toLowerCase();
-                    } else if (Array.isArray(recipe.recipeCuisine)) {
-                      recipeCuisine = recipe.recipeCuisine.join(' ').toLowerCase();
-                    }
-                    
-                    const recipeKeywords = (typeof recipe.keywords === 'string' ? recipe.keywords : '').toLowerCase();
-                    
-                    return tags.some(tag => {
-                      const tagLower = tag.toLowerCase();
-                      // Also create a version with spaces between camelCase words
-                      const tagWithSpaces = tag.replace(/([A-Z])/g, ' $1').trim().toLowerCase();
-                      
-                      // Split tag into individual words for better matching
-                      const tagWords = tagWithSpaces.split(' ').filter(word => word.length > 2);
-                      
-                      // Create a combined search string for easier matching
-                      const searchableContent = `${recipeName} ${recipeDescription} ${recipeCategory} ${recipeCuisine} ${recipeKeywords}`;
-                      
-                      // Check for exact tag match first
-                      if (searchableContent.includes(tagLower) || searchableContent.includes(tagWithSpaces)) {
-                        return true;
-                      }
-                      
-                      // Check if all significant words from the tag are present
-                      const significantWords = tagWords.filter(word => word.length > 3);
-                      if (significantWords.length > 0) {
-                        const matchedWords = significantWords.filter(word => searchableContent.includes(word));
-                        // If more than half of significant words match, consider it a match
-                        if (matchedWords.length >= Math.ceil(significantWords.length / 2)) {
-                          return true;
-                        }
-                      }
-                      
-                      // Check individual words with word boundaries for better accuracy
-                      return tagWords.some(word => {
-                        if (word.length <= 2) return false;
-                        // Create word boundary regex for more accurate matching
-                        const wordRegex = new RegExp(`\\b${word}\\b`, 'i');
-                        return wordRegex.test(recipeName) ||
-                               wordRegex.test(recipeDescription) ||
-                               wordRegex.test(recipeCategory) ||
-                               wordRegex.test(recipeCuisine);
-                      });
-                    });
-                  });
-                  
-                  // Get external recipes for this category
+                  // Get external recipes for this category (no longer using local recipes)
                   const categoryExternalRecipes = externalRecipes[categoryName] || [];
                   
-                  // Combine local and external recipes, filtering out duplicates
-                  let categoryRecipes = [...localCategoryRecipes];
-                  if (categoryRecipes.length < 3) {
-                    const externalFiltered = categoryExternalRecipes.filter(external => 
-                      !recipes.some(local => local.name.toLowerCase() === external.name.toLowerCase()) &&
-                      !shownRecipeIds.has(external.id)
-                    );
-                    categoryRecipes = [...categoryRecipes, ...externalFiltered];
-                  }
+                  // Filter out duplicates across categories
+                  const uniqueExternalRecipes = categoryExternalRecipes.filter(external => 
+                    !shownRecipeIds.has(external.id)
+                  );
                   
-                  // Sort by relevance (local recipes first, then external ones)
-                  const sortedRecipes = categoryRecipes
-                    .sort((a, b) => {
-                      // Local recipes first
-                      if (a.isExternal && !b.isExternal) return 1;
-                      if (!a.isExternal && b.isExternal) return -1;
-                      return 0;
-                    })
-                    .slice(0, 3);
+                  // Take up to 3 recipes for this category
+                  const sortedRecipes = uniqueExternalRecipes.slice(0, 3);
                   
                   // Add selected recipes to the shown set
                   sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
@@ -1930,7 +1851,7 @@ function App() {
                       <h2 className="category-title">{categoryName}</h2>
                       <div className="recipe-grid category-recipes" ref={recipeGridRef}>
                         {sortedRecipes.map((recipe) => (
-                          <div key={recipe.id} className={`recipe-card ${recipe.isExternal ? 'external-recipe' : ''}`} onClick={() => openRecipeView(recipe)}>
+                          <div key={recipe.id} className="recipe-card external-recipe" onClick={() => openRecipeView(recipe)}>
                             <div className="recipe-card-image">
                               {/* Main image display */}
                               {(recipe.image || recipe.image_url) ? (
@@ -1969,11 +1890,9 @@ function App() {
                               <div className="recipe-card-overlay"></div>
                               <div className="recipe-card-title-overlay">
                                 <h3 className="recipe-card-title">{recipe.name}</h3>
-                                {recipe.isExternal && (
-                                  <span className="external-badge" title="External recipe - click to view details">
-                                    🌐
-                                  </span>
-                                )}
+                                <span className="external-badge" title="External recipe - click to view details">
+                                  🌐
+                                </span>
                               </div>
                             </div>
                             <div className="recipe-card-content">
