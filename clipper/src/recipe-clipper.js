@@ -1,9 +1,7 @@
 // Recipe Clipper Worker using Cloudflare Workers AI with GPT-4o-mini model
 import { 
   generateRecipeId, 
-  saveRecipeToKV, 
-  getRecipeFromKV, 
-  deleteRecipeFromKV 
+  getRecipeFromKV
 } from '../../shared/kv-storage.js';
 
 export default {
@@ -89,33 +87,57 @@ export default {
             });
           }
           
-          // Save the extracted recipe to KV store
-          const saveResult = await saveRecipeToKV(env, recipeId, {
-            url: pageUrl,
-            data: recipe
+          // Save the extracted recipe using recipe-save-worker
+          const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipe: {
+                ...recipe,
+                url: pageUrl
+              }
+            })
           });
           
-          if (saveResult.success) {
-            console.log('Recipe saved to KV store successfully');
-            return new Response(JSON.stringify({
-              ...recipe,
-              source_url: pageUrl,
-              cached: false,
-              recipeId: recipeId,
-              savedToKV: true
-            }), { 
-              status: 200, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+          if (recipeSaveResponse.ok) {
+            const saveResult = await recipeSaveResponse.json();
+            if (saveResult.success) {
+              console.log('Recipe saved to KV store successfully');
+              return new Response(JSON.stringify({
+                ...recipe,
+                source_url: pageUrl,
+                cached: false,
+                recipeId: saveResult.id || recipeId,
+                savedToKV: true
+              }), { 
+                status: 200, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            } else {
+              console.warn('Failed to save recipe to KV store:', saveResult.error);
+              // Still return the recipe even if KV save failed
+              return new Response(JSON.stringify({
+                ...recipe,
+                source_url: pageUrl,
+                cached: false,
+                savedToKV: false,
+                kvError: saveResult.error
+              }), { 
+                status: 200, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
           } else {
-            console.warn('Failed to save recipe to KV store:', saveResult.error);
-            // Still return the recipe even if KV save failed
+            console.error('Failed to save recipe:', recipeSaveResponse.status);
+            // Still return the recipe even if save failed
             return new Response(JSON.stringify({
               ...recipe,
               source_url: pageUrl,
               cached: false,
               savedToKV: false,
-              kvError: saveResult.error
+              kvError: 'Failed to save to recipe-save-worker'
             }), { 
               status: 200, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }

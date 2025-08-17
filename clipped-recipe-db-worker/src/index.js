@@ -87,10 +87,41 @@ export default {
             hasRecipeInstructions: !!body.recipeInstructions
           });
           
-          const recipeId = await createRecipe(env, body);
-          console.log('Recipe created with ID:', recipeId);
+          console.log('Creating recipe with body fields:', {
+            hasName: !!body.name,
+            hasIngredients: !!body.ingredients,
+            hasRecipeIngredient: !!body.recipeIngredient,
+            hasInstructions: !!body.instructions,
+            hasRecipeInstructions: !!body.recipeInstructions
+          });
           
-          return new Response(JSON.stringify({ id: recipeId, message: 'Recipe created' }), {
+          // Call recipe-save-worker to create the recipe
+          const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipe: {
+                ...body,
+                url: body.source_url || `manual://${Date.now()}` // Ensure we have a URL
+              }
+            })
+          });
+          
+          if (!recipeSaveResponse.ok) {
+            const errorText = await recipeSaveResponse.text();
+            console.error('Failed to create recipe:', recipeSaveResponse.status, errorText);
+            return new Response(JSON.stringify({ error: 'Failed to create recipe' }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          const result = await recipeSaveResponse.json();
+          console.log('Recipe created with ID:', result.id);
+          
+          return new Response(JSON.stringify({ id: result.id, message: 'Recipe created' }), {
             status: 201,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -116,13 +147,36 @@ export default {
       if (pathname.startsWith('/recipe/') && request.method === 'PUT') {
         const id = pathname.split('/')[2];
         const body = await request.json();
-        const success = await updateRecipe(env, id, body);
-        if (!success) {
-          return new Response('Recipe not found', { 
-            status: 404,
-            headers: corsHeaders
+        
+        // Call recipe-save-worker to update the recipe
+        const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipeId: id,
+            updates: body
+          })
+        });
+        
+        if (!recipeSaveResponse.ok) {
+          const errorText = await recipeSaveResponse.text();
+          console.error('Failed to update recipe:', recipeSaveResponse.status, errorText);
+          
+          if (recipeSaveResponse.status === 404) {
+            return new Response('Recipe not found', { 
+              status: 404,
+              headers: corsHeaders
+            });
+          }
+          
+          return new Response(JSON.stringify({ error: 'Failed to update recipe' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
+        
         return new Response(JSON.stringify({ message: 'Recipe updated' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -131,13 +185,35 @@ export default {
       // Delete recipe
       if (pathname.startsWith('/recipe/') && request.method === 'DELETE') {
         const id = pathname.split('/')[2];
-        const success = await deleteRecipe(env, id);
-        if (!success) {
-          return new Response('Recipe not found', { 
-            status: 404,
-            headers: corsHeaders
+        
+        // Call recipe-save-worker to delete the recipe
+        const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipeId: id
+          })
+        });
+        
+        if (!recipeSaveResponse.ok) {
+          const errorText = await recipeSaveResponse.text();
+          console.error('Failed to delete recipe:', recipeSaveResponse.status, errorText);
+          
+          if (recipeSaveResponse.status === 404) {
+            return new Response('Recipe not found', { 
+              status: 404,
+              headers: corsHeaders
+            });
+          }
+          
+          return new Response(JSON.stringify({ error: 'Failed to delete recipe' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
+        
         return new Response(JSON.stringify({ message: 'Recipe deleted' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -192,9 +268,27 @@ export default {
           console.log('Upload result:', imageUrl);
           
           if (imageUrl) {
-            // Update recipe with image URL
-            await updateRecipeImage(env, recipeId, imageUrl);
-            console.log('Recipe image updated in database');
+            // Update recipe with image URL using recipe-save-worker
+            const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                recipeId: recipeId,
+                updates: {
+                  imageUrl: imageUrl,
+                  image: imageUrl, // backward compatibility
+                  image_url: imageUrl // backward compatibility
+                }
+              })
+            });
+            
+            if (!recipeSaveResponse.ok) {
+              console.error('Failed to update recipe image:', recipeSaveResponse.status);
+            } else {
+              console.log('Recipe image updated in database');
+            }
           }
 
           return new Response(JSON.stringify({ imageUrl }), {
@@ -217,14 +311,38 @@ export default {
         try {
           const recipe = await extractRecipeFromUrl(pageUrl);
           if (!recipe) {
-            return new Response('No recipe found in JSON-LD', { 
+            return new Response('Failed to extract recipe data', { 
               status: 404,
               headers: corsHeaders
             });
           }
           
-          const recipeId = await createRecipe(env, recipe);
-          return new Response(JSON.stringify({ ...recipe, id: recipeId }), { 
+          // Call recipe-save-worker to create the recipe
+          const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              recipe: {
+                ...recipe,
+                url: url || recipe.source_url || `clipped://${Date.now()}`
+              }
+            })
+          });
+          
+          if (!recipeSaveResponse.ok) {
+            const errorText = await recipeSaveResponse.text();
+            console.error('Failed to create recipe from clip:', recipeSaveResponse.status, errorText);
+            return new Response(JSON.stringify({ error: 'Failed to save recipe' }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          const result = await recipeSaveResponse.json();
+          
+          return new Response(JSON.stringify({ ...recipe, id: result.id }), { 
             status: 200, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -343,6 +461,19 @@ async function getRecipeById(env, id) {
   };
 }
 
+// ===== DEPRECATED FUNCTIONS =====
+// The following recipe CRUD functions have been moved to recipe-save-worker
+// for centralized recipe management. These functions are kept here for reference
+// but should not be used. Use the recipe-save-worker API instead.
+// 
+// - createRecipe: POST https://recipe-save-worker.nolanfoster.workers.dev/recipe/save
+// - updateRecipe: PUT https://recipe-save-worker.nolanfoster.workers.dev/recipe/update  
+// - deleteRecipe: DELETE https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete
+// - updateRecipeImage: Handled automatically by recipe-save-worker
+//
+// TODO: Remove these functions in a future cleanup once all dependencies are migrated
+
+/*
 async function createRecipe(env, recipeData) {
   const { 
     name, description, image, author, datePublished, prepTime, cookTime, totalTime,
@@ -549,6 +680,9 @@ async function updateRecipeImage(env, recipeId, imageUrl) {
     'UPDATE recipes SET image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
   ).bind(imageUrl, recipeId).run();
 }
+*/
+
+// ===== END DEPRECATED FUNCTIONS =====
 
 // Image upload function
 async function uploadImage(env, file, recipeId) {

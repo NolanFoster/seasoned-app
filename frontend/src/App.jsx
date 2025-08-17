@@ -831,32 +831,55 @@ function App() {
     const manualRecipeUrl = `manual://${timestamp}`;
     
     const recipe = {
-      name,
+      url: manualRecipeUrl,
+      title: name,
       description,
-      image: '', // Will be updated after image upload
-      recipeIngredient: ingredients.filter(i => i.trim()),
-      recipeInstructions: instructions.filter(i => i.trim()),
-      // Backward compatibility
+      imageUrl: '', // Will be updated after image upload
       ingredients: ingredients.filter(i => i.trim()),
       instructions: instructions.filter(i => i.trim()),
       prepTime: prepTime ? `PT${prepTime}M` : null,
       cookTime: cookTime ? `PT${cookTime}M` : null,
+      servings: recipeYield || null,
+      // Backward compatibility fields
+      name,
+      recipeIngredient: ingredients.filter(i => i.trim()),
+      recipeInstructions: instructions.filter(i => i.trim()),
       recipeYield: recipeYield || null,
-      // Add source URL for manual recipes
       source_url: manualRecipeUrl,
-      // Add image_url for consistency
       image_url: ''
     };
     
     try {
-      // For now, we'll store the recipe locally and refresh the list
-      // TODO: Implement proper KV storage for manual recipes
-      // Refresh the recipe list
-      fetchRecipes();
-      resetForm();
+      // Use the recipe-save-worker to save the recipe
+      const response = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipe })
+      });
       
-      // Show success message
-      alert('Recipe added successfully! Note: Manual recipes are currently stored locally.');
+      if (!response.ok) {
+        throw new Error(`Failed to save recipe: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Handle image upload if there's an image
+        if (selectedImage) {
+          await uploadRecipeImage(result.id, selectedImage);
+        }
+        
+        // Refresh the recipe list
+        fetchRecipes();
+        resetForm();
+        
+        // Show success message
+        alert('Recipe added successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to save recipe');
+      }
     } catch (e) {
       console.error('Error adding recipe:', e);
       alert('Error saving recipe. Please try again.');
@@ -866,32 +889,87 @@ function App() {
   async function updateRecipe() {
     if (!editingRecipe || !editableRecipe || !editableRecipe.name.trim()) return;
     
-    // TODO: Implement proper KV storage update for recipes
-    // For now, we'll just refresh the list
-    // Recipe update requested
-    
-    // Refresh the recipe list
-    fetchRecipes();
-    resetForm();
-    setEditingRecipe(null);
-    setEditableRecipe(null);
-    setIsEditingRecipe(false);
-    
-    // Show success message
-    alert('Recipe updated successfully! Note: Updates are currently stored locally.');
+    try {
+      // Prepare the update data
+      const updates = {
+        title: editableRecipe.name,
+        description: editableRecipe.description,
+        ingredients: editableRecipe.recipeIngredient || editableRecipe.ingredients || [],
+        instructions: editableRecipe.recipeInstructions || editableRecipe.instructions || [],
+        prepTime: editableRecipe.prepTime,
+        cookTime: editableRecipe.cookTime,
+        servings: editableRecipe.recipeYield || editableRecipe.servings,
+        // Backward compatibility fields
+        name: editableRecipe.name,
+        recipeIngredient: editableRecipe.recipeIngredient || editableRecipe.ingredients || [],
+        recipeInstructions: editableRecipe.recipeInstructions || editableRecipe.instructions || [],
+        recipeYield: editableRecipe.recipeYield || editableRecipe.servings
+      };
+      
+      // Use the recipe-save-worker to update the recipe
+      const response = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          recipeId: editingRecipe.id,
+          updates 
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update recipe: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Refresh the recipe list
+        fetchRecipes();
+        resetForm();
+        setEditingRecipe(null);
+        setEditableRecipe(null);
+        setIsEditingRecipe(false);
+        
+        // Show success message
+        alert('Recipe updated successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to update recipe');
+      }
+    } catch (e) {
+      console.error('Error updating recipe:', e);
+      alert('Error updating recipe. Please try again.');
+    }
   }
 
   async function deleteRecipe(id) {
     if (!confirm('Are you sure you want to delete this recipe?')) return;
     try {
-      const res = await fetch(`${API_URL}/recipes?id=${id}`, {
+      // Use the recipe-save-worker to delete the recipe
+      const response = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipeId: id })
       });
-      if (res.ok) {
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete recipe: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
         fetchRecipes();
+        // Close any open modals/panels if this was the selected recipe
+        if (selectedRecipe && selectedRecipe.id === id) {
+          setSelectedRecipe(null);
+          setShowSharePanel(false);
+        }
       } else {
-        console.error('Failed to delete recipe:', res.status);
-        alert('Failed to delete recipe. Please try again.');
+        throw new Error(result.error || 'Failed to delete recipe');
       }
     } catch (e) {
       console.error('Error deleting recipe:', e);
