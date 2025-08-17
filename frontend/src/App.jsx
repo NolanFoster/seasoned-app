@@ -271,7 +271,7 @@ function VideoPopup({ videoUrl, onClose }) {
       
       {/* Video content */}
       <div className="video-popup-content">
-        {embedUrl ? (
+        {embedUrl && !videoError ? (
           <iframe
             src={embedUrl}
             title="Recipe Video"
@@ -2699,18 +2699,21 @@ function App() {
                     🌐 Source Recipe
                   </a>
                 )}
-                {(selectedRecipe.video_url !== undefined || (selectedRecipe.video && selectedRecipe.video.contentUrl)) && (
-                  <button 
-                    className="recipe-link video-link"
-                    title="Watch recipe video"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openVideoPopup(selectedRecipe.video_url !== undefined ? selectedRecipe.video_url : (selectedRecipe.video && selectedRecipe.video.contentUrl));
-                    }}
-                  >
-                    🎥 Watch Video
-                  </button>
-                )}
+                {(() => {
+                  const videoUrl = selectedRecipe.video_url || (selectedRecipe.video && selectedRecipe.video.contentUrl);
+                  return videoUrl && isValidUrl(videoUrl) && (
+                    <button 
+                      className="recipe-link video-link"
+                      title="Watch recipe video"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVideoPopup(videoUrl);
+                      }}
+                    >
+                      🎥 Watch Video
+                    </button>
+                  );
+                })()}
               </div>
             )}
           </div>
