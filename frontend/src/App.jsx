@@ -369,7 +369,10 @@ function App() {
   useEffect(() => {
     fetchRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
-    fetchRecommendations(); // Fetch recommendations on startup
+    // Fetch recommendations but don't let it block the app
+    fetchRecommendations().catch(err => {
+      console.error('Failed to fetch initial recommendations:', err);
+    });
   }, []);
 
   // Close search results when clicking outside
@@ -1470,7 +1473,15 @@ function App() {
             {/* Show recommendations if available */}
             {recommendations && recommendations.recommendations && !isLoadingRecommendations ? (
               <div className="recommendations-container">
-                {Object.entries(recommendations.recommendations).map(([categoryName, tags]) => {
+                {(() => {
+                  try {
+                    return Object.entries(recommendations.recommendations).map(([categoryName, tags]) => {
+                  // Ensure tags is an array
+                  if (!Array.isArray(tags)) {
+                    console.error(`Invalid tags format for category ${categoryName}:`, tags);
+                    return null;
+                  }
+                  
                   // Filter recipes that match any of the tags in this category
                   const categoryRecipes = recipes.filter(recipe => {
                     // Check if recipe matches any tag (case-insensitive)
@@ -1578,7 +1589,12 @@ function App() {
                       </div>
                     </div>
                   );
-                })}
+                });
+                  } catch (error) {
+                    console.error('Error rendering recommendations:', error);
+                    return null;
+                  }
+                })()}
                 
                 {/* Show all recipes section at the bottom */}
                 <div className="recommendation-category">
