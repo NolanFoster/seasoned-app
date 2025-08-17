@@ -12,7 +12,8 @@
     "db:migrate": "wrangler d1 execute recipe-db --file=./schema.sql",
     "r2:create": "wrangler r2 bucket create recipe-images",
     "test": "node test/run-tests.js",
-    "test:coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov npm test"
+    "test:coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov npm test",
+    "coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov npm test"
   },
   "devDependencies": {
     "c8": "^10.1.3",

@@ -47,7 +47,7 @@ jobs:
       working-directory: ./recipe-recommendation-worker
       run: |
         # Run tests with coverage
-        npm run test:coverage || true  # Continue even if tests fail to get coverage report
+        npm run coverage || true  # Continue even if tests fail to get coverage report
         
         # Extract coverage percentages
         COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)

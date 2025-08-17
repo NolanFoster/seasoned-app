@@ -47,7 +47,7 @@ jobs:
       working-directory: ./clipped-recipe-db-worker
       run: |
         # Run tests with coverage
-        npm run test:coverage
+        npm run coverage
         
         # Extract coverage percentages
         COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)

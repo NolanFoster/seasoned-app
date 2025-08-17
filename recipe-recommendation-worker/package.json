@@ -9,7 +9,8 @@
     "deploy": "wrangler deploy",
     "test": "node --experimental-vm-modules tests/run-tests.js",
     "test:watch": "nodemon --watch src --watch tests --exec 'npm test'",
-    "test:coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov node --experimental-vm-modules tests/run-tests.js"
+    "test:coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov node --experimental-vm-modules tests/run-tests.js",
+    "coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov node --experimental-vm-modules tests/run-tests.js"
   },
   "keywords": [
     "cloudflare",
