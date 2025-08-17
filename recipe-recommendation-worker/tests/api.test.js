@@ -94,7 +94,7 @@ export async function runTests() {
 
   // Test 4: POST /recommendations without location
   tests.push({
-    name: 'POST /recommendations without location should return 400',
+    name: 'POST /recommendations without location should return valid recommendations',
     fn: async () => {
       const response = await mf.dispatchFetch('http://localhost/recommendations', {
         method: 'POST',
@@ -104,11 +104,11 @@ export async function runTests() {
         })
       });
       
-      assertEquals(response.status, 400, 'Should return 400 status');
-      
+      assertEquals(response.status, 200, 'Should return 200 status');
       const data = await response.json();
-      assert(data.error, 'Should have error message');
-      assert(data.error.includes('Location'), 'Error should mention location');
+      assert(data.recommendations, 'Should have recommendations');
+      assert(Object.keys(data.recommendations).length === 3, 'Should have 3 categories');
+      assert(data.location === 'Not specified', 'Should indicate no location');
     }
   });
 
