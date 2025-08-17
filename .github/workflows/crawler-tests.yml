@@ -24,6 +24,8 @@ jobs:
   test-crawler:
     name: Crawler Tests
     runs-on: ubuntu-latest
+    outputs:
+      tests_passed: ${{ steps.test-results.outputs.tests_passed }}
     
     steps:
     - uses: actions/checkout@v4
@@ -39,12 +41,21 @@ jobs:
         pip install -r requirements.txt
     
     - name: Run Crawler Tests
+      id: test-results
       working-directory: ./crawler
       run: |
         # Run tests if they exist, otherwise skip
         if [ -f "test_crawler.py" ]; then
-          python -m pytest test_crawler.py -v || echo "Tests failed or not configured"
+          if python -m pytest test_crawler.py -v; then
+            echo "tests_passed=true" >> $GITHUB_OUTPUT
+            echo "Tests passed successfully"
+          else
+            echo "tests_passed=false" >> $GITHUB_OUTPUT
+            echo "Tests failed or not configured"
+            exit 1
+          fi
         else
+          echo "tests_passed=true" >> $GITHUB_OUTPUT
           echo "No test files found for crawler"
         fi
 
@@ -82,3 +93,21 @@ jobs:
         else
           echo "Black not available for code formatting check"
         fi
+
+  # Slack notification for test failures
+  notify-test-failure:
+    name: Notify Slack on Test Failure
+    needs: test-crawler
+    if: always() && needs.test-crawler.outputs.tests_passed == 'false'
+    uses: ./.github/workflows/slack-notify-cursor.yml
+    with:
+      test_type: 'unit-tests'
+      workflow_name: 'Crawler Tests'
+      failure_details: 'Crawler unit tests failed'
+      branch: ${{ github.ref_name }}
+      commit_sha: ${{ github.sha }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+      CURSOR_AGENT_ID: ${{ secrets.CURSOR_AGENT_ID }}

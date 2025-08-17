@@ -1,0 +1,149 @@
+name: Slack Notification to Cursor Agent
+
+on:
+  workflow_call:
+    inputs:
+      test_type:
+        description: 'Type of test that failed (e.g., unit-tests, coverage)'
+        required: true
+        type: string
+      workflow_name:
+        description: 'Name of the workflow that failed'
+        required: true
+        type: string
+      failure_details:
+        description: 'Details about the failure'
+        required: false
+        type: string
+        default: 'Test or coverage check failed'
+      branch:
+        description: 'Branch where the failure occurred'
+        required: false
+        type: string
+        default: ${{ github.ref_name }}
+      commit_sha:
+        description: 'Commit SHA that triggered the failure'
+        required: false
+        type: string
+        default: ${{ github.sha }}
+      run_url:
+        description: 'URL to the failed workflow run'
+        required: false
+        type: string
+        default: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL:
+        description: 'Slack webhook URL for sending notifications'
+        required: true
+      SLACK_CHANNEL:
+        description: 'Slack channel to send notifications to'
+        required: false
+      CURSOR_AGENT_ID:
+        description: 'Cursor agent ID to mention in Slack'
+        required: false
+
+jobs:
+  notify-slack:
+    name: Send Slack Notification to Cursor Agent
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Prepare Notification Message
+      id: prepare-message
+      run: |
+        # Prepare the message based on test type
+        case "${{ inputs.test_type }}" in
+          "unit-tests")
+            ICON=":x:"
+            ALERT_TYPE="Unit Tests Failed"
+            ;;
+          "coverage")
+            ICON=":warning:"
+            ALERT_TYPE="Coverage Below Threshold"
+            ;;
+          "lint")
+            ICON=":pencil2:"
+            ALERT_TYPE="Code Quality Check Failed"
+            ;;
+          *)
+            ICON=":rotating_light:"
+            ALERT_TYPE="Test Failed"
+            ;;
+        esac
+        
+        # Set outputs for use in next step
+        echo "icon=$ICON" >> $GITHUB_OUTPUT
+        echo "alert_type=$ALERT_TYPE" >> $GITHUB_OUTPUT
+        
+    - name: Send Slack Notification
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "channel": "${{ secrets.SLACK_CHANNEL || '#cursor-notifications' }}",
+            "username": "GitHub Actions",
+            "icon_emoji": ":github:",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "${{ steps.prepare-message.outputs.icon }} ${{ steps.prepare-message.outputs.alert_type }}",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Workflow:*\n${{ inputs.workflow_name }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n`${{ inputs.branch }}`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Commit:*\n`${{ inputs.commit_sha }}`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Test Type:*\n${{ inputs.test_type }}"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Details:*\n${{ inputs.failure_details }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "<${{ inputs.run_url }}|View Workflow Run>"
+                }
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "${{ secrets.CURSOR_AGENT_ID && format('<@{0}> Please investigate this failure.', secrets.CURSOR_AGENT_ID) || '@cursor-agent Please investigate this failure.' }}"
+                  }
+                ]
+              }
+            ]
+          }
+    
+    - name: Send Alternative Notification (if Slack fails)
+      if: failure()
+      run: |
+        echo "::error::Failed to send Slack notification for ${{ inputs.test_type }} failure in ${{ inputs.workflow_name }}"
+        echo "Failure details: ${{ inputs.failure_details }}"
+        echo "Workflow run: ${{ inputs.run_url }}"

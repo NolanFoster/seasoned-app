@@ -30,6 +30,8 @@ jobs:
       diff_coverage_available: ${{ steps.diff-coverage.outputs.diff_coverage_available }}
       diff_coverage_below_threshold: ${{ steps.diff-coverage.outputs.diff_coverage_below_threshold }}
       diff_coverage_percentage: ${{ steps.diff-coverage.outputs.diff_coverage_percentage }}
+      tests_passed: ${{ steps.test-results.outputs.tests_passed }}
+      coverage_passed: ${{ steps.coverage-check.outputs.coverage_passed }}
     
     steps:
     - uses: actions/checkout@v4
@@ -48,20 +50,26 @@ jobs:
       run: npm ci
     
     - name: Run Frontend Tests with Coverage
+      id: test-results
       working-directory: ./frontend
       run: |
         echo "Running tests with coverage..."
-        npm run test:coverage -- --passWithNoTests --ci --watchAll=false || {
-          echo "Tests failed, but continuing to check coverage..."
-          exit 0
-        }
+        if npm run test:coverage -- --passWithNoTests --ci --watchAll=false; then
+          echo "tests_passed=true" >> $GITHUB_OUTPUT
+          echo "Tests passed successfully"
+        else
+          echo "tests_passed=false" >> $GITHUB_OUTPUT
+          echo "Tests failed"
+          exit 1
+        fi
     
     - name: Check Coverage Thresholds
+      id: coverage-check
+      if: always()
       working-directory: ./frontend
       run: |
         echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
-        # The coverage threshold check is handled by Jest config
-        # If coverage is below 40%, Jest will fail the test run
+        coverage_passed=true
         
         # Verify coverage files were generated
         if [ -f coverage/coverage-summary.json ]; then
@@ -79,16 +87,26 @@ jobs:
             statements=$(jq -r '.total.statements.pct' coverage/coverage-summary.json)
             functions=$(jq -r '.total.functions.pct' coverage/coverage-summary.json)
             branches=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
-            echo "- Lines: ${lines}%" >> $GITHUB_STEP_SUMMARY
-            echo "- Statements: ${statements}%" >> $GITHUB_STEP_SUMMARY
-            echo "- Functions: ${functions}%" >> $GITHUB_STEP_SUMMARY
-            echo "- Branches: ${branches}%" >> $GITHUB_STEP_SUMMARY
+            
+            # Check if coverage is below 40%
+            if (( $(echo "$statements < 40" | bc -l) )); then
+              coverage_passed=false
+              echo "❌ Coverage is below 40% threshold" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "- Lines: $lines%" >> $GITHUB_STEP_SUMMARY
+            echo "- Statements: $statements%" >> $GITHUB_STEP_SUMMARY
+            echo "- Functions: $functions%" >> $GITHUB_STEP_SUMMARY
+            echo "- Branches: $branches%" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ jq not available, cannot parse coverage metrics" >> $GITHUB_STEP_SUMMARY
           fi
         else
-          echo "❌ Coverage summary not found!" >> $GITHUB_STEP_SUMMARY
-          echo "Coverage directory contents:"
-          ls -la coverage/ || echo "Coverage directory not found"
+          echo "⚠️ No coverage summary found" >> $GITHUB_STEP_SUMMARY
+          coverage_passed=false
         fi
+        
+        echo "coverage_passed=$coverage_passed" >> $GITHUB_OUTPUT
     
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
@@ -356,3 +374,21 @@ jobs:
             // Still add to summary even if comment fails
             core.summary.addRaw(comment).write();
           }
+
+  # Slack notification for test failures
+  notify-test-failure:
+    name: Notify Slack on Test Failure
+    needs: test-frontend
+    if: always() && (needs.test-frontend.outputs.tests_passed == 'false' || needs.test-frontend.outputs.coverage_passed == 'false')
+    uses: ./.github/workflows/slack-notify-cursor.yml
+    with:
+      test_type: ${{ needs.test-frontend.outputs.tests_passed == 'false' && 'unit-tests' || 'coverage' }}
+      workflow_name: 'Frontend Tests and Coverage'
+      failure_details: ${{ needs.test-frontend.outputs.tests_passed == 'false' && 'Frontend unit tests failed' || 'Frontend coverage is below 40% threshold' }}
+      branch: ${{ github.ref_name }}
+      commit_sha: ${{ github.sha }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+      CURSOR_AGENT_ID: ${{ secrets.CURSOR_AGENT_ID }}
