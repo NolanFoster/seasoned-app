@@ -40,20 +40,35 @@ After successful rebase:
 git push origin staging --force-with-lease
 ```
 
-### 4. Merge to Production
+### 4. Merge to Production via Pull Request
 ```bash
 # Switch to main branch
 git checkout main
 git pull origin main
 
-# Merge staging into main (should be fast-forward after rebase)
-git merge staging
-
-# Push to main
-git push origin main
+# Merge staging into main from origin/staging
+git merge origin/staging
 ```
 
-### 5. Post-Release Verification
+### 5. Resolve Merge Conflicts
+If conflicts occur during the merge:
+- Resolve conflicts carefully, preserving both features and hotfixes
+- Test thoroughly after resolution
+- Commit the resolved merge: `git commit -m "Merge staging into main - resolve conflicts"`
+- If issues arise: `git merge --abort` and investigate
+
+### 6. Create Pull Request
+After successful merge and conflict resolution:
+```bash
+# Push the merged main branch
+git push origin main
+
+# Create a pull request from main to staging for review
+# Use your preferred method (GitHub CLI, web interface, etc.)
+gh pr create --base staging --head main --title "Release: Merge staging into main" --body "Production release merge with conflict resolution"
+```
+
+### 7. Post-Release Verification
 1. Monitor deployment pipelines
 2. Verify production deployment completed successfully
 3. Perform smoke tests on production
@@ -84,3 +99,4 @@ If issues are discovered post-release:
 - **Document** any significant conflict resolutions
 - **Communicate** with team during release process
 - **Monitor** production after deployment
+- **Use pull requests** for final review before production deployment
