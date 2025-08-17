@@ -99,3 +99,5 @@ If differential coverage check fails or shows warnings:
 2. Add tests for the new/modified code in your PR
 3. The differential coverage only applies to lines changed in the PR
 4. Use `diff-cover coverage/lcov.info --compare-branch=origin/main` locally to test
+
+**Note:** If your PR only contains changes to documentation, configuration files, or other non-executable code, the differential coverage will show "No lines with coverage information in this diff" - this is normal and expected.
