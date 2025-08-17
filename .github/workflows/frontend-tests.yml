@@ -51,10 +51,7 @@ jobs:
       working-directory: ./frontend
       run: |
         echo "Running tests with coverage..."
-        npm run test:coverage -- --passWithNoTests --ci --watchAll=false || {
-          echo "Tests failed, but continuing to check coverage..."
-          exit 0
-        }
+        npm run test:coverage -- --passWithNoTests --ci --watchAll=false
     
     - name: Check Coverage Thresholds
       working-directory: ./frontend
