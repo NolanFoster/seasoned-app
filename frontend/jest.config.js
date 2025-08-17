@@ -5,7 +5,8 @@ module.exports = {
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.svg$': '<rootDir>/__mocks__/svgMock.js'
+    '\\.svg$': '<rootDir>/__mocks__/svgMock.js',
+    '^../../shared/utility-functions.js$': '<rootDir>/__mocks__/utility-functions.js'
   },
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.js'],
   coverageDirectory: 'coverage',
