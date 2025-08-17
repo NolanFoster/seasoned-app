@@ -9,6 +9,10 @@ binding = "AI"
 [env.production]
 vars = { }
 
+[env.preview]
+name = "preview-recipe-recommendation-worker"
+vars = { }
+
 # You can add environment-specific configurations here
 # [env.staging]
 # vars = { }

@@ -6,6 +6,9 @@ compatibility_date = "2024-01-01"
 [vars]
 # Add any environment variables here
 
+[env.preview]
+name = "preview-recipe-search-db"
+
 # D1 Database for search graph
 [[d1_databases]]
 binding = "SEARCH_DB"

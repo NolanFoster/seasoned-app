@@ -12,6 +12,9 @@ workers_dev = true
 [vars]
 # Add any environment variables here
 
+[env.preview]
+name = "preview-recipe-scraper"
+
 # Routes (optional - for custom domains)
 # [[routes]]
 # pattern = "example.com/api/*"
