@@ -1322,9 +1322,10 @@ function App() {
             </button>
           </div>
           {/* Desktop Add button - outside search panel, to the right */}
-          <button className="fab fab-add fab-desktop" onClick={() => setShowAddForm(true)}>
+          {/* TODO: Enable with feature flag */}
+          {/* <button className="fab fab-add fab-desktop" onClick={() => setShowAddForm(true)}>
             <span className="fab-icon">+</span>
-          </button>
+          </button> */}
         </h1>
         
         {/* Search Results Dropdown - now inside the header container */}
@@ -1386,9 +1387,10 @@ function App() {
       </div>
       
       {/* Mobile FAB - outside header, bottom left */}
-      <button className="fab fab-add fab-mobile" onClick={() => setShowAddForm(true)}>
+      {/* TODO: Enable with feature flag */}
+      {/* <button className="fab fab-add fab-mobile" onClick={() => setShowAddForm(true)}>
         <span className="fab-icon">+</span>
-      </button>
+      </button> */}
 
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
@@ -1938,9 +1940,10 @@ function App() {
                       </div>
                       
                       <div className="form-actions">
-                        <button onClick={editPreview} className="edit-btn" disabled={isSavingRecipe}>
+                        {/* TODO: Enable with feature flag */}
+                        {/* <button onClick={editPreview} className="edit-btn" disabled={isSavingRecipe}>
                           ✏️ Edit Recipe
-                        </button>
+                        </button> */}
                         <button 
                           onClick={async () => {
                             // Prevent rapid successive saves (debounce)
@@ -2255,7 +2258,8 @@ function App() {
           
           {/* Share Panel */}
           <div className={`share-panel ${showSharePanel ? 'visible' : ''}`}>
-            <button 
+            {/* TODO: Enable with feature flag */}
+            {/* <button 
               className="share-panel-item edit-action"
               onClick={() => {
                 editRecipe(selectedRecipe);
@@ -2265,7 +2269,7 @@ function App() {
             >
               <span className="action-icon">✏️</span>
               <span className="action-label">Edit Recipe</span>
-            </button>
+            </button> */}
             
             <button 
               className="share-panel-item delete-action"
