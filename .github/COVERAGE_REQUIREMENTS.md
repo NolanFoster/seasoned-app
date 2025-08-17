@@ -72,3 +72,20 @@ To improve code coverage:
 2. Add edge case tests
 3. Test error handling paths
 4. Focus on critical business logic first
+
+## Troubleshooting
+
+### No Coverage Data Available
+
+If you see "No coverage data available" in the workflow:
+1. Ensure you have at least one test file (*.test.js or *.spec.js)
+2. Check that tests are actually running: `npm run test:coverage`
+3. Verify coverage-summary.json is generated in `frontend/coverage/`
+4. Make sure Jest configuration includes all necessary coverage reporters
+
+### Coverage Below Threshold
+
+If coverage fails due to being below 40%:
+1. Add more tests to increase coverage
+2. Focus on untested files shown in the coverage report
+3. Use `npm run test:coverage` locally to see detailed coverage information

@@ -1,2 +1,1 @@
-export default 'svg-mock';
-export const ReactComponent = 'svg-mock';
+module.exports = 'test-file-stub';
