@@ -1,4 +1,4 @@
-name: Generic Worker Tests
+name: Generic Worker Tests (Deprecated)
 
 on:
   push:
@@ -6,74 +6,21 @@ on:
     paths:
       - 'worker/**'
       - '.github/workflows/worker-tests.yml'
-      - 'shared/**'
-      - 'package.json'
-      - 'package-lock.json'
   pull_request:
     branches: [ main, staging ]
     paths:
       - 'worker/**'
       - '.github/workflows/worker-tests.yml'
-      - 'shared/**'
-      - 'package.json'
-      - 'package-lock.json'
-
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  checks: write
 
 jobs:
-  test-worker:
-    name: Generic Worker Tests
+  deprecated-notice:
+    name: Deprecated Workflow Notice
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: worker/package-lock.json
-    
-    - name: Install Worker Dependencies
-      working-directory: ./worker
-      run: npm ci
-    
-    - name: Run Worker Tests
-      working-directory: ./worker
+    - name: Workflow Deprecated
       run: |
-        # Run tests if test script exists, otherwise skip
-        if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
-        else
-          echo "No test script found in package.json"
-        fi
-        
-        # Note: Worker tests currently don't generate coverage reports
-        # Consider adding coverage collection for worker tests in the future
-
-  lint-worker:
-    name: Generic Worker Code Quality Checks
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Lint Worker
-      working-directory: ./worker
-      run: |
-        npm ci
-        if npm run | grep -q "lint"; then
-          npm run lint || echo "Linting completed with warnings"
-        else
-          echo "No lint script found"
-        fi
+        echo "This workflow is deprecated as there is no generic worker directory."
+        echo "Worker-specific tests are handled in their respective workflows:"
+        echo "- clipped-recipe-db-worker-tests.yml"
+        echo "- recipe-recommendation-worker-tests.yml"

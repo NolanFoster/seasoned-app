@@ -351,6 +351,13 @@ wrangler tail
 
 MIT License - see LICENSE file for details
 
+## Documentation
+
+- [Worker Coverage Setup](WORKER_COVERAGE_SETUP.md) - Details on test coverage for workers
+- [Environment Setup](ENVIRONMENT_SETUP.md) - Setting up your development environment
+- [Deployment Setup](DEPLOYMENT_SETUP.md) - Deploying to Cloudflare
+- [Branch Strategy](BRANCH_STRATEGY.md) - Git workflow and branching
+
 ## Support
 
 For issues and questions:
