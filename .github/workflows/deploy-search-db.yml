@@ -1,0 +1,42 @@
+name: Deploy Recipe Search Database
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'recipe-search-db/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy Search Database Worker
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        working-directory: ./recipe-search-db
+        run: npm ci
+        
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: './recipe-search-db'
+          
+      - name: Verify deployment
+        run: |
+          echo "Waiting for deployment to propagate..."
+          sleep 10
+          
+          echo "Checking version endpoint..."
+          curl -s https://recipe-search-db.nolanfoster.workers.dev/api/version | jq .
+          
+          echo "Testing partial word search..."
+          curl -s "https://recipe-search-db.nolanfoster.workers.dev/api/search?q=chick&type=RECIPE&limit=2" | jq '.results | length'

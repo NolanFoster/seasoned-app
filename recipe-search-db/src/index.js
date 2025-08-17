@@ -44,10 +44,23 @@ export default {
         return await deleteEdge(edgeId, env, corsHeaders);
       } else if (path === '/api/search' && method === 'GET') {
         return await searchNodes(request, env, corsHeaders);
+      } else if (path === '/api/debug/search' && method === 'GET') {
+        return await debugSearch(request, env, corsHeaders);
       } else if (path === '/api/graph' && method === 'GET') {
         return await getGraph(request, env, corsHeaders);
       } else if (path === '/api/health' && method === 'GET') {
         return new Response(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else if (path === '/api/version' && method === 'GET') {
+        return new Response(JSON.stringify({ 
+          version: '1.1.0',
+          features: {
+            partialWordSearch: true,
+            description: 'Supports partial word search by appending * to search terms'
+          },
+          timestamp: new Date().toISOString() 
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } else if (path === '/api/migrate-kv' && method === 'POST') {
@@ -258,6 +271,95 @@ async function deleteEdge(edgeId, env, corsHeaders) {
     success: true, 
     message: 'Edge deleted successfully' 
   }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+// Debug search function
+async function debugSearch(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const query = url.searchParams.get('q');
+  
+  if (!query) {
+    return new Response(JSON.stringify({ error: 'Query parameter "q" is required' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Transform the query to support prefix matching
+  const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
+  const ftsQuery = searchTerms.map(term => {
+    const escapedTerm = term.replace(/['"]/g, '');
+    return escapedTerm.endsWith('*') ? escapedTerm : escapedTerm + '*';
+  }).join(' ');
+
+  // Test different queries
+  const debugInfo = {
+    originalQuery: query,
+    searchTerms: searchTerms,
+    ftsQuery: ftsQuery,
+    tests: []
+  };
+
+  // Test 1: Basic FTS query
+  try {
+    const basicResult = await env.SEARCH_DB.prepare(`
+      SELECT COUNT(*) as count FROM nodes_fts WHERE properties MATCH ?
+    `).bind(ftsQuery).first();
+    debugInfo.tests.push({
+      name: 'Basic FTS Match',
+      query: ftsQuery,
+      count: basicResult.count
+    });
+  } catch (error) {
+    debugInfo.tests.push({
+      name: 'Basic FTS Match',
+      error: error.message
+    });
+  }
+
+  // Test 2: Without wildcards
+  try {
+    const noWildcardResult = await env.SEARCH_DB.prepare(`
+      SELECT COUNT(*) as count FROM nodes_fts WHERE properties MATCH ?
+    `).bind(query).first();
+    debugInfo.tests.push({
+      name: 'Without Wildcards',
+      query: query,
+      count: noWildcardResult.count
+    });
+  } catch (error) {
+    debugInfo.tests.push({
+      name: 'Without Wildcards',
+      error: error.message
+    });
+  }
+
+  // Test 3: Check FTS table content
+  try {
+    const ftsContent = await env.SEARCH_DB.prepare(`
+      SELECT COUNT(*) as total_rows FROM nodes_fts
+    `).first();
+    debugInfo.ftsTableRows = ftsContent.total_rows;
+  } catch (error) {
+    debugInfo.ftsTableError = error.message;
+  }
+
+  // Test 4: Sample FTS content
+  try {
+    const sampleFTS = await env.SEARCH_DB.prepare(`
+      SELECT properties FROM nodes_fts LIMIT 3
+    `).all();
+    debugInfo.sampleFTSContent = sampleFTS.results.map(row => {
+      const props = JSON.parse(row.properties);
+      return props.title || props.name || 'No title';
+    });
+  } catch (error) {
+    debugInfo.sampleFTSError = error.message;
+  }
+
+  return new Response(JSON.stringify(debugInfo, null, 2), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
