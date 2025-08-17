@@ -806,10 +806,25 @@ function App() {
       } else {
         console.warn('Clipper worker health check failed:', res.status);
         setClipperStatus('unavailable');
+        
+        // In development mode or if the clipper is unavailable, 
+        // we can show a helpful message to the user
+        if (import.meta.env.DEV) {
+          console.info('Clipper service is not available. To enable clipping:');
+          console.info('1. Deploy the clipper worker: cd clipper && npm run deploy');
+          console.info('2. Or set VITE_CLIPPER_API_URL to a working clipper service');
+        }
       }
     } catch (e) {
       console.error('Error checking clipper worker health:', e);
       setClipperStatus('unavailable');
+      
+      // In development mode, provide helpful information
+      if (import.meta.env.DEV) {
+        console.info('Clipper service is not reachable. To enable clipping:');
+        console.info('1. Deploy the clipper worker: cd clipper && npm run deploy');
+        console.info('2. Or set VITE_CLIPPER_API_URL to a working clipper service');
+      }
     }
   }
 
@@ -1270,8 +1285,9 @@ function App() {
                     // Trigger search for non-URL inputs
                     searchRecipes(searchInput);
                   } else if (isValidUrl(searchInput) && clipperStatus !== 'available') {
-                    // Clipper not available, do nothing
+                    // Clipper not available, show user-friendly message
                     console.warn('Clipper service is not available');
+                    alert('Recipe clipping service is currently unavailable. Please try again later or add the recipe manually.');
                   } else if (!searchInput.trim()) {
                     // Only open clip dialog if input is empty
                     setIsClipping(true);
@@ -1287,6 +1303,9 @@ function App() {
               onClick={() => {
                 if (isValidUrl(searchInput) && clipperStatus === 'available') {
                   handleSearchBarClip();
+                } else if (isValidUrl(searchInput) && clipperStatus !== 'available') {
+                  // Clipper not available, show user-friendly message
+                  alert('Recipe clipping service is currently unavailable. Please try again later or add the recipe manually.');
                 } else if (!isValidUrl(searchInput) && searchInput.trim()) {
                   // Trigger search for non-URL inputs
                   searchRecipes(searchInput);
