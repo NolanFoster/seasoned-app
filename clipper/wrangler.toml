@@ -6,6 +6,9 @@ compatibility_date = "2024-08-09"
 [ai]
 binding = "AI"
 
+[env.preview]
+name = "preview-clipper"
+
 # KV Namespaces for storing recipes
 [[kv_namespaces]]
 binding = "RECIPE_STORAGE"
