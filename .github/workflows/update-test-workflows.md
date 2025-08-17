@@ -87,10 +87,7 @@ Add this job at the end of your workflow:
       branch: ${{ github.ref_name }}
       commit_sha: ${{ github.sha }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-    secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
-      CURSOR_AGENT_ID: ${{ secrets.CURSOR_AGENT_ID }}
+    secrets: inherit  # This passes all repository secrets to the reusable workflow
 ```
 
 ## GitHub Secrets Required

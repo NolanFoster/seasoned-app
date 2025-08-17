@@ -86,6 +86,14 @@ The Slack notification will include:
 
 ## Troubleshooting
 
+### Error: "Need to provide at least one botToken or webhookUrl"
+This error occurs when the Slack action cannot access the webhook URL. Common causes:
+1. The `SLACK_WEBHOOK_URL` secret is not set in the repository
+2. The secret name is misspelled
+3. The workflow is not inheriting secrets properly
+
+**Solution**: Ensure you've added the `SLACK_WEBHOOK_URL` secret to your repository and that the workflow uses `secrets: inherit` when calling the reusable workflow.
+
 ### Notifications not appearing
 1. Check the GitHub Actions logs for the notification job
 2. Verify the webhook URL is correct
