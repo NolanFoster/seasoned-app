@@ -82,15 +82,21 @@ describe('Glass Panel Integration', () => {
       });
     });
 
-    it('should position FAB button outside the glass panel', async () => {
+    it('should position desktop FAB inside header and mobile FAB outside', async () => {
       render(<App />);
       
       await waitFor(() => {
         const headerContainer = document.querySelector('.header-container');
-        const fabButton = document.querySelector('.fab-add');
+        const desktopFab = document.querySelector('.fab-desktop');
+        const mobileFab = document.querySelector('.fab-mobile');
         
-        expect(fabButton).toBeInTheDocument();
-        expect(headerContainer).not.toContainElement(fabButton);
+        // Desktop FAB should be inside the header container
+        expect(desktopFab).toBeInTheDocument();
+        expect(headerContainer).toContainElement(desktopFab);
+        
+        // Mobile FAB should be outside the header container
+        expect(mobileFab).toBeInTheDocument();
+        expect(headerContainer).not.toContainElement(mobileFab);
       });
     });
   });
