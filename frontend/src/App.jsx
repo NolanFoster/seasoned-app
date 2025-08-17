@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper.nolanfoster.workers.dev'; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev'; // Search database worker
+const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev'; // Recommendation worker
 
 // Function to convert ISO 8601 duration to human readable format
 function formatDuration(duration) {
@@ -356,6 +357,9 @@ function App() {
   const [isSearching, setIsSearching] = useState(false); // New state for search loading
   const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
+  const [recommendations, setRecommendations] = useState(null); // New state for recipe recommendations
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false); // Loading state for recommendations
+  const [userLocation, setUserLocation] = useState(null); // User's location for recommendations
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -365,6 +369,7 @@ function App() {
   useEffect(() => {
     fetchRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
+    fetchRecommendations(); // Fetch recommendations on startup
   }, []);
 
   // Close search results when clicking outside
@@ -1217,6 +1222,55 @@ function App() {
     }
   }
 
+  async function fetchRecommendations() {
+    try {
+      setIsLoadingRecommendations(true);
+      
+      // Try to get user's location or use a default
+      let location = userLocation || 'San Francisco, CA'; // Default location
+      
+      // Try to get user's location from browser
+      if (!userLocation && navigator.geolocation) {
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          // For now, just use a general location based on coordinates
+          location = `${position.coords.latitude.toFixed(2)}°N, ${position.coords.longitude.toFixed(2)}°W`;
+          setUserLocation(location);
+        } catch (geoError) {
+          console.log('Could not get user location, using default');
+        }
+      }
+      
+      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location: location,
+          date: new Date().toISOString().split('T')[0]
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setRecommendations(data);
+      } else {
+        console.error('Failed to fetch recommendations:', res.status);
+        setRecommendations(null);
+      }
+    } catch (e) {
+      console.error('Error fetching recommendations:', e);
+      setRecommendations(null);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  }
+
   return (
     <>
       {/* Seasoning background canvas for both light and dark modes */}
@@ -1412,85 +1466,287 @@ function App() {
         <div className="recipes-list">
         {/* Show recipe cards unless recipe is selected */}
         {!selectedRecipe && (
-          <div className="recipe-grid" ref={recipeGridRef}>
-            {(Array.isArray(recipes) ? recipes.slice(0, 10) : []).map((recipe) => {
-              return (
-                <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
-                  <div className="recipe-card-image">
-
-                    {/* Main image display */}
-                    {(recipe.image || recipe.image_url) ? (
-                      <img 
-                        src={recipe.image || recipe.image_url} 
-                        alt={recipe.name}
-                        loading="lazy"
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          zIndex: 1,
-                          borderRadius: '20px 20px 0 0',
-                          opacity: 0.85
-                        }}
-                        onError={(e) => {
-                          // Fallback to gradient if image fails
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        zIndex: 1,
-                        opacity: 0.85
-                      }}></div>
-                    )}
-                    <div className="recipe-card-overlay">
-                    </div>
-                    <div className="recipe-card-title-overlay">
-                      <h3 className="recipe-card-title">{recipe.name}</h3>
-                    </div>
-                  </div>
-                  <div className="recipe-card-content">
-                    {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
-                      <div className="recipe-card-time">
-                        <div className="time-item">
-                          <span className="time-label">Prep</span>
-                          <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
-                        </div>
-                        <div className="time-divider"></div>
-                        <div className="time-item">
-                          <span className="time-label">Cook</span>
-                          <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
-                        </div>
-                        {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
-                          <>
-                            <div className="time-divider"></div>
-                            <div className="time-item">
-                              <span className="time-label">Yield</span>
-                              <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
-                            </div>
-                          </>
-                        )}
+          <>
+            {/* Show recommendations if available */}
+            {recommendations && recommendations.recommendations && !isLoadingRecommendations ? (
+              <div className="recommendations-container">
+                {Object.entries(recommendations.recommendations).map(([categoryName, tags]) => {
+                  // Filter recipes that match any of the tags in this category
+                  const categoryRecipes = recipes.filter(recipe => {
+                    // Check if recipe matches any tag (case-insensitive)
+                    const recipeName = recipe.name?.toLowerCase() || '';
+                    const recipeDescription = recipe.description?.toLowerCase() || '';
+                    const recipeCategory = recipe.recipeCategory?.toLowerCase() || '';
+                    const recipeCuisine = recipe.recipeCuisine?.toLowerCase() || '';
+                    const recipeKeywords = recipe.keywords?.toLowerCase() || '';
+                    
+                    return tags.some(tag => {
+                      const tagLower = tag.toLowerCase();
+                      return recipeName.includes(tagLower) ||
+                             recipeDescription.includes(tagLower) ||
+                             recipeCategory.includes(tagLower) ||
+                             recipeCuisine.includes(tagLower) ||
+                             recipeKeywords.includes(tagLower);
+                    });
+                  }).slice(0, 3); // Show max 3 recipes per category
+                  
+                  // Only show category if it has recipes
+                  if (categoryRecipes.length === 0) return null;
+                  
+                  return (
+                    <div key={categoryName} className="recommendation-category">
+                      <h2 className="category-title">{categoryName}</h2>
+                      <div className="category-tags">
+                        {tags.map((tag, index) => (
+                          <span key={index} className="recommendation-tag">{tag}</span>
+                        ))}
                       </div>
-                    ) : (
-                      <p className="recipe-card-time">
-                        <span className="time-icon">⏱️</span>
-                        <span className="no-time">-</span>
-                      </p>
-                    )}
+                      <div className="recipe-grid category-recipes" ref={recipeGridRef}>
+                        {categoryRecipes.map((recipe) => (
+                          <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
+                            <div className="recipe-card-image">
+                              {/* Main image display */}
+                              {(recipe.image || recipe.image_url) ? (
+                                <img 
+                                  src={recipe.image || recipe.image_url} 
+                                  alt={recipe.name}
+                                  loading="lazy"
+                                  style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    zIndex: 1,
+                                    borderRadius: '20px 20px 0 0',
+                                    opacity: 0.85
+                                  }}
+                                  onError={(e) => {
+                                    // Fallback to gradient if image fails
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  zIndex: 1,
+                                  opacity: 0.85
+                                }}></div>
+                              )}
+                              <div className="recipe-card-overlay"></div>
+                              <div className="recipe-card-title-overlay">
+                                <h3 className="recipe-card-title">{recipe.name}</h3>
+                              </div>
+                            </div>
+                            <div className="recipe-card-content">
+                              {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                                <div className="recipe-card-time">
+                                  <div className="time-item">
+                                    <span className="time-label">Prep</span>
+                                    <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                                  </div>
+                                  <div className="time-divider"></div>
+                                  <div className="time-item">
+                                    <span className="time-label">Cook</span>
+                                    <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
+                                  </div>
+                                  {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                                    <>
+                                      <div className="time-divider"></div>
+                                      <div className="time-item">
+                                        <span className="time-label">Yield</span>
+                                        <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="recipe-card-time">
+                                  <span className="time-icon">⏱️</span>
+                                  <span className="no-time">-</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Show all recipes section at the bottom */}
+                <div className="recommendation-category">
+                  <h2 className="category-title">All Recipes</h2>
+                  <div className="recipe-grid" ref={recipeGridRef}>
+                    {(Array.isArray(recipes) ? recipes.slice(0, 10) : []).map((recipe) => {
+                      return (
+                        <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
+                          <div className="recipe-card-image">
+
+                            {/* Main image display */}
+                            {(recipe.image || recipe.image_url) ? (
+                              <img 
+                                src={recipe.image || recipe.image_url} 
+                                alt={recipe.name}
+                                loading="lazy"
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                  zIndex: 1,
+                                  borderRadius: '20px 20px 0 0',
+                                  opacity: 0.85
+                                }}
+                                onError={(e) => {
+                                  // Fallback to gradient if image fails
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                zIndex: 1,
+                                opacity: 0.85
+                              }}></div>
+                            )}
+                            <div className="recipe-card-overlay">
+                            </div>
+                            <div className="recipe-card-title-overlay">
+                              <h3 className="recipe-card-title">{recipe.name}</h3>
+                            </div>
+                          </div>
+                          <div className="recipe-card-content">
+                            {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                              <div className="recipe-card-time">
+                                <div className="time-item">
+                                  <span className="time-label">Prep</span>
+                                  <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                                </div>
+                                <div className="time-divider"></div>
+                                <div className="time-item">
+                                  <span className="time-label">Cook</span>
+                                  <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
+                                </div>
+                                {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                                  <>
+                                    <div className="time-divider"></div>
+                                    <div className="time-item">
+                                      <span className="time-label">Yield</span>
+                                      <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="recipe-card-time">
+                                <span className="time-icon">⏱️</span>
+                                <span className="no-time">-</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            ) : (
+              // Fallback to original grid if no recommendations
+              <div className="recipe-grid" ref={recipeGridRef}>
+                {(Array.isArray(recipes) ? recipes.slice(0, 10) : []).map((recipe) => {
+                  return (
+                    <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
+                      <div className="recipe-card-image">
+
+                        {/* Main image display */}
+                        {(recipe.image || recipe.image_url) ? (
+                          <img 
+                            src={recipe.image || recipe.image_url} 
+                            alt={recipe.name}
+                            loading="lazy"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              zIndex: 1,
+                              borderRadius: '20px 20px 0 0',
+                              opacity: 0.85
+                            }}
+                            onError={(e) => {
+                              // Fallback to gradient if image fails
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            zIndex: 1,
+                            opacity: 0.85
+                          }}></div>
+                        )}
+                        <div className="recipe-card-overlay">
+                        </div>
+                        <div className="recipe-card-title-overlay">
+                          <h3 className="recipe-card-title">{recipe.name}</h3>
+                        </div>
+                      </div>
+                      <div className="recipe-card-content">
+                        {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                          <div className="recipe-card-time">
+                            <div className="time-item">
+                              <span className="time-label">Prep</span>
+                              <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                            </div>
+                            <div className="time-divider"></div>
+                            <div className="time-item">
+                              <span className="time-label">Cook</span>
+                              <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
+                            </div>
+                            {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                              <>
+                                <div className="time-divider"></div>
+                                <div className="time-item">
+                                  <span className="time-label">Yield</span>
+                                  <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="recipe-card-time">
+                            <span className="time-icon">⏱️</span>
+                            <span className="no-time">-</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {/* Show Add Recipe Form when active */}
