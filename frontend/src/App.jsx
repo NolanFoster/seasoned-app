@@ -1150,6 +1150,26 @@ function App() {
         throw new Error('No source URL found for clipped recipe. Please try clipping the recipe again.');
       }
       
+      // First check if the recipe already exists by trying to get it from the clipper
+      try {
+        const checkRes = await fetch(`${CLIPPER_API_URL}/cached?url=${encodeURIComponent(sourceUrl)}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        });
+        
+        if (checkRes.ok) {
+          // Recipe already exists in KV store - just proceed silently
+          fetchRecipes(); // Refresh the recipe list
+          setClippedRecipePreview(null);
+          setClipError('');
+          setIsEditingPreview(false);
+          setEditablePreview(null);
+          return;
+        }
+      } catch (checkError) {
+        console.log('Error checking existing recipe, proceeding with save:', checkError);
+      }
+      
       const res = await fetch(`${API_URL}/scrape?url=${encodeURIComponent(sourceUrl)}&save=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1174,7 +1194,12 @@ function App() {
         
         // Handle duplicate errors from backend
         if (errorText.includes('already exists')) {
-          alert('This recipe already exists in your collection. Please check if you have already saved it.');
+          // Recipe already exists - just proceed silently
+          fetchRecipes(); // Refresh the recipe list
+          setClippedRecipePreview(null);
+          setClipError('');
+          setIsEditingPreview(false);
+          setEditablePreview(null);
         } else {
           throw new Error(`Failed to save recipe: ${errorText}`);
         }
@@ -1182,7 +1207,12 @@ function App() {
     } catch (error) {
       console.error('Error saving recipe:', error);
       if (error.message.includes('already exists')) {
-        alert('This recipe already exists in your collection. Please check if you have already saved it.');
+        // Recipe already exists - just proceed silently
+        fetchRecipes(); // Refresh the recipe list
+        setClippedRecipePreview(null);
+        setClipError('');
+        setIsEditingPreview(false);
+        setEditablePreview(null);
       } else {
         alert('Failed to save recipe. Please try again.');
       }
