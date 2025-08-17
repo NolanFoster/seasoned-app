@@ -1851,7 +1851,7 @@ function App() {
                       <h2 className="category-title">{categoryName}</h2>
                       <div className="recipe-grid category-recipes" ref={recipeGridRef}>
                         {sortedRecipes.map((recipe) => (
-                          <div key={recipe.id} className="recipe-card external-recipe" onClick={() => openRecipeView(recipe)}>
+                          <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
                             <div className="recipe-card-image">
                               {/* Main image display */}
                               {(recipe.image || recipe.image_url) ? (
@@ -1890,9 +1890,7 @@ function App() {
                               <div className="recipe-card-overlay"></div>
                               <div className="recipe-card-title-overlay">
                                 <h3 className="recipe-card-title">{recipe.name}</h3>
-                                <span className="external-badge" title="External recipe - click to view details">
-                                  🌐
-                                </span>
+
                               </div>
                             </div>
                             <div className="recipe-card-content">
