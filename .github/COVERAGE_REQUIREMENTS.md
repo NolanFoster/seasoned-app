@@ -13,6 +13,8 @@ This repository enforces code coverage requirements to maintain code quality.
 - **Minimum Required**: 85% for new code changes in pull requests
 - Only applies to code modified in the PR
 - Enforced using `diff-cover` tool in the GitHub Actions workflow
+- Uses `lcov.info` format directly (no XML conversion needed)
+- Compares against the base branch to calculate coverage of changed lines
 
 ## GitHub Actions Workflow
 
@@ -89,3 +91,11 @@ If coverage fails due to being below 40%:
 1. Add more tests to increase coverage
 2. Focus on untested files shown in the coverage report
 3. Use `npm run test:coverage` locally to see detailed coverage information
+
+### Differential Coverage Issues
+
+If differential coverage check fails or shows warnings:
+1. Ensure your PR branch is up to date with the base branch
+2. Add tests for the new/modified code in your PR
+3. The differential coverage only applies to lines changed in the PR
+4. Use `diff-cover coverage/lcov.info --compare-branch=origin/main` locally to test
