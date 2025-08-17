@@ -42,30 +42,3 @@ jobs:
           projectName: seasoned-frontend
           directory: frontend/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          
-  deploy-backend:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: worker/package-lock.json
-          
-      - name: Install backend dependencies
-        working-directory: ./worker
-        run: npm ci
-        
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-          workingDirectory: ./worker
