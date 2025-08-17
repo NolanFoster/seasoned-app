@@ -1,0 +1,427 @@
+import React, { useEffect, useState } from 'react';
+import { formatDuration } from '../../../shared/utility-functions.js';
+
+const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
+const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
+
+function Recommendations({ onRecipeSelect }) {
+  const [recommendations, setRecommendations] = useState(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
+  const [externalRecipes, setExternalRecipes] = useState({});
+
+  useEffect(() => {
+    // Fetch recommendations but don't let it block the app
+    fetchRecommendations().catch(err => {
+      console.error('Failed to fetch initial recommendations:', err);
+    });
+  }, []);
+
+  // Fetch external recipes when recommendations change
+  useEffect(() => {
+    if (recommendations && recommendations.recommendations) {
+      const fetchExternalRecipes = async () => {
+        const externalData = {};
+        for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
+          if (Array.isArray(tags)) {
+            try {
+              const externalRecipes = await searchRecipesByTags(tags, 3);
+              externalData[categoryName] = externalRecipes;
+            } catch (error) {
+              console.error(`Error fetching external recipes for ${categoryName}:`, error);
+              externalData[categoryName] = [];
+            }
+          }
+        }
+        setExternalRecipes(externalData);
+      };
+      fetchExternalRecipes();
+    }
+  }, [recommendations]);
+
+  async function fetchRecommendations() {
+    try {
+      setIsLoadingRecommendations(true);
+      
+      // Try to get user's location or use a default
+      let location = userLocation || 'San Francisco, CA'; // Default location
+      
+      // Try to get user's location from browser
+      if (!userLocation && navigator.geolocation) {
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          // For now, just use a general location based on coordinates
+          location = `${position.coords.latitude.toFixed(2)}°N, ${position.coords.longitude.toFixed(2)}°W`;
+          setUserLocation(location);
+        } catch (geoError) {
+          console.log('Could not get user location, using default');
+        }
+      }
+      
+      const currentDate = new Date().toISOString().split('T')[0];
+      console.log('Fetching recommendations for date:', currentDate, 'location:', location);
+      
+      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location: location,
+          date: currentDate
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Recommendations received:', data);
+        
+        // Filter out inappropriate seasonal recommendations
+        if (data.recommendations && data.season) {
+          const filteredRecommendations = {};
+          const season = data.season.toLowerCase();
+          
+          Object.entries(data.recommendations).forEach(([category, tags]) => {
+            if (Array.isArray(tags)) {
+              // Filter out fall/winter holiday items in summer
+              if (season === 'summer' && category.toLowerCase().includes('holiday')) {
+                // Keep only summer-appropriate items
+                filteredRecommendations[category] = tags.filter(tag => {
+                  const tagLower = tag.toLowerCase();
+                  // Remove fall/winter holidays
+                  return !tagLower.includes('halloween') && 
+                         !tagLower.includes('thanksgiving') && 
+                         !tagLower.includes('christmas') &&
+                         !tagLower.includes('pumpkin') &&
+                         !tagLower.includes('gingerbread');
+                });
+              } else if (season === 'winter' && category.toLowerCase().includes('holiday')) {
+                // Keep only winter-appropriate items
+                filteredRecommendations[category] = tags.filter(tag => {
+                  const tagLower = tag.toLowerCase();
+                  // Remove summer holidays
+                  return !tagLower.includes('4th of july') && 
+                         !tagLower.includes('labor day') &&
+                         !tagLower.includes('memorial day');
+                });
+              } else {
+                // Keep all tags for non-holiday categories
+                filteredRecommendations[category] = tags;
+              }
+            }
+          });
+          
+          // Update the data with filtered recommendations
+          data.recommendations = filteredRecommendations;
+        }
+        
+        setRecommendations(data);
+      } else {
+        console.error('Failed to fetch recommendations:', res.status);
+        setRecommendations(null);
+      }
+    } catch (e) {
+      console.error('Error fetching recommendations:', e);
+      setRecommendations(null);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  }
+
+  // New function to search for recipes matching recommendation tags
+  async function searchRecipesByTags(tags, limit = 3) {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return [];
+    }
+    
+    try {
+      // Search for each tag with fallback strategy
+      const searchPromises = tags.map(async (tag) => {
+        try {
+          // First try: search with the full tag
+          let results = await searchWithFallback(tag, Math.ceil(limit / tags.length));
+          
+          // If no results, try breaking down the tag
+          if (!results || results.length === 0) {
+            results = await searchWithFallbackStrategy(tag, Math.ceil(limit / tags.length));
+          }
+          
+          return results || [];
+        } catch (e) {
+          console.error(`Error searching for tag "${tag}":`, e);
+          return [];
+        }
+      });
+      
+      const searchResults = await Promise.all(searchPromises);
+      
+      // Flatten and deduplicate results
+      const allResults = searchResults.flat();
+      const uniqueResults = new Map();
+      
+      allResults.forEach(node => {
+        if (!uniqueResults.has(node.id)) {
+          const properties = node.properties;
+          uniqueResults.set(node.id, {
+            id: node.id,
+            name: properties.title || properties.name || 'Untitled Recipe',
+            description: properties.description || '',
+            image: properties.image || properties.image_url || '',
+            image_url: properties.image || properties.image_url || '',
+            prep_time: properties.prepTime || properties.prep_time || null,
+            cook_time: properties.cookTime || properties.cook_time || null,
+            recipe_yield: properties.servings || properties.recipeYield || properties.recipe_yield || null,
+            source_url: properties.url || properties.source_url || '',
+            ingredients: properties.ingredients || [],
+            instructions: properties.instructions || [],
+            recipeIngredient: properties.ingredients || [],
+            recipeInstructions: properties.instructions || [],
+            // Mark as external recipe
+            isExternal: true
+          });
+        }
+      });
+      
+      // Return up to the limit, prioritizing recipes that match multiple tags
+      return Array.from(uniqueResults.values()).slice(0, limit);
+    } catch (e) {
+      console.error('Error searching recipes by tags:', e);
+      return [];
+    }
+  }
+
+  // Helper function to search with fallback strategy
+  async function searchWithFallback(query, limit = 1) {
+    try {
+      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
+      if (res.ok) {
+        const result = await res.json();
+        return result.results || [];
+      }
+    } catch (e) {
+      console.error(`Error searching for query "${query}":`, e);
+    }
+    return [];
+  }
+
+  // Fallback strategy: break down complex queries into simpler parts
+  async function searchWithFallbackStrategy(originalQuery, limit = 1) {
+    console.log(`Trying fallback strategy for: "${originalQuery}"`);
+    
+    // Strategy 1: Try with common cooking words removed
+    const cookingWords = ['with', 'and', 'or', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for'];
+    const cleanedQuery = originalQuery
+      .split(' ')
+      .filter(word => !cookingWords.includes(word.toLowerCase()) && word.length > 2)
+      .join(' ');
+    
+    if (cleanedQuery !== originalQuery) {
+      console.log(`Trying cleaned query: "${cleanedQuery}"`);
+      let results = await searchWithFallback(cleanedQuery, limit);
+      if (results && results.length > 0) {
+        return results;
+      }
+    }
+    
+    // Strategy 2: Try with phrases (groups of 2-3 words)
+    const words = originalQuery.split(' ').filter(word => word.length > 2);
+    if (words.length >= 2) {
+      // Try 3-word phrases first
+      for (let i = 0; i <= words.length - 3; i++) {
+        const phrase = words.slice(i, i + 3).join(' ');
+        console.log(`Trying 3-word phrase: "${phrase}"`);
+        let results = await searchWithFallback(phrase, limit);
+        if (results && results.length > 0) {
+          return results;
+        }
+      }
+      
+      // Try 2-word phrases
+      for (let i = 0; i <= words.length - 2; i++) {
+        const phrase = words.slice(i, i + 2).join(' ');
+        console.log(`Trying 2-word phrase: "${phrase}"`);
+        let results = await searchWithFallback(phrase, limit);
+        if (results && results.length > 0) {
+          return results;
+        }
+      }
+    }
+    
+    // Strategy 3: Try individual significant words
+    const significantWords = words.filter(word => word.length > 3);
+    for (const word of significantWords) {
+      console.log(`Trying individual word: "${word}"`);
+      let results = await searchWithFallback(word, limit);
+      if (results && results.length > 0) {
+        return results;
+      }
+    }
+    
+    // Strategy 4: Try with any remaining words
+    for (const word of words) {
+      if (word.length <= 3) continue; // Skip very short words
+      console.log(`Trying remaining word: "${word}"`);
+      let results = await searchWithFallback(word, limit);
+      if (results && results.length > 0) {
+        return results;
+      }
+    }
+    
+    console.log(`All fallback strategies failed for: "${originalQuery}"`);
+    return [];
+  }
+
+  if (isLoadingRecommendations || recommendations) {
+    return (
+      <div className="recommendations-container">
+        {(() => {
+          try {
+            // Show loading state with placeholder categories
+            if (isLoadingRecommendations || !recommendations || !recommendations.recommendations) {
+              const loadingCategories = ['Seasonal Favorites', 'Local Specialties', 'Holiday Treats'];
+              return loadingCategories.map(categoryName => (
+                <div key={categoryName} className="recommendation-category">
+                  <h2 className="category-title">{categoryName}</h2>
+                  <div className="recipe-grid category-recipes">
+                    {[1, 2, 3].map(index => (
+                      <div key={index} className="recipe-card loading-card">
+                        <div className="recipe-card-image loading-pulse">
+                          <div className="loading-shimmer"></div>
+                        </div>
+                        <div className="recipe-card-content">
+                          <div className="loading-text loading-pulse"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ));
+            }
+            
+            // Track which recipes have been shown to avoid duplicates
+            const shownRecipeIds = new Set();
+            
+            return Object.entries(recommendations.recommendations).map(([categoryName, tags]) => {
+              // Ensure tags is an array
+              if (!Array.isArray(tags)) {
+                console.error(`Invalid tags format for category ${categoryName}:`, tags);
+                return null;
+              }
+              
+              console.log(`Processing category: ${categoryName} with tags:`, tags);
+              
+              // Get external recipes for this category (no longer using local recipes)
+              const categoryExternalRecipes = externalRecipes[categoryName] || [];
+              
+              // Filter out duplicates across categories
+              const uniqueExternalRecipes = categoryExternalRecipes.filter(external => 
+                !shownRecipeIds.has(external.id)
+              );
+              
+              // Take up to 3 recipes for this category
+              const sortedRecipes = uniqueExternalRecipes.slice(0, 3);
+              
+              // Add selected recipes to the shown set
+              sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
+              
+              // Only show category if it has recipes
+              if (sortedRecipes.length === 0) return null;
+              
+              return (
+                <div key={categoryName} className="recommendation-category">
+                  <h2 className="category-title">{categoryName}</h2>
+                  <div className="recipe-grid category-recipes">
+                    {sortedRecipes.map((recipe) => (
+                      <div key={recipe.id} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                        <div className="recipe-card-image">
+                          {/* Main image display */}
+                          {(recipe.image || recipe.image_url) ? (
+                            <img 
+                              src={recipe.image || recipe.image_url} 
+                              alt={recipe.name}
+                              loading="lazy"
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                zIndex: 1,
+                                borderRadius: '20px 20px 0 0',
+                                opacity: 0.85
+                              }}
+                              onError={(e) => {
+                                // Fallback to gradient if image fails
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              zIndex: 1,
+                              opacity: 0.85
+                            }}></div>
+                          )}
+                          <div className="recipe-card-overlay"></div>
+                          <div className="recipe-card-title-overlay">
+                            <h3 className="recipe-card-title">{recipe.name}</h3>
+                          </div>
+                        </div>
+                        <div className="recipe-card-content">
+                          {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                            <div className="recipe-card-time">
+                              <div className="time-item">
+                                <span className="time-label">Prep</span>
+                                <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                              </div>
+                              <div className="time-divider"></div>
+                              <div className="time-item">
+                                <span className="time-label">Cook</span>
+                                <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
+                              </div>
+                              {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                                <>
+                                  <div className="time-divider"></div>
+                                  <div className="time-item">
+                                    <span className="time-label">Yield</span>
+                                    <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="recipe-card-time">
+                              <span className="time-icon">⏱️</span>
+                              <span className="no-time">-</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            });
+          } catch (error) {
+            console.error('Error rendering recommendations:', error);
+            return null;
+          }
+        })()}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+export default Recommendations;

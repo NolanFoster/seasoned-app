@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import Recommendations from '../components/Recommendations';
 
 // TODO: FIX MOCK DATA HANDLING
 // =============================
@@ -20,6 +21,93 @@ import App from '../App';
 //
 // Current Status: 65 tests passing, 12 tests failing due to mock data issues
 // =============================
+
+// Test the new Recommendations component separately
+describe('Recommendations Component Integration', () => {
+  const mockOnRecipeSelect = jest.fn();
+
+  beforeEach(() => {
+    mockOnRecipeSelect.mockClear();
+  });
+
+  it('renders recommendations component correctly', () => {
+    render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
+    
+    // Should show loading categories
+    expect(screen.getByText('Seasonal Favorites')).toBeInTheDocument();
+    expect(screen.getByText('Local Specialties')).toBeInTheDocument();
+    expect(screen.getByText('Holiday Treats')).toBeInTheDocument();
+  });
+
+  it('calls onRecipeSelect when recipe is selected', async () => {
+    const mockRecommendations = {
+      recommendations: {
+        'Seasonal Favorites': ['summer berries']
+      }
+    };
+
+    const mockSearchResults = {
+      results: [
+        {
+          id: '1',
+          properties: {
+            title: 'Summer Berry Salad',
+            description: 'Fresh berries with mint',
+            image: 'berry-salad.jpg',
+            prepTime: 'PT10M',
+            cookTime: null,
+            servings: '4 servings'
+          }
+        }
+      ]
+    };
+
+    // Mock geolocation to reject quickly so the function can continue
+    mockGeolocation.getCurrentPosition.mockImplementation((resolve, reject) => {
+      reject(new Error('Geolocation not available in test'));
+    });
+
+    // Mock the fetch calls with proper URL matching
+    fetch.mockImplementation((url) => {
+      if (url.includes('/recommendations')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockRecommendations
+        });
+      }
+      if (url.includes('/api/search')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockSearchResults
+        });
+      }
+      return Promise.resolve({ ok: false });
+    });
+
+    render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
+
+    // Wait for recommendations to load and recipes to be fetched
+    await waitFor(() => {
+      expect(screen.getByText('Seasonal Favorites')).toBeInTheDocument();
+    }, { timeout: 5000 });
+    
+    // Wait for the recipe to be rendered
+    await waitFor(() => {
+      expect(screen.getByText('Summer Berry Salad')).toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    // Click on the recipe card
+    const recipeCard = screen.getByText('Summer Berry Salad').closest('.recipe-card');
+    recipeCard.click();
+
+    expect(mockOnRecipeSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '1',
+        name: 'Summer Berry Salad'
+      })
+    );
+  });
+});
 
 // Mock fetch globally
 global.fetch = jest.fn();
