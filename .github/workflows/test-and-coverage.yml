@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, staging ]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
 jobs:
   test-frontend:
     name: Frontend Tests and Coverage
@@ -199,63 +205,76 @@ jobs:
     - name: Post PR Comment with Coverage
       if: github.event_name == 'pull_request' && always()
       uses: actions/github-script@v7
+      continue-on-error: true
       with:
         script: |
           const fs = require('fs');
           let comment = '## 📊 Coverage Report\n\n';
           
-          // Check if coverage summary exists
-          if (fs.existsSync('./coverage-reports/frontend/coverage-summary.json')) {
-            const coverage = JSON.parse(fs.readFileSync('./coverage-reports/frontend/coverage-summary.json', 'utf8'));
-            const total = coverage.total;
-            
-            comment += '### Overall Coverage\n';
-            comment += '| Metric | Coverage | Threshold |\n';
-            comment += '|--------|----------|----------|\n';
-            comment += `| Lines | ${total.lines.pct}% | 40% |\n`;
-            comment += `| Statements | ${total.statements.pct}% | 40% |\n`;
-            comment += `| Functions | ${total.functions.pct}% | 40% |\n`;
-            comment += `| Branches | ${total.branches.pct}% | 40% |\n`;
-            comment += '\n';
-            
-            // Check if any metric is below threshold
-            const belowThreshold = total.lines.pct < 40 || total.statements.pct < 40 || 
-                                 total.functions.pct < 40 || total.branches.pct < 40;
-            
-            if (belowThreshold) {
-              comment += '❌ **Coverage is below the required 40% threshold**\n';
+          try {
+            // Check if coverage summary exists
+            if (fs.existsSync('./coverage-reports/frontend/coverage-summary.json')) {
+              const coverage = JSON.parse(fs.readFileSync('./coverage-reports/frontend/coverage-summary.json', 'utf8'));
+              const total = coverage.total;
+              
+              comment += '### Overall Coverage\n';
+              comment += '| Metric | Coverage | Threshold |\n';
+              comment += '|--------|----------|----------|\n';
+              comment += `| Lines | ${total.lines.pct}% | 40% |\n`;
+              comment += `| Statements | ${total.statements.pct}% | 40% |\n`;
+              comment += `| Functions | ${total.functions.pct}% | 40% |\n`;
+              comment += `| Branches | ${total.branches.pct}% | 40% |\n`;
+              comment += '\n';
+              
+              // Check if any metric is below threshold
+              const belowThreshold = total.lines.pct < 40 || total.statements.pct < 40 || 
+                                   total.functions.pct < 40 || total.branches.pct < 40;
+              
+              if (belowThreshold) {
+                comment += '❌ **Coverage is below the required 40% threshold**\n';
+              } else {
+                comment += '✅ **Coverage meets the required 40% threshold**\n';
+              }
             } else {
-              comment += '✅ **Coverage meets the required 40% threshold**\n';
+              comment += '⚠️ **No coverage data available**\n\n';
             }
-          }
-          
-          comment += '\n### Differential Coverage\n';
-          comment += 'New code changes must have at least **85% coverage**\n';
-          comment += '\nSee workflow artifacts for detailed coverage reports.';
-          
-          // Find and update or create comment
-          const { data: comments } = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-          });
-          
-          const botComment = comments.find(comment => 
-            comment.user.type === 'Bot' && comment.body.includes('📊 Coverage Report')
-          );
-          
-          if (botComment) {
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: botComment.id,
-              body: comment
-            });
-          } else {
-            await github.rest.issues.createComment({
+            
+            comment += '\n### Differential Coverage\n';
+            comment += 'New code changes must have at least **85% coverage**\n';
+            comment += '\nSee workflow artifacts for detailed coverage reports.';
+            
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: comment
             });
+            
+            const botComment = comments.find(comment => 
+              comment.user?.type === 'Bot' && comment.body?.includes('📊 Coverage Report')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+            
+            console.log('Coverage comment posted successfully');
+          } catch (error) {
+            console.error('Failed to post coverage comment:', error);
+            console.log('This may be due to permissions. The coverage report is still available in the workflow summary.');
+            
+            // Still add to summary even if comment fails
+            core.summary.addRaw(comment).write();
           }

@@ -23,6 +23,16 @@ The `test-and-coverage.yml` workflow:
 4. Posts coverage summary as PR comment
 5. Uploads coverage reports as artifacts
 
+### Required Permissions
+
+The workflow requires the following permissions to function correctly:
+- `contents: read` - To checkout the code
+- `pull-requests: write` - To post comments on PRs
+- `issues: write` - To create/update issue comments
+- `checks: write` - To create status checks
+
+These permissions are defined at the workflow level. If using a custom GitHub token, ensure it has these permissions.
+
 ## Setting Up Branch Protection
 
 To enforce coverage checks on pull requests:
