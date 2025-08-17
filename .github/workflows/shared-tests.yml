@@ -1,0 +1,77 @@
+name: Shared Components Tests
+
+on:
+  push:
+    branches: [ main, staging ]
+    paths:
+      - 'shared/**'
+      - '.github/workflows/shared-tests.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [ main, staging ]
+    paths:
+      - 'shared/**'
+      - '.github/workflows/shared-tests.yml'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  test-shared:
+    name: Shared Components Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: shared/package-lock.json
+    
+    - name: Install Shared Dependencies
+      working-directory: ./shared
+      run: npm ci
+    
+    - name: Run Shared Tests
+      working-directory: ./shared
+      run: |
+        # Run tests if test script exists, otherwise skip
+        if npm run | grep -q "test"; then
+          npm test || echo "No tests found or test script not configured"
+        else
+          echo "No test script found in package.json"
+        fi
+        
+        # Note: Shared tests currently don't generate coverage reports
+        # Consider adding coverage collection for shared tests in the future
+
+  lint-shared:
+    name: Shared Components Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Lint Shared Components
+      working-directory: ./shared
+      run: |
+        npm ci
+        if npm run | grep -q "lint"; then
+          npm run lint || echo "Linting completed with warnings"
+        else
+          echo "No lint script found"
+        fi

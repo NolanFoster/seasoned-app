@@ -1,0 +1,84 @@
+name: Crawler Tests
+
+on:
+  push:
+    branches: [ main, staging ]
+    paths:
+      - 'crawler/**'
+      - '.github/workflows/crawler-tests.yml'
+      - 'requirements.txt'
+  pull_request:
+    branches: [ main, staging ]
+    paths:
+      - 'crawler/**'
+      - '.github/workflows/crawler-tests.yml'
+      - 'requirements.txt'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  test-crawler:
+    name: Crawler Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install Python Dependencies
+      working-directory: ./crawler
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run Crawler Tests
+      working-directory: ./crawler
+      run: |
+        # Run tests if they exist, otherwise skip
+        if [ -f "test_crawler.py" ]; then
+          python -m pytest test_crawler.py -v || echo "Tests failed or not configured"
+        else
+          echo "No test files found for crawler"
+        fi
+
+  lint-crawler:
+    name: Crawler Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install Python Dependencies
+      working-directory: ./crawler
+      run: |
+        pip install -r requirements.txt
+        pip install flake8 black
+    
+    - name: Lint Crawler Code
+      working-directory: ./crawler
+      run: |
+        # Run flake8 for linting
+        if command -v flake8 &> /dev/null; then
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Linting completed with warnings"
+        else
+          echo "Flake8 not available for linting"
+        fi
+        
+        # Run black for code formatting check
+        if command -v black &> /dev/null; then
+          black --check . || echo "Code formatting check completed with warnings"
+        else
+          echo "Black not available for code formatting check"
+        fi

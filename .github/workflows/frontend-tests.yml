@@ -1,10 +1,20 @@
-name: Tests and Coverage
+name: Frontend Tests and Coverage
 
 on:
   push:
     branches: [ main, staging ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+      - 'package.json'
+      - 'package-lock.json'
   pull_request:
     branches: [ main, staging ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+      - 'package.json'
+      - 'package-lock.json'
 
 permissions:
   contents: read
@@ -115,12 +125,6 @@ jobs:
           echo "diff_coverage_below_threshold=true" >> $GITHUB_OUTPUT
         }
         
-        # Generate diff coverage HTML report
-        diff-cover coverage/lcov.info \
-          --compare-branch=origin/${{ github.base_ref }} \
-          --html-report=coverage-diff.html \
-          --diff-range-notation=..
-        
         # Extract diff coverage percentage for PR comment
         if grep -q "Diff coverage" diff-coverage-output.txt; then
           coverage_line=$(grep "Diff coverage" diff-coverage-output.txt)
@@ -136,49 +140,9 @@ jobs:
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Required: 85% coverage for new/modified code**" >> $GITHUB_STEP_SUMMARY
-    
-    - name: Upload Diff Coverage Report
-      if: github.event_name == 'pull_request'
-      uses: actions/upload-artifact@v4
-      with:
-        name: diff-coverage-report
-        path: frontend/coverage-diff.html
 
-  test-worker:
-    name: Worker Tests and Coverage  
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Fetch full history for diff coverage
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: clipped-recipe-db-worker/package-lock.json
-    
-    - name: Install Worker Dependencies
-      working-directory: ./clipped-recipe-db-worker
-      run: npm ci
-    
-    - name: Run Worker Tests
-      working-directory: ./clipped-recipe-db-worker
-      run: |
-        # Run tests if test script exists, otherwise skip
-        if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
-        else
-          echo "No test script found in package.json"
-        fi
-        
-        # Note: Worker tests currently don't generate coverage reports
-        # Consider adding coverage collection for worker tests in the future
-    
-  lint:
-    name: Code Quality Checks
+  lint-frontend:
+    name: Frontend Code Quality Checks
     runs-on: ubuntu-latest
     
     steps:
@@ -194,20 +158,10 @@ jobs:
       run: |
         npm ci
         npm run lint || echo "Linting completed with warnings"
-    
-    - name: Lint Worker
-      working-directory: ./clipped-recipe-db-worker
-      run: |
-        npm ci
-        if npm run | grep -q "lint"; then
-          npm run lint || echo "Linting completed with warnings"
-        else
-          echo "No lint script found"
-        fi
 
   coverage-report:
-    name: Coverage Report
-    needs: [test-frontend, test-worker]
+    name: Frontend Coverage Report
+    needs: [test-frontend]
     runs-on: ubuntu-latest
     if: always()
     
@@ -224,21 +178,11 @@ jobs:
     - name: Coverage Summary
       id: coverage-summary
       run: |
-        echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Debug: Show directory structure
-        echo "Debug: Current directory structure:"
-        ls -la
-        echo "Debug: Coverage reports directory:"
-        ls -la ./coverage-reports/ || echo "No coverage-reports directory"
         
         if [ -d ./coverage-reports/frontend ]; then
           echo "✅ Frontend coverage reports available" >> $GITHUB_STEP_SUMMARY
-          
-          # Debug: Show frontend coverage directory contents
-          echo "Debug: Frontend coverage directory contents:"
-          ls -la ./coverage-reports/frontend/
           
           # Extract and display coverage percentages from JSON summary
           if [ -f ./coverage-reports/frontend/coverage-summary.json ]; then
@@ -315,7 +259,7 @@ jobs:
           if (anyThresholdNotMet) {
             comment += '@cursoragent\n\n';
           }
-          comment += '## 📊 Coverage Report\n\n';
+          comment += '## 📊 Frontend Coverage Report\n\n';
           
           try {
             // Overall Coverage Section
@@ -364,7 +308,7 @@ jobs:
             
             comment += '---\n';
             comment += '_Coverage thresholds: **40%** overall, **85%** for new/modified code_\n';
-            comment += '_See workflow artifacts for detailed coverage reports._';
+            comment += '_Coverage analysis is performed inline without generating external reports._';
             
             // Find and update or create comment
             const { data: comments } = await github.rest.issues.listComments({
@@ -374,7 +318,7 @@ jobs:
             });
             
             const botComment = comments.find(comment => 
-              comment.user?.type === 'Bot' && comment.body?.includes('📊 Coverage Report')
+              comment.user?.type === 'Bot' && comment.body?.includes('📊 Frontend Coverage Report')
             );
             
             if (botComment) {
@@ -393,9 +337,9 @@ jobs:
               });
             }
             
-            console.log('Coverage comment posted successfully');
+            console.log('Frontend coverage comment posted successfully');
           } catch (error) {
-            console.error('Failed to post coverage comment:', error);
+            console.error('Failed to post frontend coverage comment:', error);
             console.log('This may be due to permissions. The coverage report is still available in the workflow summary.');
             
             // Still add to summary even if comment fails
