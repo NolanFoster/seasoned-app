@@ -45,6 +45,7 @@ export default {
             console.log('Recipe found in KV store, returning cached version');
             return new Response(JSON.stringify({
               ...existingRecipe.recipe.data,
+              source_url: pageUrl,
               cached: true,
               recipeId: recipeId,
               scrapedAt: existingRecipe.recipe.scrapedAt
@@ -75,6 +76,7 @@ export default {
             console.log('Recipe saved to KV store successfully');
             return new Response(JSON.stringify({
               ...recipe,
+              source_url: pageUrl,
               cached: false,
               recipeId: recipeId,
               savedToKV: true
@@ -87,6 +89,7 @@ export default {
             // Still return the recipe even if KV save failed
             return new Response(JSON.stringify({
               ...recipe,
+              source_url: pageUrl,
               cached: false,
               savedToKV: false,
               kvError: saveResult.error
@@ -122,6 +125,7 @@ export default {
           if (existingRecipe.success) {
             return new Response(JSON.stringify({
               ...existingRecipe.recipe.data,
+              source_url: pageUrl,
               cached: true,
               recipeId: recipeId,
               scrapedAt: existingRecipe.recipe.scrapedAt
@@ -286,6 +290,9 @@ async function extractRecipeWithGPT(pageUrl, env) {
     const recipe = await callGPTModel(cleanedHtml, pageUrl, env);
     
     if (recipe) {
+      // Ensure source_url is set for AI-extracted recipes
+      recipe.source_url = pageUrl;
+      
       console.log('Recipe extracted successfully with GPT:', {
         name: recipe.name,
         ingredients: recipe.recipeIngredient?.length || 0,
@@ -404,6 +411,8 @@ async function extractRecipeWithGPT(pageUrl, env) {
     } else {
       console.log('No recipe extracted - AI returned null or empty data');
     }
+    
+    
     
     return recipe;
   } catch (error) {

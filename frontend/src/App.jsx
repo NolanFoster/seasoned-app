@@ -1028,7 +1028,9 @@ function App() {
       recipeInstructions: editablePreview.instructions.filter(i => i.trim()).map(instruction => ({
         "@type": "HowToStep",
         text: instruction
-      }))
+      })),
+      // Preserve the source_url
+      source_url: clippedRecipePreview.source_url
     });
     setIsEditingPreview(false);
     setEditablePreview(null);
@@ -1059,7 +1061,7 @@ function App() {
       // This will save the recipe to KV storage
       const sourceUrl = clippedRecipePreview.source_url;
       if (!sourceUrl) {
-        throw new Error('No source URL found for clipped recipe');
+        throw new Error('No source URL found for clipped recipe. Please try clipping the recipe again.');
       }
       
       const res = await fetch(`${API_URL}/scrape?url=${encodeURIComponent(sourceUrl)}&save=true`, {
