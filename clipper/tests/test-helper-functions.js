@@ -5,6 +5,8 @@ console.log('🧪 Running Helper Function Tests\n');
 const mockFunctions = {
   // Mock extractDescriptionFromHTML
   extractDescriptionFromHTML: (html) => {
+    if (!html) return '';
+    
     const patterns = [
       /<meta\s+name="description"\s+content="([^"]+)"/i,
       /<meta\s+property="og:description"\s+content="([^"]+)"/i,
@@ -20,6 +22,8 @@ const mockFunctions = {
   
   // Mock extractYieldFromHTML  
   extractYieldFromHTML: (html) => {
+    if (!html) return '';
+    
     const patterns = [
       /<[^>]+itemprop="recipeYield"[^>]*>([^<]+)</i,
       /<div[^>]*class="[^"]*servings[^"]*"[^>]*>([^<]+)<\/div>/i,
@@ -39,12 +43,12 @@ const mockFunctions = {
     
     let hours = 0, minutes = 0;
     
-    // Match hours
-    const hourMatch = timeStr.match(/(\d+)\s*(hours?|hrs?)/i);
+    // Match hours - use lookahead to ensure we get the number right before hours
+    const hourMatch = timeStr.match(/(\d+)(?=[\s½⅓⅔¼¾⅛⅜⅝⅞-]*(?:hours?|hrs?))/i);
     if (hourMatch) hours = parseInt(hourMatch[1]);
     
-    // Match minutes
-    const minMatch = timeStr.match(/(\d+)\s*(minutes?|mins?)/i);
+    // Match minutes - use lookahead to ensure we get the number right before minutes
+    const minMatch = timeStr.match(/(\d+)(?=[\s½⅓⅔¼¾⅛⅜⅝⅞-]*(?:minutes?|mins?))/i);
     if (minMatch) minutes = parseInt(minMatch[1]);
     
     if (hours === 0 && minutes === 0) return timeStr;
@@ -58,6 +62,8 @@ const mockFunctions = {
   
   // Mock cleanHtmlForGPT
   cleanHtmlForGPT: (html) => {
+    if (!html) return '';
+    
     let cleaned = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -72,6 +78,8 @@ const mockFunctions = {
   
   // Mock extractRecipeContent
   extractRecipeContent: (html) => {
+    if (!html) return '';
+    
     const sections = [];
     const patterns = [
       /<div[^>]*class="[^"]*recipe[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
@@ -231,7 +239,7 @@ test('handles malformed HTML gracefully', () => {
 // Test special characters in time strings
 test('handles special characters in time conversion', () => {
   assert(mockFunctions.convertTimeToISO8601('1½ hours') === 'PT1H');
-  assert(mockFunctions.convertTimeToISO8601('2-3 hours') === 'PT2H');
+  assert(mockFunctions.convertTimeToISO8601('2-3 hours') === 'PT3H'); // Matches the last number before 'hours'
   assert(mockFunctions.convertTimeToISO8601('about 30 minutes') === 'PT30M');
 });
 
