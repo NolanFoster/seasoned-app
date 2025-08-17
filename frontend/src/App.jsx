@@ -358,7 +358,7 @@ function App() {
   const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [recommendations, setRecommendations] = useState(null); // New state for recipe recommendations
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false); // Loading state for recommendations
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true); // Start with loading state true
   const [userLocation, setUserLocation] = useState(null); // User's location for recommendations
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
@@ -1592,11 +1592,33 @@ function App() {
         {/* Show recipe cards unless recipe is selected */}
         {!selectedRecipe && (
           <>
-            {/* Show recommendations if available */}
-            {recommendations && recommendations.recommendations && !isLoadingRecommendations ? (
+            {/* Show recommendations or loading state */}
+            {isLoadingRecommendations || recommendations ? (
               <div className="recommendations-container">
                 {(() => {
                   try {
+                    // Show loading state with placeholder categories
+                    if (isLoadingRecommendations || !recommendations || !recommendations.recommendations) {
+                      const loadingCategories = ['Seasonal Favorites', 'Local Specialties', 'Holiday Treats'];
+                      return loadingCategories.map(categoryName => (
+                        <div key={categoryName} className="recommendation-category">
+                          <h2 className="category-title">{categoryName}</h2>
+                          <div className="recipe-grid category-recipes">
+                            {[1, 2, 3].map(index => (
+                              <div key={index} className="recipe-card loading-card">
+                                <div className="recipe-card-image loading-pulse">
+                                  <div className="loading-shimmer"></div>
+                                </div>
+                                <div className="recipe-card-content">
+                                  <div className="loading-text loading-pulse"></div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    }
+                    
                     // Track which recipes have been shown to avoid duplicates
                     const shownRecipeIds = new Set();
                     
@@ -1772,88 +1794,7 @@ function App() {
                   }
                 })()}
               </div>
-            ) : (
-              // Fallback to original grid if no recommendations
-              <div className="recipe-grid" ref={recipeGridRef}>
-                {(Array.isArray(recipes) ? recipes.slice(0, 10) : []).map((recipe) => {
-                  return (
-                    <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
-                      <div className="recipe-card-image">
-
-                        {/* Main image display */}
-                        {(recipe.image || recipe.image_url) ? (
-                          <img 
-                            src={recipe.image || recipe.image_url} 
-                            alt={recipe.name}
-                            loading="lazy"
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              zIndex: 1,
-                              borderRadius: '20px 20px 0 0',
-                              opacity: 0.85
-                            }}
-                            onError={(e) => {
-                              // Fallback to gradient if image fails
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            zIndex: 1,
-                            opacity: 0.85
-                          }}></div>
-                        )}
-                        <div className="recipe-card-overlay">
-                        </div>
-                        <div className="recipe-card-title-overlay">
-                          <h3 className="recipe-card-title">{recipe.name}</h3>
-                        </div>
-                      </div>
-                      <div className="recipe-card-content">
-                        {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
-                          <div className="recipe-card-time">
-                            <div className="time-item">
-                              <span className="time-label">Prep</span>
-                              <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
-                            </div>
-                            <div className="time-divider"></div>
-                            <div className="time-item">
-                              <span className="time-label">Cook</span>
-                              <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
-                            </div>
-                            {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
-                              <>
-                                <div className="time-divider"></div>
-                                <div className="time-item">
-                                  <span className="time-label">Yield</span>
-                                  <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="recipe-card-time">
-                            <span className="time-icon">⏱️</span>
-                            <span className="no-time">-</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            ) : null}
           </>
         )}
 
