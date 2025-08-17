@@ -61,7 +61,7 @@ jobs:
       run: |
         echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
         # The coverage threshold check is handled by Jest config
-        # If coverage is below 40%, Jest will fail the test run
+        # If coverage is below 50%, Jest will fail the test run
         
         # Verify coverage files were generated
         if [ -f coverage/coverage-summary.json ]; then
@@ -210,13 +210,13 @@ jobs:
             echo "| Functions | ${functions}% |" >> $GITHUB_STEP_SUMMARY
             echo "| Branches | ${branches}% |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Minimum Required: 40%**" >> $GITHUB_STEP_SUMMARY
+            echo "**Minimum Required: 50%**" >> $GITHUB_STEP_SUMMARY
             
             # Check if any metric is below threshold and set output
-            if (( $(echo "$lines < 40" | bc -l) )) || \
-               (( $(echo "$statements < 40" | bc -l) )) || \
-               (( $(echo "$functions < 40" | bc -l) )) || \
-               (( $(echo "$branches < 40" | bc -l) )); then
+            if (( $(echo "$lines < 50" | bc -l) )) || \
+               (( $(echo "$statements < 50" | bc -l) )) || \
+               (( $(echo "$functions < 50" | bc -l) )) || \
+               (( $(echo "$branches < 50" | bc -l) )); then
               echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
             else
               echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
@@ -279,16 +279,16 @@ jobs:
               const functions = parseFloat('${{ steps.coverage-summary.outputs.coverage_functions }}');
               const branches = parseFloat('${{ steps.coverage-summary.outputs.coverage_branches }}');
               
-              comment += `| Lines | ${lines}% | 40% | ${lines >= 40 ? '✅' : '❌'} |\n`;
-              comment += `| Statements | ${statements}% | 40% | ${statements >= 40 ? '✅' : '❌'} |\n`;
-              comment += `| Functions | ${functions}% | 40% | ${functions >= 40 ? '✅' : '❌'} |\n`;
-              comment += `| Branches | ${branches}% | 40% | ${branches >= 40 ? '✅' : '❌'} |\n`;
+              comment += `| Lines | ${lines}% | 50% | ${lines >= 50 ? '✅' : '❌'} |\n`;
+              comment += `| Statements | ${statements}% | 50% | ${statements >= 50 ? '✅' : '❌'} |\n`;
+              comment += `| Functions | ${functions}% | 50% | ${functions >= 50 ? '✅' : '❌'} |\n`;
+              comment += `| Branches | ${branches}% | 50% | ${branches >= 50 ? '✅' : '❌'} |\n`;
               comment += '\n';
               
               if (coverageBelowThreshold) {
-                comment += '❌ **Coverage is below the required 40% threshold**\n\n';
+                comment += '❌ **Coverage is below the required 50% threshold**\n\n';
               } else {
-                comment += '✅ **Coverage meets the required 40% threshold**\n\n';
+                comment += '✅ **Coverage meets the required 50% threshold**\n\n';
               }
             } else {
               comment += '⚠️ **No coverage data available**\n\n';
@@ -318,7 +318,7 @@ jobs:
             }
             
             comment += '---\n';
-            comment += '_Coverage thresholds: **40%** overall, **85%** for new/modified code_\n';
+            comment += '_Coverage thresholds: **50%** overall, **85%** for new/modified code_\n';
             comment += '_Coverage analysis is performed inline without generating external reports._';
             
             // Find and update or create comment
