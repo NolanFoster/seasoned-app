@@ -28,6 +28,13 @@ jobs:
   test-worker:
     name: Recipe Recommendation Worker Tests
     runs-on: ubuntu-latest
+    outputs:
+      coverage_available: ${{ steps.coverage-check.outputs.coverage_available }}
+      coverage_below_threshold: ${{ steps.coverage-check.outputs.coverage_below_threshold }}
+      coverage_lines: ${{ steps.coverage-check.outputs.coverage_lines }}
+      coverage_statements: ${{ steps.coverage-check.outputs.coverage_statements }}
+      coverage_functions: ${{ steps.coverage-check.outputs.coverage_functions }}
+      coverage_branches: ${{ steps.coverage-check.outputs.coverage_branches }}
     
     steps:
     - uses: actions/checkout@v4
@@ -46,8 +53,15 @@ jobs:
     - name: Run Worker Tests with Coverage
       working-directory: ./recipe-recommendation-worker
       run: |
-        # Run tests with coverage
-        npm run test:coverage || true  # Continue even if tests fail to get coverage report
+        echo "Running tests with coverage..."
+        npm run coverage
+        echo "✅ Tests passed successfully!"
+    
+    - name: Check Coverage Thresholds
+      id: coverage-check
+      working-directory: ./recipe-recommendation-worker
+      run: |
+        echo "### Recipe Recommendation Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
         
         # Extract coverage percentages
         COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)
@@ -66,23 +80,37 @@ jobs:
         THRESHOLD_LINES=0
         
         # Check if coverage meets thresholds
+        COVERAGE_FAILED=false
+        
         if (( $(echo "$STATEMENTS < $THRESHOLD_STATEMENTS" | bc -l) )); then
           echo "❌ Statement coverage ($STATEMENTS%) is below threshold ($THRESHOLD_STATEMENTS%)"
-          exit 1
+          COVERAGE_FAILED=true
         fi
         
         if (( $(echo "$BRANCHES < $THRESHOLD_BRANCHES" | bc -l) )); then
           echo "❌ Branch coverage ($BRANCHES%) is below threshold ($THRESHOLD_BRANCHES%)"
-          exit 1
+          COVERAGE_FAILED=true
         fi
         
         if (( $(echo "$FUNCTIONS < $THRESHOLD_FUNCTIONS" | bc -l) )); then
           echo "❌ Function coverage ($FUNCTIONS%) is below threshold ($THRESHOLD_FUNCTIONS%)"
-          exit 1
+          COVERAGE_FAILED=true
         fi
         
         if (( $(echo "$LINES < $THRESHOLD_LINES" | bc -l) )); then
           echo "❌ Line coverage ($LINES%) is below threshold ($THRESHOLD_LINES%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        # Set outputs before potential exit
+        echo "coverage_available=true" >> $GITHUB_OUTPUT
+        echo "coverage_lines=$LINES" >> $GITHUB_OUTPUT
+        echo "coverage_statements=$STATEMENTS" >> $GITHUB_OUTPUT
+        echo "coverage_functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+        echo "coverage_branches=$BRANCHES" >> $GITHUB_OUTPUT
+        
+        if [ "$COVERAGE_FAILED" = true ]; then
+          echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
           exit 1
         fi
         
@@ -91,6 +119,7 @@ jobs:
         echo "   Branches: $BRANCHES% (threshold: $THRESHOLD_BRANCHES%)"
         echo "   Functions: $FUNCTIONS% (threshold: $THRESHOLD_FUNCTIONS%)"
         echo "   Lines: $LINES% (threshold: $THRESHOLD_LINES%)"
+        echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
     
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
@@ -121,3 +150,93 @@ jobs:
         else
           echo "No lint script found"
         fi
+
+  coverage-report:
+    name: Recipe Recommendation Worker Coverage Report
+    needs: [test-worker]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Post PR Comment with Coverage
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      continue-on-error: true
+      with:
+        script: |
+          const coverageAvailable = '${{ needs.test-worker.outputs.coverage_available }}' === 'true';
+          const coverageBelowThreshold = '${{ needs.test-worker.outputs.coverage_below_threshold }}' === 'true';
+          
+          let comment = '';
+          if (coverageBelowThreshold) {
+            comment += '@cursoragent\n\n';
+          }
+          comment += '## 📊 Recipe Recommendation Worker Coverage Report\n\n';
+          
+          try {
+            if (coverageAvailable) {
+              comment += '### Coverage Metrics\n';
+              comment += '| Metric | Coverage | Threshold | Status |\n';
+              comment += '|--------|----------|-----------|--------|\n';
+              
+              const lines = parseFloat('${{ needs.test-worker.outputs.coverage_lines }}');
+              const statements = parseFloat('${{ needs.test-worker.outputs.coverage_statements }}');
+              const functions = parseFloat('${{ needs.test-worker.outputs.coverage_functions }}');
+              const branches = parseFloat('${{ needs.test-worker.outputs.coverage_branches }}');
+              
+              // Currently thresholds are 0% as tests are mocks
+              comment += `| Lines | ${lines}% | 0% | ${lines >= 0 ? '✅' : '❌'} |\n`;
+              comment += `| Statements | ${statements}% | 0% | ${statements >= 0 ? '✅' : '❌'} |\n`;
+              comment += `| Functions | ${functions}% | 0% | ${functions >= 0 ? '✅' : '❌'} |\n`;
+              comment += `| Branches | ${branches}% | 0% | ${branches >= 0 ? '✅' : '❌'} |\n`;
+              comment += '\n';
+              
+              if (coverageBelowThreshold) {
+                comment += '❌ **Coverage is below the required thresholds**\n\n';
+              } else {
+                comment += '✅ **Coverage meets the required thresholds**\n\n';
+              }
+            } else {
+              comment += '⚠️ **No coverage data available**\n\n';
+            }
+            
+            comment += '---\n';
+            comment += '_Coverage thresholds are currently set to 0% as tests are being developed._';
+            
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user?.type === 'Bot' && comment.body?.includes('📊 Recipe Recommendation Worker Coverage Report')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+            
+            console.log('Recipe Recommendation Worker coverage comment posted successfully');
+          } catch (error) {
+            console.error('Failed to post coverage comment:', error);
+            console.log('This may be due to permissions. The coverage report is still available in the workflow summary.');
+            
+            // Still add to summary even if comment fails
+            core.summary.addRaw(comment).write();
+          }
