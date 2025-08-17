@@ -7,12 +7,30 @@ import App from '../App';
 describe('App Utility Functions', () => {
   beforeEach(() => {
     // Mock fetch for all tests
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
+    global.fetch = jest.fn((url) => {
+      if (url.includes('/recommendations')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            recommendations: {
+              'Test Category': ['test', 'recipe']
+            },
+            location: 'Test Location',
+            date: '2025-01-01',
+            season: 'Test'
+          })
+        });
+      } else if (url.includes('/health')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: 'healthy' })
+        });
+      }
+      return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ success: true, recipes: [] })
-      })
-    );
+      });
+    });
   });
 
   afterEach(() => {
@@ -22,7 +40,7 @@ describe('App Utility Functions', () => {
   describe('formatDuration function (via recipe display)', () => {
     it('should format ISO 8601 duration strings correctly', async () => {
       // Mock a recipe with various duration formats
-      global.fetch.mockImplementationOnce((url) => {
+      global.fetch.mockImplementation((url) => {
         if (url.includes('/recipes')) {
           return Promise.resolve({
             ok: true,
@@ -71,6 +89,23 @@ describe('App Utility Functions', () => {
                 }
               ]
             })
+          });
+        } else if (url.includes('/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              recommendations: {
+                'Test Category': ['test', 'recipe', 'salad', 'berry']
+              },
+              location: 'Test Location',
+              date: '2025-01-01',
+              season: 'Test'
+            })
+          });
+        } else if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: 'healthy' })
           });
         }
         return Promise.resolve({

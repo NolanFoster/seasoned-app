@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import App from '../App';
 
 // Mock fetch globally
@@ -95,35 +95,63 @@ describe('Additional Function Coverage Tests', () => {
       // Mock window.confirm
       window.confirm = jest.fn(() => false);
       
-      // Mock recipes
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          recipes: [
-            {
-              id: '1',
-              data: {
-                id: '1',
-                name: 'Delete Test Recipe',
-                recipeIngredient: ['ingredient 1'],
-                recipeInstructions: ['step 1']
-              }
-            }
-          ]
-        })
+      // Mock all API calls
+      fetch.mockImplementation((url) => {
+        if (url.includes('/recipes')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              recipes: [
+                {
+                  id: '1',
+                  data: {
+                    id: '1',
+                    name: 'Delete Test Recipe',
+                    recipeIngredient: ['ingredient 1'],
+                    recipeInstructions: ['step 1']
+                  }
+                }
+              ]
+            })
+          });
+        } else if (url.includes('/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Test Category': ['delete', 'test', 'recipe']
+              },
+              location: 'Test Location',
+              date: '2025-01-01',
+              season: 'Test'
+            })
+          });
+        } else if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          status: 404
+        });
       });
       
       render(<App />);
       
       // Wait for recipes to load
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
+      await waitFor(() => {
+        expect(screen.getByText('Delete Test Recipe')).toBeInTheDocument();
+      }, { timeout: 3000 });
       
-      // The delete function would be called from the UI
-      // Since we can't access it directly, we verify the component renders
-      expect(screen.queryByText('Delete Test Recipe')).toBeInTheDocument();
+      // Verify the confirm dialog is set up
+      global.confirm.mockReturnValue(true);
+      
+      // The recipe card should be rendered
+      const recipeElements = screen.getAllByText('Delete Test Recipe');
+      expect(recipeElements.length).toBeGreaterThan(0);
     });
   });
 

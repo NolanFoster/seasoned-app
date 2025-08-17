@@ -12,10 +12,30 @@ describe('Recipe Management Functions', () => {
     fetch.mockClear();
     
     // Mock successful responses by default
-    fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, recipes: [] }),
-      text: async () => 'Success'
+    fetch.mockImplementation((url) => {
+      if (url.includes('/recommendations')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            recommendations: {
+              'Test Category': ['test', 'recipe']
+            },
+            location: 'Test Location',
+            date: '2025-01-01',
+            season: 'Test'
+          })
+        });
+      } else if (url.includes('/health')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ status: 'healthy' })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, recipes: [] }),
+        text: async () => 'Success'
+      });
     });
   });
 
@@ -52,23 +72,48 @@ describe('Recipe Management Functions', () => {
   describe('Recipe Edit Functions', () => {
     it('should enable edit mode for a recipe', async () => {
       // Mock initial recipes
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          recipes: [
-            {
-              id: '1',
-              data: {
-                id: '1',
-                name: 'Test Recipe',
-                source_url: 'http://example.com',
-                ingredients: ['ingredient 1'],
-                instructions: ['step 1']
-              }
-            }
-          ]
-        })
+      fetch.mockImplementation((url) => {
+        if (url.includes('/recipes')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              recipes: [
+                {
+                  id: '1',
+                  data: {
+                    id: '1',
+                    name: 'Test Recipe',
+                    source_url: 'http://example.com',
+                    ingredients: ['ingredient 1'],
+                    instructions: ['step 1']
+                  }
+                }
+              ]
+            })
+          });
+        } else if (url.includes('/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Test Category': ['test', 'recipe']
+              },
+              location: 'Test Location',
+              date: '2025-01-01',
+              season: 'Test'
+            })
+          });
+        } else if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, recipes: [] })
+        });
       });
       
       const { getByText, getByDisplayValue } = render(<App />);
@@ -97,9 +142,40 @@ describe('Recipe Management Functions', () => {
       // Type a valid URL
       await userEvent.type(searchInput, 'http://example.com/recipe');
       
+      // Mock clipper health check
+      fetch.mockImplementation((url) => {
+        if (url.includes('clipper') && url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        } else if (url.includes('/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Test Category': ['test', 'recipe']
+              },
+              location: 'Test Location',
+              date: '2025-01-01',
+              season: 'Test'
+            })
+          });
+        } else if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, recipes: [] })
+        });
+      });
+      
       // Should show clip button
       await waitFor(() => {
-        expect(getByTitle('Clip recipe from URL')).toBeInTheDocument();
+        expect(getByTitle('Clip recipe from website')).toBeInTheDocument();
       });
     });
   });
@@ -107,23 +183,48 @@ describe('Recipe Management Functions', () => {
   describe('Recipe View Functions', () => {
     it('should open recipe view when recipe is clicked', async () => {
       // Mock initial recipes
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          recipes: [
-            {
-              id: '1',
-              data: {
-                id: '1',
-                name: 'Clickable Recipe',
-                source_url: 'http://example.com',
-                recipeIngredient: ['ingredient 1', 'ingredient 2'],
-                recipeInstructions: ['step 1', 'step 2']
-              }
-            }
-          ]
-        })
+      fetch.mockImplementation((url) => {
+        if (url.includes('/recipes')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              recipes: [
+                {
+                  id: '1',
+                  data: {
+                    id: '1',
+                    name: 'Clickable Recipe',
+                    source_url: 'http://example.com',
+                    recipeIngredient: ['ingredient 1', 'ingredient 2'],
+                    recipeInstructions: ['step 1', 'step 2']
+                  }
+                }
+              ]
+            })
+          });
+        } else if (url.includes('/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Test Category': ['clickable', 'recipe']
+              },
+              location: 'Test Location',
+              date: '2025-01-01',
+              season: 'Test'
+            })
+          });
+        } else if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, recipes: [] })
+        });
       });
       
       const { getByText } = render(<App />);
@@ -158,23 +259,48 @@ describe('Recipe Management Functions', () => {
   describe('Share Panel Functions', () => {
     it('should toggle share panel', async () => {
       // Mock initial recipes
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          recipes: [
-            {
-              id: '1',
-              data: {
-                id: '1',
-                name: 'Share Test Recipe',
-                source_url: 'http://example.com/share',
-                recipeIngredient: ['ingredient 1'],
-                recipeInstructions: ['step 1']
-              }
-            }
-          ]
-        })
+      fetch.mockImplementation((url) => {
+        if (url.includes('/recipes')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              recipes: [
+                {
+                  id: '1',
+                  data: {
+                    id: '1',
+                    name: 'Share Test Recipe',
+                    source_url: 'http://example.com/share',
+                    recipeIngredient: ['ingredient 1'],
+                    recipeInstructions: ['step 1']
+                  }
+                }
+              ]
+            })
+          });
+        } else if (url.includes('/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Test Category': ['share', 'test', 'recipe']
+              },
+              location: 'Test Location',
+              date: '2025-01-01',
+              season: 'Test'
+            })
+          });
+        } else if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, recipes: [] })
+        });
       });
       
       const { getByText, getByTitle } = render(<App />);

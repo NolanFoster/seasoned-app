@@ -105,51 +105,71 @@ describe('Recipe Recommendations Feature', () => {
               recipes: [
                 {
                   id: '1',
-                  name: 'Summer Berry Salad',
-                  description: 'Fresh berries with mint',
-                  image: 'berry-salad.jpg',
-                  recipeCategory: ['Salad', 'Summer'],
-                  recipeCuisine: 'American',
-                  keywords: 'fresh, berries, salad',
-                  prep_time: 'PT10M',
-                  cook_time: null,
-                  recipe_yield: '4 servings'
+                  data: {
+                    id: '1',
+                    name: 'Summer Berry Salad',
+                    description: 'Fresh berries with mint',
+                    image: 'berry-salad.jpg',
+                    recipeCategory: ['Salad', 'Summer'],
+                    recipeCuisine: 'American',
+                    keywords: 'fresh, berries, salad',
+                    prep_time: 'PT10M',
+                    cook_time: null,
+                    recipe_yield: '4 servings',
+                    recipeIngredient: ['2 cups mixed berries', '1/4 cup fresh mint', 'Honey to taste'],
+                    recipeInstructions: ['Mix berries', 'Add mint', 'Drizzle with honey']
+                  }
                 },
                 {
                   id: '2',
-                  name: 'Grilled Vegetables',
-                  description: 'Seasonal grilled vegetables',
-                  image: 'grilled-veg.jpg',
-                  recipeCategory: 'Side Dish',
-                  recipeCuisine: ['Mediterranean', 'Healthy'],
-                  keywords: 'grilled, vegetables, summer',
-                  prep_time: 'PT15M',
-                  cook_time: 'PT20M',
-                  recipe_yield: '6 servings'
+                  data: {
+                    id: '2',
+                    name: 'Grilled Vegetables',
+                    description: 'Seasonal grilled vegetables',
+                    image: 'grilled-veg.jpg',
+                    recipeCategory: 'Side Dish',
+                    recipeCuisine: ['Mediterranean', 'Healthy'],
+                    keywords: 'grilled, vegetables, summer',
+                    prep_time: 'PT15M',
+                    cook_time: 'PT20M',
+                    recipe_yield: '6 servings',
+                    recipeIngredient: ['2 zucchini', '1 eggplant', '2 bell peppers', 'Olive oil'],
+                    recipeInstructions: ['Slice vegetables', 'Brush with oil', 'Grill until tender']
+                  }
                 },
                 {
                   id: '3',
-                  name: 'Tomato Gazpacho',
-                  description: 'Cold tomato soup perfect for summer',
-                  image: 'gazpacho.jpg',
-                  recipeCategory: 'Soup',
-                  recipeCuisine: 'Spanish',
-                  keywords: 'cold soup, tomatoes, summer',
-                  prep_time: 'PT20M',
-                  cook_time: null,
-                  recipe_yield: '4 servings'
+                  data: {
+                    id: '3',
+                    name: 'Tomato Gazpacho',
+                    description: 'Cold tomato soup perfect for summer',
+                    image: 'gazpacho.jpg',
+                    recipeCategory: 'Soup',
+                    recipeCuisine: 'Spanish',
+                    keywords: 'cold soup, tomatoes, summer',
+                    prep_time: 'PT20M',
+                    cook_time: null,
+                    recipe_yield: '4 servings',
+                    recipeIngredient: ['6 ripe tomatoes', '1 cucumber', '1 bell pepper', 'Garlic'],
+                    recipeInstructions: ['Chop vegetables', 'Blend until smooth', 'Chill before serving']
+                  }
                 },
                 {
                   id: '4',
-                  name: 'Apple Pie',
-                  description: 'Classic American apple pie',
-                  image: 'apple-pie.jpg',
-                  recipeCategory: 'Dessert',
-                  recipeCuisine: 'American',
-                  keywords: 'pie, apples, dessert, fall',
-                  prep_time: 'PT30M',
-                  cook_time: 'PT45M',
-                  recipe_yield: '8 slices'
+                  data: {
+                    id: '4',
+                    name: 'Apple Pie',
+                    description: 'Classic American apple pie',
+                    image: 'apple-pie.jpg',
+                    recipeCategory: 'Dessert',
+                    recipeCuisine: 'American',
+                    keywords: 'pie, apples, dessert, fall',
+                    prep_time: 'PT30M',
+                    cook_time: 'PT45M',
+                    recipe_yield: '8 slices',
+                    recipeIngredient: ['6 apples', '1 pie crust', '1/2 cup sugar', 'Cinnamon'],
+                    recipeInstructions: ['Prepare crust', 'Mix apple filling', 'Bake at 375°F']
+                  }
                 }
               ]
             })
