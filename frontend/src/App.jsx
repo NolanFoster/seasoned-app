@@ -2735,68 +2735,111 @@ function App() {
             {showNutrition ? (
               /* Nutrition Panel */
               <div className="recipe-panel glass nutrition-panel">
-                <h2>Nutrition Information</h2>
-                <div className="nutrition-grid">
+                <div className="nutrition-facts-label">
+                  <h2 className="nutrition-title">Nutrition Facts</h2>
+                  {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+                    <div className="serving-info">
+                      <span className="serving-label">Serving Size</span>
+                      <span className="serving-value">1 serving</span>
+                    </div>
+                  )}
+                  {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
+                    <div className="servings-per-container">
+                      <span className="serving-label">Servings Per Recipe</span>
+                      <span className="serving-value">{selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield}</span>
+                    </div>
+                  )}
+                  
+                  <div className="nutrition-divider thick"></div>
+                  
                   {selectedRecipe.nutrition.calories && (
-                    <div className="nutrition-item highlight">
-                      <span className="nutrition-label">Calories</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.calories}</span>
-                    </div>
+                    <>
+                      <div className="calories-section">
+                        <span className="calories-label">Calories</span>
+                        <span className="calories-value">{selectedRecipe.nutrition.calories.replace(' kcal', '')}</span>
+                      </div>
+                      <div className="nutrition-divider medium"></div>
+                    </>
                   )}
-                  {selectedRecipe.nutrition.fatContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Total Fat</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.fatContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.saturatedFatContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Saturated Fat</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.saturatedFatContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.unsaturatedFatContent && selectedRecipe.nutrition.unsaturatedFatContent !== "0 g" && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Unsaturated Fat</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.unsaturatedFatContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.proteinContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Protein</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.proteinContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.carbohydrateContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Carbohydrates</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.carbohydrateContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.fiberContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Fiber</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.fiberContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.sugarContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Sugar</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.sugarContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.sodiumContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Sodium</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.sodiumContent}</span>
-                    </div>
-                  )}
-                  {selectedRecipe.nutrition.cholesterolContent && (
-                    <div className="nutrition-item">
-                      <span className="nutrition-label">Cholesterol</span>
-                      <span className="nutrition-value">{selectedRecipe.nutrition.cholesterolContent}</span>
-                    </div>
-                  )}
+                  
+                  <div className="nutrition-list">
+                    {selectedRecipe.nutrition.fatContent && (
+                      <div className="nutrition-row">
+                        <span className="nutrient-name bold">Total Fat</span>
+                        <span className="nutrient-value">{selectedRecipe.nutrition.fatContent}</span>
+                      </div>
+                    )}
+                    {selectedRecipe.nutrition.saturatedFatContent && (
+                      <div className="nutrition-row indent">
+                        <span className="nutrient-name">Saturated Fat</span>
+                        <span className="nutrient-value">{selectedRecipe.nutrition.saturatedFatContent}</span>
+                      </div>
+                    )}
+                    {selectedRecipe.nutrition.unsaturatedFatContent && selectedRecipe.nutrition.unsaturatedFatContent !== "0 g" && (
+                      <div className="nutrition-row indent">
+                        <span className="nutrient-name">Unsaturated Fat</span>
+                        <span className="nutrient-value">{selectedRecipe.nutrition.unsaturatedFatContent}</span>
+                      </div>
+                    )}
+                    
+                    {selectedRecipe.nutrition.cholesterolContent && (
+                      <>
+                        <div className="nutrition-divider thin"></div>
+                        <div className="nutrition-row">
+                          <span className="nutrient-name bold">Cholesterol</span>
+                          <span className="nutrient-value">{selectedRecipe.nutrition.cholesterolContent}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {selectedRecipe.nutrition.sodiumContent && (
+                      <>
+                        <div className="nutrition-divider thin"></div>
+                        <div className="nutrition-row">
+                          <span className="nutrient-name bold">Sodium</span>
+                          <span className="nutrient-value">{selectedRecipe.nutrition.sodiumContent}</span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {selectedRecipe.nutrition.carbohydrateContent && (
+                      <>
+                        <div className="nutrition-divider thin"></div>
+                        <div className="nutrition-row">
+                          <span className="nutrient-name bold">Total Carbohydrate</span>
+                          <span className="nutrient-value">{selectedRecipe.nutrition.carbohydrateContent}</span>
+                        </div>
+                      </>
+                    )}
+                    {selectedRecipe.nutrition.fiberContent && (
+                      <div className="nutrition-row indent">
+                        <span className="nutrient-name">Dietary Fiber</span>
+                        <span className="nutrient-value">{selectedRecipe.nutrition.fiberContent}</span>
+                      </div>
+                    )}
+                    {selectedRecipe.nutrition.sugarContent && (
+                      <div className="nutrition-row indent">
+                        <span className="nutrient-name">Total Sugars</span>
+                        <span className="nutrient-value">{selectedRecipe.nutrition.sugarContent}</span>
+                      </div>
+                    )}
+                    
+                    {selectedRecipe.nutrition.proteinContent && (
+                      <>
+                        <div className="nutrition-divider thin"></div>
+                        <div className="nutrition-row">
+                          <span className="nutrient-name bold">Protein</span>
+                          <span className="nutrient-value">{selectedRecipe.nutrition.proteinContent}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="nutrition-divider thick"></div>
+                  
+                  <div className="nutrition-footer">
+                    <p className="nutrition-note">* Nutrition information is estimated based on the ingredients and cooking instructions for each recipe.</p>
+                  </div>
                 </div>
               </div>
             ) : (
