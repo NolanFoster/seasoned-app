@@ -2743,9 +2743,8 @@ function App() {
           <div className={`recipe-fullscreen-content ${showNutrition ? 'nutrition-view' : ''}`}>
             {showNutrition ? (
               /* Nutrition Panel */
-              <div className="recipe-panel glass nutrition-panel">
-                <div className="nutrition-facts-label">
-                  <h2 className="nutrition-title">Nutrition Facts</h2>
+              <div className="nutrition-facts-label">
+                <h2 className="nutrition-title">Nutrition Facts</h2>
                   {(selectedRecipe.recipe_yield || selectedRecipe.recipeYield || selectedRecipe.yield) && (
                     <div className="serving-info">
                       <span className="serving-label">Serving Size</span>
@@ -2850,7 +2849,6 @@ function App() {
                     <p className="nutrition-note">* Nutrition information is estimated based on the ingredients and cooking instructions for each recipe.</p>
                   </div>
                 </div>
-              </div>
             ) : (
               <>
                 {/* Ingredients Panel */}
