@@ -133,7 +133,7 @@ describe('VideoPopup Component', () => {
     expect(iframe).toHaveAttribute('src', 'https://player.vimeo.com/video/123456789');
   });
 
-  test('handles invalid URL gracefully', async () => {
+  test('hides video button for invalid URL', async () => {
     fetch.mockImplementation(createMockFetch({ video_url: 'not-a-valid-url' }));
 
     render(<App />);
@@ -143,13 +143,50 @@ describe('VideoPopup Component', () => {
       fireEvent.click(recipeCard);
     });
 
+    // Video button should not be visible for invalid URLs
+    expect(screen.queryByText('🎥 Watch Video')).not.toBeInTheDocument();
+  });
+
+  test('hides video button for empty URL', async () => {
+    fetch.mockImplementation(createMockFetch({ video_url: '' }));
+
+    render(<App />);
+    
     await waitFor(() => {
-      const videoLink = screen.getByText('🎥 Watch Video');
-      fireEvent.click(videoLink);
+      const recipeCard = screen.getByText('Test Recipe');
+      fireEvent.click(recipeCard);
     });
 
-    const iframe = screen.getByTitle('Recipe Video');
-    expect(iframe).toHaveAttribute('src', 'not-a-valid-url');
+    // Video button should not be visible for empty URLs
+    expect(screen.queryByText('🎥 Watch Video')).not.toBeInTheDocument();
+  });
+
+  test('hides video button for null URL', async () => {
+    fetch.mockImplementation(createMockFetch({ video_url: null }));
+
+    render(<App />);
+    
+    await waitFor(() => {
+      const recipeCard = screen.getByText('Test Recipe');
+      fireEvent.click(recipeCard);
+    });
+
+    // Video button should not be visible for null URLs
+    expect(screen.queryByText('🎥 Watch Video')).not.toBeInTheDocument();
+  });
+
+  test('hides video button when video_url is undefined', async () => {
+    fetch.mockImplementation(createMockFetch({ /* no video_url */ }));
+
+    render(<App />);
+    
+    await waitFor(() => {
+      const recipeCard = screen.getByText('Test Recipe');
+      fireEvent.click(recipeCard);
+    });
+
+    // Video button should not be visible when video_url is undefined
+    expect(screen.queryByText('🎥 Watch Video')).not.toBeInTheDocument();
   });
 
   test('closes video popup when close button is clicked', async () => {
@@ -308,8 +345,9 @@ describe('VideoPopup Component', () => {
     expect(iframe).toHaveAttribute('src', 'https://www.youtube.com/embed/test456');
   });
 
-  test('shows error message when video fails to load', async () => {
-    fetch.mockImplementation(createMockFetch({ video_url: '' }));
+  test('shows video popup with valid URL', async () => {
+    // Test that video popup opens with a valid URL
+    fetch.mockImplementation(createMockFetch({ video_url: 'https://example.com/video.mp4' }));
 
     render(<App />);
     
@@ -323,8 +361,16 @@ describe('VideoPopup Component', () => {
       fireEvent.click(videoLink);
     });
 
-    // Should show error message
-    expect(screen.getByText('Unable to load video')).toBeInTheDocument();
-    expect(screen.getByText('Open in new tab')).toBeInTheDocument();
+    // Verify iframe is rendered with the correct URL
+    await waitFor(() => {
+      const iframe = screen.getByTitle('Recipe Video');
+      expect(iframe).toBeInTheDocument();
+      expect(iframe).toHaveAttribute('src', 'https://example.com/video.mp4');
+    });
+
+    // Verify popup has proper controls
+    expect(screen.getByTitle('Minimize')).toBeInTheDocument();
+    expect(screen.getByTitle('Maximize')).toBeInTheDocument();
+    expect(screen.getByTitle('Close')).toBeInTheDocument();
   });
 });
