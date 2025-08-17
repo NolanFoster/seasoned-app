@@ -1299,7 +1299,7 @@ function App() {
               )}
             </button>
           </div>
-          {/* Desktop Add button - inside header, to the right of search */}
+          {/* Desktop Add button - outside search panel, to the right */}
           <button className="fab fab-add fab-desktop" onClick={() => setShowAddForm(true)}>
             <span className="fab-icon">+</span>
           </button>

@@ -249,10 +249,26 @@
   // Position relative since it's inside the header flex container
   position: relative;
   width: 48px;
-  height: 36px;
-  border-radius: 18px;
+  height: 48px;
+  border-radius: 50%; // Make it circular
   flex-shrink: 0;
   margin-left: $spacing-sm;
+  
+  // Glass effect to match header styling
+  @include glass-effect;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 
+              0 2px 6px rgba(0, 0, 0, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15), 
+                0 3px 8px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.3);
+  }
   
   // Hide on mobile
   @media (max-width: 640px) {
@@ -261,7 +277,8 @@
 }
 
 .fab-desktop .fab-icon {
-  font-size: 1.6em;
+  font-size: 1.8em;
+  font-weight: 300; // Lighter weight for the plus sign
 }
 
 /* Mobile FAB positioned at bottom left */
