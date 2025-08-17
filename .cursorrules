@@ -1,0 +1,26 @@
+# Cursor Rules
+
+This project uses modular rules stored in `.cursor/rules/`. The following rules are automatically applied:
+
+## Active Rules
+
+1. **Testing and Deployment Workflow** - Ensures proper testing and deployment practices
+2. **Code Quality Standards** - Maintains consistent code quality  
+3. **Release Workflow** - Guides the release process from staging to production
+4. **Automated Workflows** (on-demand) - Suggests CI/CD and testing improvements
+
+## Key Guidelines
+
+### Release Process
+- Always rebase main into staging before merging to production
+- Resolve conflicts carefully, preserving both features and hotfixes
+- Use `--force-with-lease` when force pushing after rebase
+- Tag releases after successful deployment
+
+### Development Workflow
+- Create feature branches from staging
+- Test thoroughly on staging before production release
+- Document significant changes and decisions
+- Follow semantic versioning for releases
+
+For detailed rules, see the individual `.mdc` files in `.cursor/rules/`.
