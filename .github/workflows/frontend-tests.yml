@@ -134,6 +134,12 @@ jobs:
           echo "diff_coverage_available=true" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📊 ${coverage_line}" >> $GITHUB_STEP_SUMMARY
+        elif grep -q "No lines with coverage information in this diff" diff-coverage-output.txt; then
+          # Handle case where there are no lines with coverage information
+          echo "diff_coverage_percentage=N/A" >> $GITHUB_OUTPUT
+          echo "diff_coverage_available=true" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 No lines with coverage information in this diff - this is normal when changes don't affect testable code" >> $GITHUB_STEP_SUMMARY
         else
           echo "diff_coverage_available=false" >> $GITHUB_OUTPUT
         fi
@@ -291,16 +297,21 @@ jobs:
             // Differential Coverage Section
             comment += '### Differential Coverage\n';
             if (diffCoverageAvailable && diffCoveragePercentage) {
-              comment += `**Coverage of new/modified code: ${diffCoveragePercentage}%**\n\n`;
-              comment += '| Type | Coverage | Threshold | Status |\n';
-              comment += '|------|----------|-----------|--------|\n';
-              const diffPercent = parseFloat(diffCoveragePercentage);
-              comment += `| New/Modified Code | ${diffCoveragePercentage}% | 85% | ${diffPercent >= 85 ? '✅' : '❌'} |\n\n`;
-              
-              if (diffCoverageBelowThreshold) {
-                comment += '❌ **New code coverage is below the required 85% threshold**\n\n';
+              if (diffCoveragePercentage === 'N/A') {
+                comment += '**Coverage of new/modified code: N/A**\n\n';
+                comment += 'ℹ️ _No lines with coverage information in this diff. This is normal when changes don\'t affect testable code (e.g., documentation, configuration, or non-executable code)._\n\n';
               } else {
-                comment += '✅ **New code coverage meets the required 85% threshold**\n\n';
+                comment += `**Coverage of new/modified code: ${diffCoveragePercentage}%**\n\n`;
+                comment += '| Type | Coverage | Threshold | Status |\n';
+                comment += '|------|----------|-----------|--------|\n';
+                const diffPercent = parseFloat(diffCoveragePercentage);
+                comment += `| New/Modified Code | ${diffCoveragePercentage}% | 85% | ${diffPercent >= 85 ? '✅' : '❌'} |\n\n`;
+                
+                if (diffCoverageBelowThreshold) {
+                  comment += '❌ **New code coverage is below the required 85% threshold**\n\n';
+                } else {
+                  comment += '✅ **New code coverage meets the required 85% threshold**\n\n';
+                }
               }
             } else {
               comment += 'ℹ️ _No differential coverage data available. This may happen if there are no code changes in the PR._\n\n';
