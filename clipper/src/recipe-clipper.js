@@ -28,12 +28,35 @@ export default {
       if (pathname === '/clip' && request.method === 'POST') {
         const body = await request.json();
         const pageUrl = body.url;
+        const clearCache = body.clearCache === true;
         
         if (!pageUrl) {
           return new Response('URL is required', { 
             status: 400,
             headers: corsHeaders
           });
+        }
+        
+        // Handle cache clearing if requested
+        if (clearCache) {
+          try {
+            const recipeId = await generateRecipeId(pageUrl);
+            await env.RECIPE_STORAGE.delete(recipeId);
+            return new Response(JSON.stringify({ 
+              message: 'Recipe cache cleared successfully',
+              url: pageUrl,
+              recipeId: recipeId
+            }), { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } catch (e) {
+            console.error('Error clearing cached recipe:', e);
+            return new Response('Error clearing cached recipe: ' + e.message, { 
+              status: 500,
+              headers: corsHeaders
+            });
+          }
         }
         
         try {
@@ -107,81 +130,7 @@ export default {
         }
       }
 
-      // Get cached recipe by URL
-      if (pathname === '/cached' && request.method === 'GET') {
-        const pageUrl = url.searchParams.get('url');
-        
-        if (!pageUrl) {
-          return new Response('URL parameter is required', { 
-            status: 400,
-            headers: corsHeaders
-          });
-        }
-        
-        try {
-          const recipeId = await generateRecipeId(pageUrl);
-          const existingRecipe = await getRecipeFromKV(env, recipeId);
-          
-          if (existingRecipe.success) {
-            return new Response(JSON.stringify({
-              ...existingRecipe.recipe.data,
-              source_url: pageUrl,
-              cached: true,
-              recipeId: recipeId,
-              scrapedAt: existingRecipe.recipe.scrapedAt
-            }), { 
-              status: 200, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          } else {
-            return new Response(JSON.stringify({ 
-              error: 'Recipe not found in cache',
-              url: pageUrl
-            }), { 
-              status: 404,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-        } catch (e) {
-          console.error('Error retrieving cached recipe:', e);
-          return new Response('Error retrieving cached recipe: ' + e.message, { 
-            status: 500,
-            headers: corsHeaders
-          });
-        }
-      }
 
-      // Clear cached recipe by URL
-      if (pathname === '/cached' && request.method === 'DELETE') {
-        const pageUrl = url.searchParams.get('url');
-        
-        if (!pageUrl) {
-          return new Response('URL parameter is required', { 
-            status: 400,
-            headers: corsHeaders
-          });
-        }
-        
-        try {
-          const recipeId = await generateRecipeId(pageUrl);
-          await env.RECIPE_STORAGE.delete(recipeId);
-          
-          return new Response(JSON.stringify({ 
-            message: 'Recipe cache cleared successfully',
-            url: pageUrl,
-            recipeId: recipeId
-          }), { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        } catch (e) {
-          console.error('Error clearing cached recipe:', e);
-          return new Response('Error clearing cached recipe: ' + e.message, { 
-            status: 500,
-            headers: corsHeaders
-          });
-        }
-      }
 
       // Health check endpoint
       if (pathname === '/health' && request.method === 'GET') {
@@ -191,8 +140,7 @@ export default {
           features: ['ai-extraction', 'kv-storage', 'caching'],
           endpoints: {
             'POST /clip': 'Extract recipe from URL (checks cache first)',
-            'GET /cached?url=<recipe-url>': 'Get cached recipe by URL',
-            'DELETE /cached?url=<recipe-url>': 'Clear cached recipe by URL',
+            'POST /clip with clearCache:true': 'Clear recipe from cache',
             'GET /health': 'Health check'
           }
         }), {
