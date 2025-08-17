@@ -40,7 +40,7 @@ class_name = "RecipeSaver"
 tag = "v1"
 new_classes = ["RecipeSaver"]
 
-# Optional: R2 Bucket for recipe images (if needed)
+# R2 Bucket for recipe images
 [[r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"

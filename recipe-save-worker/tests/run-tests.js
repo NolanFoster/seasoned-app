@@ -16,23 +16,39 @@ if (!existsSync(join(rootDir, 'package.json'))) {
 
 console.log('🧪 Running Recipe Save Worker tests...\n');
 
-try {
-  // Run tests with coverage if c8 is available
-  const command = process.argv.includes('--coverage') 
-    ? 'npx c8 --reporter=text --reporter=html node --experimental-vm-modules tests/worker.test.js'
-    : 'node --experimental-vm-modules tests/worker.test.js';
+const testFiles = [
+  'tests/worker.test.js',
+  'tests/image-processing.test.js'
+];
 
-  execSync(command, {
-    stdio: 'inherit',
-    cwd: rootDir,
-    env: {
-      ...process.env,
-      NODE_ENV: 'test'
-    }
-  });
+let allTestsPassed = true;
 
+for (const testFile of testFiles) {
+  console.log(`\n📄 Running ${testFile}...`);
+  
+  try {
+    // Run tests with coverage if c8 is available
+    const command = process.argv.includes('--coverage') 
+      ? `npx c8 --reporter=text --reporter=html node --experimental-vm-modules ${testFile}`
+      : `node --experimental-vm-modules ${testFile}`;
+
+    execSync(command, {
+      stdio: 'inherit',
+      cwd: rootDir,
+      env: {
+        ...process.env,
+        NODE_ENV: 'test'
+      }
+    });
+  } catch (error) {
+    console.error(`\n❌ ${testFile} failed!`);
+    allTestsPassed = false;
+  }
+}
+
+if (allTestsPassed) {
   console.log('\n✅ All tests passed!');
-} catch (error) {
-  console.error('\n❌ Tests failed!');
+} else {
+  console.error('\n❌ Some tests failed!');
   process.exit(1);
 }

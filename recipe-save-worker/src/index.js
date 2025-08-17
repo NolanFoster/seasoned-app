@@ -64,9 +64,12 @@ export class RecipeSaver {
           };
         }
 
+        // Process and download images
+        const processedRecipe = await this.processRecipeImages(recipe, recipeId);
+
         // Create recipe record with metadata
         const recipeRecord = {
-          ...recipe,
+          ...processedRecipe,
           id: recipeId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -138,10 +141,13 @@ export class RecipeSaver {
         const { decompressData } = await import('../../shared/kv-storage.js');
         const existingRecipe = await decompressData(compressedData);
 
+        // Process images in updates if any
+        const processedUpdates = await this.processRecipeImages(updates, recipeId, existingRecipe);
+
         // Apply updates
         const updatedRecipe = {
           ...existingRecipe,
-          ...updates,
+          ...processedUpdates,
           id: recipeId, // Ensure ID doesn't change
           updatedAt: new Date().toISOString(),
           version: (existingRecipe.version || 1) + 1
@@ -199,13 +205,20 @@ export class RecipeSaver {
     const result = await this.state.blockConcurrencyWhile(async () => {
       try {
         // Check if recipe exists
-        const existing = await this.env.RECIPE_STORAGE.get(recipeId);
-        if (!existing) {
+        const compressedData = await this.env.RECIPE_STORAGE.get(recipeId);
+        if (!compressedData) {
           return {
             success: false,
             error: 'Recipe not found'
           };
         }
+
+        // Decompress to get image URLs for cleanup
+        const { decompressData } = await import('../../shared/kv-storage.js');
+        const recipe = await decompressData(compressedData);
+
+        // Delete images from R2 if they exist
+        await this.deleteRecipeImages(recipe);
 
         // Delete from KV
         await this.env.RECIPE_STORAGE.delete(recipeId);
@@ -267,6 +280,168 @@ export class RecipeSaver {
     return new Response(JSON.stringify(status), {
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+
+  async processRecipeImages(recipe, recipeId, existingRecipe = null) {
+    const processedRecipe = { ...recipe };
+    const imagesToProcess = [];
+
+    // Collect all image URLs that need processing
+    if (recipe.imageUrl && this.isExternalUrl(recipe.imageUrl)) {
+      imagesToProcess.push({ field: 'imageUrl', url: recipe.imageUrl });
+    }
+
+    // Check for images in recipe steps/instructions if they exist
+    if (recipe.images && Array.isArray(recipe.images)) {
+      recipe.images.forEach((img, index) => {
+        if (this.isExternalUrl(img)) {
+          imagesToProcess.push({ field: 'images', index, url: img });
+        }
+      });
+    }
+
+    // Process images in parallel
+    const processedImages = await Promise.all(
+      imagesToProcess.map(async (img) => {
+        try {
+          const r2Url = await this.downloadAndStoreImage(img.url, recipeId, img.field, img.index);
+          return { ...img, r2Url };
+        } catch (error) {
+          console.error(`Failed to process image ${img.url}:`, error);
+          // Return original URL if download fails
+          return { ...img, r2Url: img.url };
+        }
+      })
+    );
+
+    // Update recipe with R2 URLs
+    processedImages.forEach(({ field, index, r2Url }) => {
+      if (field === 'imageUrl') {
+        processedRecipe.imageUrl = r2Url;
+      } else if (field === 'images' && index !== undefined) {
+        if (!processedRecipe.images) processedRecipe.images = [...recipe.images];
+        processedRecipe.images[index] = r2Url;
+      }
+    });
+
+    // Keep track of original URLs for potential cleanup
+    processedRecipe._originalImageUrls = imagesToProcess.map(img => img.url);
+
+    return processedRecipe;
+  }
+
+  async downloadAndStoreImage(imageUrl, recipeId, field, index) {
+    try {
+      // Download the image
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download image: ${response.status}`);
+      }
+
+      // Get content type
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const extension = this.getExtensionFromContentType(contentType);
+      
+      // Generate unique filename
+      const timestamp = Date.now();
+      const filename = index !== undefined 
+        ? `${recipeId}/${field}_${index}_${timestamp}.${extension}`
+        : `${recipeId}/${field}_${timestamp}.${extension}`;
+
+      // Get image data
+      const imageData = await response.arrayBuffer();
+
+      // Store in R2
+      await this.env.RECIPE_IMAGES.put(filename, imageData, {
+        httpMetadata: {
+          contentType: contentType,
+          cacheControl: 'public, max-age=31536000' // Cache for 1 year
+        },
+        customMetadata: {
+          recipeId: recipeId,
+          originalUrl: imageUrl,
+          field: field,
+          uploadedAt: new Date().toISOString()
+        }
+      });
+
+      // Return the R2 URL
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      return `${imageDomain}/${filename}`;
+    } catch (error) {
+      console.error(`Error downloading/storing image from ${imageUrl}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteRecipeImages(recipe) {
+    try {
+      const imagesToDelete = [];
+
+      // Collect R2 URLs from the recipe
+      if (recipe.imageUrl && recipe.imageUrl.includes(this.env.IMAGE_DOMAIN)) {
+        imagesToDelete.push(this.getR2KeyFromUrl(recipe.imageUrl));
+      }
+
+      if (recipe.images && Array.isArray(recipe.images)) {
+        recipe.images.forEach(img => {
+          if (img && img.includes(this.env.IMAGE_DOMAIN)) {
+            imagesToDelete.push(this.getR2KeyFromUrl(img));
+          }
+        });
+      }
+
+      // Delete images from R2
+      await Promise.all(
+        imagesToDelete.map(key => 
+          this.env.RECIPE_IMAGES.delete(key).catch(err => 
+            console.error(`Failed to delete image ${key}:`, err)
+          )
+        )
+      );
+
+      console.log(`Deleted ${imagesToDelete.length} images for recipe ${recipe.id}`);
+    } catch (error) {
+      console.error('Error deleting recipe images:', error);
+      // Don't fail the entire operation if image deletion fails
+    }
+  }
+
+  isExternalUrl(url) {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      return !url.startsWith(imageDomain) && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
+    } catch {
+      return false;
+    }
+  }
+
+  getExtensionFromContentType(contentType) {
+    const typeMap = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'image/svg+xml': 'svg',
+      'image/avif': 'avif'
+    };
+    return typeMap[contentType.toLowerCase()] || 'jpg';
+  }
+
+  getR2KeyFromUrl(url) {
+    try {
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      if (url.startsWith(imageDomain)) {
+        return url.substring(imageDomain.length + 1); // +1 for the trailing slash
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   async syncWithSearchDB(recipe, operation) {
