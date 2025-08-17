@@ -1258,6 +1258,12 @@ async function callGPTModel(htmlContent, pageUrl, env) {
     
     console.log('AI binding available, proceeding with AI call...');
     
+    // Truncate HTML content to reduce prompt size for faster processing
+    const maxHtmlLength = 10000; // Limit HTML to avoid overwhelming the model
+    const truncatedHtml = htmlContent.length > maxHtmlLength 
+      ? htmlContent.substring(0, maxHtmlLength) + '...[truncated]'
+      : htmlContent;
+    
     const prompt = `You are a recipe extraction expert. Extract a recipe from the following raw HTML content and format it according to Google's Recipe structured data schema.
 
 IMPORTANT: You must return ONLY a valid JSON object with NO additional text, markdown formatting, or explanations. The response must be parseable by JSON.parse().
@@ -1366,14 +1372,14 @@ IMPORTANT: Look for publication dates in:
 - "Published on" or "Updated on" text
 
 HTML Content:
-${htmlContent}`;
+${truncatedHtml}`;
 
     console.log('Calling Cloudflare AI with prompt length:', prompt.length);
     
-    // Use Cloudflare Workers AI binding
-    const response = await env.AI.run('@cf/openai/gpt-oss-20b', {
-      instructions: 'You are a recipe extraction expert. Extract recipes from HTML content and return clean JSON.',
-      input: prompt
+    // Use faster Llama 3.1 8B model instead of GPT-OSS-20B
+    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      prompt: prompt,
+      max_tokens: 1024  // Limit tokens for faster response
     });
 
     console.log('Cloudflare AI response received. Response type:', typeof response);

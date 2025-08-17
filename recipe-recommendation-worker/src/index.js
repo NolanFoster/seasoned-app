@@ -94,25 +94,27 @@ async function getRecipeRecommendations(location, date, env) {
   const month = dateObj.toLocaleString('default', { month: 'long' });
   const season = getSeason(dateObj);
 
-  // Create the prompt
-  const prompt = `Based on my location (${location}) and the date (${date} - ${month}, ${season}), give me 3 relevant categories each with a list of tags for recipe recommendations. Consider local cuisine, seasonal ingredients, and any holidays or cultural events around this time. Provide the output in JSON format.
+  // Create a more concise prompt for better performance
+  const prompt = `Location: ${location}, Date: ${date} (${month}, ${season})
 
-Example format:
+Generate 3 recipe categories with 4 tags each. Consider local cuisine, seasonal ingredients, and holidays.
+
+Return ONLY this JSON format:
 {
   "recommendations": {
-    "Seasonal Favorites": ["pumpkin", "apple", "cinnamon", "warm spices"],
-    "Local Specialties": ["seafood", "clam chowder", "lobster roll"],
-    "Holiday Treats": ["thanksgiving", "turkey", "stuffing", "cranberry"]
+    "Seasonal Favorites": ["tag1", "tag2", "tag3", "tag4"],
+    "Local Specialties": ["tag1", "tag2", "tag3", "tag4"],
+    "Holiday Treats": ["tag1", "tag2", "tag3", "tag4"]
   }
 }`;
 
   try {
-    console.log('Calling Cloudflare AI with prompt for recommendations');
+    console.log('Calling Cloudflare AI with Llama 3.1 8B model');
     
-    // Use Cloudflare Workers AI binding
-    const response = await env.AI.run('@cf/openai/gpt-oss-20b', {
-      instructions: 'You are a helpful culinary assistant that provides recipe recommendations based on location and season. Always respond with valid JSON only, no extra text.',
-      input: prompt
+    // Use faster Llama 3.1 8B model instead of GPT-OSS-20B
+    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      prompt: prompt,
+      max_tokens: 256  // Limit tokens for faster response
     });
 
     console.log('Cloudflare AI response received. Response type:', typeof response);
