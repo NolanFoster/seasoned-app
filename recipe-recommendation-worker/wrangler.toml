@@ -1,0 +1,17 @@
+name = "recipe-recommendation-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# AI binding for Cloudflare Workers AI
+[ai]
+binding = "AI"
+
+[env.production]
+vars = { }
+
+# You can add environment-specific configurations here
+# [env.staging]
+# vars = { }
+
+# Note: With Cloudflare AI binding, you don't need OpenAI API keys
+# The AI models are provided by Cloudflare Workers AI
