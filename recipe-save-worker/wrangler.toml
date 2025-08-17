@@ -1,0 +1,54 @@
+name = "recipe-save-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Worker configuration
+workers_dev = true
+
+# Environment variables
+[vars]
+SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
+
+# Preview environment
+[env.preview]
+name = "preview-recipe-save-worker"
+[env.preview.vars]
+SEARCH_DB_URL = "https://preview-recipe-search-db.nolanfoster.workers.dev"
+IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
+
+# Production environment
+[env.production]
+name = "recipe-save-worker"
+[env.production.vars]
+SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
+
+# KV Namespace for recipe storage
+[[kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+preview_id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+
+# Durable Objects configuration
+[[durable_objects.bindings]]
+name = "RECIPE_SAVER"
+class_name = "RecipeSaver"
+
+# Durable Object migrations
+[[migrations]]
+tag = "v1"
+new_classes = ["RecipeSaver"]
+
+# R2 Bucket for recipe images
+[[r2_buckets]]
+binding = "RECIPE_IMAGES"
+bucket_name = "recipe-images"
+
+# Optional: Analytics Engine (for monitoring)
+# [[analytics_engine_datasets]]
+# binding = "ANALYTICS"
+
+# Observability
+[observability.logs]
+enabled = true

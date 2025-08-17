@@ -1,15 +1,13 @@
 /**
- * Recipe Scraper
- * Scrapes recipe data from URLs using JSON-LD structured data
+ * Cloudflare Worker for scraping recipe data from URLs
+ * Returns structured recipe data in JSON-LD format when available
  * Stores recipes in KV database with hashed URL as key
  */
 
 import { 
   generateRecipeId, 
-  saveRecipeToKV, 
   getRecipeFromKV, 
-  listRecipesFromKV, 
-  deleteRecipeFromKV 
+  listRecipesFromKV
 } from '../shared/kv-storage.js';
 
 import {
@@ -382,11 +380,35 @@ export default {
               }
             }
             
-            const saveResult = await saveRecipeToKV(env, recipeId, result);
-            result.savedToKV = saveResult.success;
-            result.recipeId = recipeId;
-            if (!saveResult.success) {
-              result.kvError = saveResult.error;
+            // Call recipe-save-worker to save the recipe
+            const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                recipe: {
+                  ...result.data,
+                  url: targetUrl,
+                },
+                options: {
+                  overwrite: !avoidOverwrite
+                }
+              }),
+            });
+
+            if (!recipeSaveResponse.ok) {
+              const errorText = await recipeSaveResponse.text();
+              console.error(`Failed to save recipe ${targetUrl}:`, recipeSaveResponse.status, errorText);
+              result.savedToKV = false;
+              result.kvError = `Failed to save recipe: ${recipeSaveResponse.status} ${recipeSaveResponse.statusText}`;
+            } else {
+              const saveResult = await recipeSaveResponse.json();
+              result.savedToKV = saveResult.success;
+              result.recipeId = saveResult.id || recipeId;
+              if (!saveResult.success) {
+                result.kvError = saveResult.error;
+              }
             }
           }
           
@@ -473,14 +495,29 @@ export default {
         });
       }
       
-      const result = await deleteRecipeFromKV(env, recipeId);
-      if (!result.success) {
-        return new Response(JSON.stringify(result), {
+      // Call recipe-save-worker to delete the recipe
+      const recipeDeleteResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipeId: recipeId,
+        }),
+      });
+
+      if (!recipeDeleteResponse.ok) {
+        const errorText = await recipeDeleteResponse.text();
+        console.error(`Failed to delete recipe ${recipeId}:`, recipeDeleteResponse.status, errorText);
+        return new Response(JSON.stringify({
+          error: `Failed to delete recipe: ${recipeDeleteResponse.status}`,
+          recipeId: recipeId
+        }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-      
+
       return new Response(JSON.stringify({ message: 'Recipe deleted successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
