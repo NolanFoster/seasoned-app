@@ -1563,11 +1563,26 @@ function App() {
                   // Filter recipes that match any of the tags in this category
                   const categoryRecipes = recipes.filter(recipe => {
                     // Check if recipe matches any tag (case-insensitive)
-                    const recipeName = recipe.name?.toLowerCase() || '';
-                    const recipeDescription = recipe.description?.toLowerCase() || '';
-                    const recipeCategory = recipe.recipeCategory?.toLowerCase() || '';
-                    const recipeCuisine = recipe.recipeCuisine?.toLowerCase() || '';
-                    const recipeKeywords = recipe.keywords?.toLowerCase() || '';
+                    const recipeName = (typeof recipe.name === 'string' ? recipe.name : '').toLowerCase();
+                    const recipeDescription = (typeof recipe.description === 'string' ? recipe.description : '').toLowerCase();
+                    
+                    // Handle recipeCategory - could be string or array
+                    let recipeCategory = '';
+                    if (typeof recipe.recipeCategory === 'string') {
+                      recipeCategory = recipe.recipeCategory.toLowerCase();
+                    } else if (Array.isArray(recipe.recipeCategory)) {
+                      recipeCategory = recipe.recipeCategory.join(' ').toLowerCase();
+                    }
+                    
+                    // Handle recipeCuisine - could be string or array
+                    let recipeCuisine = '';
+                    if (typeof recipe.recipeCuisine === 'string') {
+                      recipeCuisine = recipe.recipeCuisine.toLowerCase();
+                    } else if (Array.isArray(recipe.recipeCuisine)) {
+                      recipeCuisine = recipe.recipeCuisine.join(' ').toLowerCase();
+                    }
+                    
+                    const recipeKeywords = (typeof recipe.keywords === 'string' ? recipe.keywords : '').toLowerCase();
                     
                     return tags.some(tag => {
                       const tagLower = tag.toLowerCase();
