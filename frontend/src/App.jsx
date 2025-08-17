@@ -1994,32 +1994,7 @@ function App() {
                         >
                           {isSavingRecipe ? '🔄 Saving...' : 'Save Recipe'}
                         </button>
-                        <button 
-                          onClick={() => {
-                            if (!isSavingRecipe) {
-                              // Store the current URL to retry with
-                              const currentUrl = clippedRecipePreview.source_url;
-                              setClippedRecipePreview(null);
-                              setSearchInput(currentUrl);
-                              setClipError('');
-                              setIsEditingPreview(false);
-                              setEditablePreview(null);
-                                                          // Focus on search bar for retry
-                                setTimeout(() => {
-                                  const searchInput = document.querySelector('.title-search-input');
-                                  if (searchInput) {
-                                    searchInput.focus();
-                                    searchInput.select();
-                                  }
-                                }, 100);
-                            }
-                          }} 
-                          className="try-again-btn"
-                          disabled={isSavingRecipe}
-                          title="Try clipping this recipe again"
-                        >
-                          🔄 Try Again
-                        </button>
+
                         <button 
                           onClick={() => {
                             if (!isSavingRecipe) {
