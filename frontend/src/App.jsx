@@ -1483,26 +1483,19 @@ function App() {
               <div className="recommendations-container">
                 {(() => {
                   try {
-                    // Show loading state with placeholder categories
-                    if (isLoadingRecommendations || !recommendations || !recommendations.recommendations) {
-                      const loadingCategories = ['Seasonal Favorites', 'Local Specialties', 'Holiday Treats'];
-                      return loadingCategories.map(categoryName => (
-                        <div key={categoryName} className="recommendation-category">
-                          <h2 className="category-title">{categoryName}</h2>
-                          <div className="recipe-grid category-recipes">
-                            {[1, 2, 3].map(index => (
-                              <div key={index} className="recipe-card loading-card">
-                                <div className="recipe-card-image loading-pulse">
-                                  <div className="loading-shimmer"></div>
-                                </div>
-                                <div className="recipe-card-content">
-                                  <div className="loading-text loading-pulse"></div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                    // Show loading state with only pulsing title bars
+                    if (isLoadingRecommendations && !recommendations) {
+                      const loadingCategories = ['', '', '']; // Three empty loading bars
+                      return loadingCategories.map((_, index) => (
+                        <div key={index} className="recommendation-category">
+                          <h2 className="category-title loading-title loading-pulse"></h2>
                         </div>
                       ));
+                    }
+                    
+                    // If no recommendations loaded at all
+                    if (!recommendations || !recommendations.recommendations) {
+                      return null;
                     }
                     
                     // Track which recipes have been shown to avoid duplicates
