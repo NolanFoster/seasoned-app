@@ -1554,6 +1554,9 @@ function App() {
               <div className="recommendations-container">
                 {(() => {
                   try {
+                    // Track which recipes have been shown to avoid duplicates
+                    const shownRecipeIds = new Set();
+                    
                     return Object.entries(recommendations.recommendations).map(([categoryName, tags]) => {
                   // Ensure tags is an array
                   if (!Array.isArray(tags)) {
@@ -1561,8 +1564,14 @@ function App() {
                     return null;
                   }
                   
+                  console.log(`Processing category: ${categoryName} with tags:`, tags);
+                  
                   // Filter recipes that match any of the tags in this category
                   const categoryRecipes = recipes.filter(recipe => {
+                    // Skip if already shown in another category
+                    if (shownRecipeIds.has(recipe.id)) {
+                      return false;
+                    }
                     // Check if recipe matches any tag (case-insensitive)
                     const recipeName = (typeof recipe.name === 'string' ? recipe.name : '').toLowerCase();
                     const recipeDescription = (typeof recipe.description === 'string' ? recipe.description : '').toLowerCase();
@@ -1590,37 +1599,54 @@ function App() {
                       // Also create a version with spaces between camelCase words
                       const tagWithSpaces = tag.replace(/([A-Z])/g, ' $1').trim().toLowerCase();
                       
-                      // Check for both the original tag and the spaced version
-                      return recipeName.includes(tagLower) ||
-                             recipeName.includes(tagWithSpaces) ||
-                             recipeDescription.includes(tagLower) ||
-                             recipeDescription.includes(tagWithSpaces) ||
-                             recipeCategory.includes(tagLower) ||
-                             recipeCategory.includes(tagWithSpaces) ||
-                             recipeCuisine.includes(tagLower) ||
-                             recipeCuisine.includes(tagWithSpaces) ||
-                             recipeKeywords.includes(tagLower) ||
-                             recipeKeywords.includes(tagWithSpaces) ||
-                             // Also check individual words from the tag
-                             tagWithSpaces.split(' ').some(word => 
-                               word.length > 3 && (
-                                 recipeName.includes(word) ||
-                                 recipeDescription.includes(word) ||
-                                 recipeCategory.includes(word) ||
-                                 recipeCuisine.includes(word)
-                               )
-                             );
+                      // Split tag into individual words for better matching
+                      const tagWords = tagWithSpaces.split(' ').filter(word => word.length > 2);
+                      
+                      // Create a combined search string for easier matching
+                      const searchableContent = `${recipeName} ${recipeDescription} ${recipeCategory} ${recipeCuisine} ${recipeKeywords}`;
+                      
+                      // Check for exact tag match first
+                      if (searchableContent.includes(tagLower) || searchableContent.includes(tagWithSpaces)) {
+                        return true;
+                      }
+                      
+                      // Check if all significant words from the tag are present
+                      const significantWords = tagWords.filter(word => word.length > 3);
+                      if (significantWords.length > 0) {
+                        const matchedWords = significantWords.filter(word => searchableContent.includes(word));
+                        // If more than half of significant words match, consider it a match
+                        if (matchedWords.length >= Math.ceil(significantWords.length / 2)) {
+                          return true;
+                        }
+                      }
+                      
+                      // Check individual words with word boundaries for better accuracy
+                      return tagWords.some(word => {
+                        if (word.length <= 2) return false;
+                        // Create word boundary regex for more accurate matching
+                        const wordRegex = new RegExp(`\\b${word}\\b`, 'i');
+                        return wordRegex.test(recipeName) ||
+                               wordRegex.test(recipeDescription) ||
+                               wordRegex.test(recipeCategory) ||
+                               wordRegex.test(recipeCuisine);
+                      });
                     });
-                  }).slice(0, 3); // Show max 3 recipes per category
+                  });
+                  
+                  // Sort by relevance (recipes that matched more tags first)
+                  const sortedRecipes = categoryRecipes.slice(0, 3);
+                  
+                  // Add selected recipes to the shown set
+                  sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
                   
                   // Only show category if it has recipes
-                  if (categoryRecipes.length === 0) return null;
+                  if (sortedRecipes.length === 0) return null;
                   
                   return (
                     <div key={categoryName} className="recommendation-category">
                       <h2 className="category-title">{categoryName}</h2>
                       <div className="recipe-grid category-recipes" ref={recipeGridRef}>
-                        {categoryRecipes.map((recipe) => (
+                        {sortedRecipes.map((recipe) => (
                           <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
                             <div className="recipe-card-image">
                               {/* Main image display */}
