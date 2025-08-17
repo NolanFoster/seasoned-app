@@ -371,73 +371,21 @@ await test('Recipe caching functionality', async () => {
   assert(data2.cached === true, 'Second request should be cached');
 });
 
-await test('GET /recipes/:id endpoint', async () => {
-  const mockRecipe = {
-    data: {
-      name: 'Stored Recipe',
-      ingredients: ['stored ingredient']
-    },
-    scrapedAt: new Date().toISOString()
-  };
+await test('Clipper has no /recipes endpoints', async () => {
+  const env = createMockEnv();
   
-  const env = createMockEnv({
-    RECIPES: {
-      get: async (key) => JSON.stringify(mockRecipe)
-    }
-  });
+  // These should all return 404 since clipper doesn't have these endpoints
+  const getRequest = createRequest('GET', '/recipes/test-recipe-id');
+  const getResponse = await worker.fetch(getRequest, env);
+  assert(getResponse.status === 404, 'GET /recipes/:id should return 404');
   
-  const request = createRequest('GET', '/recipes/test-recipe-id');
-  const response = await worker.fetch(request, env);
+  const deleteRequest = createRequest('DELETE', '/recipes/test-delete-id');
+  const deleteResponse = await worker.fetch(deleteRequest, env);
+  assert(deleteResponse.status === 404, 'DELETE /recipes/:id should return 404');
   
-  assert(response.status === 200, 'Should return 200');
-  const data = await response.json();
-  assert(data.success === true, 'Should indicate success');
-  assert(data.recipe.data.name === 'Stored Recipe', 'Should return recipe data');
-});
-
-await test('DELETE /recipes/:id endpoint', async () => {
-  let deleted = false;
-  const env = createMockEnv({
-    RECIPES: {
-      delete: async (key) => { 
-        deleted = true;
-        assert(key === 'test-delete-id', 'Should delete correct key');
-      }
-    }
-  });
-  
-  const request = createRequest('DELETE', '/recipes/test-delete-id');
-  const response = await worker.fetch(request, env);
-  
-  assert(response.status === 200, 'Should return 200');
-  assert(deleted === true, 'Should call delete');
-});
-
-await test('PUT /recipes/:id endpoint', async () => {
-  let savedKey = null;
-  let savedData = null;
-  
-  const env = createMockEnv({
-    RECIPES: {
-      put: async (key, value) => { 
-        savedKey = key;
-        savedData = JSON.parse(value);
-      }
-    }
-  });
-  
-  const updateData = {
-    name: 'Updated Recipe',
-    ingredients: ['updated ingredient']
-  };
-  
-  const request = createRequest('PUT', '/recipes/test-update-id', updateData);
-  const response = await worker.fetch(request, env);
-  
-  assert(response.status === 200, 'Should return 200');
-  assert(savedKey === 'test-update-id', 'Should save to correct key');
-  assert(savedData.data.name === 'Updated Recipe', 'Should save updated data');
-  assert(savedData.scrapedAt !== undefined, 'Should include timestamp');
+  const putRequest = createRequest('PUT', '/recipes/test-update-id', { name: 'Test' });
+  const putResponse = await worker.fetch(putRequest, env);
+  assert(putResponse.status === 404, 'PUT /recipes/:id should return 404');
 });
 
 await test('Health check endpoint', async () => {
@@ -447,8 +395,9 @@ await test('Health check endpoint', async () => {
   
   assert(response.status === 200, 'Should return 200');
   const data = await response.json();
-  assert(data.status === 'ok', 'Should return ok status');
-  assert(data.service === 'recipe-clipper-worker', 'Should identify service');
+  assert(data.status === 'healthy', 'Should return healthy status');
+  assert(data.service === 'recipe-clipper', 'Should identify service');
+  assert(data.features.includes('kv-storage'), 'Should list KV storage feature');
 });
 
 await test('CORS headers are present', async () => {
