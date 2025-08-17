@@ -1339,6 +1339,7 @@ function App() {
       
       if (res.ok) {
         const data = await res.json();
+        console.log('Recommendations received:', data);
         setRecommendations(data);
       } else {
         console.error('Failed to fetch recommendations:', res.status);
@@ -1586,11 +1587,29 @@ function App() {
                     
                     return tags.some(tag => {
                       const tagLower = tag.toLowerCase();
+                      // Also create a version with spaces between camelCase words
+                      const tagWithSpaces = tag.replace(/([A-Z])/g, ' $1').trim().toLowerCase();
+                      
+                      // Check for both the original tag and the spaced version
                       return recipeName.includes(tagLower) ||
+                             recipeName.includes(tagWithSpaces) ||
                              recipeDescription.includes(tagLower) ||
+                             recipeDescription.includes(tagWithSpaces) ||
                              recipeCategory.includes(tagLower) ||
+                             recipeCategory.includes(tagWithSpaces) ||
                              recipeCuisine.includes(tagLower) ||
-                             recipeKeywords.includes(tagLower);
+                             recipeCuisine.includes(tagWithSpaces) ||
+                             recipeKeywords.includes(tagLower) ||
+                             recipeKeywords.includes(tagWithSpaces) ||
+                             // Also check individual words from the tag
+                             tagWithSpaces.split(' ').some(word => 
+                               word.length > 3 && (
+                                 recipeName.includes(word) ||
+                                 recipeDescription.includes(word) ||
+                                 recipeCategory.includes(word) ||
+                                 recipeCuisine.includes(word)
+                               )
+                             );
                     });
                   }).slice(0, 3); // Show max 3 recipes per category
                   
