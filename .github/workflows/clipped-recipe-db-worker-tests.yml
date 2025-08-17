@@ -43,18 +43,62 @@ jobs:
       working-directory: ./clipped-recipe-db-worker
       run: npm ci
     
-    - name: Run Worker Tests
+    - name: Run Worker Tests with Coverage
       working-directory: ./clipped-recipe-db-worker
       run: |
-        # Run tests if test script exists, otherwise skip
-        if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
-        else
-          echo "No test script found in package.json"
+        # Run tests with coverage
+        npm run test:coverage
+        
+        # Extract coverage percentages
+        COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)
+        echo "$COVERAGE_OUTPUT"
+        
+        # Parse coverage percentages (statements, branches, functions, lines)
+        STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s*:\s*\K[\d.]+' || echo "0")
+        BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s*:\s*\K[\d.]+' || echo "0")
+        FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s*:\s*\K[\d.]+' || echo "0")
+        LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s*:\s*\K[\d.]+' || echo "0")
+        
+        # Set coverage thresholds (starting at 0% as tests are currently mocks)
+        THRESHOLD_STATEMENTS=0
+        THRESHOLD_BRANCHES=0
+        THRESHOLD_FUNCTIONS=0
+        THRESHOLD_LINES=0
+        
+        # Check if coverage meets thresholds
+        if (( $(echo "$STATEMENTS < $THRESHOLD_STATEMENTS" | bc -l) )); then
+          echo "❌ Statement coverage ($STATEMENTS%) is below threshold ($THRESHOLD_STATEMENTS%)"
+          exit 1
         fi
         
-        # Note: Worker tests currently don't generate coverage reports
-        # Consider adding coverage collection for worker tests in the future
+        if (( $(echo "$BRANCHES < $THRESHOLD_BRANCHES" | bc -l) )); then
+          echo "❌ Branch coverage ($BRANCHES%) is below threshold ($THRESHOLD_BRANCHES%)"
+          exit 1
+        fi
+        
+        if (( $(echo "$FUNCTIONS < $THRESHOLD_FUNCTIONS" | bc -l) )); then
+          echo "❌ Function coverage ($FUNCTIONS%) is below threshold ($THRESHOLD_FUNCTIONS%)"
+          exit 1
+        fi
+        
+        if (( $(echo "$LINES < $THRESHOLD_LINES" | bc -l) )); then
+          echo "❌ Line coverage ($LINES%) is below threshold ($THRESHOLD_LINES%)"
+          exit 1
+        fi
+        
+        echo "✅ All coverage thresholds met!"
+        echo "   Statements: $STATEMENTS% (threshold: $THRESHOLD_STATEMENTS%)"
+        echo "   Branches: $BRANCHES% (threshold: $THRESHOLD_BRANCHES%)"
+        echo "   Functions: $FUNCTIONS% (threshold: $THRESHOLD_FUNCTIONS%)"
+        echo "   Lines: $LINES% (threshold: $THRESHOLD_LINES%)"
+    
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: clipped-recipe-db-worker-coverage
+        path: clipped-recipe-db-worker/coverage/
+        retention-days: 30
 
   lint-worker:
     name: Clipped Recipe DB Worker Code Quality Checks

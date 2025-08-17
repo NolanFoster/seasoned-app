@@ -7,6 +7,11 @@ compatibility_date = "2024-08-09"
 [vars]
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
+[env.preview]
+name = "preview-clipped-recipe-db-worker"
+[env.preview.vars]
+IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "recipe-db"
