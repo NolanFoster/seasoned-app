@@ -46,8 +46,14 @@ jobs:
     - name: Run Worker Tests with Coverage
       working-directory: ./clipped-recipe-db-worker
       run: |
-        # Run tests with coverage
+        echo "Running tests with coverage..."
         npm run coverage
+        echo "✅ Tests passed successfully!"
+    
+    - name: Check Coverage Thresholds
+      working-directory: ./clipped-recipe-db-worker
+      run: |
+        echo "### Clipped Recipe DB Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
         
         # Extract coverage percentages
         COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)
