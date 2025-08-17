@@ -1287,7 +1287,7 @@ function App() {
               disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
             />
             <button 
-              className="title-search-button" 
+              className={`title-search-button ${isValidUrl(searchInput) && clipperStatus === 'available' ? 'clipper-available' : ''}`}
               aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
               title={isValidUrl(searchInput) ? 
                 (clipperStatus === 'available' ? "Clip recipe from website" : "Recipe clipper service is currently unavailable") : 
