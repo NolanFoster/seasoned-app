@@ -1,0 +1,30 @@
+{
+  "name": "recipe-recommendation-worker",
+  "version": "1.0.0",
+  "description": "Recipe recommendation worker using Cloudflare Workers AI (GPT-OSS-20B) based on location and date",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --experimental-vm-modules tests/run-tests.js",
+    "test:watch": "nodemon --watch src --watch tests --exec 'npm test'"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "recipes",
+    "recommendations",
+    "ai",
+    "llm",
+    "gpt-oss"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^4.28.1",
+    "miniflare": "^3.20231218.0",
+    "node-fetch": "^3.3.2",
+    "nodemon": "^3.0.2"
+  }
+}
