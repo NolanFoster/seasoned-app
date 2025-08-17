@@ -2,6 +2,63 @@
 
 This directory contains shared utilities and functions used across multiple workers in the recipe app.
 
+## Utility Functions
+
+The `utility-functions.js` module provides common utility functions used across the application.
+
+### Functions
+
+#### `formatDuration(duration)`
+Converts ISO 8601 duration strings to human-readable format.
+
+**Parameters:**
+- `duration` (string): ISO 8601 duration string (e.g., "PT1H30M")
+
+**Returns:** Human-readable duration string (e.g., "1 h 30 m")
+
+**Examples:**
+```javascript
+import { formatDuration } from '../shared/utility-functions.js';
+
+formatDuration('PT1H30M');  // "1 h 30 m"
+formatDuration('PT45M');     // "45 m"
+formatDuration('PT2H');      // "2 h"
+formatDuration('1 hour 30 minutes'); // "1 hour 30 minutes" (returns as-is)
+```
+
+#### `isValidUrl(string)`
+Validates if a string is a valid URL.
+
+**Parameters:**
+- `string` (string): String to validate as URL
+
+**Returns:** Boolean indicating if the string is a valid URL
+
+**Examples:**
+```javascript
+import { isValidUrl } from '../shared/utility-functions.js';
+
+isValidUrl('https://example.com');     // true
+isValidUrl('http://example.com');      // true
+isValidUrl('www.example.com');         // true
+isValidUrl('example.com');             // true
+isValidUrl('not-a-url');               // false
+```
+
+### Usage
+
+```javascript
+import { formatDuration, isValidUrl } from '../shared/utility-functions.js';
+
+// Format recipe cooking time
+const cookingTime = formatDuration(recipe.cookTime);
+
+// Validate user input URL
+if (isValidUrl(userInput)) {
+  // Process valid URL
+}
+```
+
 ## KV Storage Library
 
 The `kv-storage.js` module provides a complete set of functions for managing recipe data in Cloudflare KV storage.

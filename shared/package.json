@@ -6,13 +6,16 @@
   "main": "kv-storage.js",
   "exports": {
     ".": "./kv-storage.js",
-    "./kv-storage": "./kv-storage.js"
+    "./kv-storage": "./kv-storage.js",
+    "./utility-functions": "./utility-functions.js",
+    "./utils": "./utility-functions.js"
   },
   "scripts": {
     "test": "node test-simple.js",
     "test:jest": "jest test-kv-storage.js",
     "test:vitest": "vitest run test-image-service.js",
     "test:image": "vitest run test-image-service.js",
+    "test:utility": "node test-utility-functions.js",
     "test:all": "node ../test-refactoring-complete.js"
   },
   "keywords": [
