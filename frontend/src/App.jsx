@@ -1158,13 +1158,12 @@ function App() {
         });
         
         if (checkRes.ok) {
-          // Recipe already exists in KV store
+          // Recipe already exists in KV store - just proceed silently
           fetchRecipes(); // Refresh the recipe list
           setClippedRecipePreview(null);
           setClipError('');
           setIsEditingPreview(false);
           setEditablePreview(null);
-          alert('This recipe is already saved in your collection!');
           return;
         }
       } catch (checkError) {
@@ -1195,13 +1194,12 @@ function App() {
         
         // Handle duplicate errors from backend
         if (errorText.includes('already exists')) {
-          // Instead of showing an error, treat this as success
+          // Recipe already exists - just proceed silently
           fetchRecipes(); // Refresh the recipe list
           setClippedRecipePreview(null);
           setClipError('');
           setIsEditingPreview(false);
           setEditablePreview(null);
-          alert('This recipe is already saved in your collection!');
         } else {
           throw new Error(`Failed to save recipe: ${errorText}`);
         }
@@ -1209,13 +1207,12 @@ function App() {
     } catch (error) {
       console.error('Error saving recipe:', error);
       if (error.message.includes('already exists')) {
-        // Instead of showing an error, treat this as success
+        // Recipe already exists - just proceed silently
         fetchRecipes(); // Refresh the recipe list
         setClippedRecipePreview(null);
         setClipError('');
         setIsEditingPreview(false);
         setEditablePreview(null);
-        alert('This recipe is already saved in your collection!');
       } else {
         alert('Failed to save recipe. Please try again.');
       }
