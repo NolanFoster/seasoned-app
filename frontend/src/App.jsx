@@ -1299,8 +1299,8 @@ function App() {
               )}
             </button>
           </div>
-          {/* Add button placed just to the right of the search panel */}
-          <button className="fab fab-add fab-standalone" onClick={() => setShowAddForm(true)}>
+          {/* Desktop Add button - inside header, to the right of search */}
+          <button className="fab fab-add fab-desktop" onClick={() => setShowAddForm(true)}>
             <span className="fab-icon">+</span>
           </button>
         </h1>
@@ -1363,6 +1363,11 @@ function App() {
         )}
       </div>
       
+      {/* Mobile FAB - outside header, bottom left */}
+      <button className="fab fab-add fab-mobile" onClick={() => setShowAddForm(true)}>
+        <span className="fab-icon">+</span>
+      </button>
+
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
         <div className="recipes-list">

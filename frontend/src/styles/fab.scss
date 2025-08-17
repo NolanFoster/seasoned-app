@@ -244,103 +244,79 @@
   }
 }
 
-/* Compact FAB used adjacent to the search bar in the title */
-.title .fab {
+/* Desktop FAB inside header container */
+.fab-desktop {
+  // Position relative since it's inside the header flex container
+  position: relative;
   width: 48px;
-  height: 40px;
-  border-radius: 20px;
-}
-
-.title .fab-icon {
-  font-size: 1.6em;
-}
-
-/* Standalone FAB positioned next to the title panel */
-.fab-standalone {
-  // Desktop: Fixed position next to the header
-  position: fixed;
-  top: $spacing-md;
-  left: calc(50% + 300px + 20px); // Center + half header width + gap
-  transform: translateX(-50%); // Center the FAB itself
-  width: 56px;
-  height: 56px;
-  border-radius: 50%; // Circular FAB
+  height: 36px;
+  border-radius: 18px;
   flex-shrink: 0;
-  z-index: $z-overlay; // Same as header container
+  margin-left: $spacing-sm;
   
-  // Enhanced shadow for FAB
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 
-              0 2px 8px rgba(0, 0, 0, 0.1),
-              0 1px 3px rgba(0, 0, 0, 0.08);
-  
-  &:hover {
-    transform: translateX(-50%) translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 
-                0 4px 12px rgba(0, 0, 0, 0.15),
-                0 2px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  // Responsive adjustments
-  @media (max-width: 900px) {
-    // Position at right edge with padding
-    left: auto;
-    right: $spacing-md;
-    transform: none;
-    
-    &:hover {
-      transform: translateY(-2px) scale(1.05);
-    }
-  }
-  
-  @media (max-width: 768px) {
-    // Slightly smaller on tablets
-    width: 48px;
-    height: 48px;
-    right: $spacing-sm;
-  }
-  
-  /* Mobile responsiveness handled by parent container */
+  // Hide on mobile
   @media (max-width: 640px) {
-    // Hide on mobile to avoid crowding
     display: none;
   }
 }
 
-.fab-standalone .fab-icon {
-  font-size: 1.8em;  // Increased from 1.6em for larger button
+.fab-desktop .fab-icon {
+  font-size: 1.6em;
 }
 
-/* Mobile FAB positioning - show as fixed element on mobile */
-@media (max-width: 640px) {
-  .header-container::after {
-    content: '';
-    position: fixed;
+/* Mobile FAB positioned at bottom left */
+.fab-mobile {
+  // Hide on desktop
+  display: none;
+  
+  // Show and position on mobile
+  @media (max-width: 640px) {
+    display: flex !important;
+    position: fixed !important;
     bottom: 20px;
-    left: 20px;  // Changed from right: 20px
+    left: 20px;
     width: 56px;
     height: 56px;
-    pointer-events: none; // Placeholder only
-  }
-  
-  // Create a mobile version of the FAB - bottom left corner
-  .fab-standalone {
-    display: block !important;
-    position: fixed !important;
-    bottom: 20px !important;
-    left: 20px !important;  // Changed from right: 20px
-    right: auto !important;
-    top: auto !important;  // Override any top positioning
-    transform: none !important;  // Remove centering transform
-    z-index: 9999 !important;  // Ensure it's above everything
-    width: 56px;  // Make it circular on mobile
-    height: 56px;  // Make it circular on mobile
-    border-radius: 50%;  // Circular button
+    border-radius: 50%;
+    z-index: $z-fab;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
     
     &:hover {
+      transform: translateY(-2px) scale(1.05);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
     }
   }
+  
+  @media (max-width: 480px) {
+    bottom: 16px;
+    left: 16px;
+    width: 48px;
+    height: 48px;
+  }
+  
+  @media (max-width: 360px) {
+    bottom: 12px;
+    left: 12px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.fab-mobile .fab-icon {
+  font-size: 1.8em;
+  
+  @media (max-width: 480px) {
+    font-size: 1.6em;
+  }
+  
+  @media (max-width: 360px) {
+    font-size: 1.4em;
+  }
+}
+
+/* Remove the old standalone FAB styles */
+.fab-standalone {
+  display: none; // Remove this class as it's no longer used
 }
 
 /* Mobile responsiveness for FAB */
@@ -402,14 +378,10 @@
     height: 18px;
   }
   
-  // Override for standalone add button to keep it at bottom left
-  .fab-standalone {
-    bottom: 16px !important;
-    left: 16px !important;  // Changed from right: 16px
-    right: auto !important;
-    top: auto !important;
-    width: 48px;
-    height: 48px;
+  .status-indicator {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
   }
 }
 
@@ -439,15 +411,5 @@
     width: 14px;
     height: 14px;
     font-size: 9px;
-  }
-  
-  // Override for standalone add button to keep it at bottom left
-  .fab-standalone {
-    bottom: 12px !important;
-    left: 12px !important;  // Changed from right: 12px
-    right: auto !important;
-    top: auto !important;
-    width: 44px;
-    height: 44px;
   }
 }
