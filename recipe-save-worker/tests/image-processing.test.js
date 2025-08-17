@@ -84,7 +84,11 @@ const createMockR2Bucket = () => {
       return storage.get(key);
     },
     delete: async (key) => {
-      return storage.delete(key);
+      const deleted = storage.delete(key);
+      if (!deleted) {
+        throw new Error(`Delete failed`);
+      }
+      return deleted;
     },
     list: async () => {
       return {
@@ -121,25 +125,25 @@ describe('Image Processing', () => {
     it('should identify external URLs correctly', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
-      expect(do.isExternalUrl('https://example.com/image.jpg')).toBeTruthy();
-      expect(do.isExternalUrl('http://example.com/image.jpg')).toBeTruthy();
-      expect(do.isExternalUrl('https://images.test.com/image.jpg')).toBeFalsy();
-      expect(do.isExternalUrl('/relative/path.jpg')).toBeFalsy();
-      expect(do.isExternalUrl(null)).toBeFalsy();
-      expect(do.isExternalUrl('')).toBeFalsy();
+      expect(recipeSaver.isExternalUrl('https://example.com/image.jpg')).toBeTruthy();
+      expect(recipeSaver.isExternalUrl('http://example.com/image.jpg')).toBeTruthy();
+      expect(recipeSaver.isExternalUrl('https://images.test.com/image.jpg')).toBeFalsy();
+      expect(recipeSaver.isExternalUrl('/relative/path.jpg')).toBeFalsy();
+      expect(recipeSaver.isExternalUrl(null)).toBeFalsy();
+      expect(recipeSaver.isExternalUrl('')).toBeFalsy();
     });
 
     it('should extract R2 key from URL correctly', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
       const url = 'https://images.test.com/recipe123/imageUrl_1234567890.jpg';
-      expect(do.getR2KeyFromUrl(url)).toBe('recipe123/imageUrl_1234567890.jpg');
+      expect(recipeSaver.getR2KeyFromUrl(url)).toBe('recipe123/imageUrl_1234567890.jpg');
       
-      expect(do.getR2KeyFromUrl('https://external.com/image.jpg')).toBe(null);
+      expect(recipeSaver.getR2KeyFromUrl('https://external.com/image.jpg')).toBe(null);
     });
   });
 
@@ -147,13 +151,13 @@ describe('Image Processing', () => {
     it('should map content types to extensions correctly', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
-      expect(do.getExtensionFromContentType('image/jpeg')).toBe('jpg');
-      expect(do.getExtensionFromContentType('image/png')).toBe('png');
-      expect(do.getExtensionFromContentType('image/gif')).toBe('gif');
-      expect(do.getExtensionFromContentType('image/webp')).toBe('webp');
-      expect(do.getExtensionFromContentType('unknown/type')).toBe('jpg');
+      expect(recipeSaver.getExtensionFromContentType('image/jpeg')).toBe('jpg');
+      expect(recipeSaver.getExtensionFromContentType('image/png')).toBe('png');
+      expect(recipeSaver.getExtensionFromContentType('image/gif')).toBe('gif');
+      expect(recipeSaver.getExtensionFromContentType('image/webp')).toBe('webp');
+      expect(recipeSaver.getExtensionFromContentType('unknown/type')).toBe('jpg');
     });
   });
 
@@ -161,7 +165,7 @@ describe('Image Processing', () => {
     it('should download and store image successfully', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
       mockFetch({
         'https://example.com/image.jpg': {
@@ -174,7 +178,7 @@ describe('Image Processing', () => {
         }
       });
 
-      const r2Url = await do.downloadAndStoreImage(
+      const r2Url = await recipeSaver.downloadAndStoreImage(
         'https://example.com/image.jpg',
         'recipe123',
         'imageUrl'
@@ -192,7 +196,7 @@ describe('Image Processing', () => {
     it('should handle image download failures gracefully', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
       mockFetch({
         'https://example.com/broken.jpg': {
@@ -203,7 +207,7 @@ describe('Image Processing', () => {
 
       let error;
       try {
-        await do.downloadAndStoreImage(
+        await recipeSaver.downloadAndStoreImage(
           'https://example.com/broken.jpg',
           'recipe123',
           'imageUrl'
@@ -221,16 +225,26 @@ describe('Image Processing', () => {
     it('should process single image URL in recipe', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
-      mockFetch({});
+      // Mock successful image download
+      mockFetch({
+        'https://example.com/recipe.jpg': {
+          ok: true,
+          status: 200,
+          headers: {
+            get: (name) => name === 'content-type' ? 'image/jpeg' : null
+          },
+          arrayBuffer: async () => new ArrayBuffer(1024)
+        }
+      });
 
       const recipe = {
         title: 'Test Recipe',
         imageUrl: 'https://example.com/recipe.jpg'
       };
 
-      const processed = await do.processRecipeImages(recipe, 'recipe123');
+      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
 
       expect(processed.imageUrl).toContain('https://images.test.com/');
       expect(processed._originalImageUrls).toEqual(['https://example.com/recipe.jpg']);
@@ -239,9 +253,35 @@ describe('Image Processing', () => {
     it('should process multiple images in recipe', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
-      mockFetch({});
+      // Mock successful image downloads
+      mockFetch({
+        'https://example.com/main.jpg': {
+          ok: true,
+          status: 200,
+          headers: {
+            get: (name) => name === 'content-type' ? 'image/jpeg' : null
+          },
+          arrayBuffer: async () => new ArrayBuffer(1024)
+        },
+        'https://example.com/step1.jpg': {
+          ok: true,
+          status: 200,
+          headers: {
+            get: (name) => name === 'content-type' ? 'image/jpeg' : null
+          },
+          arrayBuffer: async () => new ArrayBuffer(1024)
+        },
+        'https://example.com/step2.jpg': {
+          ok: true,
+          status: 200,
+          headers: {
+            get: (name) => name === 'content-type' ? 'image/jpeg' : null
+          },
+          arrayBuffer: async () => new ArrayBuffer(1024)
+        }
+      });
 
       const recipe = {
         title: 'Test Recipe',
@@ -252,7 +292,7 @@ describe('Image Processing', () => {
         ]
       };
 
-      const processed = await do.processRecipeImages(recipe, 'recipe123');
+      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
 
       expect(processed.imageUrl).toContain('https://images.test.com/');
       expect(processed.images[0]).toContain('https://images.test.com/');
@@ -263,9 +303,19 @@ describe('Image Processing', () => {
     it('should skip already processed R2 URLs', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
-      mockFetch({});
+      // Mock successful image download for new image only
+      mockFetch({
+        'https://example.com/new.jpg': {
+          ok: true,
+          status: 200,
+          headers: {
+            get: (name) => name === 'content-type' ? 'image/jpeg' : null
+          },
+          arrayBuffer: async () => new ArrayBuffer(1024)
+        }
+      });
 
       const recipe = {
         title: 'Test Recipe',
@@ -273,7 +323,7 @@ describe('Image Processing', () => {
         images: ['https://example.com/new.jpg']
       };
 
-      const processed = await do.processRecipeImages(recipe, 'recipe123');
+      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
 
       expect(processed.imageUrl).toBe('https://images.test.com/existing/image.jpg');
       expect(processed.images[0]).toContain('https://images.test.com/recipe123/');
@@ -283,7 +333,7 @@ describe('Image Processing', () => {
     it('should handle failed image downloads gracefully', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
       mockFetch({
         'https://example.com/broken.jpg': {
@@ -297,7 +347,7 @@ describe('Image Processing', () => {
         imageUrl: 'https://example.com/broken.jpg'
       };
 
-      const processed = await do.processRecipeImages(recipe, 'recipe123');
+      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
 
       // Should keep original URL if download fails
       expect(processed.imageUrl).toBe('https://example.com/broken.jpg');
@@ -308,7 +358,7 @@ describe('Image Processing', () => {
     it('should delete recipe images from R2', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
       // Pre-populate R2 with images
       await env.RECIPE_IMAGES.put('recipe123/imageUrl_123.jpg', new ArrayBuffer(1024));
@@ -320,7 +370,7 @@ describe('Image Processing', () => {
         images: ['https://images.test.com/recipe123/images_0_456.jpg']
       };
 
-      await do.deleteRecipeImages(recipe);
+      await recipeSaver.deleteRecipeImages(recipe);
 
       const remainingKeys = Array.from(env.RECIPE_IMAGES._storage.keys());
       expect(remainingKeys.length).toBe(0);
@@ -328,12 +378,15 @@ describe('Image Processing', () => {
 
     it('should handle deletion errors gracefully', async () => {
       const env = createMockEnv();
-      env.RECIPE_IMAGES.delete = async () => {
+      // Create a mock that throws on delete
+      const mockR2 = createMockR2Bucket();
+      mockR2.delete = async () => {
         throw new Error('Delete failed');
       };
+      env.RECIPE_IMAGES = mockR2;
       
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
       const recipe = {
         id: 'recipe123',
@@ -341,7 +394,7 @@ describe('Image Processing', () => {
       };
 
       // Should not throw even if delete fails
-      await do.deleteRecipeImages(recipe);
+      await recipeSaver.deleteRecipeImages(recipe);
     });
   });
 
@@ -349,14 +402,22 @@ describe('Image Processing', () => {
     it('should process images during recipe save', async () => {
       const env = createMockEnv();
       const state = createMockState();
-      const do = new RecipeSaver(state, env);
+      const recipeSaver = new RecipeSaver(state, env);
 
-      mockFetch({});
-
-      // Mock successful search DB sync
+      // Mock successful image download and search DB sync
       global.fetch = async (url) => {
         if (url.includes('search.test.com')) {
           return { ok: true };
+        }
+        if (url.includes('external.com/image.jpg')) {
+          return {
+            ok: true,
+            status: 200,
+            headers: {
+              get: (name) => name === 'content-type' ? 'image/jpeg' : null
+            },
+            arrayBuffer: async () => new ArrayBuffer(1024)
+          };
         }
         return {
           ok: true,
@@ -380,7 +441,7 @@ describe('Image Processing', () => {
         })
       });
 
-      const response = await do.fetch(request);
+      const response = await recipeSaver.fetch(request);
       const result = await response.json();
 
       expect(result.success).toBeTruthy();
