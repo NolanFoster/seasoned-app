@@ -13,15 +13,29 @@ import {
   getImageExtension
 } from './image-service.js';
 
-// Mock crypto for Node.js environment
-vi.mock('crypto', () => ({
-  default: {
-    createHash: vi.fn(() => ({
-      update: vi.fn().mockReturnThis(),
-      digest: vi.fn(() => 'abcdef1234567890')
-    }))
-  }
-}));
+// Mock Web Crypto API
+const mockArrayBuffer = new ArrayBuffer(32);
+const mockUint8Array = new Uint8Array(mockArrayBuffer);
+mockUint8Array.fill(171); // 171 = 0xAB in hex
+
+Object.defineProperty(global, 'crypto', {
+  value: {
+    subtle: {
+      digest: vi.fn().mockResolvedValue(mockArrayBuffer)
+    }
+  },
+  writable: true
+});
+
+// Mock TextEncoder
+Object.defineProperty(global, 'TextEncoder', {
+  value: function() {
+    return {
+      encode: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4]))
+    };
+  },
+  writable: true
+});
 
 // Mock global fetch
 global.fetch = vi.fn();
@@ -38,21 +52,30 @@ describe('Image Service', () => {
   });
 
   describe('generateImageFilename', () => {
-    it('should generate a unique filename with timestamp and hash', () => {
+    beforeEach(() => {
+      // Mock crypto.subtle.digest to return a predictable ArrayBuffer
+      const mockArrayBuffer = new ArrayBuffer(32);
+      const mockUint8Array = new Uint8Array(mockArrayBuffer);
+      // Fill with predictable values that will create 'abababababababab' hex
+      mockUint8Array.fill(171); // 171 = 0xAB in hex
+      global.crypto.subtle.digest.mockResolvedValue(mockArrayBuffer);
+    });
+
+    it('should generate a unique filename with timestamp and hash', async () => {
       const url = 'https://example.com/image.jpg';
       const extension = 'jpg';
       
-      const filename = generateImageFilename(url, extension);
+      const filename = await generateImageFilename(url, extension);
       
-      expect(filename).toBe('recipe-images/1234567890000-abcdef1234567890.jpg');
+      expect(filename).toBe('recipe-images/1234567890000-abababababababab.jpg');
     });
 
-    it('should default to jpg extension', () => {
+    it('should default to jpg extension', async () => {
       const url = 'https://example.com/image';
       
-      const filename = generateImageFilename(url);
+      const filename = await generateImageFilename(url);
       
-      expect(filename).toBe('recipe-images/1234567890000-abcdef1234567890.jpg');
+      expect(filename).toBe('recipe-images/1234567890000-abababababababab.jpg');
     });
   });
 
@@ -220,7 +243,7 @@ describe('Image Service', () => {
 
       const result = await saveRecipeImageToR2(mockR2Bucket, 'https://example.com/image.jpg');
 
-      expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abcdef1234567890.jpg');
+      expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg');
       expect(mockR2Bucket.put).toHaveBeenCalled();
     });
 
@@ -279,7 +302,7 @@ describe('Image Service', () => {
       const imageUrl = 'https://example.com/image.jpg';
       const result = await processRecipeImages(mockR2Bucket, imageUrl);
 
-      expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abcdef1234567890.jpg');
+      expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg');
     });
 
     it('should return original URL if processing fails for single image', async () => {
@@ -302,8 +325,8 @@ describe('Image Service', () => {
       const result = await processRecipeImages(mockR2Bucket, imageUrls);
 
       expect(result).toEqual([
-        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abcdef1234567890.jpg',
-        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abcdef1234567890.jpg'
+        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg',
+        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg'
       ]);
     });
 
@@ -327,7 +350,7 @@ describe('Image Service', () => {
       const result = await processRecipeImages(mockR2Bucket, imageUrls);
 
       expect(result).toEqual([
-        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abcdef1234567890.jpg',
+        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg',
         'https://example.com/image2.jpg' // Original URL returned on failure
       ]);
 
@@ -369,7 +392,7 @@ describe('Image Service Integration', () => {
     // Verify the complete workflow
     expect(global.fetch).toHaveBeenCalledWith(originalImageUrl, expect.any(Object));
     expect(mockR2Bucket.put).toHaveBeenCalledWith(
-      'recipe-images/1234567890000-abcdef1234567890.jpg',
+      'recipe-images/1234567890000-abababababababab.jpg',
       mockArrayBuffer,
       {
         httpMetadata: {
@@ -378,7 +401,7 @@ describe('Image Service Integration', () => {
         },
       }
     );
-    expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abcdef1234567890.jpg');
+    expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg');
   });
 
   it('should gracefully handle network errors without breaking recipe processing', async () => {

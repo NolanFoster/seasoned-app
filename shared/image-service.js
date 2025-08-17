@@ -3,18 +3,21 @@
  * Handles downloading images from URLs and uploading to R2 storage
  */
 
-import crypto from 'crypto';
-
 /**
  * Generate a unique filename for an image based on its URL and content
  * @param {string} originalUrl - The original image URL
  * @param {string} extension - File extension (e.g., 'jpg', 'png')
- * @returns {string} - Unique filename
+ * @returns {Promise<string>} - Unique filename
  */
-function generateImageFilename(originalUrl, extension = 'jpg') {
-  const hash = crypto.createHash('sha256').update(originalUrl).digest('hex');
+async function generateImageFilename(originalUrl, extension = 'jpg') {
+  // Use Web Crypto API instead of Node.js crypto
+  const encoder = new TextEncoder();
+  const data = encoder.encode(originalUrl);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   const timestamp = Date.now();
-  return `recipe-images/${timestamp}-${hash.substring(0, 16)}.${extension}`;
+  return `recipe-images/${timestamp}-${hashHex.substring(0, 16)}.${extension}`;
 }
 
 /**
@@ -138,7 +141,7 @@ async function saveRecipeImageToR2(r2Bucket, imageUrl, baseUrl) {
     const { buffer, contentType, extension } = await downloadImage(imageUrl);
     
     // Generate unique filename
-    const filename = generateImageFilename(imageUrl, extension);
+    const filename = await generateImageFilename(imageUrl, extension);
     
     // Upload to R2
     const r2Url = await uploadImageToR2(r2Bucket, buffer, filename, contentType, baseUrl);

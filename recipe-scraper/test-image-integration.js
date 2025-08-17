@@ -18,14 +18,16 @@ vi.mock('../shared/image-service.js', () => ({
   processRecipeImages: vi.fn()
 }));
 
-// Mock crypto for Node.js environment
-vi.mock('crypto', () => ({
-  default: {
-    createHash: vi.fn(() => ({
-      update: vi.fn().mockReturnThis(),
-      digest: vi.fn(() => 'abcdef1234567890')
-    }))
+// Mock Web Crypto API
+global.crypto = {
+  subtle: {
+    digest: vi.fn().mockResolvedValue(new ArrayBuffer(32))
   }
+};
+
+// Mock TextEncoder
+global.TextEncoder = vi.fn().mockImplementation(() => ({
+  encode: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4]))
 }));
 
 // Mock global fetch and HTMLRewriter
