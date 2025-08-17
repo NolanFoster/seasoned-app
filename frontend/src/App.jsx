@@ -361,6 +361,7 @@ function App() {
   const [recommendations, setRecommendations] = useState(null); // New state for recipe recommendations
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true); // Start with loading state true
   const [userLocation, setUserLocation] = useState(null); // User's location for recommendations
+  const [externalRecipes, setExternalRecipes] = useState({}); // State for external recipes from search database
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -376,6 +377,28 @@ function App() {
       console.error('Failed to fetch initial recommendations:', err);
     });
   }, []);
+
+  // Fetch external recipes when recommendations change
+  useEffect(() => {
+    if (recommendations && recommendations.recommendations) {
+      const fetchExternalRecipes = async () => {
+        const externalData = {};
+        for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
+          if (Array.isArray(tags)) {
+            try {
+              const externalRecipes = await searchRecipesByTags(tags, 3);
+              externalData[categoryName] = externalRecipes;
+            } catch (error) {
+              console.error(`Error fetching external recipes for ${categoryName}:`, error);
+              externalData[categoryName] = [];
+            }
+          }
+        }
+        setExternalRecipes(externalData);
+      };
+      fetchExternalRecipes();
+    }
+  }, [recommendations]);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -1335,6 +1358,149 @@ function App() {
     }
   }
 
+  // New function to search for recipes matching recommendation tags
+  async function searchRecipesByTags(tags, limit = 3) {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return [];
+    }
+    
+    try {
+      // Search for each tag with fallback strategy
+      const searchPromises = tags.map(async (tag) => {
+        try {
+          // First try: search with the full tag
+          let results = await searchWithFallback(tag, Math.ceil(limit / tags.length));
+          
+          // If no results, try breaking down the tag
+          if (!results || results.length === 0) {
+            results = await searchWithFallbackStrategy(tag, Math.ceil(limit / tags.length));
+          }
+          
+          return results || [];
+        } catch (e) {
+          console.error(`Error searching for tag "${tag}":`, e);
+          return [];
+        }
+      });
+      
+      const searchResults = await Promise.all(searchPromises);
+      
+      // Flatten and deduplicate results
+      const allResults = searchResults.flat();
+      const uniqueResults = new Map();
+      
+      allResults.forEach(node => {
+        if (!uniqueResults.has(node.id)) {
+          const properties = node.properties;
+          uniqueResults.set(node.id, {
+            id: node.id,
+            name: properties.title || properties.name || 'Untitled Recipe',
+            description: properties.description || '',
+            image: properties.image || properties.image_url || '',
+            image_url: properties.image || properties.image_url || '',
+            prep_time: properties.prepTime || properties.prep_time || null,
+            cook_time: properties.cookTime || properties.cook_time || null,
+            recipe_yield: properties.servings || properties.recipeYield || properties.recipe_yield || null,
+            source_url: properties.url || properties.source_url || '',
+            ingredients: properties.ingredients || [],
+            instructions: properties.instructions || [],
+            recipeIngredient: properties.ingredients || [],
+            recipeInstructions: properties.instructions || [],
+            // Mark as external recipe
+            isExternal: true
+          });
+        }
+      });
+      
+      // Return up to the limit, prioritizing recipes that match multiple tags
+      return Array.from(uniqueResults.values()).slice(0, limit);
+    } catch (e) {
+      console.error('Error searching recipes by tags:', e);
+      return [];
+    }
+  }
+
+  // Helper function to search with fallback strategy
+  async function searchWithFallback(query, limit = 1) {
+    try {
+      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
+      if (res.ok) {
+        const result = await res.json();
+        return result.results || [];
+      }
+    } catch (e) {
+      console.error(`Error searching for query "${query}":`, e);
+    }
+    return [];
+  }
+
+  // Fallback strategy: break down complex queries into simpler parts
+  async function searchWithFallbackStrategy(originalQuery, limit = 1) {
+    console.log(`Trying fallback strategy for: "${originalQuery}"`);
+    
+    // Strategy 1: Try with common cooking words removed
+    const cookingWords = ['with', 'and', 'or', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for'];
+    const cleanedQuery = originalQuery
+      .split(' ')
+      .filter(word => !cookingWords.includes(word.toLowerCase()) && word.length > 2)
+      .join(' ');
+    
+    if (cleanedQuery !== originalQuery) {
+      console.log(`Trying cleaned query: "${cleanedQuery}"`);
+      let results = await searchWithFallback(cleanedQuery, limit);
+      if (results && results.length > 0) {
+        return results;
+      }
+    }
+    
+    // Strategy 2: Try with phrases (groups of 2-3 words)
+    const words = originalQuery.split(' ').filter(word => word.length > 2);
+    if (words.length >= 2) {
+      // Try 3-word phrases first
+      for (let i = 0; i <= words.length - 3; i++) {
+        const phrase = words.slice(i, i + 3).join(' ');
+        console.log(`Trying 3-word phrase: "${phrase}"`);
+        let results = await searchWithFallback(phrase, limit);
+        if (results && results.length > 0) {
+          return results;
+        }
+      }
+      
+      // Try 2-word phrases
+      for (let i = 0; i <= words.length - 2; i++) {
+        const phrase = words.slice(i, i + 2).join(' ');
+        console.log(`Trying 2-word phrase: "${phrase}"`);
+        let results = await searchWithFallback(phrase, limit);
+        if (results && results.length > 0) {
+          return results;
+        }
+      }
+    }
+    
+    // Strategy 3: Try individual significant words
+    const significantWords = words.filter(word => word.length > 3);
+    for (const word of significantWords) {
+      console.log(`Trying individual word: "${word}"`);
+      let results = await searchWithFallback(word, limit);
+      if (results && results.length > 0) {
+        return results;
+      }
+    }
+    
+    // Strategy 4: Try with any remaining words
+    for (const word of words) {
+      if (word.length <= 3) continue; // Skip very short words
+      console.log(`Trying remaining word: "${word}"`);
+      let results = await searchWithFallback(word, limit);
+      if (results && results.length > 0) {
+        return results;
+      }
+    }
+    
+    console.log(`All fallback strategies failed for: "${originalQuery}"`);
+    return [];
+  }
+
   async function fetchRecommendations() {
     try {
       setIsLoadingRecommendations(true);
@@ -1663,8 +1829,8 @@ function App() {
                   
                   console.log(`Processing category: ${categoryName} with tags:`, tags);
                   
-                  // Filter recipes that match any of the tags in this category
-                  const categoryRecipes = recipes.filter(recipe => {
+                  // First, try to find matching recipes from user's saved recipes
+                  const localCategoryRecipes = recipes.filter(recipe => {
                     // Skip if already shown in another category
                     if (shownRecipeIds.has(recipe.id)) {
                       return false;
@@ -1684,7 +1850,7 @@ function App() {
                     // Handle recipeCuisine - could be string or array
                     let recipeCuisine = '';
                     if (typeof recipe.recipeCuisine === 'string') {
-                      recipeCuisine = recipe.recipeCuisine.toLowerCase();
+                      recipeCuisine = recipe.recipeCategory.toLowerCase();
                     } else if (Array.isArray(recipe.recipeCuisine)) {
                       recipeCuisine = recipe.recipeCuisine.join(' ').toLowerCase();
                     }
@@ -1730,8 +1896,28 @@ function App() {
                     });
                   });
                   
-                  // Sort by relevance (recipes that matched more tags first)
-                  const sortedRecipes = categoryRecipes.slice(0, 3);
+                  // Get external recipes for this category
+                  const categoryExternalRecipes = externalRecipes[categoryName] || [];
+                  
+                  // Combine local and external recipes, filtering out duplicates
+                  let categoryRecipes = [...localCategoryRecipes];
+                  if (categoryRecipes.length < 3) {
+                    const externalFiltered = categoryExternalRecipes.filter(external => 
+                      !recipes.some(local => local.name.toLowerCase() === external.name.toLowerCase()) &&
+                      !shownRecipeIds.has(external.id)
+                    );
+                    categoryRecipes = [...categoryRecipes, ...externalFiltered];
+                  }
+                  
+                  // Sort by relevance (local recipes first, then external ones)
+                  const sortedRecipes = categoryRecipes
+                    .sort((a, b) => {
+                      // Local recipes first
+                      if (a.isExternal && !b.isExternal) return 1;
+                      if (!a.isExternal && b.isExternal) return -1;
+                      return 0;
+                    })
+                    .slice(0, 3);
                   
                   // Add selected recipes to the shown set
                   sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
@@ -1744,7 +1930,7 @@ function App() {
                       <h2 className="category-title">{categoryName}</h2>
                       <div className="recipe-grid category-recipes" ref={recipeGridRef}>
                         {sortedRecipes.map((recipe) => (
-                          <div key={recipe.id} className="recipe-card" onClick={() => openRecipeView(recipe)}>
+                          <div key={recipe.id} className={`recipe-card ${recipe.isExternal ? 'external-recipe' : ''}`} onClick={() => openRecipeView(recipe)}>
                             <div className="recipe-card-image">
                               {/* Main image display */}
                               {(recipe.image || recipe.image_url) ? (
@@ -1783,6 +1969,11 @@ function App() {
                               <div className="recipe-card-overlay"></div>
                               <div className="recipe-card-title-overlay">
                                 <h3 className="recipe-card-title">{recipe.name}</h3>
+                                {recipe.isExternal && (
+                                  <span className="external-badge" title="External recipe - click to view details">
+                                    🌐
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="recipe-card-content">
