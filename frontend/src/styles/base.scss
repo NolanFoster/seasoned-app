@@ -335,17 +335,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: calc(#{$border-radius-lg} - 9px); // 16px for inner element
-  transition: background $transition-normal;
+  border-radius: 50%; // Make button circular
+  transition: all $transition-normal; // Include all properties for smooth transitions
   height: 100%; // Fill parent height
-  aspect-ratio: 1; // Make button square
+  aspect-ratio: 1; // Make button square (which becomes circular with border-radius)
   
   &:hover {
     background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05); // Slight scale on hover
   }
   
   &:active {
     background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95); // Slight scale down on active
   }
   
   // Style for both SVG and IMG icons
@@ -357,13 +359,37 @@ body {
   }
   
   img.clip-icon {
-    filter: brightness(0) invert(1); // White by default
+    filter: brightness(0) invert(1); // Keep white by default
   }
   
   img.clip-icon-available {
-    // Green color filter
-    filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 3px rgba(76, 175, 80, 0.6));
-    transition: filter $transition-normal;
+    // Keep icon white but add green glass background to button
+    filter: brightness(0) invert(1); // White icon
+  }
+  
+  // Green glass background when clipper is available
+  &.clipper-available {
+    background: rgba(76, 175, 80, 0.3);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    border: 1px solid rgba(76, 175, 80, 0.5);
+    box-shadow: 
+      0 2px 8px rgba(76, 175, 80, 0.3),
+      inset 0 1px 2px rgba(255, 255, 255, 0.2);
+    
+    &:hover {
+      background: rgba(76, 175, 80, 0.4);
+      border-color: rgba(76, 175, 80, 0.6);
+      box-shadow: 
+        0 4px 12px rgba(76, 175, 80, 0.4),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      background: rgba(76, 175, 80, 0.5);
+      transform: scale(0.95);
+    }
   }
   
   &:hover {
@@ -386,6 +412,11 @@ body {
   &:disabled {
     cursor: not-allowed;
     opacity: 0.7;
+    transform: none;
+    
+    &:hover {
+      transform: none;
+    }
   }
 }
 
@@ -463,8 +494,35 @@ body {
     color: #ecf0f1;
     
     img.clip-icon-available {
-      // Same green color in dark mode
-      filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(400%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 4px rgba(76, 175, 80, 0.8));
+      // Keep icon white in dark mode too
+      filter: brightness(0) invert(1);
+    }
+    
+    // Enhanced green glass background in dark mode
+    &.clipper-available {
+      background: rgba(76, 175, 80, 0.25);
+      backdrop-filter: blur(10px) saturate(150%);
+      -webkit-backdrop-filter: blur(10px) saturate(150%);
+      border: 1px solid rgba(76, 175, 80, 0.4);
+      box-shadow: 
+        0 2px 8px rgba(76, 175, 80, 0.4),
+        0 0 10px rgba(76, 175, 80, 0.2),
+        inset 0 1px 2px rgba(255, 255, 255, 0.15);
+      
+      &:hover {
+        background: rgba(76, 175, 80, 0.35);
+        border-color: rgba(76, 175, 80, 0.6);
+        box-shadow: 
+          0 4px 12px rgba(76, 175, 80, 0.5),
+          0 0 15px rgba(76, 175, 80, 0.3),
+          inset 0 1px 2px rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+      }
+      
+      &:active {
+        background: rgba(76, 175, 80, 0.4);
+        transform: scale(0.95);
+      }
     }
   }
   
@@ -521,7 +579,7 @@ body {
   }
   
   .title-search-button {
-    padding: 4px 8px;
+    padding: 6px; // Adjust padding for circular button on mobile
     
     svg, img {
       width: 16px;
@@ -598,7 +656,7 @@ body {
   }
   
   .title-search-button {
-    padding: 4px 6px;
+    padding: 5px; // Adjust padding for circular button on smallest screens
     
     svg, img {
       width: 14px;
