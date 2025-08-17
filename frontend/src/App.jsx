@@ -357,6 +357,7 @@ function App() {
   const [isSearching, setIsSearching] = useState(false); // New state for search loading
   const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
+  const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
   const [recommendations, setRecommendations] = useState(null); // New state for recipe recommendations
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true); // Start with loading state true
   const [userLocation, setUserLocation] = useState(null); // User's location for recommendations
@@ -365,6 +366,7 @@ function App() {
   const recipeGridRef = useRef(null);
   const recipeFullscreenRef = useRef(null);
   const searchTimeoutRef = useRef(null); // Add ref for debounce timeout
+  const recipeContentRef = useRef(null);
 
   useEffect(() => {
     fetchRecipes();
@@ -2567,9 +2569,21 @@ function App() {
             <button className="back-btn" onClick={() => {
               setSelectedRecipe(null);
               setShowSharePanel(false); // Reset share panel when closing recipe view
+              setShowNutrition(false); // Reset nutrition view when closing
             }}>
               <span className="back-arrow">←</span>
             </button>
+            
+            {/* Nutrition FAB - only show if nutrition data exists */}
+            {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
+              <button 
+                className="fab-nutrition-trigger"
+                onClick={() => setShowNutrition(!showNutrition)}
+                title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
+              >
+                <span className="nutrition-icon">📊</span>
+              </button>
+            )}
             
             {/* Share/More Actions FAB */}
             <button 
@@ -2718,27 +2732,98 @@ function App() {
           
           {/* Recipe Content */}
           <div className="recipe-fullscreen-content">
-            {/* Ingredients Panel */}
-            <div className="recipe-panel glass">
-              <h2>Ingredients</h2>
-              <ul className="ingredients-list">
-                {(selectedRecipe.recipeIngredient || selectedRecipe.ingredients || []).map((ingredient, index) => (
-                  <li key={index}>{ingredient}</li>
-                ))}
-              </ul>
-            </div>
-            
-            {/* Instructions Panel */}
-            <div className="recipe-panel glass">
-              <h2>Instructions</h2>
-              <ol className="instructions-list">
-                {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
-                  <li key={index}>
-                    {typeof instruction === 'string' ? instruction : instruction.text || ''}
-                  </li>
-                ))}
-              </ol>
-            </div>
+            {showNutrition ? (
+              /* Nutrition Panel */
+              <div className="recipe-panel glass nutrition-panel">
+                <h2>Nutrition Information</h2>
+                <div className="nutrition-grid">
+                  {selectedRecipe.nutrition.calories && (
+                    <div className="nutrition-item highlight">
+                      <span className="nutrition-label">Calories</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.calories}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.fatContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Total Fat</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.fatContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.saturatedFatContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Saturated Fat</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.saturatedFatContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.unsaturatedFatContent && selectedRecipe.nutrition.unsaturatedFatContent !== "0 g" && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Unsaturated Fat</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.unsaturatedFatContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.proteinContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Protein</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.proteinContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.carbohydrateContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Carbohydrates</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.carbohydrateContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.fiberContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Fiber</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.fiberContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.sugarContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Sugar</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.sugarContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.sodiumContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Sodium</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.sodiumContent}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.nutrition.cholesterolContent && (
+                    <div className="nutrition-item">
+                      <span className="nutrition-label">Cholesterol</span>
+                      <span className="nutrition-value">{selectedRecipe.nutrition.cholesterolContent}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Ingredients Panel */}
+                <div className="recipe-panel glass">
+                  <h2>Ingredients</h2>
+                  <ul className="ingredients-list">
+                    {(selectedRecipe.recipeIngredient || selectedRecipe.ingredients || []).map((ingredient, index) => (
+                      <li key={index}>{ingredient}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {/* Instructions Panel */}
+                <div className="recipe-panel glass">
+                  <h2>Instructions</h2>
+                  <ol className="instructions-list">
+                    {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
+                      <li key={index}>
+                        {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
