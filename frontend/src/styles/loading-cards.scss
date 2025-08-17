@@ -1,0 +1,80 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Loading card styles
+.loading-card {
+  pointer-events: none;
+  cursor: default;
+  
+  .recipe-card-image {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    position: relative;
+    overflow: hidden;
+    
+    &.loading-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    .loading-shimmer {
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        transparent 100%
+      );
+      animation: shimmer 2s infinite;
+    }
+  }
+  
+  .recipe-card-content {
+    .loading-text {
+      height: 20px;
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+      border-radius: 4px;
+      margin: 10px 0;
+      
+      &.loading-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .loading-card {
+    .recipe-card-image {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    }
+    
+    .recipe-card-content {
+      .loading-text {
+        background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      }
+    }
+  }
+}
