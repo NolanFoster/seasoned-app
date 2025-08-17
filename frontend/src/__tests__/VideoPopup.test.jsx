@@ -21,9 +21,21 @@ describe('VideoPopup Component', () => {
                 name: 'Test Recipe',
                 ingredients: [],
                 instructions: [],
+                keywords: 'test',
                 ...recipeOverrides
               }
             }]
+          })
+        });
+      }
+      if (url.includes('/recommendations')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            recommendations: {
+              'Seasonal Favorites': ['test']
+            },
+            season: 'Summer'
           })
         });
       }
