@@ -214,7 +214,9 @@ async function extractRecipeWithGPT(pageUrl, env) {
       console.log('Recipe extracted from JSON-LD:', {
         name: jsonLdRecipe.name,
         ingredients: jsonLdRecipe.recipeIngredient?.length || 0,
-        instructions: jsonLdRecipe.recipeInstructions?.length || 0
+        instructions: jsonLdRecipe.recipeInstructions?.length || 0,
+        image: jsonLdRecipe.image,
+        description: jsonLdRecipe.description?.substring(0, 100) + '...'
       });
       
       // Add source_url and ensure backward compatibility fields
@@ -1051,9 +1053,20 @@ function cleanJsonContent(jsonString) {
 
 // Clean HTML content for GPT processing - optimized for token reduction
 function cleanHtmlForGPT(html) {
-  // Remove script tags, style tags, and other non-content elements
-  let cleanHtml = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  // Remove script tags (but preserve JSON-LD), style tags, and other non-content elements
+  let cleanHtml = html;
+  
+  // First, temporarily mark JSON-LD scripts to preserve them
+  cleanHtml = cleanHtml.replace(/<script\s+type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi, '<!--JSON_LD_PRESERVE-->$1<!--/JSON_LD_PRESERVE-->');
+  
+  // Now remove all other script tags
+  cleanHtml = cleanHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Restore JSON-LD scripts
+  cleanHtml = cleanHtml.replace(/<!--JSON_LD_PRESERVE-->([\s\S]*?)<!--\/JSON_LD_PRESERVE-->/gi, '<script type="application/ld+json">$1</script>');
+  
+  // Remove other non-content elements
+  cleanHtml = cleanHtml
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
     .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, '')
     .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
@@ -1994,15 +2007,34 @@ function extractRecipeFromJsonLd(html) {
         
         if (!jsonContent) continue;
         
+        console.log('Parsing JSON-LD content (first 200 chars):', jsonContent.substring(0, 200) + '...');
+        
         // Parse the JSON
         const jsonLd = JSON.parse(jsonContent);
+        
+        console.log('JSON-LD parsed successfully, structure:', {
+          hasType: !!jsonLd['@type'],
+          type: jsonLd['@type'],
+          hasGraph: !!jsonLd['@graph'],
+          graphLength: jsonLd['@graph']?.length || 0
+        });
         
         // Check if it's a Recipe or contains a Recipe
         const recipe = findRecipeInJsonLd(jsonLd);
         
         if (recipe) {
-          console.log('Found Recipe in JSON-LD!');
-          return normalizeJsonLdRecipe(recipe);
+          console.log('Found Recipe in JSON-LD! Recipe structure:', {
+            name: recipe.name,
+            hasIngredients: !!recipe.recipeIngredient,
+            ingredientCount: recipe.recipeIngredient?.length || 0,
+            hasInstructions: !!recipe.recipeInstructions,
+            instructionCount: recipe.recipeInstructions?.length || 0
+          });
+          
+          // Resolve references in the recipe using the full JSON-LD context
+          const resolvedRecipe = resolveJsonLdReferences(recipe, jsonLd);
+          
+          return normalizeJsonLdRecipe(resolvedRecipe);
         }
       } catch (parseError) {
         console.error('Error parsing JSON-LD:', parseError);
@@ -2018,28 +2050,109 @@ function extractRecipeFromJsonLd(html) {
   }
 }
 
+// Resolve JSON-LD references by looking up objects by their @id
+function resolveJsonLdReferences(recipe, fullJsonLd) {
+  try {
+    const resolved = { ...recipe };
+    
+    // If the recipe has a @graph, we can resolve references from it
+    if (fullJsonLd['@graph'] && Array.isArray(fullJsonLd['@graph'])) {
+      const graph = fullJsonLd['@graph'];
+      
+      // Resolve image reference
+      if (recipe.image && typeof recipe.image === 'object' && recipe.image['@id']) {
+        const imageId = recipe.image['@id'];
+        console.log('Looking for image with ID:', imageId);
+        const imageObject = graph.find(item => item['@id'] === imageId);
+        console.log('Found image object:', imageObject);
+        if (imageObject && imageObject.url) {
+          resolved.image = imageObject.url;
+          console.log('Resolved image to URL:', resolved.image);
+        } else if (imageObject && imageObject.contentUrl) {
+          resolved.image = imageObject.contentUrl;
+          console.log('Resolved image to contentUrl:', resolved.image);
+        }
+      }
+      
+      // If recipe is missing image, try to extract it from WebPage
+      if (!resolved.image || resolved.image === '') {
+        console.log('Recipe missing image, trying to extract from WebPage...');
+        const webPage = graph.find(item => item['@type'] === 'WebPage');
+        if (webPage) {
+          // Try to get image from WebPage
+          if (webPage.image && typeof webPage.image === 'object' && webPage.image['@id']) {
+            const imageId = webPage.image['@id'];
+            const imageObject = graph.find(item => item['@id'] === imageId);
+            if (imageObject && imageObject.url) {
+              resolved.image = imageObject.url;
+              console.log('Extracted image from WebPage image reference:', resolved.image);
+            }
+          } else if (webPage.primaryImageOfPage && typeof webPage.primaryImageOfPage === 'object' && webPage.primaryImageOfPage['@id']) {
+            const imageId = webPage.primaryImageOfPage['@id'];
+            const imageObject = graph.find(item => item['@id'] === imageId);
+            if (imageObject && imageObject.url) {
+              resolved.image = imageObject.url;
+              console.log('Extracted image from WebPage primaryImageOfPage reference:', resolved.image);
+            }
+          } else if (webPage.thumbnailUrl) {
+            resolved.image = webPage.thumbnailUrl;
+            console.log('Extracted image from WebPage thumbnailUrl:', resolved.image);
+          }
+        }
+      }
+      
+      // Resolve author reference
+      if (recipe.author && typeof recipe.author === 'object' && recipe.author['@id']) {
+        const authorId = recipe.author['@id'];
+        const authorObject = graph.find(item => item['@id'] === authorId);
+        if (authorObject && authorObject.name) {
+          resolved.author = authorObject.name;
+        }
+      }
+    }
+    
+    return resolved;
+  } catch (error) {
+    console.error('Error resolving JSON-LD references:', error);
+    return recipe;
+  }
+}
+
 // Find Recipe object in JSON-LD data (handles nested structures)
 function findRecipeInJsonLd(jsonLd) {
   // Direct Recipe object
   if (jsonLd['@type'] === 'Recipe' || 
       (Array.isArray(jsonLd['@type']) && jsonLd['@type'].includes('Recipe'))) {
+    console.log('Found direct Recipe object');
     return jsonLd;
   }
   
   // Check if it's an array of objects
   if (Array.isArray(jsonLd)) {
-    for (const item of jsonLd) {
+    console.log('Checking array of objects, length:', jsonLd.length);
+    for (let i = 0; i < jsonLd.length; i++) {
+      const item = jsonLd[i];
+      console.log(`Checking array item ${i}, type:`, item['@type']);
       const recipe = findRecipeInJsonLd(item);
       if (recipe) return recipe;
     }
   }
   
-  // Check if it's a graph
+  // Check if it's a graph (most common case for Yoast SEO)
   if (jsonLd['@graph'] && Array.isArray(jsonLd['@graph'])) {
-    for (const item of jsonLd['@graph']) {
+    console.log('Checking @graph array, length:', jsonLd['@graph'].length);
+    for (let i = 0; i < jsonLd['@graph'].length; i++) {
+      const item = jsonLd['@graph'][i];
+      console.log(`Checking graph item ${i}, type:`, item['@type']);
       if (item['@type'] === 'Recipe' || 
           (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))) {
+        console.log('Found Recipe in @graph array!');
         return item;
+      }
+      // Also check nested objects within graph items
+      if (typeof item === 'object' && item !== null) {
+        const nestedRecipe = findRecipeInJsonLd(item);
+        if (nestedRecipe) return nestedRecipe;
       }
     }
   }
@@ -2060,6 +2173,17 @@ function findRecipeInJsonLd(jsonLd) {
 // Normalize JSON-LD recipe to our expected format
 function normalizeJsonLdRecipe(recipe) {
   try {
+    console.log('Normalizing JSON-LD recipe:', {
+      name: recipe.name,
+      hasImage: !!recipe.image,
+      hasDescription: !!recipe.description,
+      hasAuthor: !!recipe.author,
+      hasIngredients: !!recipe.recipeIngredient,
+      ingredientCount: recipe.recipeIngredient?.length || 0,
+      hasInstructions: !!recipe.recipeInstructions,
+      instructionCount: recipe.recipeInstructions?.length || 0
+    });
+    
     const normalized = {
       // Required fields
       name: recipe.name || '',
@@ -2106,6 +2230,13 @@ function normalizeJsonLdRecipe(recipe) {
       video: recipe.video || null
     };
     
+    console.log('Normalized recipe:', {
+      name: normalized.name,
+      image: normalized.image,
+      ingredientCount: normalized.recipeIngredient?.length || 0,
+      instructionCount: normalized.recipeInstructions?.length || 0
+    });
+    
     // Validate required fields
     if (!normalized.name || !normalized.image || 
         !normalized.recipeIngredient || normalized.recipeIngredient.length === 0 ||
@@ -2119,6 +2250,7 @@ function normalizeJsonLdRecipe(recipe) {
       return null;
     }
     
+    console.log('JSON-LD recipe validation passed!');
     return normalized;
   } catch (error) {
     console.error('Error normalizing JSON-LD recipe:', error);
@@ -2134,7 +2266,8 @@ function normalizeImage(image) {
     return normalizeImage(image[0]);
   }
   if (image && typeof image === 'object') {
-    return image.url || image['@id'] || image.contentUrl || '';
+    // At this point, references should already be resolved
+    return image.url || image.contentUrl || '';
   }
   return '';
 }
