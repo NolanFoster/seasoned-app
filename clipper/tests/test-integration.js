@@ -27,11 +27,11 @@ function assert(condition, message) {
 
 // Create comprehensive mock environment
 const createMockEnv = (overrides = {}) => ({
-  RECIPES: {
+  RECIPE_STORAGE: {
     get: async (key) => null,
     put: async (key, value) => {},
     delete: async (key) => {},
-    ...overrides.RECIPES
+    ...(overrides.RECIPE_STORAGE || overrides.RECIPES || {})
   },
   AI: {
     run: async (model, options) => ({
@@ -106,6 +106,14 @@ const createRequest = (method, path, body = null) => {
 
 // Mock global fetch for HTML fetching
 global.fetch = async (url) => {
+  // Handle recipe save worker
+  if (url.includes('recipe-save-worker')) {
+    return {
+      ok: true,
+      json: async () => ({ success: true, id: 'test-recipe-id' })
+    };
+  }
+  
   // Return different HTML based on URL for testing different scenarios
   if (url.includes('json-ld-recipe')) {
     return {
@@ -339,7 +347,7 @@ await test('Network error handling', async () => {
 await test('Recipe caching functionality', async () => {
   let kvStoreData = null;
   const env = createMockEnv({
-    RECIPES: {
+    RECIPE_STORAGE: {
       get: async (key) => kvStoreData,
       put: async (key, value) => { kvStoreData = value; },
       delete: async (key) => { kvStoreData = null; }
@@ -357,7 +365,15 @@ await test('Recipe caching functionality', async () => {
   const data1 = await response1.json();
   assert(data1.cached === false, 'First request should not be cached');
   assert(data1.savedToKV === true, 'Should save to KV');
-  assert(kvStoreData !== null, 'Should have saved data to KV');
+  
+  // Simulate that the external service saved the recipe to KV
+  kvStoreData = JSON.stringify({
+    id: data1.recipeId,
+    url: 'https://example.com/cacheable-recipe',
+    data: data1,
+    scrapedAt: new Date().toISOString(),
+    version: '1.1'
+  });
   
   // Second request - should return cached
   const request2 = createRequest('POST', '/clip', { 
