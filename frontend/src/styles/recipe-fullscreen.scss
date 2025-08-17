@@ -939,23 +939,11 @@
 }
 
 /* Nutrition Panel Specific Styles */
-.nutrition-panel {
+
+.nutrition-facts-label {
   max-width: 400px;
   width: 100%;
   margin: 0 auto;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 30px 0; // Add vertical padding for better spacing
-  
-  // Override default recipe-panel h2 styles
-  h2 {
-    color: #fff !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  }
-}
-
-.nutrition-facts-label {
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
@@ -1133,11 +1121,8 @@ body.dark-mode {
     margin-right: 8px;
   }
 
-  .nutrition-panel {
-    max-width: 350px;
-  }
-
   .nutrition-facts-label {
+    max-width: 350px;
     padding: 12px 15px;
   }
 
@@ -1166,11 +1151,8 @@ body.dark-mode {
     margin-right: 6px;
   }
 
-  .nutrition-panel {
-    max-width: 300px;
-  }
-
   .nutrition-facts-label {
+    max-width: 300px;
     padding: 10px 12px;
     border-radius: 10px;
   }
