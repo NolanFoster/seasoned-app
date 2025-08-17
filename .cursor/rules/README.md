@@ -28,6 +28,12 @@ Each rule is stored as an individual MDC (Markdown with metadata) file containin
 - **Purpose**: Suggests CI/CD and testing improvements
 - Covers: GitHub Actions, testing strategies
 
+### 4. Release Workflow (`release-workflow.mdc`)
+- **Type**: `always` - Applied to all operations
+- **Priority**: 1
+- **Purpose**: Ensures proper release process from staging to production
+- Covers: Rebasing, merging, conflict resolution, rollback procedures
+
 ## Rule Types
 
 - **`always`**: Included in every operation

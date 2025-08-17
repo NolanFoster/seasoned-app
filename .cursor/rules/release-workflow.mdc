@@ -1,0 +1,86 @@
+# Release Workflow Guidelines
+
+When performing a release from staging to production (main branch), follow this structured workflow:
+
+## Pre-Release Checklist
+
+Before starting the release process:
+1. Ensure all tests pass on the staging branch
+2. Verify staging deployment is working correctly
+3. Review all changes between staging and main
+4. Ensure no active hotfixes are in progress on main
+
+## Release Process
+
+### 1. Prepare Staging Branch
+```bash
+# Fetch latest changes
+git fetch origin
+
+# Switch to staging branch
+git checkout staging
+git pull origin staging
+
+# Rebase main into staging to incorporate any hotfixes
+git rebase origin/main
+```
+
+### 2. Handle Conflicts During Rebase
+If conflicts occur during rebase:
+- Resolve conflicts carefully, prioritizing staging changes for features
+- Keep any hotfixes from main intact
+- Test thoroughly after resolution
+- Continue rebase: `git rebase --continue`
+- If issues arise: `git rebase --abort` and investigate
+
+### 3. Push Updated Staging
+After successful rebase:
+```bash
+# Force push the rebased staging (coordinate with team)
+git push origin staging --force-with-lease
+```
+
+### 4. Merge to Production
+```bash
+# Switch to main branch
+git checkout main
+git pull origin main
+
+# Merge staging into main (should be fast-forward after rebase)
+git merge staging
+
+# Push to main
+git push origin main
+```
+
+### 5. Post-Release Verification
+1. Monitor deployment pipelines
+2. Verify production deployment completed successfully
+3. Perform smoke tests on production
+4. Tag the release: `git tag -a v1.x.x -m "Release version 1.x.x"`
+5. Push tag: `git push origin v1.x.x`
+
+## Conflict Resolution Guidelines
+
+When resolving conflicts:
+- **Feature code**: Generally keep staging version (newer features)
+- **Hotfixes**: Preserve any hotfix changes from main
+- **Dependencies**: Merge carefully, may need both versions
+- **Configuration**: Review environment-specific settings
+- **Documentation**: Merge both sets of changes
+
+## Emergency Rollback
+
+If issues are discovered post-release:
+1. Revert the merge commit: `git revert -m 1 <merge-commit-hash>`
+2. Push the revert: `git push origin main`
+3. Investigate and fix issues on staging
+4. Re-attempt release when ready
+
+## Important Notes
+
+- **Never force push to main** without team coordination
+- **Always test** after resolving conflicts
+- **Document** any significant conflict resolutions
+- **Communicate** with team during release process
+- **Monitor** production after deployment
