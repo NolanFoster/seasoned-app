@@ -1,0 +1,14 @@
+name = "recipe-recommendation-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+vars = { }
+
+# You can add environment-specific configurations here
+# [env.staging]
+# vars = { }
+
+# Secrets should be added via wrangler secret put OPENAI_API_KEY
+# For local development, create a .dev.vars file:
+# OPENAI_API_KEY=your-api-key-here
