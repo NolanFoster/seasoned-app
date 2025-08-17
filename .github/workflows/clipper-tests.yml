@@ -46,9 +46,9 @@ jobs:
     - name: Run Worker Tests
       working-directory: ./clipper
       run: |
-        # Run tests if test script exists, otherwise skip
+        # Run tests if test script exists
         if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
+          npm test
         else
           echo "No test script found in package.json"
         fi
@@ -73,7 +73,7 @@ jobs:
       run: |
         npm ci
         if npm run | grep -q "lint"; then
-          npm run lint || echo "Linting completed with warnings"
+          npm run lint
         else
           echo "No lint script found"
         fi
