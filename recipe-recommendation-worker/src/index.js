@@ -102,9 +102,9 @@ Generate 3 recipe categories with 4 tags each. Consider local cuisine, seasonal 
 Return ONLY this JSON format:
 {
   "recommendations": {
-    "Seasonal Favorites": ["tag1", "tag2", "tag3", "tag4"],
-    "Local Specialties": ["tag1", "tag2", "tag3", "tag4"],
-    "Holiday Treats": ["tag1", "tag2", "tag3", "tag4"]
+    "${season} Favorites": ["tag1", "tag2", "tag3", "tag4"],
+    "${location.includes('Pacific') || location.includes('PNW') || location.includes('Seattle') || location.includes('Portland') || location.includes('Washington') || location.includes('Oregon') ? 'PNW' : 'Local'} Specialties": ["tag1", "tag2", "tag3", "tag4"],
+    "${month === 'December' ? 'Christmas' : month === 'November' ? 'Thanksgiving' : month === 'October' ? 'Halloween' : month === 'July' ? 'Independence Day' : month === 'April' ? 'Easter' : month === 'February' ? "Valentine's Day" : 'Holiday'} Treats": ["tag1", "tag2", "tag3", "tag4"]
   }
 }`;
 
@@ -190,29 +190,49 @@ function getMockRecommendations(location, date) {
 
   const seasonalRecommendations = {
     'Spring': {
-      'Seasonal Favorites': ['asparagus', 'strawberries', 'peas', 'spring onions', 'fresh herbs'],
+      'Spring Favorites': ['asparagus', 'strawberries', 'peas', 'spring onions', 'fresh herbs'],
       'Light & Fresh': ['salads', 'grilled vegetables', 'citrus', 'mint', 'basil'],
       'Easter Specials': ['lamb', 'eggs', 'hot cross buns', 'carrot cake']
     },
     'Summer': {
-      'Seasonal Favorites': ['tomatoes', 'corn', 'zucchini', 'berries', 'stone fruits'],
+      'Summer Favorites': ['tomatoes', 'corn', 'zucchini', 'berries', 'stone fruits'],
       'BBQ & Grilling': ['burgers', 'kebabs', 'grilled fish', 'corn on the cob'],
       'Refreshing Dishes': ['gazpacho', 'ice cream', 'cold salads', 'smoothies']
     },
     'Fall': {
-      'Seasonal Favorites': ['pumpkin', 'apples', 'squash', 'mushrooms', 'root vegetables'],
+      'Fall Favorites': ['pumpkin', 'apples', 'squash', 'mushrooms', 'root vegetables'],
       'Comfort Foods': ['soups', 'stews', 'casseroles', 'roasts', 'warm spices'],
-      'Harvest Treats': ['apple pie', 'pumpkin bread', 'cider', 'nuts']
+      'Halloween & Thanksgiving Treats': ['apple pie', 'pumpkin bread', 'cider', 'nuts']
     },
     'Winter': {
-      'Seasonal Favorites': ['citrus', 'kale', 'brussels sprouts', 'pomegranate', 'cranberries'],
+      'Winter Favorites': ['citrus', 'kale', 'brussels sprouts', 'pomegranate', 'cranberries'],
       'Warming Dishes': ['chili', 'hot chocolate', 'mulled wine', 'hearty soups'],
-      'Holiday Favorites': ['turkey', 'ham', 'cookies', 'gingerbread', 'eggnog']
+      'Christmas & New Year Favorites': ['turkey', 'ham', 'cookies', 'gingerbread', 'eggnog']
     }
   };
 
+  // Check if location is in PNW
+  const isPNW = location.includes('Seattle') || location.includes('Portland') || 
+                 location.includes('Washington') || location.includes('Oregon') || 
+                 location.includes('PNW') || location.includes('Pacific');
+
+  // Get base recommendations for the season
+  let recommendations = { ...seasonalRecommendations[season] };
+
+  // Add PNW specialties if applicable
+  if (isPNW) {
+    // Replace the second category with PNW Specialties
+    const categories = Object.keys(recommendations);
+    delete recommendations[categories[1]];
+    recommendations = {
+      [categories[0]]: recommendations[categories[0]],
+      'PNW Specialties': ['salmon', 'dungeness crab', 'oysters', 'chanterelle mushrooms', 'blackberries'],
+      [categories[2]]: recommendations[categories[2]]
+    };
+  }
+
   return {
-    recommendations: seasonalRecommendations[season],
+    recommendations: recommendations,
     location: location,
     date: date,
     season: season,
