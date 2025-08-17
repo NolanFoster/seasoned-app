@@ -210,7 +210,7 @@ describe('Image Service', () => {
         },
       });
 
-      expect(result).toBe(`https://recipe-images.your-domain.com/${filename}`);
+      expect(result).toBe(`https://images.nolanfoster.me/${filename}`);
     });
 
     it('should throw error if R2 upload fails', async () => {
@@ -241,18 +241,18 @@ describe('Image Service', () => {
 
       global.fetch.mockResolvedValue(mockResponse);
 
-      const result = await saveRecipeImageToR2(mockR2Bucket, 'https://example.com/image.jpg');
+      const result = await saveRecipeImageToR2(mockR2Bucket, 'https://example.com/image.jpg', 'https://images.nolanfoster.me');
 
-      expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg');
+      expect(result).toBe('https://images.nolanfoster.me/recipe-images/1234567890000-abababababababab.jpg');
       expect(mockR2Bucket.put).toHaveBeenCalled();
     });
 
     it('should return null for invalid inputs', async () => {
       const mockR2Bucket = {};
 
-      expect(await saveRecipeImageToR2(null, 'https://example.com/image.jpg')).toBeNull();
-      expect(await saveRecipeImageToR2(mockR2Bucket, '')).toBeNull();
-      expect(await saveRecipeImageToR2(mockR2Bucket, null)).toBeNull();
+      expect(await saveRecipeImageToR2(null, 'https://example.com/image.jpg', 'https://images.nolanfoster.me')).toBeNull();
+      expect(await saveRecipeImageToR2(mockR2Bucket, '', 'https://images.nolanfoster.me')).toBeNull();
+      expect(await saveRecipeImageToR2(mockR2Bucket, null, 'https://images.nolanfoster.me')).toBeNull();
     });
 
     it('should return null and log error if processing fails', async () => {
@@ -261,7 +261,7 @@ describe('Image Service', () => {
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await saveRecipeImageToR2(mockR2Bucket, 'https://example.com/image.jpg');
+      const result = await saveRecipeImageToR2(mockR2Bucket, 'https://example.com/image.jpg', 'https://images.nolanfoster.me');
 
       expect(result).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -300,9 +300,9 @@ describe('Image Service', () => {
 
     it('should process single image URL', async () => {
       const imageUrl = 'https://example.com/image.jpg';
-      const result = await processRecipeImages(mockR2Bucket, imageUrl);
+      const result = await processRecipeImages(mockR2Bucket, imageUrl, 'https://images.nolanfoster.me');
 
-      expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg');
+      expect(result).toBe('https://images.nolanfoster.me/recipe-images/1234567890000-abababababababab.jpg');
     });
 
     it('should return original URL if processing fails for single image', async () => {
@@ -310,7 +310,7 @@ describe('Image Service', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const imageUrl = 'https://example.com/image.jpg';
-      const result = await processRecipeImages(mockR2Bucket, imageUrl);
+      const result = await processRecipeImages(mockR2Bucket, imageUrl, 'https://images.nolanfoster.me');
 
       expect(result).toBe(imageUrl);
       consoleSpy.mockRestore();
@@ -322,11 +322,11 @@ describe('Image Service', () => {
         'https://example.com/image2.jpg'
       ];
 
-      const result = await processRecipeImages(mockR2Bucket, imageUrls);
+      const result = await processRecipeImages(mockR2Bucket, imageUrls, 'https://images.nolanfoster.me');
 
       expect(result).toEqual([
-        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg',
-        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg'
+        'https://images.nolanfoster.me/recipe-images/1234567890000-abababababababab.jpg',
+        'https://images.nolanfoster.me/recipe-images/1234567890000-abababababababab.jpg'
       ]);
     });
 
@@ -347,10 +347,10 @@ describe('Image Service', () => {
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await processRecipeImages(mockR2Bucket, imageUrls);
+      const result = await processRecipeImages(mockR2Bucket, imageUrls, 'https://images.nolanfoster.me');
 
       expect(result).toEqual([
-        'https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg',
+        'https://images.nolanfoster.me/recipe-images/1234567890000-abababababababab.jpg',
         'https://example.com/image2.jpg' // Original URL returned on failure
       ]);
 
@@ -387,7 +387,7 @@ describe('Image Service Integration', () => {
     global.fetch.mockResolvedValue(mockResponse);
 
     const originalImageUrl = 'https://example.com/recipe-image.jpg';
-    const result = await saveRecipeImageToR2(mockR2Bucket, originalImageUrl);
+    const result = await saveRecipeImageToR2(mockR2Bucket, originalImageUrl, 'https://images.nolanfoster.me');
 
     // Verify the complete workflow
     expect(global.fetch).toHaveBeenCalledWith(originalImageUrl, expect.any(Object));
@@ -401,7 +401,7 @@ describe('Image Service Integration', () => {
         },
       }
     );
-    expect(result).toBe('https://recipe-images.your-domain.com/recipe-images/1234567890000-abababababababab.jpg');
+    expect(result).toBe('https://images.nolanfoster.me/recipe-images/1234567890000-abababababababab.jpg');
   });
 
   it('should gracefully handle network errors without breaking recipe processing', async () => {

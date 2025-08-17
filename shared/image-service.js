@@ -116,9 +116,11 @@ async function uploadImageToR2(r2Bucket, imageBuffer, filename, contentType, bas
       },
     });
 
-    // Return the public URL (configurable base URL or default)
-    const publicBaseUrl = baseUrl || 'https://recipe-images.your-domain.com';
-    return `${publicBaseUrl}/${filename}`;
+    // Return the public URL (baseUrl is required)
+    if (!baseUrl) {
+      throw new Error('baseUrl is required for image upload');
+    }
+    return `${baseUrl}/${filename}`;
   } catch (error) {
     throw new Error(`Failed to upload image to R2: ${error.message}`);
   }

@@ -11,7 +11,7 @@ workers_dev = true
 # Environment variables (if needed)
 [vars]
 # Add any environment variables here
-IMAGE_DOMAIN = "https://recipe-images.your-domain.com"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
 [env.preview]
 name = "preview-recipe-scraper"
