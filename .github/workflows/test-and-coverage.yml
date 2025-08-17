@@ -16,6 +16,10 @@ jobs:
   test-frontend:
     name: Frontend Tests and Coverage
     runs-on: ubuntu-latest
+    outputs:
+      diff_coverage_available: ${{ steps.diff-coverage.outputs.diff_coverage_available }}
+      diff_coverage_below_threshold: ${{ steps.diff-coverage.outputs.diff_coverage_below_threshold }}
+      diff_coverage_percentage: ${{ steps.diff-coverage.outputs.diff_coverage_percentage }}
     
     steps:
     - uses: actions/checkout@v4
@@ -84,6 +88,7 @@ jobs:
     
     - name: Generate Diff Coverage Report (PR only)
       if: github.event_name == 'pull_request'
+      id: diff-coverage
       working-directory: ./frontend
       run: |
         # Install diff-cover for differential coverage
@@ -92,21 +97,22 @@ jobs:
         # Check if coverage report exists
         if [ ! -f coverage/lcov.info ]; then
           echo "⚠️ No coverage report found, skipping differential coverage check" >> $GITHUB_STEP_SUMMARY
+          echo "diff_coverage_available=false" >> $GITHUB_OUTPUT
           exit 0
         fi
         
         echo "### Differential Coverage Report" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        # Run diff-cover with lcov format
+        # Run diff-cover with lcov format and capture output
         echo "Running differential coverage analysis..."
         diff-cover coverage/lcov.info \
           --compare-branch=origin/${{ github.base_ref }} \
           --fail-under=85 \
-          --diff-range-notation=.. || {
+          --diff-range-notation=.. 2>&1 | tee diff-coverage-output.txt || {
           echo "::warning::New code changes have less than 85% coverage"
           echo "❌ **New code coverage is below the required 85% threshold**" >> $GITHUB_STEP_SUMMARY
-          # Don't fail the build, just warn
+          echo "diff_coverage_below_threshold=true" >> $GITHUB_OUTPUT
         }
         
         # Generate diff coverage HTML report
@@ -115,16 +121,17 @@ jobs:
           --html-report=coverage-diff.html \
           --diff-range-notation=..
         
-        # Try to extract and display diff coverage percentage
-        diff-cover coverage/lcov.info \
-          --compare-branch=origin/${{ github.base_ref }} \
-          --diff-range-notation=.. | tee diff-coverage-output.txt
-        
-        # Parse the output to show in summary
+        # Extract diff coverage percentage for PR comment
         if grep -q "Diff coverage" diff-coverage-output.txt; then
           coverage_line=$(grep "Diff coverage" diff-coverage-output.txt)
+          # Extract percentage from the line (e.g., "Diff coverage is 75.5%")
+          diff_percentage=$(echo "$coverage_line" | grep -oE '[0-9]+\.?[0-9]*' | head -1)
+          echo "diff_coverage_percentage=$diff_percentage" >> $GITHUB_OUTPUT
+          echo "diff_coverage_available=true" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📊 ${coverage_line}" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "diff_coverage_available=false" >> $GITHUB_OUTPUT
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -215,6 +222,7 @@ jobs:
       continue-on-error: true
     
     - name: Coverage Summary
+      id: coverage-summary
       run: |
         echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -253,11 +261,30 @@ jobs:
             echo "| Branches | ${branches}% |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Minimum Required: 40%**" >> $GITHUB_STEP_SUMMARY
+            
+            # Check if any metric is below threshold and set output
+            if (( $(echo "$lines < 40" | bc -l) )) || \
+               (( $(echo "$statements < 40" | bc -l) )) || \
+               (( $(echo "$functions < 40" | bc -l) )) || \
+               (( $(echo "$branches < 40" | bc -l) )); then
+              echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
+            else
+              echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
+            fi
+            
+            # Store coverage values for PR comment
+            echo "coverage_lines=$lines" >> $GITHUB_OUTPUT
+            echo "coverage_statements=$statements" >> $GITHUB_OUTPUT
+            echo "coverage_functions=$functions" >> $GITHUB_OUTPUT
+            echo "coverage_branches=$branches" >> $GITHUB_OUTPUT
+            echo "coverage_available=true" >> $GITHUB_OUTPUT
           else
             echo "⚠️ coverage-summary.json not found in frontend coverage reports" >> $GITHUB_STEP_SUMMARY
+            echo "coverage_available=false" >> $GITHUB_OUTPUT
           fi
         else
           echo "⚠️ No frontend coverage reports found" >> $GITHUB_STEP_SUMMARY
+          echo "coverage_available=false" >> $GITHUB_OUTPUT
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -272,37 +299,65 @@ jobs:
           const fs = require('fs');
           let comment = '## 📊 Coverage Report\n\n';
           
+          // Get coverage data from previous step outputs
+          const coverageAvailable = '${{ steps.coverage-summary.outputs.coverage_available }}' === 'true';
+          const coverageBelowThreshold = '${{ steps.coverage-summary.outputs.coverage_below_threshold }}' === 'true';
+          
+          // Get diff coverage data from test-frontend job
+          const diffCoverageAvailable = '${{ needs.test-frontend.outputs.diff_coverage_available }}' === 'true';
+          const diffCoverageBelowThreshold = '${{ needs.test-frontend.outputs.diff_coverage_below_threshold }}' === 'true';
+          const diffCoveragePercentage = '${{ needs.test-frontend.outputs.diff_coverage_percentage }}';
+          
           try {
-            // Check if coverage summary exists
-            if (fs.existsSync('./coverage-reports/frontend/coverage-summary.json')) {
-              const coverage = JSON.parse(fs.readFileSync('./coverage-reports/frontend/coverage-summary.json', 'utf8'));
-              const total = coverage.total;
-              
+            // Overall Coverage Section
+            if (coverageAvailable) {
               comment += '### Overall Coverage\n';
-              comment += '| Metric | Coverage | Threshold |\n';
-              comment += '|--------|----------|----------|\n';
-              comment += `| Lines | ${total.lines.pct}% | 40% |\n`;
-              comment += `| Statements | ${total.statements.pct}% | 40% |\n`;
-              comment += `| Functions | ${total.functions.pct}% | 40% |\n`;
-              comment += `| Branches | ${total.branches.pct}% | 40% |\n`;
+              comment += '| Metric | Coverage | Threshold | Status |\n';
+              comment += '|--------|----------|-----------|--------|\n';
+              
+              const lines = parseFloat('${{ steps.coverage-summary.outputs.coverage_lines }}');
+              const statements = parseFloat('${{ steps.coverage-summary.outputs.coverage_statements }}');
+              const functions = parseFloat('${{ steps.coverage-summary.outputs.coverage_functions }}');
+              const branches = parseFloat('${{ steps.coverage-summary.outputs.coverage_branches }}');
+              
+              comment += `| Lines | ${lines}% | 40% | ${lines >= 40 ? '✅' : '❌'} |\n`;
+              comment += `| Statements | ${statements}% | 40% | ${statements >= 40 ? '✅' : '❌'} |\n`;
+              comment += `| Functions | ${functions}% | 40% | ${functions >= 40 ? '✅' : '❌'} |\n`;
+              comment += `| Branches | ${branches}% | 40% | ${branches >= 40 ? '✅' : '❌'} |\n`;
               comment += '\n';
               
-              // Check if any metric is below threshold
-              const belowThreshold = total.lines.pct < 40 || total.statements.pct < 40 || 
-                                   total.functions.pct < 40 || total.branches.pct < 40;
-              
-              if (belowThreshold) {
-                comment += '❌ **Coverage is below the required 40% threshold**\n';
+              if (coverageBelowThreshold) {
+                comment += '❌ **Coverage is below the required 40% threshold**\n\n';
+                comment += '@cursoragent coverage does not meet minimum threshold\n\n';
               } else {
-                comment += '✅ **Coverage meets the required 40% threshold**\n';
+                comment += '✅ **Coverage meets the required 40% threshold**\n\n';
               }
             } else {
               comment += '⚠️ **No coverage data available**\n\n';
             }
             
-            comment += '\n### Differential Coverage\n';
-            comment += 'New code changes must have at least **85% coverage**\n';
-            comment += '\nSee workflow artifacts for detailed coverage reports.';
+            // Differential Coverage Section
+            comment += '### Differential Coverage\n';
+            if (diffCoverageAvailable && diffCoveragePercentage) {
+              comment += `**Coverage of new/modified code: ${diffCoveragePercentage}%**\n\n`;
+              comment += '| Type | Coverage | Threshold | Status |\n';
+              comment += '|------|----------|-----------|--------|\n';
+              const diffPercent = parseFloat(diffCoveragePercentage);
+              comment += `| New/Modified Code | ${diffCoveragePercentage}% | 85% | ${diffPercent >= 85 ? '✅' : '❌'} |\n\n`;
+              
+              if (diffCoverageBelowThreshold) {
+                comment += '❌ **New code coverage is below the required 85% threshold**\n\n';
+                comment += '@cursoragent coverage does not meet minimum threshold\n\n';
+              } else {
+                comment += '✅ **New code coverage meets the required 85% threshold**\n\n';
+              }
+            } else {
+              comment += 'ℹ️ _No differential coverage data available. This may happen if there are no code changes in the PR._\n\n';
+            }
+            
+            comment += '---\n';
+            comment += '_Coverage thresholds: **40%** overall, **85%** for new/modified code_\n';
+            comment += '_See workflow artifacts for detailed coverage reports._';
             
             // Find and update or create comment
             const { data: comments } = await github.rest.issues.listComments({
