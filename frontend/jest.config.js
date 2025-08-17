@@ -11,11 +11,20 @@ module.exports = {
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
-    '!src/**/*.d.ts',
-    '!src/setupTests.js',
-    '!src/__tests__/**/*',
-    '!babel-plugin-transform-import-meta.js'
+    '!src/index.js',
+    '!src/reportWebVitals.js',
+    '!src/**/*.test.{js,jsx}',
+    '!src/**/*.spec.{js,jsx}',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 40,
+      functions: 40,
+      lines: 40,
+      statements: 40,
+    },
+  },
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx}',
     '<rootDir>/src/**/*.{spec,test}.{js,jsx}'

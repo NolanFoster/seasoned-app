@@ -13,6 +13,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for diff coverage
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -29,19 +31,56 @@ jobs:
       working-directory: ./frontend
       run: npm run test:coverage -- --passWithNoTests
     
+    - name: Check Coverage Thresholds
+      working-directory: ./frontend
+      run: |
+        echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
+        # The coverage threshold check is handled by Jest config
+        # If coverage is below 40%, Jest will fail the test run
+    
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
       with:
         name: frontend-coverage
-        path: frontend/coverage/
+        path: |
+          frontend/coverage/
+          frontend/coverage/coverage-summary.json
     
-    - name: Display Frontend Coverage Summary
+    - name: Generate Diff Coverage Report (PR only)
+      if: github.event_name == 'pull_request'
       working-directory: ./frontend
       run: |
-        if [ -f coverage/lcov-report/index.html ]; then
-          echo "### Frontend Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          echo "Coverage report generated at coverage/lcov-report/index.html" >> $GITHUB_STEP_SUMMARY
+        # Install diff-cover for differential coverage
+        pip install diff-cover
+        
+        # Generate coverage XML report if not exists
+        if [ ! -f coverage/lcov.info ]; then
+          echo "No coverage report found"
+          exit 0
         fi
+        
+        # Convert lcov to xml for diff-cover
+        npm install -g lcov2xml
+        lcov2xml coverage/lcov.info > coverage.xml
+        
+        # Generate diff coverage report
+        diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=85 || {
+          echo "::error::New code changes must have at least 85% coverage"
+          exit 1
+        }
+        
+        # Generate diff coverage HTML report
+        diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --html-report=coverage-diff.html
+        
+        echo "### Differential Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "New code coverage must be at least 85%" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload Diff Coverage Report
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: diff-coverage-report
+        path: frontend/coverage-diff.html
 
   test-worker:
     name: Worker Tests and Coverage  
@@ -49,6 +88,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for diff coverage
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -70,6 +111,9 @@ jobs:
         else
           echo "No test script found in package.json"
         fi
+        
+        # Note: Worker tests currently don't generate coverage reports
+        # Consider adding coverage collection for worker tests in the future
     
   lint:
     name: Code Quality Checks
@@ -106,6 +150,8 @@ jobs:
     if: always()
     
     steps:
+    - uses: actions/checkout@v4
+    
     - name: Download Frontend Coverage
       uses: actions/download-artifact@v4
       with:
@@ -120,9 +166,96 @@ jobs:
         
         if [ -d ./coverage-reports/frontend ]; then
           echo "✅ Frontend coverage reports available" >> $GITHUB_STEP_SUMMARY
+          
+          # Extract and display coverage percentages from JSON summary
+          if [ -f ./coverage-reports/frontend/coverage-summary.json ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Coverage Metrics:" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Parse coverage summary using jq
+            sudo apt-get install -y jq
+            
+            lines=$(jq -r '.total.lines.pct' ./coverage-reports/frontend/coverage-summary.json)
+            statements=$(jq -r '.total.statements.pct' ./coverage-reports/frontend/coverage-summary.json)
+            functions=$(jq -r '.total.functions.pct' ./coverage-reports/frontend/coverage-summary.json)
+            branches=$(jq -r '.total.branches.pct' ./coverage-reports/frontend/coverage-summary.json)
+            
+            echo "| Lines | ${lines}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | ${statements}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | ${functions}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | ${branches}% |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Minimum Required: 40%**" >> $GITHUB_STEP_SUMMARY
+          fi
         else
           echo "⚠️ No frontend coverage reports found" >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Coverage artifacts have been uploaded and are available in the workflow run." >> $GITHUB_STEP_SUMMARY
+    
+    - name: Post PR Comment with Coverage
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let comment = '## 📊 Coverage Report\n\n';
+          
+          // Check if coverage summary exists
+          if (fs.existsSync('./coverage-reports/frontend/coverage-summary.json')) {
+            const coverage = JSON.parse(fs.readFileSync('./coverage-reports/frontend/coverage-summary.json', 'utf8'));
+            const total = coverage.total;
+            
+            comment += '### Overall Coverage\n';
+            comment += '| Metric | Coverage | Threshold |\n';
+            comment += '|--------|----------|----------|\n';
+            comment += `| Lines | ${total.lines.pct}% | 40% |\n`;
+            comment += `| Statements | ${total.statements.pct}% | 40% |\n`;
+            comment += `| Functions | ${total.functions.pct}% | 40% |\n`;
+            comment += `| Branches | ${total.branches.pct}% | 40% |\n`;
+            comment += '\n';
+            
+            // Check if any metric is below threshold
+            const belowThreshold = total.lines.pct < 40 || total.statements.pct < 40 || 
+                                 total.functions.pct < 40 || total.branches.pct < 40;
+            
+            if (belowThreshold) {
+              comment += '❌ **Coverage is below the required 40% threshold**\n';
+            } else {
+              comment += '✅ **Coverage meets the required 40% threshold**\n';
+            }
+          }
+          
+          comment += '\n### Differential Coverage\n';
+          comment += 'New code changes must have at least **85% coverage**\n';
+          comment += '\nSee workflow artifacts for detailed coverage reports.';
+          
+          // Find and update or create comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('📊 Coverage Report')
+          );
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }
