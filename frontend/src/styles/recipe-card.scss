@@ -425,21 +425,21 @@
 /* Responsive adjustments for recipe grid */
 @media (max-width: 768px) {
   .recipe-grid {
-    margin-top: $spacing-md; /* Reduced margin since container has padding */
+    margin-top: $spacing-xl + $spacing-md; /* Increased from $spacing-md to add more space */
     gap: $spacing-md;
   }
 }
 
 @media (max-width: 640px) {
   .recipe-grid {
-    margin-top: $spacing-sm; /* Small margin to add some separation */
+    margin-top: $spacing-xl + $spacing-lg; /* Increased from $spacing-sm to ensure cards are below glass panel */
     gap: $spacing-md;
   }
 }
 
 @media (max-width: 480px) {
   .recipe-grid {
-    margin-top: 0; /* Remove top margin as container already has sufficient padding */
+    margin-top: $spacing-xl + $spacing-md; /* Added more space instead of 0 */
     gap: $spacing-sm;
   }
 }
