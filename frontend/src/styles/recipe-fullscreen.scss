@@ -416,6 +416,13 @@
   box-sizing: border-box; // Ensure padding is included in width calculations
 }
 
+/* Center nutrition panel when it's the only content */
+.recipe-fullscreen-content.nutrition-view {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
 /* Recipe Panels */
 .recipe-panel {
   padding: 30px;
@@ -691,6 +698,11 @@
     max-width: 800px; // Further reduce max-width for tablets
   }
   
+  .recipe-fullscreen-content.nutrition-view {
+    display: flex;
+    justify-content: center;
+  }
+  
   .recipe-panel {
     margin-left: 0;
     margin-right: 0;
@@ -929,10 +941,12 @@
 /* Nutrition Panel Specific Styles */
 .nutrition-panel {
   max-width: 400px;
+  width: 100%;
   margin: 0 auto;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  padding: 30px 0; // Add vertical padding for better spacing
   
   // Override default recipe-panel h2 styles
   h2 {

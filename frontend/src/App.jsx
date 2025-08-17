@@ -2731,7 +2731,7 @@ function App() {
           </div>
           
           {/* Recipe Content */}
-          <div className="recipe-fullscreen-content">
+          <div className={`recipe-fullscreen-content ${showNutrition ? 'nutrition-view' : ''}`}>
             {showNutrition ? (
               /* Nutrition Panel */
               <div className="recipe-panel glass nutrition-panel">
