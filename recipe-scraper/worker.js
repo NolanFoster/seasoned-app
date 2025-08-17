@@ -12,6 +12,10 @@ import {
   deleteRecipeFromKV 
 } from '../shared/kv-storage.js';
 
+import {
+  processRecipeImages
+} from '../shared/image-service.js';
+
 // Decode HTML entities
 function decodeHtmlEntities(text) {
   if (typeof text !== 'string') return text;
@@ -191,7 +195,7 @@ class JSONLDExtractor {
 }
 
 // Process a single URL
-async function processRecipeUrl(url) {
+async function processRecipeUrl(url, r2Bucket = null, imageBaseUrl = null) {
   try {
     // Fetch the HTML page
     const response = await fetch(url, {
@@ -227,6 +231,21 @@ async function processRecipeUrl(url) {
         url,
         error: 'No valid Recipe JSON-LD found'
       };
+    }
+    
+    // Process and save recipe image to R2 if available
+    if (r2Bucket && recipeData.image) {
+      try {
+        const originalImageUrl = recipeData.image;
+        const processedImageUrl = await processRecipeImages(r2Bucket, recipeData.image, imageBaseUrl);
+        if (processedImageUrl && processedImageUrl !== originalImageUrl) {
+          recipeData.image = processedImageUrl;
+          recipeData.originalImageUrl = originalImageUrl;
+        }
+      } catch (imageError) {
+        console.error(`Failed to process image for recipe ${url}:`, imageError.message);
+        // Continue with original image URL if processing fails
+      }
     }
     
     // Generate unique ID
@@ -335,7 +354,7 @@ export default {
       // Process URLs
       const results = await Promise.all(
         urls.map(async (targetUrl) => {
-          const result = await processRecipeUrl(targetUrl);
+          const result = await processRecipeUrl(targetUrl, env.RECIPE_IMAGES, env.IMAGE_DOMAIN);
           
           // Save to KV if requested and successful
           if (saveToKV && result.success && env.RECIPE_STORAGE) {
