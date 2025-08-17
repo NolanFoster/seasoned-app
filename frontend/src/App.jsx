@@ -1324,6 +1324,9 @@ function App() {
         }
       }
       
+      const currentDate = new Date().toISOString().split('T')[0];
+      console.log('Fetching recommendations for date:', currentDate, 'location:', location);
+      
       const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
         mode: 'cors',
@@ -1333,13 +1336,53 @@ function App() {
         },
         body: JSON.stringify({
           location: location,
-          date: new Date().toISOString().split('T')[0]
+          date: currentDate
         })
       });
       
       if (res.ok) {
         const data = await res.json();
         console.log('Recommendations received:', data);
+        
+        // Filter out inappropriate seasonal recommendations
+        if (data.recommendations && data.season) {
+          const filteredRecommendations = {};
+          const season = data.season.toLowerCase();
+          
+          Object.entries(data.recommendations).forEach(([category, tags]) => {
+            if (Array.isArray(tags)) {
+              // Filter out fall/winter holiday items in summer
+              if (season === 'summer' && category.toLowerCase().includes('holiday')) {
+                // Keep only summer-appropriate items
+                filteredRecommendations[category] = tags.filter(tag => {
+                  const tagLower = tag.toLowerCase();
+                  // Remove fall/winter holidays
+                  return !tagLower.includes('halloween') && 
+                         !tagLower.includes('thanksgiving') && 
+                         !tagLower.includes('christmas') &&
+                         !tagLower.includes('pumpkin') &&
+                         !tagLower.includes('gingerbread');
+                });
+              } else if (season === 'winter' && category.toLowerCase().includes('holiday')) {
+                // Keep only winter-appropriate items
+                filteredRecommendations[category] = tags.filter(tag => {
+                  const tagLower = tag.toLowerCase();
+                  // Remove summer holidays
+                  return !tagLower.includes('4th of july') && 
+                         !tagLower.includes('labor day') &&
+                         !tagLower.includes('memorial day');
+                });
+              } else {
+                // Keep all tags for non-holiday categories
+                filteredRecommendations[category] = tags;
+              }
+            }
+          });
+          
+          // Update the data with filtered recommendations
+          data.recommendations = filteredRecommendations;
+        }
+        
         setRecommendations(data);
       } else {
         console.error('Failed to fetch recommendations:', res.status);
