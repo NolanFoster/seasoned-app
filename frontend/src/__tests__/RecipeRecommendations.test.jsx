@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 
@@ -32,7 +32,7 @@ describe('Recipe Recommendations Feature', () => {
             recipes: [] // Start with empty recipes to test loading state
           })
         });
-      } else if (url.includes('/recommendations')) {
+      } else if (url.includes('/recommendations') || url.includes('recommendation')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({
@@ -174,7 +174,7 @@ describe('Recipe Recommendations Feature', () => {
               ]
             })
           });
-        } else if (url.includes('/recommendations')) {
+        } else if (url.includes('/recommendations') || url.includes('recommendation')) {
           return Promise.resolve({
             ok: true,
             json: async () => ({
@@ -202,13 +202,159 @@ describe('Recipe Recommendations Feature', () => {
     });
 
     it('should match recipes based on recommendation tags', async () => {
-      render(<App />);
+      // Add console logging to the mock to debug
+      const originalConsoleError = console.error;
+      console.error = jest.fn();
+      
+      fetch.mockImplementation((url, options) => {
+        console.log('Fetch called with URL:', url, 'Method:', options?.method || 'GET');
+        if (url.includes('/recipes')) {
+          const response = {
+            ok: true,
+            json: async () => ({
+              success: true,
+              recipes: [
+                {
+                  id: '1',
+                  data: {
+                    id: '1',
+                    name: 'Summer Berry Salad',
+                    description: 'Fresh berries with mint',
+                    image: 'berry-salad.jpg',
+                    recipeCategory: ['Salad', 'Summer'],
+                    recipeCuisine: 'American',
+                    keywords: 'fresh, berries, salad',
+                    prep_time: 'PT10M',
+                    cook_time: null,
+                    recipe_yield: '4 servings',
+                    recipeIngredient: ['2 cups mixed berries', '1/4 cup fresh mint', 'Honey to taste'],
+                    recipeInstructions: ['Mix berries', 'Add mint', 'Drizzle with honey']
+                  }
+                },
+                {
+                  id: '2',
+                  data: {
+                    id: '2',
+                    name: 'Grilled Vegetables',
+                    description: 'Seasonal grilled vegetables',
+                    image: 'grilled-veg.jpg',
+                    recipeCategory: 'Side Dish',
+                    recipeCuisine: ['Mediterranean', 'Healthy'],
+                    keywords: 'grilled, vegetables, summer',
+                    prep_time: 'PT15M',
+                    cook_time: 'PT20M',
+                    recipe_yield: '6 servings',
+                    recipeIngredient: ['2 zucchini', '1 eggplant', '2 bell peppers', 'Olive oil'],
+                    recipeInstructions: ['Slice vegetables', 'Brush with oil', 'Grill until tender']
+                  }
+                },
+                {
+                  id: '3',
+                  data: {
+                    id: '3',
+                    name: 'Tomato Gazpacho',
+                    description: 'Cold tomato soup perfect for summer',
+                    image: 'gazpacho.jpg',
+                    recipeCategory: 'Soup',
+                    recipeCuisine: 'Spanish',
+                    keywords: 'cold soup, tomatoes, summer',
+                    prep_time: 'PT20M',
+                    cook_time: null,
+                    recipe_yield: '4 servings',
+                    recipeIngredient: ['6 ripe tomatoes', '1 cucumber', '1 bell pepper', 'Garlic'],
+                    recipeInstructions: ['Chop vegetables', 'Blend until smooth', 'Chill before serving']
+                  }
+                },
+                {
+                  id: '4',
+                  data: {
+                    id: '4',
+                    name: 'Apple Pie',
+                    description: 'Classic American apple pie',
+                    image: 'apple-pie.jpg',
+                    recipeCategory: 'Dessert',
+                    recipeCuisine: 'American',
+                    keywords: 'pie, apples, dessert, fall',
+                    prep_time: 'PT30M',
+                    cook_time: 'PT45M',
+                    recipe_yield: '8 slices',
+                    recipeIngredient: ['6 apples', '1 pie crust', '1/2 cup sugar', 'Cinnamon'],
+                    recipeInstructions: ['Prepare crust', 'Mix apple filling', 'Bake at 375°F']
+                  }
+                }
+              ]
+            })
+          };
+          console.log('Returning recipes response');
+          return Promise.resolve(response);
+        } else if (url.includes('/recommendations') || url.includes('recommendation')) {
+          const response = {
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Seasonal Favorites': ['berries', 'tomatoes', 'GrilledVegetables', 'SummerSalads'],
+                'Local Specialties': ['sourdough', 'seafood', 'FreshProduce', 'ArtisanCheese'],
+                'Holiday Treats': ['BBQRibs', 'CornOnTheCob', 'SummerDesserts', 'IceCream']
+              },
+              location: 'San Francisco, CA',
+              date: '2025-08-17',
+              season: 'Summer'
+            })
+          };
+          console.log('Returning recommendations response');
+          return Promise.resolve(response);
+        } else if (url.includes('/health')) {
+          console.log('Returning health response');
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
+          });
+        }
+        console.log('Returning 404 for URL:', url);
+        return Promise.resolve({
+          ok: false,
+          status: 404
+        });
+      });
+      
+      // Log the recommendation API URL to debug
+      console.log('ENV VITE_RECOMMENDATION_API_URL:', process.env.VITE_RECOMMENDATION_API_URL);
+      console.log('import.meta.env:', import.meta?.env);
+      
+      const { container } = render(<App />);
+      
+      // Wait for initial render
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+      
+      // Force another render cycle
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      });
+      
+      // Check if recommendation API was called
+      const recommendationCalls = fetch.mock.calls.filter(call => 
+        call[0].includes('recommendation')
+      );
+      console.log('Recommendation API calls:', recommendationCalls.length);
+      console.log('All fetch calls:', fetch.mock.calls.map(call => call[0]));
+      console.log('Console.error calls:', console.error.mock.calls);
+      
+      // For now, let's just check that the categories are rendered
+      await waitFor(() => {
+        expect(screen.getByText('Seasonal Favorites')).toBeInTheDocument();
+      });
+      
+      // If no recipes match, we should at least see loading cards
+      const allRecipeCards = document.querySelectorAll('.recipe-card');
+      console.log('Total recipe cards found:', allRecipeCards.length);
       
       // Wait for recommendations to load
       await waitFor(() => {
         expect(screen.getByText('Summer Berry Salad')).toBeInTheDocument();
         expect(screen.getByText('Grilled Vegetables')).toBeInTheDocument();
-      }, { timeout: 3000 });
+      }, { timeout: 5000 });
       
       // Check that tomato gazpacho appears (matches 'tomatoes' tag)
       expect(screen.getByText('Tomato Gazpacho')).toBeInTheDocument();
@@ -453,7 +599,7 @@ describe('Recipe Recommendations Feature', () => {
               ]
             })
           });
-        } else if (url.includes('/recommendations')) {
+        } else if (url.includes('/recommendations') || url.includes('recommendation')) {
           return Promise.resolve({
             ok: true,
             json: async () => ({

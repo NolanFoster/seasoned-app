@@ -35,7 +35,9 @@ module.exports = {
   globals: {
     'import.meta.env': {
       VITE_API_URL: 'https://test-api.example.com',
-      VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com'
+      VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com',
+      VITE_RECOMMENDATION_API_URL: 'https://test-recommendation-api.example.com',
+      VITE_SEARCH_DB_URL: 'https://test-search-db.example.com'
     }
   }
 };
