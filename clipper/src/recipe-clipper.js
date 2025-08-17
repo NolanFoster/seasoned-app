@@ -1431,6 +1431,30 @@ ${truncatedHtml}`;
       try {
         recipeData = JSON.parse(content);
         console.log('Successfully parsed entire content as JSON');
+        
+        // Check if the parsed data has a 'response' field with stringified JSON
+        if (recipeData && typeof recipeData.response === 'string') {
+          console.log('Found nested response field, parsing inner JSON...');
+          try {
+            const innerJson = JSON.parse(recipeData.response);
+            // Check if this has the source.output structure
+            if (innerJson && innerJson.source && innerJson.source.output && 
+                innerJson.source.output[0] && innerJson.source.output[0].content && 
+                innerJson.source.output[0].content[0] && innerJson.source.output[0].content[0].text) {
+              console.log('Found nested source.output structure, extracting text...');
+              const nestedText = innerJson.source.output[0].content[0].text;
+              // Parse the nested text as JSON
+              recipeData = JSON.parse(nestedText);
+              console.log('Successfully extracted recipe from nested structure');
+            } else {
+              // Use the inner JSON directly
+              recipeData = innerJson;
+            }
+          } catch (innerParseError) {
+            console.log('Failed to parse inner response:', innerParseError.message);
+            // Keep the original parsed data
+          }
+        }
       } catch (directParseError) {
         console.log('Direct JSON parse failed, trying extraction methods...');
         console.log('Parse error:', directParseError.message);
@@ -1546,24 +1570,37 @@ ${truncatedHtml}`;
         throw new Error('Incomplete recipe data extracted - missing name, image, recipeIngredient, or recipeInstructions');
       }
     }
+    
+    // Map additional alternative field names
+    if (!recipeData.recipeYield && recipeData.servings) {
+      recipeData.recipeYield = recipeData.servings;
+    }
 
     // Clean up the extracted data according to Google Recipe schema
     const cleanedRecipe = {
       // Required fields
       name: String(recipeData.name || '').trim(),
-      image: String(recipeData.image || '').trim(),
+      image: Array.isArray(recipeData.image) 
+        ? String(recipeData.image[0] || '').trim() 
+        : String(recipeData.image || '').trim(),
       
       // Recommended fields
       description: String(recipeData.description || '').trim(),
-      author: String(recipeData.author || '').trim(),
+      author: typeof recipeData.author === 'object' && recipeData.author?.name
+        ? String(recipeData.author.name).trim()
+        : String(recipeData.author || '').trim(),
       datePublished: String(recipeData.datePublished || '').trim(),
       prepTime: String(recipeData.prepTime || '').trim(),
       cookTime: String(recipeData.cookTime || '').trim(),
       totalTime: String(recipeData.totalTime || '').trim(),
-      recipeYield: String(recipeData.recipeYield || '').trim(),
+      recipeYield: Array.isArray(recipeData.recipeYield) 
+        ? String(recipeData.recipeYield[0] || '').trim()
+        : String(recipeData.recipeYield || '').trim(),
       recipeCategory: String(recipeData.recipeCategory || '').trim(),
       recipeCuisine: String(recipeData.recipeCuisine || '').trim(),
-      keywords: String(recipeData.keywords || '').trim(),
+      keywords: Array.isArray(recipeData.keywords) 
+        ? recipeData.keywords.join(', ')
+        : String(recipeData.keywords || '').trim(),
       
       // Recipe content
       recipeIngredient: Array.isArray(recipeData.recipeIngredient) 
@@ -1577,6 +1614,17 @@ ${truncatedHtml}`;
               return { "@type": "HowToStep", text: step.trim() };
             } else if (step && typeof step === 'object' && step.text) {
               return { "@type": "HowToStep", text: String(step.text).trim() };
+            } else if (step && typeof step === 'object' && step.name) {
+              // Handle instructions with name field
+              return { "@type": "HowToStep", text: String(step.name).trim() };
+            } else if (step && typeof step === 'object') {
+              // Try to extract any text-like field
+              const textField = Object.keys(step).find(key => 
+                ['text', 'instruction', 'step', 'description', 'name'].includes(key.toLowerCase())
+              );
+              if (textField) {
+                return { "@type": "HowToStep", text: String(step[textField]).trim() };
+              }
             }
             return null;
           }).filter(step => step && step.text.length > 0)
@@ -1587,20 +1635,20 @@ ${truncatedHtml}`;
               })).filter(step => step.text.length > 0)
             : []),
       
-      // Nutrition information
+      // Nutrition information - handle alternative field names
       nutrition: recipeData.nutrition && typeof recipeData.nutrition === 'object' ? {
         "@type": "NutritionInformation",
         calories: String(recipeData.nutrition.calories || '').trim(),
-        proteinContent: String(recipeData.nutrition.proteinContent || '').trim(),
-        fatContent: String(recipeData.nutrition.fatContent || '').trim(),
-        carbohydrateContent: String(recipeData.nutrition.carbohydrateContent || '').trim(),
-        fiberContent: String(recipeData.nutrition.fiberContent || '').trim(),
-        sugarContent: String(recipeData.nutrition.sugarContent || '').trim(),
-        sodiumContent: String(recipeData.nutrition.sodiumContent || '').trim(),
-        cholesterolContent: String(recipeData.nutrition.cholesterolContent || '').trim(),
-        saturatedFatContent: String(recipeData.nutrition.saturatedFatContent || '').trim(),
-        transFatContent: String(recipeData.nutrition.transFatContent || '').trim(),
-        unsaturatedFatContent: String(recipeData.nutrition.unsaturatedFatContent || '').trim(),
+        proteinContent: String(recipeData.nutrition.proteinContent || recipeData.nutrition.protein || '').trim(),
+        fatContent: String(recipeData.nutrition.fatContent || recipeData.nutrition.fat || '').trim(),
+        carbohydrateContent: String(recipeData.nutrition.carbohydrateContent || recipeData.nutrition.carbs || recipeData.nutrition.carbohydrates || '').trim(),
+        fiberContent: String(recipeData.nutrition.fiberContent || recipeData.nutrition.fiber || '').trim(),
+        sugarContent: String(recipeData.nutrition.sugarContent || recipeData.nutrition.sugar || '').trim(),
+        sodiumContent: String(recipeData.nutrition.sodiumContent || recipeData.nutrition.sodium || '').trim(),
+        cholesterolContent: String(recipeData.nutrition.cholesterolContent || recipeData.nutrition.cholesterol || '').trim(),
+        saturatedFatContent: String(recipeData.nutrition.saturatedFatContent || recipeData.nutrition.saturatedFat || '').trim(),
+        transFatContent: String(recipeData.nutrition.transFatContent || recipeData.nutrition.transFat || '').trim(),
+        unsaturatedFatContent: String(recipeData.nutrition.unsaturatedFatContent || recipeData.nutrition.unsaturatedFat || '').trim(),
         servingSize: String(recipeData.nutrition.servingSize || '').trim()
       } : null,
       
@@ -1635,6 +1683,16 @@ ${truncatedHtml}`;
               return step.trim();
             } else if (step && typeof step === 'object' && step.text) {
               return String(step.text).trim();
+            } else if (step && typeof step === 'object' && step.name) {
+              return String(step.name).trim();
+            } else if (step && typeof step === 'object') {
+              // Try to extract any text-like field
+              const textField = Object.keys(step).find(key => 
+                ['text', 'instruction', 'step', 'description', 'name'].includes(key.toLowerCase())
+              );
+              if (textField) {
+                return String(step[textField]).trim();
+              }
             }
             return '';
           }).filter(step => step.length > 0)
@@ -1694,6 +1752,26 @@ function extractRecipeFromAIResponse(response, pageUrl) {
       // Since we're forcing the AI to return valid JSON, try parsing the entire content first
       try {
         recipeData = JSON.parse(content);
+        
+        // Check if the parsed data has a 'response' field with stringified JSON
+        if (recipeData && typeof recipeData.response === 'string') {
+          try {
+            const innerJson = JSON.parse(recipeData.response);
+            // Check if this has the source.output structure
+            if (innerJson && innerJson.source && innerJson.source.output && 
+                innerJson.source.output[0] && innerJson.source.output[0].content && 
+                innerJson.source.output[0].content[0] && innerJson.source.output[0].content[0].text) {
+              const nestedText = innerJson.source.output[0].content[0].text;
+              // Parse the nested text as JSON
+              recipeData = JSON.parse(nestedText);
+            } else {
+              // Use the inner JSON directly
+              recipeData = innerJson;
+            }
+          } catch (innerParseError) {
+            // Keep the original parsed data
+          }
+        }
       } catch (directParseError) {
         // First, try to extract JSON from markdown code blocks
         const codeBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
@@ -1752,24 +1830,37 @@ function extractRecipeFromAIResponse(response, pageUrl) {
         throw new Error('Incomplete recipe data extracted - missing name, image, recipeIngredient, or recipeInstructions');
       }
     }
+    
+    // Map additional alternative field names
+    if (!recipeData.recipeYield && recipeData.servings) {
+      recipeData.recipeYield = recipeData.servings;
+    }
 
     // Clean up the extracted data according to Google Recipe schema
     const cleanedRecipe = {
       // Required fields
       name: String(recipeData.name || '').trim(),
-      image: String(recipeData.image || '').trim(),
+      image: Array.isArray(recipeData.image) 
+        ? String(recipeData.image[0] || '').trim() 
+        : String(recipeData.image || '').trim(),
       
       // Recommended fields
       description: String(recipeData.description || '').trim(),
-      author: String(recipeData.author || '').trim(),
+      author: typeof recipeData.author === 'object' && recipeData.author?.name
+        ? String(recipeData.author.name).trim()
+        : String(recipeData.author || '').trim(),
       datePublished: String(recipeData.datePublished || '').trim(),
       prepTime: String(recipeData.prepTime || '').trim(),
       cookTime: String(recipeData.cookTime || '').trim(),
       totalTime: String(recipeData.totalTime || '').trim(),
-      recipeYield: String(recipeData.recipeYield || '').trim(),
+      recipeYield: Array.isArray(recipeData.recipeYield) 
+        ? String(recipeData.recipeYield[0] || '').trim()
+        : String(recipeData.recipeYield || '').trim(),
       recipeCategory: String(recipeData.recipeCategory || '').trim(),
       recipeCuisine: String(recipeData.recipeCuisine || '').trim(),
-      keywords: String(recipeData.keywords || '').trim(),
+      keywords: Array.isArray(recipeData.keywords) 
+        ? recipeData.keywords.join(', ')
+        : String(recipeData.keywords || '').trim(),
       
       // Recipe content
       recipeIngredient: Array.isArray(recipeData.recipeIngredient) 
@@ -1783,6 +1874,17 @@ function extractRecipeFromAIResponse(response, pageUrl) {
               return { "@type": "HowToStep", text: step.trim() };
             } else if (step && typeof step === 'object' && step.text) {
               return { "@type": "HowToStep", text: String(step.text).trim() };
+            } else if (step && typeof step === 'object' && step.name) {
+              // Handle instructions with name field
+              return { "@type": "HowToStep", text: String(step.name).trim() };
+            } else if (step && typeof step === 'object') {
+              // Try to extract any text-like field
+              const textField = Object.keys(step).find(key => 
+                ['text', 'instruction', 'step', 'description', 'name'].includes(key.toLowerCase())
+              );
+              if (textField) {
+                return { "@type": "HowToStep", text: String(step[textField]).trim() };
+              }
             }
             return null;
           }).filter(step => step && step.text.length > 0)
@@ -1797,16 +1899,16 @@ function extractRecipeFromAIResponse(response, pageUrl) {
       nutrition: recipeData.nutrition && typeof recipeData.nutrition === 'object' ? {
         "@type": "NutritionInformation",
         calories: String(recipeData.nutrition.calories || '').trim(),
-        proteinContent: String(recipeData.nutrition.proteinContent || '').trim(),
-        fatContent: String(recipeData.nutrition.fatContent || '').trim(),
-        carbohydrateContent: String(recipeData.nutrition.carbohydrateContent || '').trim(),
-        fiberContent: String(recipeData.nutrition.fiberContent || '').trim(),
-        sugarContent: String(recipeData.nutrition.sugarContent || '').trim(),
-        sodiumContent: String(recipeData.nutrition.sodiumContent || '').trim(),
-        cholesterolContent: String(recipeData.nutrition.cholesterolContent || '').trim(),
-        saturatedFatContent: String(recipeData.nutrition.saturatedFatContent || '').trim(),
-        transFatContent: String(recipeData.nutrition.transFatContent || '').trim(),
-        unsaturatedFatContent: String(recipeData.nutrition.unsaturatedFatContent || '').trim(),
+        proteinContent: String(recipeData.nutrition.proteinContent || recipeData.nutrition.protein || '').trim(),
+        fatContent: String(recipeData.nutrition.fatContent || recipeData.nutrition.fat || '').trim(),
+        carbohydrateContent: String(recipeData.nutrition.carbohydrateContent || recipeData.nutrition.carbs || recipeData.nutrition.carbohydrates || '').trim(),
+        fiberContent: String(recipeData.nutrition.fiberContent || recipeData.nutrition.fiber || '').trim(),
+        sugarContent: String(recipeData.nutrition.sugarContent || recipeData.nutrition.sugar || '').trim(),
+        sodiumContent: String(recipeData.nutrition.sodiumContent || recipeData.nutrition.sodium || '').trim(),
+        cholesterolContent: String(recipeData.nutrition.cholesterolContent || recipeData.nutrition.cholesterol || '').trim(),
+        saturatedFatContent: String(recipeData.nutrition.saturatedFatContent || recipeData.nutrition.saturatedFat || '').trim(),
+        transFatContent: String(recipeData.nutrition.transFatContent || recipeData.nutrition.transFat || '').trim(),
+        unsaturatedFatContent: String(recipeData.nutrition.unsaturatedFatContent || recipeData.nutrition.unsaturatedFat || '').trim(),
         servingSize: String(recipeData.nutrition.servingSize || '').trim()
       } : null,
       
@@ -1841,6 +1943,16 @@ function extractRecipeFromAIResponse(response, pageUrl) {
               return step.trim();
             } else if (step && typeof step === 'object' && step.text) {
               return String(step.text).trim();
+            } else if (step && typeof step === 'object' && step.name) {
+              return String(step.name).trim();
+            } else if (step && typeof step === 'object') {
+              // Try to extract any text-like field
+              const textField = Object.keys(step).find(key => 
+                ['text', 'instruction', 'step', 'description', 'name'].includes(key.toLowerCase())
+              );
+              if (textField) {
+                return String(step[textField]).trim();
+              }
             }
             return '';
           }).filter(step => step.length > 0)

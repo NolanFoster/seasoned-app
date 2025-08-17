@@ -116,6 +116,7 @@ async function testAlternativeFieldNames() {
             text: JSON.stringify({
               title: "Chef John's Salt Roasted Chicken",
               description: "A simple but amazing roast chicken recipe",
+              image_url: "https://www.allrecipes.com/image/salt-roasted-chicken.jpg",
               ingredient_list: [
                 "1 (3 1/2) pound whole chicken",
                 "3 tablespoons kosher salt"
