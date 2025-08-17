@@ -30,7 +30,7 @@ Get recipe recommendations based on location and date.
 ```json
 {
   "recommendations": {
-    "Seasonal Favorites": ["tomatoes", "corn", "zucchini", "berries"],
+    "Summer Favorites": ["tomatoes", "corn", "zucchini", "berries"],
     "BBQ & Grilling": ["burgers", "kebabs", "grilled fish"],
     "Refreshing Dishes": ["gazpacho", "ice cream", "cold salads"]
   },
