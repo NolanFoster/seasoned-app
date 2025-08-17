@@ -1,0 +1,66 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Recommendations container
+.recommendations-container {
+  padding: 20px 0;
+  
+  .recommendation-category {
+    margin-bottom: 60px;
+    
+    &:last-child {
+      margin-bottom: 20px;
+    }
+    
+    .category-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 25px;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      
+      @media (max-width: 768px) {
+        font-size: 1.5rem;
+      }
+    }
+    
+    // Recipe grid for category
+    .category-recipes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin-bottom: 0;
+      
+      @media (max-width: 1200px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      
+      // Limit to 3 cards
+      .recipe-card:nth-child(n+4) {
+        display: none;
+      }
+    }
+  }
+  
+  // Loading state
+  &.loading {
+    .recommendation-category {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .recommendation-category {
+    .category-title {
+      color: var(--text-primary);
+    }
+  }
+}
