@@ -41,7 +41,7 @@ if git diff --cached --name-only | grep -q "^clipped-recipe-db-worker/"; then
             fi
             echo "✅ Worker tests passed!"
         else
-            echo "⚠️  No test script found in worker/package.json"
+            echo "⚠️  No test script found in clipped-recipe-db-worker/package.json"
         fi
     fi
     cd ..
