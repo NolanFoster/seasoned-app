@@ -11,6 +11,8 @@
   "scripts": {
     "test": "node test-simple.js",
     "test:jest": "jest test-kv-storage.js",
+    "test:vitest": "vitest run test-image-service.js",
+    "test:image": "vitest run test-image-service.js",
     "test:all": "node ../test-refactoring-complete.js"
   },
   "keywords": [
@@ -23,6 +25,7 @@
   "author": "Recipe App Team",
   "license": "MIT",
   "devDependencies": {
-    "jest": "^29.0.0"
+    "jest": "^29.0.0",
+    "vitest": "^1.0.0"
   }
 }
