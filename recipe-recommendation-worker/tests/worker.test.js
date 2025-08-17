@@ -45,7 +45,7 @@ export async function runTests() {
     }
   });
 
-  // Test 2: getMockRecommendations function
+  // Test 2: getMockRecommendations should return seasonal data
   tests.push({
     name: 'getMockRecommendations should return seasonal data',
     fn: async () => {
@@ -57,7 +57,10 @@ export async function runTests() {
       
       const summerRecs = getMockRecommendations('California', '2024-07-04');
       assert(summerRecs.season === 'Summer', 'Should identify summer season');
-      assert(summerRecs.recommendations['BBQ & Grilling'], 'Summer should have BBQ category');
+      // July 4th should have Independence Day Treats instead of BBQ & Grilling
+      assert(summerRecs.recommendations['Independence Day Treats'], 'July 4th should have Independence Day category');
+      assert(summerRecs.recommendations['Summer Favorites'], 'Should have Summer Favorites');
+      assert(Object.keys(summerRecs.recommendations).length === 3, 'Should have 3 categories');
     }
   });
 
