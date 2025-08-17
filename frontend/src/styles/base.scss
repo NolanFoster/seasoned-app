@@ -166,6 +166,7 @@ body {
     width: calc(100% - #{$spacing-sm * 2});
     max-width: none;
     padding: $spacing-xs;
+    padding-bottom: $spacing-sm; /* Extra bottom padding for search bar separation */
     
     /* Add border-bottom on mobile to separate from content */
     border-bottom: 3px solid rgba(255, 255, 255, 0.4);
@@ -506,6 +507,7 @@ body {
     width: 100%;
     margin-top: 4px;
     min-width: unset;
+    margin-bottom: 6px; /* Add margin-bottom to separate from glass panel edge */
   }
   
   .title-search-input {
@@ -587,6 +589,7 @@ body {
     min-width: unset;
     flex-basis: 100%; /* Force search bar to new line */
     height: 36px; /* Slightly smaller height on mobile */
+    margin-bottom: 8px; /* Add margin-bottom to separate from glass panel edge */
   }
   
   .title-search-input {
