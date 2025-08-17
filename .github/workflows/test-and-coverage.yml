@@ -297,7 +297,6 @@ jobs:
       with:
         script: |
           const fs = require('fs');
-          let comment = '## 📊 Coverage Report\n\n';
           
           // Get coverage data from previous step outputs
           const coverageAvailable = '${{ steps.coverage-summary.outputs.coverage_available }}' === 'true';
@@ -307,6 +306,16 @@ jobs:
           const diffCoverageAvailable = '${{ needs.test-frontend.outputs.diff_coverage_available }}' === 'true';
           const diffCoverageBelowThreshold = '${{ needs.test-frontend.outputs.diff_coverage_below_threshold }}' === 'true';
           const diffCoveragePercentage = '${{ needs.test-frontend.outputs.diff_coverage_percentage }}';
+          
+          // Check if any threshold is not met
+          const anyThresholdNotMet = coverageBelowThreshold || diffCoverageBelowThreshold;
+          
+          // Start building the comment - add @cursoragent at top if thresholds not met
+          let comment = '';
+          if (anyThresholdNotMet) {
+            comment += '@cursoragent\n\n';
+          }
+          comment += '## 📊 Coverage Report\n\n';
           
           try {
             // Overall Coverage Section
@@ -328,7 +337,6 @@ jobs:
               
               if (coverageBelowThreshold) {
                 comment += '❌ **Coverage is below the required 40% threshold**\n\n';
-                comment += '@cursoragent coverage does not meet minimum threshold\n\n';
               } else {
                 comment += '✅ **Coverage meets the required 40% threshold**\n\n';
               }
@@ -347,7 +355,6 @@ jobs:
               
               if (diffCoverageBelowThreshold) {
                 comment += '❌ **New code coverage is below the required 85% threshold**\n\n';
-                comment += '@cursoragent coverage does not meet minimum threshold\n\n';
               } else {
                 comment += '✅ **New code coverage meets the required 85% threshold**\n\n';
               }
