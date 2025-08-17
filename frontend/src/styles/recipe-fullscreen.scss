@@ -199,9 +199,9 @@
 
 /* Share FAB Trigger Button */
 .fab-share-trigger {
-  width: 60px;
-  height: 40px;
-  border-radius: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -231,9 +231,9 @@
 
 /* Nutrition FAB */
 .fab-nutrition-trigger {
-  width: 60px;
-  height: 40px;
-  border-radius: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -258,6 +258,10 @@
 .nutrition-icon {
   display: inline-block;
   line-height: 1;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Make the icon white */
 }
 
 /* Share Panel */
@@ -728,8 +732,8 @@
   }
   
   .fab-share-trigger {
-    width: 45px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     font-size: 1.2em;
   }
   
@@ -850,8 +854,8 @@
   }
   
   .fab-share-trigger {
-    width: 40px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     font-size: 1em;
   }
   
@@ -1115,10 +1119,15 @@ body.dark-mode {
 /* Mobile responsive nutrition styles */
 @media (max-width: 768px) {
   .fab-nutrition-trigger {
-    width: 45px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     font-size: 1.1em;
     margin-right: 8px;
+  }
+
+  .nutrition-icon {
+    width: 20px;
+    height: 20px;
   }
 
   .nutrition-facts-label {
@@ -1145,10 +1154,15 @@ body.dark-mode {
 
 @media (max-width: 480px) {
   .fab-nutrition-trigger {
-    width: 40px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     font-size: 1em;
     margin-right: 6px;
+  }
+
+  .nutrition-icon {
+    width: 18px;
+    height: 18px;
   }
 
   .nutrition-facts-label {
