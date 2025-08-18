@@ -1,5 +1,5 @@
 // Test script for the simplified smart search endpoint
-const SEARCH_DB_URL = 'http://localhost:8787'; // Local development URL
+const SEARCH_DB_URL = 'https://recipe-search-db.nolanfoster.workers.dev'; // Production URL
 
 async function testSmartSearch() {
   console.log('🧪 Testing Simplified Smart Search Endpoint\n');
