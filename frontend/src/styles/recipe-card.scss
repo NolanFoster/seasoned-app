@@ -34,6 +34,10 @@
   /* Larger touch target area */
   margin: -10px 0 !important; /* Expand touch area vertically */
   
+  /* Fix for choppy scrolling - ensure touch events aren't blocked */
+  pointer-events: auto !important;
+  z-index: 100 !important; /* Ensure grid is above other elements */
+  
   &::-webkit-scrollbar {
     display: none !important;
   }
@@ -48,6 +52,21 @@
     /* Enhanced touch feedback */
     touch-action: pan-x !important;
     transition: transform 0.2s ease !important;
+    
+    /* Fix blocking elements - allow touch events to bubble up */
+    pointer-events: auto !important;
+    position: relative !important;
+    
+    /* Prevent child elements from blocking swipe gestures */
+    * {
+      pointer-events: none !important; /* Disable pointer events on all children */
+      touch-action: inherit !important;
+    }
+    
+    /* Re-enable pointer events only for interactive elements when needed */
+    &:hover * {
+      pointer-events: auto !important;
+    }
     
     &:active {
       transform: scale(0.98) !important; /* Subtle feedback on touch */

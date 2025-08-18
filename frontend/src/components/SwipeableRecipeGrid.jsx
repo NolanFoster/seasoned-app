@@ -61,6 +61,26 @@ function SwipeableRecipeGrid({ children, className = '', ...props }) {
       ref={gridRef}
       className={`recipe-grid category-recipes ${className}`}
       data-swipe-container="true"
+      onTouchStart={(e) => {
+        // Prevent event bubbling that might interfere with swipe detection
+        e.stopPropagation();
+      }}
+      onTouchMove={(e) => {
+        // Allow horizontal scrolling, prevent vertical scrolling conflicts
+        const touch = e.touches[0];
+        if (touch) {
+          const rect = gridRef.current?.getBoundingClientRect();
+          if (rect && touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+            e.stopPropagation();
+          }
+        }
+      }}
+      style={{
+        // Ensure the container is properly positioned for touch events
+        position: 'relative',
+        zIndex: 100,
+        isolation: 'isolate' // Create new stacking context
+      }}
       {...props}
     >
       {children}
