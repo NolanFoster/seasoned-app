@@ -1,0 +1,177 @@
+
+> seasoned-frontend@0.0.0 dev
+> vite
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  VITE v5.4.19  ready in 177 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+7:11:52 PM [vite] hmr update /src/components/Recommendations.jsx
+7:12:01 PM [vite] hmr update /src/components/Recommendations.jsx
+7:12:04 PM [vite] hmr update /src/components/Recommendations.jsx
+7:12:12 PM [vite] hmr update /src/components/Recommendations.jsx
+7:12:16 PM [vite] hmr update /src/components/Recommendations.jsx
+7:12:29 PM [vite] hmr update /src/components/Recommendations.jsx
+7:13:23 PM [vite] hmr update /src/components/Recommendations.jsx
+7:14:53 PM [vite] hmr update /src/components/Recommendations.jsx
+7:14:57 PM [vite] hmr update /src/components/Recommendations.jsx
+7:15:02 PM [vite] hmr update /src/components/Recommendations.jsx
+7:15:15 PM [vite] hmr update /src/components/Recommendations.jsx
+7:15:23 PM [vite] hmr update /src/components/Recommendations.jsx
+7:15:30 PM [vite] hmr update /src/components/Recommendations.jsx
+7:15:56 PM [vite] hmr update /src/components/Recommendations.jsx
+7:18:34 PM [vite] hmr update /src/App.jsx
+7:18:56 PM [vite] hmr update /src/App.jsx
+7:18:59 PM [vite] hmr update /src/App.jsx
+7:19:15 PM [vite] hmr update /src/App.jsx
+7:19:25 PM [vite] hmr update /src/App.jsx
+7:19:43 PM [vite] hmr update /src/App.jsx
+7:20:02 PM [vite] hmr update /src/App.jsx
+7:20:15 PM [vite] hmr update /src/App.jsx
+7:20:20 PM [vite] hmr update /src/App.jsx
+7:21:08 PM [vite] hmr update /src/App.jsx
+7:23:03 PM [vite] hmr update /src/App.jsx
+7:23:10 PM [vite] hmr update /src/App.jsx
+7:23:18 PM [vite] hmr update /src/App.jsx
+7:23:19 PM [vite] hmr update /src/App.jsx
+7:23:41 PM [vite] hmr update /src/components/Recommendations.jsx
+7:23:53 PM [vite] hmr update /src/components/Recommendations.jsx
+7:23:54 PM [vite] hmr update /src/components/Recommendations.jsx
+7:23:57 PM [vite] hmr update /src/components/Recommendations.jsx
+7:24:06 PM [vite] hmr update /src/components/Recommendations.jsx
+7:24:08 PM [vite] hmr update /src/components/Recommendations.jsx
+7:24:26 PM [vite] hmr update /src/App.jsx
+7:24:43 PM [vite] hmr update /src/App.jsx
+7:24:45 PM [vite] hmr update /src/App.jsx
+7:25:13 PM [vite] hmr update /src/App.jsx
+7:25:35 PM [vite] hmr update /src/App.jsx
+7:25:36 PM [vite] hmr update /src/App.jsx
+7:25:36 PM [vite] hmr update /src/components/Recommendations.jsx
+7:30:04 PM [vite] hmr update /src/App.jsx
+7:30:09 PM [vite] hmr update /src/App.jsx
+7:30:17 PM [vite] hmr update /src/App.jsx
+7:32:04 PM [vite] hmr update /src/App.jsx
+7:32:06 PM [vite] hmr update /src/App.jsx
+7:32:32 PM [vite] hmr update /src/App.jsx
+7:32:34 PM [vite] hmr update /src/App.jsx
+7:32:55 PM [vite] hmr update /src/App.jsx
+7:33:21 PM [vite] hmr update /src/App.jsx
+7:33:32 PM [vite] hmr update /src/App.jsx
+7:33:46 PM [vite] hmr update /src/App.jsx
+7:33:46 PM [vite] hmr update /src/App.jsx
+7:34:43 PM [vite] hmr update /src/App.jsx
+7:34:59 PM [vite] hmr update /src/App.jsx
+7:35:15 PM [vite] hmr update /src/App.jsx
+7:35:39 PM [vite] hmr update /src/App.jsx
+7:35:43 PM [vite] hmr update /src/App.jsx
+7:35:43 PM [vite] hmr update /src/App.jsx
+7:36:05 PM [vite] hmr update /src/App.jsx
+7:36:33 PM [vite] hmr update /src/App.jsx
+7:36:39 PM [vite] hmr update /src/App.jsx
+7:36:40 PM [vite] hmr update /src/App.jsx
+7:36:58 PM [vite] hmr update /src/App.jsx
+7:37:21 PM [vite] hmr update /src/App.jsx
+7:37:35 PM [vite] hmr update /src/App.jsx
+7:38:00 PM [vite] hmr update /src/App.jsx
+7:38:18 PM [vite] hmr update /src/components/Recommendations.jsx
+7:38:38 PM [vite] hmr update /src/App.jsx
+7:38:38 PM [vite] hmr update /src/components/Recommendations.jsx
+7:40:53 PM [vite] hmr update /src/components/Recommendations.jsx
+7:41:14 PM [vite] hmr update /src/components/Recommendations.jsx
+7:41:22 PM [vite] hmr update /src/components/Recommendations.jsx
+7:41:40 PM [vite] hmr update /src/components/Recommendations.jsx
+7:41:54 PM [vite] hmr update /src/components/Recommendations.jsx
+7:45:49 PM [vite] hmr update /src/components/Recommendations.jsx
+7:47:29 PM [vite] hmr update /src/App.jsx
+7:48:02 PM [vite] hmr update /src/App.jsx
+7:48:28 PM [vite] hmr update /src/App.jsx
+7:48:30 PM [vite] hmr update /src/App.jsx
+7:48:37 PM [vite] hmr update /src/App.jsx
+7:48:39 PM [vite] hmr update /src/App.jsx
+7:48:55 PM [vite] hmr update /src/App.jsx
+7:48:56 PM [vite] hmr update /src/App.jsx
+7:49:25 PM [vite] hmr update /src/App.jsx
+7:49:45 PM [vite] hmr update /src/App.jsx
+7:49:46 PM [vite] hmr update /src/App.jsx
+7:50:43 PM [vite] hmr update /src/App.jsx
+7:50:57 PM [vite] hmr update /src/App.jsx
+7:56:14 PM [vite] hmr update /src/App.jsx
+7:59:06 PM [vite] hmr update /src/App.jsx
+7:59:22 PM [vite] hmr update /src/App.jsx
+7:59:28 PM [vite] hmr update /src/App.jsx
+7:59:36 PM [vite] hmr update /src/App.jsx
+7:59:43 PM [vite] hmr update /src/App.jsx
+7:59:53 PM [vite] hmr update /src/App.jsx
+8:00:10 PM [vite] hmr update /src/App.jsx
+8:00:22 PM [vite] hmr update /src/App.jsx
+8:01:42 PM [vite] hmr update /src/App.jsx
+8:01:47 PM [vite] hmr update /src/App.jsx
+8:02:03 PM [vite] hmr update /src/App.jsx
+8:02:18 PM [vite] hmr update /src/App.jsx
+8:02:57 PM [vite] hmr update /src/App.jsx
+8:08:55 PM [vite] hmr update /src/App.jsx
+8:09:11 PM [vite] hmr update /src/App.jsx
+8:09:12 PM [vite] hmr update /src/App.jsx
+8:09:26 PM [vite] hmr update /src/App.jsx
+8:09:28 PM [vite] hmr update /src/App.jsx
+8:09:28 PM [vite] hmr update /src/App.jsx
+8:09:41 PM [vite] hmr update /src/App.jsx
+8:09:46 PM [vite] hmr update /src/App.jsx
+8:09:55 PM [vite] hmr update /src/App.jsx
+8:09:59 PM [vite] hmr update /src/App.jsx
+8:09:59 PM [vite] hmr update /src/App.jsx
+8:10:29 PM [vite] hmr update /src/App.jsx
+8:22:12 PM [vite] hmr update /src/App.jsx
+8:22:22 PM [vite] hmr update /src/App.jsx
+8:22:57 PM [vite] hmr update /src/App.jsx
+8:32:19 PM [vite] hmr update /src/App.jsx
+7:38:22 AM [vite] hmr update /src/App.jsx
+7:38:22 AM [vite] hmr update /src/components/Recommendations.jsx
+7:38:22 AM [vite] hmr update /src/styles/main.scss
+7:38:22 AM [vite] hmr update /src/styles/main.scss
+7:38:22 AM [vite] hmr update /src/components/Recommendations.jsx
+7:38:22 AM [vite] hmr update /src/App.jsx
+7:38:22 AM [vite] hmr update /src/styles/main.scss
+7:38:22 AM [vite] hmr update /src/styles/main.scss
+7:38:31 AM [vite] hmr update /src/components/Recommendations.jsx
+7:38:31 AM [vite] hmr update /src/components/VideoPopup.jsx
+7:38:31 AM [vite] hmr update /src/App.jsx
+7:38:31 AM [vite] hmr update /src/styles/main.scss
+7:38:31 AM [vite] hmr update /src/styles/main.scss
+7:38:31 AM [vite] hmr update /src/styles/main.scss
+7:38:31 AM [vite] hmr update /src/styles/main.scss
+7:38:31 AM [vite] hmr update /src/styles/main.scss
+7:38:31 AM [vite] hmr update /src/App.jsx
+7:38:35 AM [vite] hmr update /src/App.jsx
+7:38:36 AM [vite] hmr update /src/components/Recommendations.jsx
+7:38:36 AM [vite] hmr update /src/components/VideoPopup.jsx
+7:38:36 AM [vite] hmr update /src/styles/main.scss
+7:38:36 AM [vite] hmr update /src/styles/main.scss
+7:38:36 AM [vite] hmr update /src/styles/main.scss
+7:38:36 AM [vite] hmr update /src/styles/main.scss
+7:38:36 AM [vite] hmr update /src/styles/main.scss
+7:38:36 AM [vite] hmr update /src/App.jsx
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+8:20:07 AM [vite] .env.local changed, restarting server...
+8:20:08 AM [vite] .env.local changed, restarting server...
+8:20:09 AM [vite] server restarted.
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+8:21:01 AM [vite] .env.local changed, restarting server...
+8:21:01 AM [vite] server restarted.
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
