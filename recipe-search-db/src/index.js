@@ -437,6 +437,7 @@ async function smartSearchNodes(request, env, corsHeaders) {
     return new Response(JSON.stringify({
       query: originalQuery,
       strategy: 'original',
+      similarityScore: 1.0,
       results: result.results
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -446,13 +447,20 @@ async function smartSearchNodes(request, env, corsHeaders) {
   // Strategy 2: Break down into individual words and try each
   const words = originalQuery.trim().split(/\s+/).filter(word => word.length > 0);
   if (words.length > 1) {
-    for (const word of words) {
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
       result = await searchNodesInternal(word, type, limit, env);
       if (result.results && result.results.length > 0) {
+        // Calculate similarity based on word position and total words
+        // First word gets higher score than later words
+        const wordScore = 0.8 - (i * 0.1 / words.length);
+        const similarityScore = Math.max(0.6, wordScore);
+        
         return new Response(JSON.stringify({
           query: originalQuery,
           strategy: 'word-breakdown',
           effectiveQuery: word,
+          similarityScore: Math.round(similarityScore * 100) / 100,
           results: result.results
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -469,10 +477,16 @@ async function smartSearchNodes(request, env, corsHeaders) {
         const combination = words.slice(start, start + len).join(' ');
         result = await searchNodesInternal(combination, type, limit, env);
         if (result.results && result.results.length > 0) {
+          // Calculate similarity based on how many words we kept vs original
+          const wordsKept = len;
+          const totalWords = words.length;
+          const similarityScore = 0.5 + (wordsKept / totalWords) * 0.3; // 0.5-0.8 range
+          
           return new Response(JSON.stringify({
             query: originalQuery,
             strategy: 'word-combination',
             effectiveQuery: combination,
+            similarityScore: Math.round(similarityScore * 100) / 100,
             results: result.results
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -490,10 +504,17 @@ async function smartSearchNodes(request, env, corsHeaders) {
         const prefix = word.substring(0, len);
         result = await searchNodesInternal(prefix, type, limit, env);
         if (result.results && result.results.length > 0) {
+          // Calculate similarity based on how much of the original word we kept
+          const charKept = len;
+          const totalChars = word.length;
+          const prefixRatio = charKept / totalChars;
+          const similarityScore = 0.2 + (prefixRatio * 0.3); // 0.2-0.5 range
+          
           return new Response(JSON.stringify({
             query: originalQuery,
             strategy: 'prefix-match',
             effectiveQuery: prefix,
+            similarityScore: Math.round(similarityScore * 100) / 100,
             results: result.results
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -505,13 +526,20 @@ async function smartSearchNodes(request, env, corsHeaders) {
 
   // Strategy 5: Try common cooking terms if no results found
   const commonTerms = ['recipe', 'dish', 'food', 'cooking', 'meal'];
-  for (const term of commonTerms) {
+  for (let i = 0; i < commonTerms.length; i++) {
+    const term = commonTerms[i];
     result = await searchNodesInternal(term, type, limit, env);
     if (result.results && result.results.length > 0) {
+      // Very low similarity since we're using completely different terms
+      // Earlier terms in the list get slightly higher scores
+      const termScore = 0.15 - (i * 0.02);
+      const similarityScore = Math.max(0.05, termScore);
+      
       return new Response(JSON.stringify({
         query: originalQuery,
         strategy: 'common-terms',
         effectiveQuery: term,
+        similarityScore: Math.round(similarityScore * 100) / 100,
         results: result.results
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -523,6 +551,7 @@ async function smartSearchNodes(request, env, corsHeaders) {
   return new Response(JSON.stringify({
     query: originalQuery,
     strategy: 'none',
+    similarityScore: 0.0,
     results: []
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }

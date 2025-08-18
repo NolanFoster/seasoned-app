@@ -12,6 +12,7 @@ async function testSmartSearch() {
       const data1 = await response1.json();
       console.log(`✅ Success: Found ${data1.results.length} results using strategy: ${data1.strategy}`);
       console.log(`   Query: "${data1.query}"`);
+      console.log(`   Similarity Score: ${data1.similarityScore || 'N/A'}`);
     } else {
       console.log(`❌ Failed: ${response1.status} ${response1.statusText}`);
     }
@@ -25,6 +26,7 @@ async function testSmartSearch() {
       const data2 = await response2.json();
       console.log(`✅ Success: Found ${data2.results.length} results using strategy: ${data2.strategy}`);
       console.log(`   Query: "${data2.query}"`);
+      console.log(`   Similarity Score: ${data2.similarityScore || 'N/A'}`);
     } else {
       console.log(`❌ Failed: ${response2.status} ${response2.statusText}`);
     }
@@ -38,6 +40,7 @@ async function testSmartSearch() {
       const data3 = await response3.json();
       console.log(`✅ Success: Found ${data3.results.length} results using strategy: ${data3.strategy}`);
       console.log(`   Query: "${data3.query}"`);
+      console.log(`   Similarity Score: ${data3.similarityScore || 'N/A'}`);
     } else {
       console.log(`❌ Failed: ${response3.status} ${response3.statusText}`);
     }
