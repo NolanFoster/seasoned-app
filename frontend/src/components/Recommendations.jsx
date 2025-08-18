@@ -214,6 +214,125 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     return [];
   }
 
+  // If we have recipesByCategory, render them directly
+  if (recipesByCategory && recipesByCategory.size > 0) {
+    return (
+      <div className="recommendations-container">
+        {(() => {
+          try {
+            // Track which recipes have been shown to avoid duplicates
+            const shownRecipeIds = new Set();
+            
+            return Array.from(recipesByCategory.entries()).map(([categoryName, recipes]) => {
+              console.log(`🎯 Rendering category "${categoryName}" with ${recipes.length} recipes`);
+              
+              // Filter out duplicates across categories
+              const uniqueRecipes = recipes.filter(recipe => 
+                !shownRecipeIds.has(recipe.id)
+              );
+              
+              // Take up to 6 recipes for this category
+              const sortedRecipes = uniqueRecipes.slice(0, 6);
+              
+              console.log(`📊 Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
+              
+              // Add selected recipes to the shown set
+              sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
+              
+              // Only show category if it has recipes
+              if (sortedRecipes.length === 0) return null;
+              
+              return (
+                <div key={categoryName} className="recommendation-category">
+                  <h2 className="category-title">{categoryName}</h2>
+                  <div className="recipe-grid category-recipes">
+                    {sortedRecipes.map((recipe) => (
+                      <div key={recipe.id} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                        <div className="recipe-card-image">
+                          {/* Main image display */}
+                          {(recipe.image || recipe.image_url) ? (
+                            <img 
+                              src={recipe.image || recipe.image_url} 
+                              alt={recipe.name}
+                              loading="lazy"
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                zIndex: 1,
+                                borderRadius: '20px 20px 0 0',
+                                opacity: 0.85
+                              }}
+                              onError={(e) => {
+                                // Fallback to gradient if image fails
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              zIndex: 1,
+                              opacity: 0.85
+                            }}></div>
+                          )}
+                          <div className="recipe-card-overlay"></div>
+                          <div className="recipe-card-title-overlay">
+                            <h3 className="recipe-card-title">{recipe.name}</h3>
+                          </div>
+                        </div>
+                        <div className="recipe-card-content">
+                          {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                            <div className="recipe-card-time">
+                              <div className="time-item">
+                                <span className="time-label">Prep</span>
+                                <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                              </div>
+                              <div className="time-divider"></div>
+                              <div className="time-item">
+                                <span className="time-label">Cook</span>
+                                <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
+                              </div>
+                              {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                                <>
+                                  <div className="time-divider"></div>
+                                  <div className="time-item">
+                                    <span className="time-label">Yield</span>
+                                    <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="recipe-card-time">
+                              <span className="time-icon">⏱️</span>
+                              <span className="no-time">-</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            });
+          } catch (error) {
+            console.error('Error rendering recommendations:', error);
+            return null;
+          }
+        })()}
+      </div>
+    );
+  }
+
+  // Fallback: If no recipesByCategory, use the original logic
   if (isLoadingRecommendations || recommendations) {
     return (
       <div className="recommendations-container">
@@ -311,9 +430,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                               width: '100%',
                               height: '100%',
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              zIndex: 1,
-                              opacity: 0.85
-                            }}></div>
+                              textAlign: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: '24px',
+                              fontWeight: 'bold'
+                            }}>🍳</div>
                           )}
                           <div className="recipe-card-overlay"></div>
                           <div className="recipe-card-title-overlay">
