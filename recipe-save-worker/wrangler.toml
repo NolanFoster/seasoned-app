@@ -26,7 +26,7 @@ IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
 
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
-id = "dd001c20659a4d6982f6d650abcac880"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 
 [[env.staging.r2_buckets]]
 binding = "RECIPE_IMAGES"
