@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { formatDuration, isValidUrl } from '../../shared/utility-functions.js'
 import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
+import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper.nolanfoster.workers.dev'; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
@@ -1737,7 +1738,7 @@ function App() {
                   cachedCategoryNames.map((categoryName, categoryIndex) => (
                     <div key={categoryName} className="recommendation-category">
                       <h2 className="category-title">{categoryName}</h2>
-                      <div className="recipe-grid category-recipes">
+                      <SwipeableRecipeGrid>
                         {[1, 2, 3].map(index => (
                           <div key={index} className="recipe-card loading-card">
                             <div className="recipe-card-image loading-pulse">
@@ -1749,7 +1750,7 @@ function App() {
                             </div>
                           </div>
                         ))}
-                      </div>
+                      </SwipeableRecipeGrid>
                     </div>
                   ))
                 ) : (
