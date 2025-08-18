@@ -2302,7 +2302,7 @@ function App() {
                               setIsSavingRecipe(false);
                             }
                           }} 
-                          className="add-btn"
+                          className={`add-btn ${isSavingRecipe ? 'saving' : ''}`}
                           disabled={isSavingRecipe}
                         >
                           {isSavingRecipe ? '🔄 Saving...' : 'Save Recipe'}
