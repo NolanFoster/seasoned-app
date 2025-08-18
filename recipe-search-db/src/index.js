@@ -44,6 +44,8 @@ export default {
         return await deleteEdge(edgeId, env, corsHeaders);
       } else if (path === '/api/search' && method === 'GET') {
         return await searchNodes(request, env, corsHeaders);
+      } else if (path === '/api/smart-search' && method === 'GET') {
+        return await smartSearchNodes(request, env, corsHeaders);
       } else if (path === '/api/debug/search' && method === 'GET') {
         return await debugSearch(request, env, corsHeaders);
       } else if (path === '/api/graph' && method === 'GET') {
@@ -54,10 +56,11 @@ export default {
         });
       } else if (path === '/api/version' && method === 'GET') {
         return new Response(JSON.stringify({ 
-          version: '1.1.0',
+          version: '1.3.0',
           features: {
             partialWordSearch: true,
-            description: 'Supports partial word search by appending * to search terms'
+            smartSearch: true,
+            description: 'Supports partial word search and smart search with token breakdown strategies'
           },
           timestamp: new Date().toISOString() 
         }), {
@@ -415,6 +418,157 @@ async function searchNodes(request, env, corsHeaders) {
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
+}
+
+// Smart search function that breaks down queries into smaller tokens until it gets results
+async function smartSearchNodes(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const originalQuery = url.searchParams.get('q');
+  const type = url.searchParams.get('type');
+  const limit = parseInt(url.searchParams.get('limit') || '50');
+
+  if (!originalQuery) {
+    throw new Error('Search query parameter "q" is required');
+  }
+
+  // Strategy 1: Try the original query first
+  let result = await searchNodesInternal(originalQuery, type, limit, env);
+  if (result.results && result.results.length > 0) {
+    return new Response(JSON.stringify({
+      query: originalQuery,
+      strategy: 'original',
+      results: result.results
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Strategy 2: Break down into individual words and try each
+  const words = originalQuery.trim().split(/\s+/).filter(word => word.length > 0);
+  if (words.length > 1) {
+    for (const word of words) {
+      result = await searchNodesInternal(word, type, limit, env);
+      if (result.results && result.results.length > 0) {
+        return new Response(JSON.stringify({
+          query: originalQuery,
+          strategy: 'word-breakdown',
+          effectiveQuery: word,
+          results: result.results
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+  }
+
+  // Strategy 3: Try progressive word combinations (longest first)
+  if (words.length > 2) {
+    // Try combinations of decreasing length
+    for (let len = words.length - 1; len >= 2; len--) {
+      for (let start = 0; start <= words.length - len; start++) {
+        const combination = words.slice(start, start + len).join(' ');
+        result = await searchNodesInternal(combination, type, limit, env);
+        if (result.results && result.results.length > 0) {
+          return new Response(JSON.stringify({
+            query: originalQuery,
+            strategy: 'word-combination',
+            effectiveQuery: combination,
+            results: result.results
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+    }
+  }
+
+  // Strategy 4: Try partial matches with shorter terms
+  for (const word of words) {
+    if (word.length > 3) {
+      // Try progressively shorter prefixes
+      for (let len = Math.max(3, Math.floor(word.length * 0.7)); len >= 3; len--) {
+        const prefix = word.substring(0, len);
+        result = await searchNodesInternal(prefix, type, limit, env);
+        if (result.results && result.results.length > 0) {
+          return new Response(JSON.stringify({
+            query: originalQuery,
+            strategy: 'prefix-match',
+            effectiveQuery: prefix,
+            results: result.results
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+    }
+  }
+
+  // Strategy 5: Try common cooking terms if no results found
+  const commonTerms = ['recipe', 'dish', 'food', 'cooking', 'meal'];
+  for (const term of commonTerms) {
+    result = await searchNodesInternal(term, type, limit, env);
+    if (result.results && result.results.length > 0) {
+      return new Response(JSON.stringify({
+        query: originalQuery,
+        strategy: 'common-terms',
+        effectiveQuery: term,
+        results: result.results
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  // If all strategies fail, return empty results
+  return new Response(JSON.stringify({
+    query: originalQuery,
+    strategy: 'none',
+    results: []
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+// Internal search function used by smart search
+async function searchNodesInternal(query, type, limit, env) {
+  try {
+    // Transform the query to support prefix matching
+    const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
+    const ftsQuery = searchTerms.map(term => {
+      const escapedTerm = term.replace(/['"]/g, '');
+      return escapedTerm.endsWith('*') ? escapedTerm : escapedTerm + '*';
+    }).join(' ');
+
+    let sqlQuery = `
+      SELECT n.*, m.status, m.version
+      FROM nodes n
+      JOIN metadata m ON n.id = m.node_id
+      JOIN nodes_fts fts ON n.rowid = fts.rowid
+      WHERE fts.properties MATCH ? AND m.status = 'ACTIVE'
+    `;
+    
+    let params = [ftsQuery];
+
+    if (type) {
+      sqlQuery += ' AND n.type = ?';
+      params.push(type);
+    }
+
+    sqlQuery += ' ORDER BY rank LIMIT ?';
+    params.push(limit);
+
+    const result = await env.SEARCH_DB.prepare(sqlQuery).bind(...params).all();
+    
+    return {
+      results: result.results.map(node => ({
+        ...node,
+        properties: JSON.parse(node.properties)
+      }))
+    };
+  } catch (error) {
+    console.error('Search error:', error);
+    return { results: [] };
+  }
 }
 
 // Graph operations
