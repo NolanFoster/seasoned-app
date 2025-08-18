@@ -52,6 +52,9 @@ export const useSwipeGesture = (containerRef, options = {}) => {
       
       // Prevent default to avoid issues with touch handling
       container.style.scrollBehavior = 'auto';
+      
+      // Stop event propagation to prevent conflicts with child elements
+      e.stopPropagation();
     };
 
     const handleTouchMove = (e) => {
@@ -63,6 +66,7 @@ export const useSwipeGesture = (containerRef, options = {}) => {
       if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 3) {
         isDraggingRef.current = true;
         e.preventDefault(); // Prevent vertical scrolling when swiping horizontally
+        e.stopPropagation(); // Stop event propagation to prevent conflicts
         
         // Apply sensitivity multiplier for more responsive scrolling
         const scrollDelta = deltaX * sensitivity;
@@ -77,22 +81,37 @@ export const useSwipeGesture = (containerRef, options = {}) => {
     };
 
     const handleTouchEnd = (e) => {
-      if (!isDraggingRef.current) return;
-      
       const deltaX = touchMoveRef.current.x - touchStartRef.current.x;
       const deltaTime = touchMoveRef.current.time - touchStartRef.current.time;
-      const velocity = deltaX / deltaTime; // pixels per millisecond
+      const totalDistance = Math.abs(deltaX);
       
-      if (enableMomentum && Math.abs(velocity) > 0.2) {
-        // Apply momentum scrolling
-        const momentumDistance = velocity * momentumMultiplier * 100; // Convert to reasonable distance
-        const targetScrollLeft = container.scrollLeft - momentumDistance;
+      // If we were dragging, prevent click events from firing
+      if (isDraggingRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
         
-        // Smooth scroll to target position with momentum
-        smoothScrollTo(container, targetScrollLeft, 300);
-      } else if (enableSnapping) {
-        // Snap to nearest card
-        snapToNearestCard(container);
+        const velocity = deltaX / deltaTime; // pixels per millisecond
+        
+        if (enableMomentum && Math.abs(velocity) > 0.2) {
+          // Apply momentum scrolling
+          const momentumDistance = velocity * momentumMultiplier * 100; // Convert to reasonable distance
+          const targetScrollLeft = container.scrollLeft - momentumDistance;
+          
+          // Smooth scroll to target position with momentum
+          smoothScrollTo(container, targetScrollLeft, 300);
+        } else if (enableSnapping) {
+          // Snap to nearest card
+          snapToNearestCard(container);
+        }
+      }
+      
+      // Prevent clicks if the user swiped more than 10px
+      if (totalDistance > 10) {
+        // Add a temporary click blocker
+        container.style.pointerEvents = 'none';
+        setTimeout(() => {
+          container.style.pointerEvents = 'auto';
+        }, 100);
       }
       
       isDraggingRef.current = false;
