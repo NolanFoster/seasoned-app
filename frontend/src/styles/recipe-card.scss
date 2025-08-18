@@ -24,10 +24,6 @@
   gap: $spacing-md !important;
   padding-bottom: 10px !important;
   
-  /* DEBUG: Visual indicator */
-  border: 3px solid #ff0000 !important;
-  background: rgba(255, 0, 0, 0.1) !important;
-  
   &::-webkit-scrollbar {
     display: none !important;
   }
@@ -38,9 +34,6 @@
     max-width: 280px !important;
     scroll-snap-align: start !important;
     margin-right: $spacing-md !important;
-    
-    /* DEBUG: Visual indicator */
-    border: 2px solid #00ff00 !important;
     
     &:last-child {
       margin-right: $spacing-lg !important;
@@ -521,10 +514,6 @@
     padding-bottom: 10px !important;
     position: relative !important;
     
-    /* DEBUG: Visual indicator that mobile styles are active */
-    border: 2px solid #ff0000 !important;
-    background: rgba(255, 0, 0, 0.1) !important;
-    
     /* Hide scrollbar for WebKit browsers */
     &::-webkit-scrollbar {
       display: none !important;
@@ -560,9 +549,6 @@
     margin-right: $spacing-md !important;
     min-width: 280px !important; /* Ensure minimum width */
     max-width: 280px !important; /* Ensure maximum width */
-    
-    /* DEBUG: Visual indicator that mobile card styles are active */
-    border: 2px solid #00ff00 !important;
     
     &:last-child {
       margin-right: $spacing-lg !important; /* Extra margin for last card */
