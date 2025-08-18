@@ -9,6 +9,20 @@ compatibility_date = "2024-01-01"
 [env.preview]
 name = "preview-recipe-search-db"
 
+[env.staging]
+name = "staging-recipe-search-db"
+
+# Staging D1 Database for search graph
+[env.staging.d1_databases]
+binding = "SEARCH_DB"
+database_name = "recipe-search-db-staging"
+database_id = "69a59404-ca73-4760-bb87-0ac910752ca9"
+
+# Staging KV Namespaces for recipe storage
+[env.staging.kv_namespaces]
+binding = "RECIPE_STORAGE"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"  # Using preview_id for staging
+
 # D1 Database for search graph
 [[d1_databases]]
 binding = "SEARCH_DB"

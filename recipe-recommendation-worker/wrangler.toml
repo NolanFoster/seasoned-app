@@ -13,9 +13,10 @@ vars = { }
 name = "preview-recipe-recommendation-worker"
 vars = { }
 
-# You can add environment-specific configurations here
-# [env.staging]
-# vars = { }
+# Staging environment
+[env.staging]
+name = "staging-recipe-recommendation-worker"
+vars = { }
 
 # Note: With Cloudflare AI binding, you don't need OpenAI API keys
 # The AI models are provided by Cloudflare Workers AI

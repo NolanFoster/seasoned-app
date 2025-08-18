@@ -12,6 +12,22 @@ name = "preview-clipped-recipe-db-worker"
 [env.preview.vars]
 IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
 
+[env.staging]
+name = "staging-clipped-recipe-db-worker"
+[env.staging.vars]
+IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+
+# Staging uses the same D1 database as production for now
+# In a full production setup, you'd want separate staging databases
+[env.staging.d1_databases]
+binding = "DB"
+database_name = "recipe-db-staging"
+database_id = "2b6e049b-bdfa-4291-be54-082c0d12146f"
+
+[env.staging.r2_buckets]
+binding = "recipe_images"
+bucket_name = "recipe-images-staging"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "recipe-db"
