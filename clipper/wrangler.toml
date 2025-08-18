@@ -18,7 +18,18 @@ IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
 # Staging KV Namespaces for storing recipes
 [env.staging.kv_namespaces]
 binding = "RECIPE_STORAGE"
-id = "3f8a3b17db9e4f8ea3eae83d864ad518"  # Using preview_id for staging
+id = "STAGING_KV_NAMESPACE_ID_PLACEHOLDER"  # This needs to be updated with actual staging KV namespace ID
+
+# Production environment
+[env.production]
+name = "recipe-clipper-worker"
+[env.production.vars]
+GPT_API_URL = "https://api.openai.com/v1/chat/completions"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
+
+[env.production.kv_namespaces]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
 
 # KV Namespaces for storing recipes
 [[kv_namespaces]]
