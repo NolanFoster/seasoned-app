@@ -1345,7 +1345,7 @@ function App() {
           setClipError('');
           setIsEditingPreview(false);
           setEditablePreview(null);
-          alert('Recipe saved successfully to database!');
+          // Recipe saved successfully - no alert needed
         } else {
           throw new Error(result.error || 'Failed to save recipe');
         }
@@ -1379,7 +1379,7 @@ function App() {
         setIsEditingPreview(false);
         setEditablePreview(null);
       } else {
-        alert('Failed to save recipe. Please try again.');
+        console.error('Failed to save recipe. Please try again.');
       }
     }
   }
@@ -2284,7 +2284,7 @@ function App() {
                             // Prevent rapid successive saves (debounce)
                             const now = Date.now();
                             if (now - lastSaveTime < 2000) { // 2 second debounce
-                              alert('Please wait a moment before trying to save again.');
+                              console.warn('Please wait a moment before trying to save again.');
                               return;
                             }
                             
@@ -2293,25 +2293,16 @@ function App() {
                             setLastSaveTime(now);
                             
                             try {
-                              // Check if recipe with same name and source already exists
-                              const duplicates = checkForDuplicates(clippedRecipePreview);
-                              
-                              if (duplicates.length > 0) {
-                                const duplicateNames = duplicates.map(d => d.name).join(', ');
-                                if (confirm(`Potential duplicate detected:\n\n${duplicateNames}\n\nDo you want to save this recipe anyway?`)) {
-                                  await saveRecipeToDatabase();
-                                }
-                              } else {
-                                await saveRecipeToDatabase();
-                              }
+                              // Save recipe without duplicate check confirmation
+                              await saveRecipeToDatabase();
                             } catch (error) {
                               console.error('Error saving recipe:', error);
-                              alert('Failed to save recipe. Please try again.');
+                              console.error('Failed to save recipe. Please try again.');
                             } finally {
                               setIsSavingRecipe(false);
                             }
                           }} 
-                          className="add-btn"
+                          className={`add-btn ${isSavingRecipe ? 'saving' : ''}`}
                           disabled={isSavingRecipe}
                         >
                           {isSavingRecipe ? '🔄 Saving...' : 'Save Recipe'}
