@@ -25,7 +25,7 @@ function Recommendations({ onRecipeSelect }) {
         for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
           if (Array.isArray(tags)) {
             try {
-              const externalRecipes = await searchRecipesByTags(tags, 3);
+              const externalRecipes = await searchRecipesByTags(tags, 6);
               externalData[categoryName] = externalRecipes;
             } catch (error) {
               console.error(`Error fetching external recipes for ${categoryName}:`, error);
@@ -139,17 +139,11 @@ function Recommendations({ onRecipeSelect }) {
     }
     
     try {
-      // Search for each tag with fallback strategy
+      // Search for each tag using smart search
       const searchPromises = tags.map(async (tag) => {
         try {
-          // First try: search with the full tag
-          let results = await searchWithFallback(tag, Math.ceil(limit / tags.length));
-          
-          // If no results, try breaking down the tag
-          if (!results || results.length === 0) {
-            results = await searchWithFallbackStrategy(tag, Math.ceil(limit / tags.length));
-          }
-          
+          // Use smart search endpoint for better results
+          let results = await searchWithSmartSearch(tag, Math.ceil(limit / tags.length));
           return results || [];
         } catch (e) {
           console.error(`Error searching for tag "${tag}":`, e);
@@ -194,10 +188,10 @@ function Recommendations({ onRecipeSelect }) {
     }
   }
 
-  // Helper function to search with fallback strategy
-  async function searchWithFallback(query, limit = 1) {
+  // Helper function to search using smart search endpoint
+  async function searchWithSmartSearch(query, limit = 1) {
     try {
-      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
+      const res = await fetch(`${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
       if (res.ok) {
         const result = await res.json();
         return result.results || [];
@@ -205,73 +199,6 @@ function Recommendations({ onRecipeSelect }) {
     } catch (e) {
       console.error(`Error searching for query "${query}":`, e);
     }
-    return [];
-  }
-
-  // Fallback strategy: break down complex queries into simpler parts
-  async function searchWithFallbackStrategy(originalQuery, limit = 1) {
-    console.log(`Trying fallback strategy for: "${originalQuery}"`);
-    
-    // Strategy 1: Try with common cooking words removed
-    const cookingWords = ['with', 'and', 'or', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for'];
-    const cleanedQuery = originalQuery
-      .split(' ')
-      .filter(word => !cookingWords.includes(word.toLowerCase()) && word.length > 2)
-      .join(' ');
-    
-    if (cleanedQuery !== originalQuery) {
-      console.log(`Trying cleaned query: "${cleanedQuery}"`);
-      let results = await searchWithFallback(cleanedQuery, limit);
-      if (results && results.length > 0) {
-        return results;
-      }
-    }
-    
-    // Strategy 2: Try with phrases (groups of 2-3 words)
-    const words = originalQuery.split(' ').filter(word => word.length > 2);
-    if (words.length >= 2) {
-      // Try 3-word phrases first
-      for (let i = 0; i <= words.length - 3; i++) {
-        const phrase = words.slice(i, i + 3).join(' ');
-        console.log(`Trying 3-word phrase: "${phrase}"`);
-        let results = await searchWithFallback(phrase, limit);
-        if (results && results.length > 0) {
-          return results;
-        }
-      }
-      
-      // Try 2-word phrases
-      for (let i = 0; i <= words.length - 2; i++) {
-        const phrase = words.slice(i, i + 2).join(' ');
-        console.log(`Trying 2-word phrase: "${phrase}"`);
-        let results = await searchWithFallback(phrase, limit);
-        if (results && results.length > 0) {
-          return results;
-        }
-      }
-    }
-    
-    // Strategy 3: Try individual significant words
-    const significantWords = words.filter(word => word.length > 3);
-    for (const word of significantWords) {
-      console.log(`Trying individual word: "${word}"`);
-      let results = await searchWithFallback(word, limit);
-      if (results && results.length > 0) {
-        return results;
-      }
-    }
-    
-    // Strategy 4: Try with any remaining words
-    for (const word of words) {
-      if (word.length <= 3) continue; // Skip very short words
-      console.log(`Trying remaining word: "${word}"`);
-      let results = await searchWithFallback(word, limit);
-      if (results && results.length > 0) {
-        return results;
-      }
-    }
-    
-    console.log(`All fallback strategies failed for: "${originalQuery}"`);
     return [];
   }
 
@@ -317,13 +244,17 @@ function Recommendations({ onRecipeSelect }) {
               // Get external recipes for this category (no longer using local recipes)
               const categoryExternalRecipes = externalRecipes[categoryName] || [];
               
+              console.log(`📊 Category "${categoryName}": ${categoryExternalRecipes.length} total recipes, ${tags.length} tags`);
+              
               // Filter out duplicates across categories
               const uniqueExternalRecipes = categoryExternalRecipes.filter(external => 
                 !shownRecipeIds.has(external.id)
               );
               
-              // Take up to 3 recipes for this category
-              const sortedRecipes = uniqueExternalRecipes.slice(0, 3);
+              // Take up to 6 recipes for this category
+              const sortedRecipes = uniqueExternalRecipes.slice(0, 6);
+              
+              console.log(`🎯 Category "${categoryName}": ${uniqueExternalRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
               
               // Add selected recipes to the shown set
               sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));

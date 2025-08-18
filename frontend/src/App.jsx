@@ -75,143 +75,28 @@ function App() {
     });
   }
 
-  // Smart search function with progressive fallback
-  async function smartSearch(tag, maxRetries = 4) {
-    const searchStrategies = [
-      // Strategy 1: Original tag
-      () => searchRecipesByTag(tag),
-      // Strategy 2: Break down into words
-      () => searchRecipesByWords(tag),
-      // Strategy 3: Use first word only
-      () => searchRecipesByFirstWord(tag),
-      // Strategy 4: Try broader search terms
-      () => searchRecipesByBroaderTerms(tag),
-      // Strategy 5: Use common recipe terms
-      () => searchRecipesByCommonTerms(tag)
-    ];
-
-    for (let i = 0; i < Math.min(maxRetries, searchStrategies.length); i++) {
-      try {
-        console.log(`🔍 Trying search strategy ${i + 1} for tag "${tag}"`);
-        const results = await searchStrategies[i]();
-        if (results && results.length > 0) {
-          console.log(`✅ Strategy ${i + 1} succeeded for "${tag}": found ${results.length} recipes`);
-          return results;
-        }
-      } catch (error) {
-        console.warn(`⚠️ Strategy ${i + 1} failed for "${tag}":`, error);
+  // Smart search function using the search worker
+  async function smartSearch(tag) {
+    try {
+      console.log(`🔍 Using smart search for tag "${tag}"`);
+      const searchRes = await fetchWithTimeout(
+        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=RECIPE&limit=6`,
+        { timeout: 10000 }
+      );
+      
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        console.log(`✅ Smart search succeeded for "${tag}": found ${searchData.results.length} recipes`);
+        return searchData.results || [];
       }
+      return [];
+    } catch (error) {
+      console.warn(`⚠️ Smart search failed for "${tag}":`, error);
+      return [];
     }
-    
-    console.warn(`❌ All search strategies failed for tag "${tag}"`);
-    return [];
   }
 
-  // Search by original tag
-  async function searchRecipesByTag(tag) {
-    const searchRes = await fetchWithTimeout(
-      `${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(tag)}&type=RECIPE&limit=3`,
-      { timeout: 8000 }
-    );
-    
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      return searchData.results || [];
-    }
-    return [];
-  }
 
-  // Search by breaking down tag into individual words
-  async function searchRecipesByWords(tag) {
-    // Filter out common stop words and short words
-    const stopWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an']);
-    const words = tag.split(/\s+/)
-      .filter(word => word.length > 2 && !stopWords.has(word.toLowerCase()))
-      .slice(0, 3); // Limit to first 3 meaningful words
-    
-    if (words.length === 0) return [];
-    
-    console.log(`🔍 Breaking down "${tag}" into words: [${words.join(', ')}]`);
-    
-    const wordPromises = words.map(word => 
-      fetchWithTimeout(
-        `${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(word)}&type=RECIPE&limit=2`,
-        { timeout: 6000 }
-      ).then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          return data.results || [];
-        }
-        return [];
-      }).catch(() => [])
-    );
-    
-    const results = await Promise.allSettled(wordPromises);
-    const allResults = [];
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-        console.log(`✅ Word "${words[index]}" found ${result.value.length} recipes`);
-        allResults.push(...result.value);
-      }
-    });
-    
-    return allResults;
-  }
-
-  // Search by first word only
-  async function searchRecipesByFirstWord(tag) {
-    const firstWord = tag.split(/\s+/)[0];
-    if (firstWord.length <= 2) return [];
-    
-    return await searchRecipesByTag(firstWord);
-  }
-
-  // Search by broader, more general terms
-  async function searchRecipesByBroaderTerms(tag) {
-    const tagLower = tag.toLowerCase();
-    
-    // Define broader categories based on the tag
-    const broaderTerms = [];
-    
-    // Food type categories
-    if (tagLower.includes('chicken') || tagLower.includes('beef') || tagLower.includes('pork')) {
-      broaderTerms.push('meat', 'protein');
-    } else if (tagLower.includes('salmon') || tagLower.includes('fish') || tagLower.includes('seafood')) {
-      broaderTerms.push('fish', 'seafood');
-    } else if (tagLower.includes('vegetable') || tagLower.includes('carrot') || tagLower.includes('broccoli')) {
-      broaderTerms.push('vegetable', 'healthy');
-    } else if (tagLower.includes('pasta') || tagLower.includes('noodle') || tagLower.includes('rice')) {
-      broaderTerms.push('grain', 'carbohydrate');
-    } else if (tagLower.includes('cake') || tagLower.includes('cookie') || tagLower.includes('dessert')) {
-      broaderTerms.push('dessert', 'sweet');
-    } else if (tagLower.includes('soup') || tagLower.includes('stew') || tagLower.includes('chili')) {
-      broaderTerms.push('soup', 'comfort food');
-    }
-    
-    // If no specific broader terms found, use general ones
-    if (broaderTerms.length === 0) {
-      broaderTerms.push('main dish', 'entree');
-    }
-    
-    // Try the first broader term
-    return await searchRecipesByTag(broaderTerms[0]);
-  }
-
-  // Search by common recipe terms related to the tag
-  async function searchRecipesByCommonTerms(tag) {
-    const commonTerms = ['recipe', 'food', 'cooking', 'meal', 'dish'];
-    const tagLower = tag.toLowerCase();
-    
-    // Find related common terms
-    const relatedTerms = commonTerms.filter(term => 
-      !tagLower.includes(term) && term.length > 2
-    );
-    
-    if (relatedTerms.length === 0) return [];
-    
-    // Try the first related term
-    return await searchRecipesByTag(relatedTerms[0]);
-  }
 
   useEffect(() => {
     // Initialize with recommendations instead of fetchRecipes
@@ -718,10 +603,10 @@ function App() {
           for (const [categoryName, tags] of Object.entries(data.recommendations)) {
             if (Array.isArray(tags)) {
               console.log(`📂 Processing category "${categoryName}" with ${tags.length} tags`);
-              // Create search promises for each tag using smart search with fallback
+              // Create search promises for each tag using smart search
               for (const tag of tags) {
                 console.log(`🏷️  Processing tag: "${tag}"`);
-                const searchPromise = smartSearch(tag, 4).then(recipes => {
+                const searchPromise = smartSearch(tag).then(recipes => {
                   if (recipes && recipes.length > 0) {
                     console.log(`✅ Tag "${tag}" successfully found ${recipes.length} recipes`);
                     // Transform to frontend format and add to collection
@@ -751,7 +636,7 @@ function App() {
                     }));
                     return transformedRecipes;
                   } else {
-                    console.log(`⚠️  Tag "${tag}" found no recipes after all strategies`);
+                    console.log(`⚠️  Tag "${tag}" found no recipes`);
                     return [];
                   }
                 }).catch(error => {
