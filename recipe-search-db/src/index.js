@@ -115,10 +115,10 @@ async function getNodes(request, env, corsHeaders) {
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
   let query = `
-    SELECT n.* 
+    SELECT n.*, COALESCE(m.status, 'ACTIVE') as status
     FROM nodes n
-    JOIN metadata m ON n.id = m.node_id
-    WHERE m.status = 'ACTIVE'
+    LEFT JOIN metadata m ON n.id = m.node_id
+    WHERE COALESCE(m.status, 'ACTIVE') = 'ACTIVE'
   `;
   let params = [];
 
@@ -389,11 +389,11 @@ async function searchNodes(request, env, corsHeaders) {
   }).join(' ');
 
   let sqlQuery = `
-    SELECT n.*, m.status, m.version
+    SELECT n.*, COALESCE(m.status, 'ACTIVE') as status, COALESCE(m.version, 1) as version
     FROM nodes n
-    JOIN metadata m ON n.id = m.node_id
+    LEFT JOIN metadata m ON n.id = m.node_id
     JOIN nodes_fts fts ON n.rowid = fts.rowid
-    WHERE fts.properties MATCH ? AND m.status = 'ACTIVE'
+    WHERE fts.properties MATCH ? AND COALESCE(m.status, 'ACTIVE') = 'ACTIVE'
   `;
   
   let params = [ftsQuery];
@@ -451,11 +451,11 @@ async function searchNodesInternal(query, type, limit, env) {
   const ftsQuery = query.replace(/['"]/g, '').endsWith('*') ? query : query + '*';
   
   let sqlQuery = `
-    SELECT n.*, m.status, m.version
+    SELECT n.*, COALESCE(m.status, 'ACTIVE') as status, COALESCE(m.version, 1) as version
     FROM nodes n
-    JOIN metadata m ON n.id = m.node_id
+    LEFT JOIN metadata m ON n.id = m.node_id
     JOIN nodes_fts fts ON n.rowid = fts.rowid
-    WHERE fts.properties MATCH ? AND m.status = 'ACTIVE'
+    WHERE fts.properties MATCH ? AND COALESCE(m.status, 'ACTIVE') = 'ACTIVE'
   `;
   
   let params = [ftsQuery];
