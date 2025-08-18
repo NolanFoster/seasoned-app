@@ -6,10 +6,28 @@ import Recommendations from './components/Recommendations.jsx'
 const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper.nolanfoster.workers.dev'; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev'; // Search database worker
+const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL || 'https://recipe-save-worker.nolanfoster.workers.dev'; // Recipe save worker
 
 
 
 function App() {
+  // Debug flag - set to true to enable detailed logging
+  const DEBUG_MODE = false;
+  
+  // Helper function for debug logging
+  const debugLog = (message, data = {}) => {
+    if (DEBUG_MODE) {
+      console.log(message, data);
+    }
+  };
+  
+  // Helper function for debug logging with emojis
+  const debugLogEmoji = (emoji, message, data = {}) => {
+    if (DEBUG_MODE) {
+      console.log(`${emoji} ${message}`, data);
+    }
+  };
+  
   // Recipes are now populated by the recommendations system instead of direct API calls
   const [recipes, setRecipes] = useState([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false); // Loading state for recipes
@@ -79,7 +97,7 @@ function App() {
   // Smart search function using the search worker
   async function smartSearch(tag) {
     try {
-      console.log(`🔍 Using smart search for tag "${tag}"`);
+      debugLogEmoji('🔍', `Using smart search for tag "${tag}"`);
       const searchRes = await fetchWithTimeout(
         `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=RECIPE&limit=6`,
         { timeout: 10000 }
@@ -87,13 +105,42 @@ function App() {
       
       if (searchRes.ok) {
         const searchData = await searchRes.json();
-        console.log(`✅ Smart search succeeded for "${tag}": found ${searchData.results.length} recipes`);
+        debugLogEmoji('✅', `Smart search succeeded for "${tag}": found ${searchData.results.length} recipes`);
         return searchData.results || [];
       }
       return [];
     } catch (error) {
       console.warn(`⚠️ Smart search failed for "${tag}":`, error);
       return [];
+    }
+  }
+
+  // Function to fetch complete recipe data from KV storage
+  async function fetchCompleteRecipeData(recipeId) {
+    try {
+      debugLogEmoji('🔍', `Fetching complete recipe data for ID: ${recipeId}`);
+      const response = await fetchWithTimeout(
+        `${API_URL}/recipes?id=${recipeId}`,
+        { timeout: 15000 }
+      );
+      
+      if (response.ok) {
+        const completeRecipe = await response.json();
+        debugLogEmoji('✅', `Complete recipe data fetched for ID: ${recipeId}`, {
+          hasData: !!completeRecipe.data,
+          hasTitle: !!(completeRecipe.data?.title || completeRecipe.title),
+          hasIngredients: !!(completeRecipe.data?.ingredients || completeRecipe.ingredients),
+          hasInstructions: !!(completeRecipe.data?.instructions || completeRecipe.instructions)
+        });
+        return completeRecipe;
+      } else {
+        const errorText = await response.text();
+        console.warn(`⚠️ Failed to fetch complete recipe data for ID: ${recipeId}:`, response.status, errorText);
+        return null;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Error fetching complete recipe data for ID: ${recipeId}:`, error);
+      return null;
     }
   }
 
@@ -131,6 +178,33 @@ function App() {
     initializeRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
+
+  // Monitor changes to recipesByCategory for debugging
+  useEffect(() => {
+    debugLogEmoji('🔄', 'App: recipesByCategory state changed:', {
+      hasRecipesByCategory: Boolean(recipesByCategory),
+      size: recipesByCategory?.size || 0,
+      categories: recipesByCategory ? Array.from(recipesByCategory.keys()) : [],
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log sample recipes from each category
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      for (const [categoryName, recipes] of recipesByCategory.entries()) {
+        if (recipes.length > 0) {
+          const sampleRecipe = recipes[0];
+          debugLogEmoji('📋', `App: Sample recipe from "${categoryName}":`, {
+            id: sampleRecipe.id,
+            name: sampleRecipe.name,
+            hasIngredients: sampleRecipe.ingredients?.length > 0,
+            hasInstructions: sampleRecipe.instructions?.length > 0,
+            ingredientCount: sampleRecipe.ingredients?.length || 0,
+            instructionCount: sampleRecipe.instructions?.length || 0
+          });
+        }
+      }
+    }
+  }, [recipesByCategory]);
 
   // Clear loading state when recipes are loaded and initialization is complete
   useEffect(() => {
@@ -603,52 +677,93 @@ function App() {
           
           for (const [categoryName, tags] of Object.entries(data.recommendations)) {
             if (Array.isArray(tags)) {
-              console.log(`📂 Processing category "${categoryName}" with ${tags.length} tags`);
+              debugLogEmoji('📂', `Processing category "${categoryName}" with ${tags.length} tags`);
               // Initialize category in the map
               newRecipesByCategory.set(categoryName, []);
               
               // Create search promises for each tag using smart search
               for (const tag of tags) {
-                console.log(`🏷️  Processing tag: "${tag}"`);
-                const searchPromise = smartSearch(tag).then(recipes => {
-                  if (recipes && recipes.length > 0) {
-                    console.log(`✅ Tag "${tag}" successfully found ${recipes.length} recipes`);
-                    // Transform to frontend format and add to collection
-                    const transformedRecipes = recipes.map(recipe => ({
-                      id: recipe.id,
-                      name: recipe.name || '',
-                      description: recipe.description || '',
-                      image: recipe.image || recipe.image_url || '',
-                      image_url: recipe.image || recipe.image_url || '',
-                      ingredients: recipe.ingredients || recipe.recipeIngredient || [],
-                      instructions: recipe.instructions || recipe.recipeInstructions || [],
-                      recipeIngredient: recipe.recipeIngredient || recipe.ingredients || [],
-                      recipeInstructions: recipe.recipeInstructions || recipe.instructions || [],
-                      prep_time: recipe.prepTime || recipe.prep_time || null,
-                      cook_time: recipe.cookTime || recipe.cook_time || null,
-                      recipe_yield: recipe.recipeYield || recipe.recipe_yield || recipe.yield || null,
-                      source_url: recipe.source_url || recipe.url || '',
-                      video_url: recipe.video?.contentUrl || recipe.video_url || null,
-                      video: recipe.video || null,
-                      author: recipe.author || '',
-                      datePublished: recipe.datePublished || '',
-                      recipeCategory: recipe.recipeCategory || '',
-                      recipeCuisine: recipe.recipeCuisine || '',
-                      keywords: recipe.keywords || '',
-                      nutrition: recipe.nutrition || {},
-                      aggregateRating: recipe.aggregateRating || {}
-                    }));
-                    return { category: categoryName, recipes: transformedRecipes };
-                  } else {
-                    console.log(`⚠️  Tag "${tag}" found no recipes`);
-                    return { category: categoryName, recipes: [] };
-                  }
-                }).catch(error => {
-                  console.warn(`❌ Smart search failed for tag "${tag}":`, error);
-                  return { category: categoryName, recipes: [] }; // Return empty array for failed searches
-                });
+                debugLogEmoji('🏷️', `Processing tag: "${tag}"`);
                 
-                searchPromises.push(searchPromise);
+                // Create an async function for processing each tag
+                const processTag = async () => {
+                  try {
+                    const recipes = await smartSearch(tag);
+                    if (recipes && recipes.length > 0) {
+                      debugLogEmoji('✅', `Tag "${tag}" successfully found ${recipes.length} recipes`);
+                      
+                      // Fetch complete recipe data from KV for each recipe
+                      const completeRecipes = [];
+                      debugLogEmoji('🔄', `Fetching complete data for ${recipes.length} recipes from KV...`);
+                      for (let i = 0; i < recipes.length; i++) {
+                        const recipe = recipes[i];
+                        debugLogEmoji('📥', `[${i + 1}/${recipes.length}] Fetching recipe ${recipe.id}...`);
+                        const completeRecipe = await fetchCompleteRecipeData(recipe.id);
+                        if (completeRecipe) {
+                          completeRecipes.push(completeRecipe);
+                          debugLogEmoji('✅', `[${i + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
+                        } else {
+                          // Fallback to search result if KV fetch fails
+                          console.warn(`⚠️ [${i + 1}/${recipes.length}] KV fetch failed for recipe ${recipe.id}, using search result`);
+                          completeRecipes.push(recipe);
+                        }
+                      }
+                      debugLogEmoji('🎯', `Completed KV fetching: ${completeRecipes.length}/${recipes.length} recipes retrieved`);
+                      
+                      // Transform complete recipes to frontend format
+                      const transformedRecipes = completeRecipes.map(recipe => {
+                        // Handle both KV format and search result format
+                        const recipeData = recipe.data || recipe;
+                        const transformed = {
+                          id: recipe.id || recipeData.id,
+                          name: recipeData.name || recipeData.title || '',
+                          description: recipeData.description || '',
+                          image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+                          image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+                          ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
+                          instructions: recipeData.instructions || recipeData.recipeInstructions || [],
+                          recipeIngredient: recipeData.ingredients || recipeData.recipeIngredient || [],
+                          recipeInstructions: recipeData.instructions || recipeData.recipeInstructions || [],
+                          prep_time: recipeData.prepTime || recipeData.prep_time || null,
+                          cook_time: recipeData.cookTime || recipeData.cook_time || null,
+                          recipe_yield: recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+                          source_url: recipeData.source_url || recipeData.url || '',
+                          video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
+                          video: recipeData.video || null,
+                          author: recipeData.author || '',
+                          datePublished: recipeData.datePublished || '',
+                          recipeCategory: recipeData.recipeCategory || '',
+                          recipeCuisine: recipeData.recipeCuisine || '',
+                          keywords: recipeData.keywords || '',
+                          nutrition: recipeData.nutrition || {},
+                          aggregateRating: recipeData.aggregateRating || {}
+                        };
+                        
+                        // Debug: Log what we're actually transforming
+                        debugLogEmoji('🔍', `Transformed recipe ${transformed.id}:`, {
+                          name: transformed.name,
+                          hasIngredients: transformed.ingredients.length > 0,
+                          hasInstructions: transformed.instructions.length > 0,
+                          ingredientCount: transformed.ingredients.length,
+                          instructionCount: transformed.instructions.length
+                        });
+                        
+                        return transformed;
+                      });
+                      
+                      debugLogEmoji('🎯', `Category "${categoryName}" now has ${transformedRecipes.length} complete recipes`);
+                      return { category: categoryName, recipes: transformedRecipes };
+                    } else {
+                      debugLogEmoji('⚠️', `Tag "${tag}" found no recipes`);
+                      return { category: categoryName, recipes: [] };
+                    }
+                  } catch (error) {
+                    console.warn(`❌ Smart search failed for tag "${tag}":`, error);
+                    return { category: categoryName, recipes: [] }; // Return empty array for failed searches
+                  }
+                };
+                
+                searchPromises.push(processTag());
               }
             }
           }
@@ -670,16 +785,12 @@ function App() {
           // Log results by category and collect all unique recipes
           let totalUniqueRecipes = 0;
           const allRecipes = [];
+          const seenRecipeIds = new Set(); // Track seen recipe IDs across all categories
           
+          // First pass: collect all recipes and track seen IDs
           for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            // Remove duplicates within each category
-            const uniqueCategoryRecipes = recipes.filter((recipe, index, self) => 
-              index === self.findIndex(r => r.id === recipe.id)
-            );
-            
-            console.log(`📊 Category "${categoryName}": ${recipes.length} total recipes, ${uniqueCategoryRecipes.length} unique recipes`);
-            totalUniqueRecipes += uniqueCategoryRecipes.length;
-            allRecipes.push(...uniqueCategoryRecipes);
+            debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes`);
+            allRecipes.push(...recipes);
           }
           
           // Remove duplicates across all categories
@@ -687,9 +798,86 @@ function App() {
             index === self.findIndex(r => r.id === recipe.id)
           );
           
-          console.log(`📊 Found ${totalUniqueRecipes} total recipes and ${uniqueRecipes.length} unique recipes across all categories`);
+          debugLogEmoji('📊', `Found ${allRecipes.length} total recipes and ${uniqueRecipes.length} unique recipes across all categories`);
+          
+          // Now rebuild recipesByCategory with no duplicates across categories
+          const deduplicatedRecipesByCategory = new Map();
+          const usedRecipeIds = new Set();
+          let totalDuplicatesRemoved = 0;
+          const recipeCategoryMapping = new Map(); // Track which category each recipe ended up in
+          
+          // First pass: identify which category should "own" each recipe
+          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
+            for (const recipe of recipes) {
+              if (!recipeCategoryMapping.has(recipe.id)) {
+                recipeCategoryMapping.set(recipe.id, categoryName);
+              }
+            }
+          }
+          
+          // Second pass: build deduplicated categories based on ownership
+          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
+            const uniqueCategoryRecipes = [];
+            let categoryDuplicatesRemoved = 0;
+            
+            for (const recipe of recipes) {
+              if (recipeCategoryMapping.get(recipe.id) === categoryName) {
+                // This category owns this recipe
+                uniqueCategoryRecipes.push(recipe);
+                usedRecipeIds.add(recipe.id);
+              } else {
+                // This recipe belongs to another category
+                debugLogEmoji('🔄', `Skipping duplicate recipe ${recipe.id} in category "${categoryName}" (belongs to "${recipeCategoryMapping.get(recipe.id)}")`);
+                categoryDuplicatesRemoved++;
+                totalDuplicatesRemoved++;
+              }
+            }
+            
+            if (uniqueCategoryRecipes.length > 0) {
+              deduplicatedRecipesByCategory.set(categoryName, uniqueCategoryRecipes);
+              debugLogEmoji('📊', `Category "${categoryName}": ${uniqueCategoryRecipes.length} unique recipes after deduplication (${categoryDuplicatesRemoved} duplicates removed)`);
+            } else {
+              debugLogEmoji('⚠️', `Category "${categoryName}": No unique recipes remaining after deduplication (${categoryDuplicatesRemoved} duplicates removed)`);
+            }
+          }
+          
+          debugLogEmoji('🎯', `Deduplication complete: ${totalDuplicatesRemoved} total duplicates removed across all categories`);
+          
+          // Log recipe distribution summary
+          debugLogEmoji('📋', 'Recipe distribution summary:');
+          for (const [recipeId, categoryName] of recipeCategoryMapping.entries()) {
+            const recipe = allRecipes.find(r => r.id === recipeId);
+            if (recipe) {
+              debugLogEmoji('  -', `Recipe "${recipe.name}" (${recipeId}) → Category: "${categoryName}"`);
+            }
+          }
+          
+          // Debug: Log what's being set in recipesByCategory
+          debugLogEmoji('🔍', 'Setting recipesByCategory with:', {
+            categoryCount: deduplicatedRecipesByCategory.size,
+            categories: Array.from(deduplicatedRecipesByCategory.keys()),
+            totalRecipes: uniqueRecipes.length
+          });
+          
+          // Debug: Log a sample of recipes from each category
+          for (const [categoryName, recipes] of deduplicatedRecipesByCategory.entries()) {
+            if (recipes.length > 0) {
+              const sampleRecipe = recipes[0];
+              debugLogEmoji('📋', `Sample recipe from "${categoryName}":`, {
+                id: sampleRecipe.id,
+                name: sampleRecipe.name,
+                hasIngredients: sampleRecipe.ingredients.length > 0,
+                hasInstructions: sampleRecipe.instructions.length > 0,
+                ingredientCount: sampleRecipe.ingredients.length,
+                instructionCount: sampleRecipe.instructions.length
+              });
+            }
+          }
+          
           setRecipes(uniqueRecipes);
-          setRecipesByCategory(newRecipesByCategory); // Update the state with organized recipes
+          // Create a new Map instance to ensure React detects the state change
+          const finalRecipesByCategory = new Map(deduplicatedRecipesByCategory);
+          setRecipesByCategory(finalRecipesByCategory); // Update the state with organized recipes
           
           // If no recipes found, still clear loading state to prevent hanging
           if (uniqueRecipes.length === 0) {
@@ -770,27 +958,20 @@ function App() {
     const manualRecipeUrl = `manual://${timestamp}`;
     
     const recipe = {
-      url: manualRecipeUrl,
       title: name,
-      description,
-      imageUrl: '', // Will be updated after image upload
+      description: description || '',
       ingredients: ingredients.filter(i => i.trim()),
       instructions: instructions.filter(i => i.trim()),
-      prepTime: prepTime ? `PT${prepTime}M` : null,
-      cookTime: cookTime ? `PT${cookTime}M` : null,
-      servings: recipeYield || null,
-      // Backward compatibility fields
-      name,
-      recipeIngredient: ingredients.filter(i => i.trim()),
-      recipeInstructions: instructions.filter(i => i.trim()),
+      prepTime: prepTime || '',
+      cookTime: cookTime || '',
       recipeYield: recipeYield || null,
-      source_url: manualRecipeUrl,
-      image_url: ''
+      url: manualRecipeUrl,
+      imageUrl: ''
     };
     
     try {
       // Use the recipe-save-worker to save the recipe
-      const response = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+      const response = await fetch(`${SAVE_WORKER_URL}/recipe/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -838,16 +1019,11 @@ function App() {
         instructions: editableRecipe.recipeInstructions || editableRecipe.instructions || [],
         prepTime: editableRecipe.prepTime,
         cookTime: editableRecipe.cookTime,
-        servings: editableRecipe.recipeYield || editableRecipe.servings,
-        // Backward compatibility fields
-        name: editableRecipe.name,
-        recipeIngredient: editableRecipe.recipeIngredient || editableRecipe.ingredients || [],
-        recipeInstructions: editableRecipe.recipeInstructions || editableRecipe.instructions || [],
         recipeYield: editableRecipe.recipeYield || editableRecipe.servings
       };
       
       // Use the recipe-save-worker to update the recipe
-      const response = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
+      const response = await fetch(`${SAVE_WORKER_URL}/recipe/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -888,7 +1064,7 @@ function App() {
     if (!confirm('Are you sure you want to delete this recipe?')) return;
     try {
       // Use the recipe-save-worker to delete the recipe
-      const response = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+      const response = await fetch(`${SAVE_WORKER_URL}/recipe/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -1077,59 +1253,54 @@ function App() {
         return;
       }
       
-      // For clipped recipes, we need to use the scrape endpoint with the source URL
-      // This will save the recipe to KV storage
+      // For clipped recipes, we need to use the recipe-save-worker instead of the scraper
+      // This will save the recipe to the proper database
       const sourceUrl = clippedRecipePreview.source_url;
       if (!sourceUrl) {
         throw new Error('No source URL found for clipped recipe. Please try clipping the recipe again.');
       }
       
-      // First check if the recipe already exists by trying to get it from the clipper
-      try {
-        const checkRes = await fetch(`${CLIPPER_API_URL}/cached?url=${encodeURIComponent(sourceUrl)}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-        });
-        
-        if (checkRes.ok) {
-          // Recipe already exists in KV store - just proceed silently
+      // Prepare the recipe data for the save worker
+      const recipeData = {
+        title: clippedRecipePreview.name,
+        description: clippedRecipePreview.description || '',
+        ingredients: clippedRecipePreview.ingredients || clippedRecipePreview.recipeIngredient || [],
+        instructions: clippedRecipePreview.instructions || (clippedRecipePreview.recipeInstructions || []).map(inst =>
+          typeof inst === 'string' ? inst : inst.text || ''
+        ),
+        prepTime: clippedRecipePreview.prepTime || clippedRecipePreview.prep_time || '',
+        cookTime: clippedRecipePreview.cookTime || clippedRecipePreview.cook_time || '',
+        recipeYield: clippedRecipePreview.recipeYield || clippedRecipePreview.recipe_yield || clippedRecipePreview.yield || '',
+        url: sourceUrl,
+        imageUrl: clippedRecipePreview.image_url || clippedRecipePreview.image || ''
+      };
+      
+      // Use the recipe-save-worker to save the clipped recipe
+      const res = await fetch(`${SAVE_WORKER_URL}/recipe/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe: recipeData })
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) {
           setIsLoadingRecipes(true); // Show loading state
           await getRecipesFromRecommendations(); // Refresh the recipe list
           setClippedRecipePreview(null);
           setClipError('');
           setIsEditingPreview(false);
           setEditablePreview(null);
-          return;
+          alert('Recipe saved successfully to database!');
+        } else {
+          throw new Error(result.error || 'Failed to save recipe');
         }
-      } catch (checkError) {
-        console.log('Error checking existing recipe, proceeding with save:', checkError);
-      }
-      
-      const res = await fetch(`${API_URL}/scrape?url=${encodeURIComponent(sourceUrl)}&save=true`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          urls: [sourceUrl],
-          save: true,
-          avoidOverwrite: false
-        }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        setIsLoadingRecipes(true); // Show loading state
-        await getRecipesFromRecommendations(); // Refresh the recipe list
-        setClippedRecipePreview(null);
-        setClipError('');
-        setIsEditingPreview(false);
-        setEditablePreview(null);
-        alert('Recipe saved successfully to KV storage!');
       } else {
         const errorText = await res.text();
-        console.error('Failed to save recipe to KV:', res.status, errorText);
+        console.error('Failed to save recipe to database:', res.status, errorText);
         
         // Handle duplicate errors from backend
-        if (errorText.includes('already exists')) {
+        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
           // Recipe already exists - just proceed silently
           setIsLoadingRecipes(true); // Show loading state
           await getRecipesFromRecommendations(); // Refresh the recipe list
@@ -1143,7 +1314,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error saving recipe:', error);
-      if (error.message.includes('already exists')) {
+      if (error.message.includes('already exists') || error.message.includes('duplicate')) {
         // Recipe already exists - just proceed silently
         setIsLoadingRecipes(true); // Show loading state
         await getRecipesFromRecommendations(); // Refresh the recipe list
@@ -1229,13 +1400,13 @@ function App() {
     // Check cache first for instant results
     const cachedResults = getFromSearchCache(query);
     if (cachedResults) {
-      console.log(`🚀 Cache hit! Using cached search results for: "${query}" (${cachedResults.length} results)`);
+      debugLogEmoji('🚀', `Cache hit! Using cached search results for: "${query}" (${cachedResults.length} results)`);
       setSearchResults(cachedResults);
       setShowSearchResults(true);
       return;
     }
     
-    console.log(`🔍 Cache miss! Fetching fresh search results for: "${query}"`);
+    debugLogEmoji('🔍', `Cache miss! Fetching fresh search results for: "${query}"`);
     
     setIsSearching(true);
     setShowSearchResults(true);
@@ -1245,30 +1416,50 @@ function App() {
       
       if (res.ok) {
         const result = await res.json();
-        // Transform search results to match the frontend format
-        const transformedResults = result.results.map(node => {
-          const properties = node.properties;
+        
+        // Fetch complete recipe data from KV for each search result
+        const completeResults = [];
+        debugLogEmoji('🔄', `Fetching complete data for ${result.results.length} search results from KV...`);
+        for (let i = 0; i < result.results.length; i++) {
+          const node = result.results[i];
+          debugLogEmoji('📥', `[${i + 1}/${result.results.length}] Fetching recipe ${node.id}...`);
+          const completeRecipe = await fetchCompleteRecipeData(node.id);
+          if (completeRecipe) {
+            completeResults.push(completeRecipe);
+            debugLogEmoji('✅', `[${i + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
+          } else {
+            // Fallback to search result if KV fetch fails
+            console.warn(`⚠️ [${i + 1}/${result.results.length}] KV fetch failed for recipe ${node.id}, using search result`);
+            completeResults.push({ id: node.id, data: node.properties });
+          }
+        }
+        debugLogEmoji('🎯', `Completed KV fetching: ${completeResults.length}/${result.results.length} recipes retrieved`);
+        
+        // Transform complete recipes to match the frontend format
+        const transformedResults = completeResults.map(recipe => {
+          // Handle both KV format and search result format
+          const recipeData = recipe.data || recipe;
           return {
-            id: node.id,
-            name: properties.title || properties.name || 'Untitled Recipe',
-            description: properties.description || '',
-            image: properties.image || properties.image_url || '',
-            image_url: properties.image || properties.image_url || '',
-            prep_time: properties.prepTime || properties.prep_time || null,
-            cook_time: properties.cookTime || properties.cook_time || null,
-            recipe_yield: properties.servings || properties.recipeYield || properties.recipe_yield || null,
-            source_url: properties.url || properties.source_url || '',
+            id: recipe.id || recipeData.id,
+            name: recipeData.name || recipeData.title || 'Untitled Recipe',
+            description: recipeData.description || '',
+            image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+            image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+            prep_time: recipeData.prepTime || recipeData.prep_time || null,
+            cook_time: recipeData.cookTime || recipeData.cook_time || null,
+            recipe_yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || null,
+            source_url: recipeData.url || recipeData.source_url || '',
             // Include full recipe data for when user selects a result
-            ingredients: properties.ingredients || [],
-            instructions: properties.instructions || [],
-            recipeIngredient: properties.ingredients || [],
-            recipeInstructions: properties.instructions || []
+            ingredients: recipeData.ingredients || [],
+            instructions: recipeData.instructions || [],
+            recipeIngredient: recipeData.ingredients || [],
+            recipeInstructions: recipeData.instructions || []
           };
         });
         
         // Cache the results for future use
         addToSearchCache(query, transformedResults);
-        console.log(`💾 Cached search results for: "${query}" (${transformedResults.length} results)`);
+        debugLogEmoji('💾', `Cached search results for: "${query}" (${transformedResults.length} results)`);
         setSearchResults(transformedResults);
       } else {
         console.error('Search failed:', res.status);
