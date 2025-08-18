@@ -201,6 +201,39 @@ describe('Recipe Recommendations Feature', () => {
             season: 'Summer'
           })
         });
+      } else if (url.includes('/search')) {
+        // Mock search endpoint for external recipe fetching
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            results: [
+              {
+                id: '1',
+                name: 'Summer Berry Salad',
+                description: 'Fresh berries with mint',
+                image: 'berry-salad.jpg',
+                recipeCategory: ['Salad', 'Summer'],
+                recipeCuisine: 'American',
+                keywords: 'fresh, berries, salad',
+                prep_time: 'PT10M',
+                cook_time: null,
+                recipe_yield: '4 servings'
+              },
+              {
+                id: '2',
+                name: 'Grilled Vegetables',
+                description: 'Seasonal grilled vegetables',
+                image: 'grilled-veg.jpg',
+                recipeCategory: 'Side Dish',
+                recipeCuisine: ['Mediterranean', 'Healthy'],
+                keywords: 'grilled, vegetables, summer',
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '6 servings'
+              }
+            ]
+          })
+        });
       } else if (url.includes('/health')) {
         return Promise.resolve({
           ok: true,
