@@ -994,6 +994,7 @@ function App() {
         // Refresh the recipe list
         setIsLoadingRecipes(true); // Show loading state
         await getRecipesFromRecommendations();
+        clearSearchCache(); // Clear search cache to include the new recipe
         resetForm();
         
         // Show success message
@@ -1044,6 +1045,7 @@ function App() {
         // Refresh the recipe list
         setIsLoadingRecipes(true); // Show loading state
         await getRecipesFromRecommendations();
+        clearSearchCache(); // Clear search cache to include the updated recipe
         resetForm();
         setEditingRecipe(null);
         setEditableRecipe(null);
@@ -1081,6 +1083,7 @@ function App() {
       if (result.success) {
         setIsLoadingRecipes(true); // Show loading state
         await getRecipesFromRecommendations();
+        clearSearchCache(); // Clear search cache to remove the deleted recipe
         // Close any open modals/panels if this was the selected recipe
         if (selectedRecipe && selectedRecipe.id === id) {
           setSelectedRecipe(null);
@@ -1287,6 +1290,7 @@ function App() {
         if (result.success) {
           setIsLoadingRecipes(true); // Show loading state
           await getRecipesFromRecommendations(); // Refresh the recipe list
+          clearSearchCache(); // Clear search cache to include the new recipe
           setClippedRecipePreview(null);
           setClipError('');
           setIsEditingPreview(false);
@@ -1304,6 +1308,7 @@ function App() {
           // Recipe already exists - just proceed silently
           setIsLoadingRecipes(true); // Show loading state
           await getRecipesFromRecommendations(); // Refresh the recipe list
+          clearSearchCache(); // Clear search cache to include the existing recipe
           setClippedRecipePreview(null);
           setClipError('');
           setIsEditingPreview(false);
@@ -1318,6 +1323,7 @@ function App() {
         // Recipe already exists - just proceed silently
         setIsLoadingRecipes(true); // Show loading state
         await getRecipesFromRecommendations(); // Refresh the recipe list
+        clearSearchCache(); // Clear search cache to include the existing recipe
         setClippedRecipePreview(null);
         setClipError('');
         setIsEditingPreview(false);
