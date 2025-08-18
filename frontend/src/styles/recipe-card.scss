@@ -22,7 +22,17 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   gap: $spacing-md !important;
-  padding-bottom: 10px !important;
+  padding: 20px 10px 20px 10px !important; /* Increased padding for larger touch area */
+  
+  /* Enhanced touch responsiveness */
+  touch-action: pan-x !important; /* Only allow horizontal panning */
+  user-select: none !important; /* Prevent text selection during swipe */
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  
+  /* Larger touch target area */
+  margin: -10px 0 !important; /* Expand touch area vertically */
   
   &::-webkit-scrollbar {
     display: none !important;
@@ -34,6 +44,14 @@
     max-width: 280px !important;
     scroll-snap-align: start !important;
     margin-right: $spacing-md !important;
+    
+    /* Enhanced touch feedback */
+    touch-action: pan-x !important;
+    transition: transform 0.2s ease !important;
+    
+    &:active {
+      transform: scale(0.98) !important; /* Subtle feedback on touch */
+    }
     
     &:last-child {
       margin-right: $spacing-lg !important;
