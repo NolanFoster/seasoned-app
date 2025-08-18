@@ -1,0 +1,26 @@
+# Curated recipe URLs for staging database population
+# These URLs are known to have good recipe data
+
+# AllRecipes - Popular recipes
+https://www.allrecipes.com/recipe/24074/alysias-basic-meat-lasagna/
+https://www.allrecipes.com/recipe/237983/easy-tamale-casserole/
+https://www.allrecipes.com/recipe/23600/worlds-best-lasagna/
+https://www.allrecipes.com/recipe/16383/easy-meatloaf/
+https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/
+
+# Food Network - Quality recipes
+https://www.foodnetwork.com/recipes/food-network-kitchen/pancakes-recipe-1913844
+https://www.foodnetwork.com/recipes/tyler-florence/grilled-cheese-sandwich-recipe-1914057
+https://www.foodnetwork.com/recipes/ree-drummond/perfect-pot-roast-recipe-2107099
+
+# Epicurious - Gourmet recipes
+https://www.epicurious.com/recipes/food/views/classic-chicken-soup-51259710
+https://www.epicurious.com/recipes/food/views/perfect-chocolate-chip-cookies-51259540
+
+# Bon Appétit - Modern recipes
+https://www.bonappetit.com/recipe/bas-best-chocolate-chip-cookies
+https://www.bonappetit.com/recipe/classic-macaroni-and-cheese
+
+# Serious Eats - Technique-focused recipes
+https://www.seriouseats.com/the-food-lab-complete-guide-to-pan-seared-steaks
+https://www.seriouseats.com/the-food-lab-complete-guide-to-making-chocolate-chip-cookies

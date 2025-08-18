@@ -32,9 +32,9 @@ id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images-staging"
 
-# [[env.staging.durable_objects.bindings]]
-# name = "RECIPE_SAVER"
-# class_name = "RecipeSaver"
+[[env.staging.durable_objects.bindings]]
+name = "RECIPE_SAVER"
+class_name = "RecipeSaver"
 
 # Production environment
 [env.production]
