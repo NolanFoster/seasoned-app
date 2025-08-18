@@ -51,10 +51,16 @@ jobs:
     - name: Run Worker Tests with Coverage
       working-directory: ./clipper
       run: |
+        # Debug: Show test files
+        echo "📋 Test files in directory:"
+        ls -la tests/
+        
         # Run tests with coverage collection
         if npm run | grep -q "test:coverage"; then
+          echo "🔍 Running npm run test:coverage"
           npm run test:coverage
         elif npm run | grep -q "test"; then
+          echo "🔍 Running npm test"
           npm test
         else
           echo "No test script found in package.json"
