@@ -1,0 +1,1426 @@
+{
+  "metadata": {
+    "scraper_url": "https://recipe-scraper.nolanfoster.workers.dev",
+    "exported_at": "2025-08-17 14:54:53",
+    "total_records": 52
+  },
+  "statistics": {
+    "total_attempted": 52,
+    "successful": 52,
+    "failed": 0,
+    "skipped": 0,
+    "success_rate": 100.0,
+    "attempted_urls": [
+      {
+        "url": "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+        "timestamp": 1755467480.8080032,
+        "datetime": "2025-08-17 14:51:20",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/artichokegoatbruschetta.htm",
+        "timestamp": 1755467485.251302,
+        "datetime": "2025-08-17 14:51:25",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/arrabbiata-sauce-recipe/",
+        "timestamp": 1755467489.403553,
+        "datetime": "2025-08-17 14:51:29",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/fruit/apple-crisp.htm",
+        "timestamp": 1755467493.203205,
+        "datetime": "2025-08-17 14:51:33",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash.htm",
+        "timestamp": 1755467496.794558,
+        "datetime": "2025-08-17 14:51:36",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/bakedacorn.htm",
+        "timestamp": 1755467500.616077,
+        "datetime": "2025-08-17 14:51:40",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/andrabarbeans.htm",
+        "timestamp": 1755467504.749172,
+        "datetime": "2025-08-17 14:51:44",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+        "timestamp": 1755467509.11437,
+        "datetime": "2025-08-17 14:51:49",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Appetizers/Hummus.htm",
+        "timestamp": 1755467513.734106,
+        "datetime": "2025-08-17 14:51:53",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/cookie/ambrosiamacaroons.htm",
+        "timestamp": 1755467517.8771358,
+        "datetime": "2025-08-17 14:51:57",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/pork/balsamicporkroast.htm",
+        "timestamp": 1755467522.1112251,
+        "datetime": "2025-08-17 14:52:02",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/soup/15-beani-soup.htm",
+        "timestamp": 1755467525.71872,
+        "datetime": "2025-08-17 14:52:05",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+        "timestamp": 1755467530.502409,
+        "datetime": "2025-08-17 14:52:10",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salad/applesauce7up-jellosalad.htm",
+        "timestamp": 1755467534.3066099,
+        "datetime": "2025-08-17 14:52:14",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/charlottebradley/quinoa.htm",
+        "timestamp": 1755467538.670353,
+        "datetime": "2025-08-17 14:52:18",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/downton-abbey-cookbook-preview.htm",
+        "timestamp": 1755467542.87282,
+        "datetime": "2025-08-17 14:52:22",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/sandwich/americanhamburger.htm",
+        "timestamp": 1755467546.91051,
+        "datetime": "2025-08-17 14:52:26",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/candy/applecandy.htm",
+        "timestamp": 1755467550.651604,
+        "datetime": "2025-08-17 14:52:30",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/artichokecrab.htm",
+        "timestamp": 1755467554.56302,
+        "datetime": "2025-08-17 14:52:34",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/lowfatsalmon.htm",
+        "timestamp": 1755467558.890968,
+        "datetime": "2025-08-17 14:52:38",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/sauces_condiments/homemadechickenstock.htm",
+        "timestamp": 1755467563.111081,
+        "datetime": "2025-08-17 14:52:43",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/KarenCalanchini/CrabCakes-TomatoCornSalad.htm",
+        "timestamp": 1755467567.307243,
+        "datetime": "2025-08-17 14:52:47",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/soup/cornvelvetsoup.htm",
+        "timestamp": 1755467571.199393,
+        "datetime": "2025-08-17 14:52:51",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm",
+        "timestamp": 1755467575.4146829,
+        "datetime": "2025-08-17 14:52:55",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/20-layercrepecake.htm",
+        "timestamp": 1755467579.61166,
+        "datetime": "2025-08-17 14:52:59",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/angelsonhorseback.htm",
+        "timestamp": 1755467583.550314,
+        "datetime": "2025-08-17 14:53:03",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmonrosemary.htm",
+        "timestamp": 1755467587.314382,
+        "datetime": "2025-08-17 14:53:07",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/KarenCalanchini/MediterraneanStuffedShellsi.htm",
+        "timestamp": 1755467592.208643,
+        "datetime": "2025-08-17 14:53:12",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmonbarbecue.htm",
+        "timestamp": 1755467595.509714,
+        "datetime": "2025-08-17 14:53:15",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/chickpeaspread.htm",
+        "timestamp": 1755467599.3735769,
+        "datetime": "2025-08-17 14:53:19",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/bread/banana.htm",
+        "timestamp": 1755467603.160398,
+        "datetime": "2025-08-17 14:53:23",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Vegetables/TomatoesDrying.htm",
+        "timestamp": 1755467608.1495628,
+        "datetime": "2025-08-17 14:53:28",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmondill.htm",
+        "timestamp": 1755467612.1883311,
+        "datetime": "2025-08-17 14:53:32",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/bakedrainbowtrout.htm",
+        "timestamp": 1755467616.314686,
+        "datetime": "2025-08-17 14:53:36",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/seafood/grilled-trout.htm",
+        "timestamp": 1755467620.398828,
+        "datetime": "2025-08-17 14:53:40",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Poultry/BalsamicDijonChicken.htm",
+        "timestamp": 1755467625.619414,
+        "datetime": "2025-08-17 14:53:45",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash-cinnamon.htm",
+        "timestamp": 1755467629.6387699,
+        "datetime": "2025-08-17 14:53:49",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/bksalpiccata.htm",
+        "timestamp": 1755467633.399102,
+        "datetime": "2025-08-17 14:53:53",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/stuffedacorn.htm",
+        "timestamp": 1755467638.07792,
+        "datetime": "2025-08-17 14:53:58",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmonmayonnaise.htm",
+        "timestamp": 1755467642.22614,
+        "datetime": "2025-08-17 14:54:02",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/soup/chasenchili.htm",
+        "timestamp": 1755467646.133548,
+        "datetime": "2025-08-17 14:54:06",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/artichokebenedict.htm",
+        "timestamp": 1755467650.007694,
+        "datetime": "2025-08-17 14:54:10",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/seafood/bakeddeviledcrab.htm",
+        "timestamp": 1755467654.016362,
+        "datetime": "2025-08-17 14:54:14",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/hummus.htm",
+        "timestamp": 1755467657.858834,
+        "datetime": "2025-08-17 14:54:17",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/history/akutaq_eskimoicecream.htm",
+        "timestamp": 1755467661.9185028,
+        "datetime": "2025-08-17 14:54:21",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Salad/FreshFruitSalad.htm",
+        "timestamp": 1755467666.572649,
+        "datetime": "2025-08-17 14:54:26",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salad/123fruitdressing.htm",
+        "timestamp": 1755467670.658102,
+        "datetime": "2025-08-17 14:54:30",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/PanFriedTrout.htm",
+        "timestamp": 1755467678.714381,
+        "datetime": "2025-08-17 14:54:38",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/almondhoneypoundcake.htm",
+        "timestamp": 1755467682.624707,
+        "datetime": "2025-08-17 14:54:42",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/cynthiapineda/beans/pintobeans.htm",
+        "timestamp": 1755467686.372836,
+        "datetime": "2025-08-17 14:54:46",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/sauces_condiments/aiolifusio-mayonnaisesauce.htm",
+        "timestamp": 1755467689.605174,
+        "datetime": "2025-08-17 14:54:49",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/chociceboxcake.htm",
+        "timestamp": 1755467693.482795,
+        "datetime": "2025-08-17 14:54:53",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      }
+    ],
+    "successful_urls": [
+      {
+        "url": "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+        "timestamp": 1755467480.8080032,
+        "datetime": "2025-08-17 14:51:20",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/artichokegoatbruschetta.htm",
+        "timestamp": 1755467485.251302,
+        "datetime": "2025-08-17 14:51:25",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/arrabbiata-sauce-recipe/",
+        "timestamp": 1755467489.403553,
+        "datetime": "2025-08-17 14:51:29",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/fruit/apple-crisp.htm",
+        "timestamp": 1755467493.203205,
+        "datetime": "2025-08-17 14:51:33",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash.htm",
+        "timestamp": 1755467496.794558,
+        "datetime": "2025-08-17 14:51:36",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/bakedacorn.htm",
+        "timestamp": 1755467500.616077,
+        "datetime": "2025-08-17 14:51:40",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/andrabarbeans.htm",
+        "timestamp": 1755467504.749172,
+        "datetime": "2025-08-17 14:51:44",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+        "timestamp": 1755467509.11437,
+        "datetime": "2025-08-17 14:51:49",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Appetizers/Hummus.htm",
+        "timestamp": 1755467513.734106,
+        "datetime": "2025-08-17 14:51:53",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/cookie/ambrosiamacaroons.htm",
+        "timestamp": 1755467517.8771358,
+        "datetime": "2025-08-17 14:51:57",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/pork/balsamicporkroast.htm",
+        "timestamp": 1755467522.1112251,
+        "datetime": "2025-08-17 14:52:02",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/soup/15-beani-soup.htm",
+        "timestamp": 1755467525.71872,
+        "datetime": "2025-08-17 14:52:05",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+        "timestamp": 1755467530.502409,
+        "datetime": "2025-08-17 14:52:10",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salad/applesauce7up-jellosalad.htm",
+        "timestamp": 1755467534.3066099,
+        "datetime": "2025-08-17 14:52:14",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/charlottebradley/quinoa.htm",
+        "timestamp": 1755467538.670353,
+        "datetime": "2025-08-17 14:52:18",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/downton-abbey-cookbook-preview.htm",
+        "timestamp": 1755467542.87282,
+        "datetime": "2025-08-17 14:52:22",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/sandwich/americanhamburger.htm",
+        "timestamp": 1755467546.91051,
+        "datetime": "2025-08-17 14:52:26",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/candy/applecandy.htm",
+        "timestamp": 1755467550.651604,
+        "datetime": "2025-08-17 14:52:30",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/artichokecrab.htm",
+        "timestamp": 1755467554.56302,
+        "datetime": "2025-08-17 14:52:34",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/lowfatsalmon.htm",
+        "timestamp": 1755467558.890968,
+        "datetime": "2025-08-17 14:52:38",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/sauces_condiments/homemadechickenstock.htm",
+        "timestamp": 1755467563.111081,
+        "datetime": "2025-08-17 14:52:43",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/KarenCalanchini/CrabCakes-TomatoCornSalad.htm",
+        "timestamp": 1755467567.307243,
+        "datetime": "2025-08-17 14:52:47",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/soup/cornvelvetsoup.htm",
+        "timestamp": 1755467571.199393,
+        "datetime": "2025-08-17 14:52:51",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm",
+        "timestamp": 1755467575.4146829,
+        "datetime": "2025-08-17 14:52:55",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/20-layercrepecake.htm",
+        "timestamp": 1755467579.61166,
+        "datetime": "2025-08-17 14:52:59",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/angelsonhorseback.htm",
+        "timestamp": 1755467583.550314,
+        "datetime": "2025-08-17 14:53:03",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmonrosemary.htm",
+        "timestamp": 1755467587.314382,
+        "datetime": "2025-08-17 14:53:07",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/KarenCalanchini/MediterraneanStuffedShellsi.htm",
+        "timestamp": 1755467592.208643,
+        "datetime": "2025-08-17 14:53:12",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmonbarbecue.htm",
+        "timestamp": 1755467595.509714,
+        "datetime": "2025-08-17 14:53:15",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/chickpeaspread.htm",
+        "timestamp": 1755467599.3735769,
+        "datetime": "2025-08-17 14:53:19",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/bread/banana.htm",
+        "timestamp": 1755467603.160398,
+        "datetime": "2025-08-17 14:53:23",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Vegetables/TomatoesDrying.htm",
+        "timestamp": 1755467608.1495628,
+        "datetime": "2025-08-17 14:53:28",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmondill.htm",
+        "timestamp": 1755467612.1883311,
+        "datetime": "2025-08-17 14:53:32",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/bakedrainbowtrout.htm",
+        "timestamp": 1755467616.314686,
+        "datetime": "2025-08-17 14:53:36",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/seafood/grilled-trout.htm",
+        "timestamp": 1755467620.398828,
+        "datetime": "2025-08-17 14:53:40",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Poultry/BalsamicDijonChicken.htm",
+        "timestamp": 1755467625.619414,
+        "datetime": "2025-08-17 14:53:45",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash-cinnamon.htm",
+        "timestamp": 1755467629.6387699,
+        "datetime": "2025-08-17 14:53:49",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/bksalpiccata.htm",
+        "timestamp": 1755467633.399102,
+        "datetime": "2025-08-17 14:53:53",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/vegetables/stuffedacorn.htm",
+        "timestamp": 1755467638.07792,
+        "datetime": "2025-08-17 14:53:58",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salmonmayonnaise.htm",
+        "timestamp": 1755467642.22614,
+        "datetime": "2025-08-17 14:54:02",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/soup/chasenchili.htm",
+        "timestamp": 1755467646.133548,
+        "datetime": "2025-08-17 14:54:06",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/artichokebenedict.htm",
+        "timestamp": 1755467650.007694,
+        "datetime": "2025-08-17 14:54:10",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/seafood/bakeddeviledcrab.htm",
+        "timestamp": 1755467654.016362,
+        "datetime": "2025-08-17 14:54:14",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/appetizers/hummus.htm",
+        "timestamp": 1755467657.858834,
+        "datetime": "2025-08-17 14:54:17",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/history/akutaq_eskimoicecream.htm",
+        "timestamp": 1755467661.9185028,
+        "datetime": "2025-08-17 14:54:21",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/Salad/FreshFruitSalad.htm",
+        "timestamp": 1755467666.572649,
+        "datetime": "2025-08-17 14:54:26",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/salad/123fruitdressing.htm",
+        "timestamp": 1755467670.658102,
+        "datetime": "2025-08-17 14:54:30",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/PanFriedTrout.htm",
+        "timestamp": 1755467678.714381,
+        "datetime": "2025-08-17 14:54:38",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/almondhoneypoundcake.htm",
+        "timestamp": 1755467682.624707,
+        "datetime": "2025-08-17 14:54:42",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/cynthiapineda/beans/pintobeans.htm",
+        "timestamp": 1755467686.372836,
+        "datetime": "2025-08-17 14:54:46",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/sauces_condiments/aiolifusio-mayonnaisesauce.htm",
+        "timestamp": 1755467689.605174,
+        "datetime": "2025-08-17 14:54:49",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      },
+      {
+        "url": "https://whatscookingamerica.net/elleneaston/chociceboxcake.htm",
+        "timestamp": 1755467693.482795,
+        "datetime": "2025-08-17 14:54:53",
+        "success": true,
+        "error": null,
+        "already_exists": false,
+        "skipped": false
+      }
+    ],
+    "failed_urls": [],
+    "skipped_urls": []
+  },
+  "detailed_records": [
+    {
+      "url": "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+      "timestamp": 1755467480.8080032,
+      "datetime": "2025-08-17 14:51:20",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/appetizers/artichokegoatbruschetta.htm",
+      "timestamp": 1755467485.251302,
+      "datetime": "2025-08-17 14:51:25",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/arrabbiata-sauce-recipe/",
+      "timestamp": 1755467489.403553,
+      "datetime": "2025-08-17 14:51:29",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/fruit/apple-crisp.htm",
+      "timestamp": 1755467493.203205,
+      "datetime": "2025-08-17 14:51:33",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash.htm",
+      "timestamp": 1755467496.794558,
+      "datetime": "2025-08-17 14:51:36",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/vegetables/bakedacorn.htm",
+      "timestamp": 1755467500.616077,
+      "datetime": "2025-08-17 14:51:40",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/vegetables/andrabarbeans.htm",
+      "timestamp": 1755467504.749172,
+      "datetime": "2025-08-17 14:51:44",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+      "timestamp": 1755467509.11437,
+      "datetime": "2025-08-17 14:51:49",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/Appetizers/Hummus.htm",
+      "timestamp": 1755467513.734106,
+      "datetime": "2025-08-17 14:51:53",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/cookie/ambrosiamacaroons.htm",
+      "timestamp": 1755467517.8771358,
+      "datetime": "2025-08-17 14:51:57",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/pork/balsamicporkroast.htm",
+      "timestamp": 1755467522.1112251,
+      "datetime": "2025-08-17 14:52:02",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/soup/15-beani-soup.htm",
+      "timestamp": 1755467525.71872,
+      "datetime": "2025-08-17 14:52:05",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+      "timestamp": 1755467530.502409,
+      "datetime": "2025-08-17 14:52:10",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/salad/applesauce7up-jellosalad.htm",
+      "timestamp": 1755467534.3066099,
+      "datetime": "2025-08-17 14:52:14",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/charlottebradley/quinoa.htm",
+      "timestamp": 1755467538.670353,
+      "datetime": "2025-08-17 14:52:18",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/elleneaston/downton-abbey-cookbook-preview.htm",
+      "timestamp": 1755467542.87282,
+      "datetime": "2025-08-17 14:52:22",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/sandwich/americanhamburger.htm",
+      "timestamp": 1755467546.91051,
+      "datetime": "2025-08-17 14:52:26",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/candy/applecandy.htm",
+      "timestamp": 1755467550.651604,
+      "datetime": "2025-08-17 14:52:30",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/vegetables/artichokecrab.htm",
+      "timestamp": 1755467554.56302,
+      "datetime": "2025-08-17 14:52:34",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/lowfatsalmon.htm",
+      "timestamp": 1755467558.890968,
+      "datetime": "2025-08-17 14:52:38",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/sauces_condiments/homemadechickenstock.htm",
+      "timestamp": 1755467563.111081,
+      "datetime": "2025-08-17 14:52:43",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/KarenCalanchini/CrabCakes-TomatoCornSalad.htm",
+      "timestamp": 1755467567.307243,
+      "datetime": "2025-08-17 14:52:47",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/soup/cornvelvetsoup.htm",
+      "timestamp": 1755467571.199393,
+      "datetime": "2025-08-17 14:52:51",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm",
+      "timestamp": 1755467575.4146829,
+      "datetime": "2025-08-17 14:52:55",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/elleneaston/20-layercrepecake.htm",
+      "timestamp": 1755467579.61166,
+      "datetime": "2025-08-17 14:52:59",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/appetizers/angelsonhorseback.htm",
+      "timestamp": 1755467583.550314,
+      "datetime": "2025-08-17 14:53:03",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/salmonrosemary.htm",
+      "timestamp": 1755467587.314382,
+      "datetime": "2025-08-17 14:53:07",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/KarenCalanchini/MediterraneanStuffedShellsi.htm",
+      "timestamp": 1755467592.208643,
+      "datetime": "2025-08-17 14:53:12",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/salmonbarbecue.htm",
+      "timestamp": 1755467595.509714,
+      "datetime": "2025-08-17 14:53:15",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/appetizers/chickpeaspread.htm",
+      "timestamp": 1755467599.3735769,
+      "datetime": "2025-08-17 14:53:19",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/bread/banana.htm",
+      "timestamp": 1755467603.160398,
+      "datetime": "2025-08-17 14:53:23",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/Vegetables/TomatoesDrying.htm",
+      "timestamp": 1755467608.1495628,
+      "datetime": "2025-08-17 14:53:28",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/salmondill.htm",
+      "timestamp": 1755467612.1883311,
+      "datetime": "2025-08-17 14:53:32",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/bakedrainbowtrout.htm",
+      "timestamp": 1755467616.314686,
+      "datetime": "2025-08-17 14:53:36",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/seafood/grilled-trout.htm",
+      "timestamp": 1755467620.398828,
+      "datetime": "2025-08-17 14:53:40",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/Poultry/BalsamicDijonChicken.htm",
+      "timestamp": 1755467625.619414,
+      "datetime": "2025-08-17 14:53:45",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash-cinnamon.htm",
+      "timestamp": 1755467629.6387699,
+      "datetime": "2025-08-17 14:53:49",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/bksalpiccata.htm",
+      "timestamp": 1755467633.399102,
+      "datetime": "2025-08-17 14:53:53",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/vegetables/stuffedacorn.htm",
+      "timestamp": 1755467638.07792,
+      "datetime": "2025-08-17 14:53:58",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/salmonmayonnaise.htm",
+      "timestamp": 1755467642.22614,
+      "datetime": "2025-08-17 14:54:02",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/soup/chasenchili.htm",
+      "timestamp": 1755467646.133548,
+      "datetime": "2025-08-17 14:54:06",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/appetizers/artichokebenedict.htm",
+      "timestamp": 1755467650.007694,
+      "datetime": "2025-08-17 14:54:10",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/seafood/bakeddeviledcrab.htm",
+      "timestamp": 1755467654.016362,
+      "datetime": "2025-08-17 14:54:14",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/appetizers/hummus.htm",
+      "timestamp": 1755467657.858834,
+      "datetime": "2025-08-17 14:54:17",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/history/akutaq_eskimoicecream.htm",
+      "timestamp": 1755467661.9185028,
+      "datetime": "2025-08-17 14:54:21",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/Salad/FreshFruitSalad.htm",
+      "timestamp": 1755467666.572649,
+      "datetime": "2025-08-17 14:54:26",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/salad/123fruitdressing.htm",
+      "timestamp": 1755467670.658102,
+      "datetime": "2025-08-17 14:54:30",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/PanFriedTrout.htm",
+      "timestamp": 1755467678.714381,
+      "datetime": "2025-08-17 14:54:38",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/elleneaston/almondhoneypoundcake.htm",
+      "timestamp": 1755467682.624707,
+      "datetime": "2025-08-17 14:54:42",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/cynthiapineda/beans/pintobeans.htm",
+      "timestamp": 1755467686.372836,
+      "datetime": "2025-08-17 14:54:46",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/sauces_condiments/aiolifusio-mayonnaisesauce.htm",
+      "timestamp": 1755467689.605174,
+      "datetime": "2025-08-17 14:54:49",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    },
+    {
+      "url": "https://whatscookingamerica.net/elleneaston/chociceboxcake.htm",
+      "timestamp": 1755467693.482795,
+      "datetime": "2025-08-17 14:54:53",
+      "success": true,
+      "error": null,
+      "already_exists": false,
+      "skipped": false
+    }
+  ]
+}

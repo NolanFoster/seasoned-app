@@ -1,0 +1,3196 @@
+{
+  "crawl_results": [
+    "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+    "https://whatscookingamerica.net/appetizers/artichokegoatbruschetta.htm",
+    "https://whatscookingamerica.net/arrabbiata-sauce-recipe/",
+    "https://whatscookingamerica.net/fruit/apple-crisp.htm",
+    "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash.htm",
+    "https://whatscookingamerica.net/vegetables/bakedacorn.htm",
+    "https://whatscookingamerica.net/vegetables/andrabarbeans.htm",
+    "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+    "https://whatscookingamerica.net/Appetizers/Hummus.htm",
+    "https://whatscookingamerica.net/cookie/ambrosiamacaroons.htm",
+    "https://whatscookingamerica.net/pork/balsamicporkroast.htm",
+    "https://whatscookingamerica.net/soup/15-beani-soup.htm",
+    "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+    "https://whatscookingamerica.net/salad/applesauce7up-jellosalad.htm",
+    "https://whatscookingamerica.net/charlottebradley/quinoa.htm",
+    "https://whatscookingamerica.net/elleneaston/downton-abbey-cookbook-preview.htm",
+    "https://whatscookingamerica.net/sandwich/americanhamburger.htm",
+    "https://whatscookingamerica.net/candy/applecandy.htm",
+    "https://whatscookingamerica.net/vegetables/artichokecrab.htm",
+    "https://whatscookingamerica.net/lowfatsalmon.htm",
+    "https://whatscookingamerica.net/sauces_condiments/homemadechickenstock.htm",
+    "https://whatscookingamerica.net/KarenCalanchini/CrabCakes-TomatoCornSalad.htm",
+    "https://whatscookingamerica.net/soup/cornvelvetsoup.htm",
+    "https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm",
+    "https://whatscookingamerica.net/elleneaston/20-layercrepecake.htm",
+    "https://whatscookingamerica.net/appetizers/angelsonhorseback.htm",
+    "https://whatscookingamerica.net/salmonrosemary.htm",
+    "https://whatscookingamerica.net/KarenCalanchini/MediterraneanStuffedShellsi.htm",
+    "https://whatscookingamerica.net/salmonbarbecue.htm",
+    "https://whatscookingamerica.net/appetizers/chickpeaspread.htm",
+    "https://whatscookingamerica.net/bread/banana.htm",
+    "https://whatscookingamerica.net/Vegetables/TomatoesDrying.htm",
+    "https://whatscookingamerica.net/salmondill.htm",
+    "https://whatscookingamerica.net/bakedrainbowtrout.htm",
+    "https://whatscookingamerica.net/seafood/grilled-trout.htm",
+    "https://whatscookingamerica.net/Poultry/BalsamicDijonChicken.htm",
+    "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash-cinnamon.htm",
+    "https://whatscookingamerica.net/bksalpiccata.htm",
+    "https://whatscookingamerica.net/vegetables/stuffedacorn.htm",
+    "https://whatscookingamerica.net/salmonmayonnaise.htm",
+    "https://whatscookingamerica.net/soup/chasenchili.htm",
+    "https://whatscookingamerica.net/appetizers/artichokebenedict.htm",
+    "https://whatscookingamerica.net/seafood/bakeddeviledcrab.htm",
+    "https://whatscookingamerica.net/appetizers/hummus.htm",
+    "https://whatscookingamerica.net/history/akutaq_eskimoicecream.htm",
+    "https://whatscookingamerica.net/Salad/FreshFruitSalad.htm",
+    "https://whatscookingamerica.net/salad/123fruitdressing.htm",
+    "https://whatscookingamerica.net/PanFriedTrout.htm",
+    "https://whatscookingamerica.net/elleneaston/almondhoneypoundcake.htm",
+    "https://whatscookingamerica.net/cynthiapineda/beans/pintobeans.htm",
+    "https://whatscookingamerica.net/sauces_condiments/aiolifusio-mayonnaisesauce.htm",
+    "https://whatscookingamerica.net/elleneaston/chociceboxcake.htm"
+  ],
+  "scrape_results": [
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+          "data": {
+            "name": "Asparagus with Orange Dressing and Toasted Hazelnuts Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2016-02-21T08:32:33+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT4M",
+            "totalTime": "PT14M",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Asparagus with Orange Dressing and Toasted Hazelnuts Recipe",
+            "ingredients": [
+              "2 tablespoons hazelnuts, (finely-chopped*)",
+              "1 1/2 to 2 pounds asparagus (stalks, washed and trimmed**)",
+              "1/4 teaspoon orange zest, (freshly-grated)",
+              "2 teaspoons orange juice, (fresh-squeezed)",
+              "1 teaspoon lemon juice, (fresh-squeezed)",
+              "2 tablespoons olive oil, (extra-virgin)",
+              "Coarse salt (and sea salt)",
+              "Black pepper, (coarsely-ground)"
+            ],
+            "instructions": [
+              "Preheat oven to 375 degrees F.",
+              "Cook asparagus in a large frying pan of boiling salted water until crisp-tender, approximately 4 to 5 minutes; remove from heat and drain well in a colander.",
+              "Transfer hot asparagus to serving platter or individual serving plates.",
+              "In a small bowl, whisk together orange zest, orange juice, lemon juice, olive oil, salt, and pepper to taste.  Spoon the prepared Orange Dressing over top or asparagus and sprinkle with chopped hazelnuts.",
+              "Makes 4 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "9ee644f57c92e65f8425391c6b65db2784abf98a0a81286d968aebfc82605401"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/appetizers/artichokegoatbruschetta.htm",
+          "data": {
+            "name": "Artichoke and Goat Cheese Bruschetta Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/appetizers/artichokegoatbruschetta.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-03-29T02:05:35+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT6M",
+            "totalTime": "PT21M",
+            "recipeYield": [
+              "18",
+              "18 bruschettas"
+            ],
+            "recipeCategory": [
+              "Appetizer"
+            ],
+            "recipeCuisine": [
+              "Italian"
+            ],
+            "keywords": "Artichoke and Goat Cheese Bruschetta Recipe",
+            "ingredients": [
+              "18 (1/4-inch thick) baguette bread (slices, cut on the diagonal)",
+              "Olive oil, (extra-virgin)",
+              "2 (6 to 6 1/2 ounce) jars artichoke hearts, (marinated)",
+              "1/2 cup plus 2 tablespoons flat-leaf parsley, (divided)",
+              "1/2 cup Parmesan Cheese ((Parmigiano-Reggiano), grated)",
+              "Black pepper, (freshly ground)",
+              "6 ounces creamy goat cheese,  (crumbled)"
+            ],
+            "instructions": [
+              "Preheat oven to 375 degrees F.",
+              "Brush baguette bread slices on both sides with olive oil and place them on a baking sheet.  Bake slices until just crisp, about 3 minutes a side.  Remove from oven and leave on baking sheet.  (Bread can be toasted 3 hours ahead; cover loosely with foil and leave at room temperature.)",
+              "Drain artichokes, reserving about 2 tablespoons of the oil they were packed in, and place them in a food processor fitted with a metal blade.  Add reserved 2 tablespoons artichoke oil, 1/2 cup of the parsley, Parmesan cheese, and several grindings of black pepper.  Process, pulsing machine, until mixture is a coarse puree.  (Puree can be prepared 3 hours ahead; cover and leave at cool room temperature.)",
+              "When ready to serve, spread each bread slice with a mound of artichoke puree and top with some crumbled goat cheese.  (Bruschetta can be assembled 1 hour ahead; leave uncovered, at room temperature.)",
+              "When ready to eat, bake until cheese is melted and bruschetta are warm, approximately 5 to 6 minutes.  Sprinkle bruschetta with black pepper and some of the remaining parsley.  Serve warm on a platter.    "
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "838649ebe80a188fc3e12c99b22456136f64f53e4196dc202b0e3b7a3b05dbf8"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/arrabbiata-sauce-recipe/",
+          "data": {
+            "name": "Arrabbiata Sauce Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/arrabbiata-sauce-recipe/",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2020-05-15T02:03:58+00:00",
+            "prepTime": "",
+            "cookTime": "",
+            "totalTime": "",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Sauce"
+            ],
+            "recipeCuisine": [
+              "Italian"
+            ],
+            "keywords": "Arrabbiata Sauce Recipe",
+            "ingredients": [
+              "1 tablespoon olive oil, (extra-virgin)",
+              "6 ounces pancetta, (sliced and coarsely chopped*)",
+              "2 teaspoons crushed red pepper flakes",
+              "3 cloves garlic, (minced)",
+              "5 cups Marinara Sauce ((homemade or a good-quality store bought sauce))"
+            ],
+            "instructions": [
+              "In a large pot over medium heat, add olive oil and heat.  Add the pancetta and saute until golden brown, approximately 10 minutes.  Add the red pepper flakes and garlic; saute until tender, approximately 1 minutes.",
+              "Add the prepared Marinara Sauce; bring just to a simmer, then remove from heat, and let cool until ready to use in your recipe.",
+              "Makes 5 cups."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "02cfab48a1d93298687e31cb98fdf1bae7383fcc71a968e2c5d88253bf900ac4"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/fruit/apple-crisp.htm",
+          "data": {
+            "name": "Homemade Apple Crisp Recipe - Apple Crispy Crisp Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/fruit/apple-crisp.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-24T17:16:17+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT50M",
+            "totalTime": "PT70M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Apple Crispy Crisp Recipe, Homemade Apple Crisp Recipe",
+            "ingredients": [
+              "6 large tart cooking apples,  (peeled, cored, and sliced*)",
+              "3 tablespoons lime juice (or lemon juice, freshly squeezed)",
+              "Zest (from 1 orange, divided)",
+              "3/4 cup old fashioned rolled oats",
+              "1 cup firmly-packed brown sugar",
+              "1/8 teaspoon pure almond extract",
+              "1/2 cup pecans, (chopped)",
+              "3/4 cup all-purpose flour",
+              "1/2 teaspoon nutmeg",
+              "1 tablespoon cinnamon, (ground, divided)",
+              "3/4 cup unsalted butter, (softened)"
+            ],
+            "instructions": [
+              "Preheat oven to 375 degrees F. Butter a 9x13-inch rectangular pan.",
+              "Prepare Apple Filling - In a large mixing bowl, add the sliced apples, lemon juice, and 1/2 of orange zest.  Gently stir together until everything is well mixed.  Pour the apple mixture into the prepared pan and set aside.",
+              "Prepare Crisp Topping - In another large bowl, combine oatmeal, brown sugar, almond extract, pecans, flour, nutmeg, 1/2 the cinnamon, and remaining orange zest.  Mash all the ingredients together until all dry ingredients are mixed in and mixture is crumbly.  Slowly add the soften butter and blend until crumbly.",
+              "[object Object]",
+              "Sprinkle the prepared Crisp Topping mixture over the top of the apples.  Sprinkle remaining cinnamon over the crumble mixture.",
+              "[object Object]",
+              "Place the prepared apple crisp on middle rack of oven.  Bake approximately 40 to 50 minutes until the crust is golden brown and the apples are tender when pierced with a fork.  Remove from oven.",
+              "Serve warm with French Vanilla Ice Cream.",
+              "Serves many.",
+              " "
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "fabe39ef0a17c78d045b935c312fd76d0c3d88e8f852b9125737c2700249d453"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash.htm",
+          "data": {
+            "name": "Roasted Butternut Squash with Cinnamon and Nutmeg Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-08-31T03:29:57+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT30M",
+            "totalTime": "PT40M",
+            "recipeYield": [
+              "2",
+              "2 servings"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Roasted Butternut Squash with Cinnamon and Nutmeg Recipe",
+            "ingredients": [
+              "1 small butternut squash ((about 6 to 7 inches long), halved lengthwise)",
+              "2 tablespoons butter",
+              "Brown sugar",
+              "Ground Cinnamon",
+              "Ground Nutmeg"
+            ],
+            "instructions": [
+              "Preheat oven to 425 degrees F.  Line a small baking sheet with non-stick aluminum boil.",
+              "Slice the stem off the top of the butternut squash and cut each squash in half lengthwise.  Scoop out seeds, membranes, and discard.",
+              "Lay the squash halves on the prepared baking sheet.  Spread 1 tablespoon butter on each of the squash halves (on top of the squash half and in the cavity).  Sprinkle as much brown sugar, cinnamon, and nutmeg over the top of the butter that you desire.",
+              "Cover the prepared squash with another sheet of aluminum foil, folding edges tightly over the edges of the baking sheet.",
+              "Place in oven and cook for approximately 30 minutes.  Remove the aluminum foil and cook approximately an additional 10 minutes until the squash is tender when pierced with a fork. Remove from oven.",
+              "Makes 2 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "1c6ffd3eee032de16a2737881dfe5f18e57ed826c3cc895fec0ba7ac2a0e7cd6"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/vegetables/bakedacorn.htm",
+          "data": {
+            "name": "Baked Acorn Squash Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/vegetables/bakedacorn.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-12-15T19:25:27+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT60M",
+            "totalTime": "PT70M",
+            "recipeYield": [
+              "2",
+              "2 servings"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Baked Acorn Squash Recipe",
+            "ingredients": [
+              "1  acorn squash, (halved)",
+              "2 tablespoons butter",
+              "2 teaspoons honey, (pur maple syrup or Hickory Syrup)",
+              "2 tablespoons firmly-packed brown sugar",
+              "Salt (and coarsely ground black pepper to taste)"
+            ],
+            "instructions": [
+              "Preheat oven to 375 degrees F.",
+              "Cut squash in half lengthwise (from stem to end).  Use a spoon to scoop out the seeds and stringy stuff in the center of each squash half.  Score the insides of each half several times with a sharp knife.",
+              "[object Object]",
+              "Add 1 tablespoon of butter, 1 teaspoon of honey, honey (maple syrup or hickory syrup), 1 tablespoon of brown sugar, salt and pepper to the hollow scoop of each squash half.",
+              "Place each half in a large baking pan, cut side up.  ",
+              "Add about approximately 1/4-inch of water to the bottom of the baking pan so that the skins do not burn and the squash does not get dried out.  ",
+              "Bake approximately 1 hour or until tender when flesh is poked with a fork.  Remove from oven and let cool a little before serving.  ",
+              "Spoon any buttery sugar sauce that has not already been absorbed by the squash over the exposed areas of the baked squash.",
+              "Makes 2 Servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "c7cf410e4646faf61a20a9552fbcd96b595ebc8164bb0d55705074b3509d76be"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/vegetables/andrabarbeans.htm",
+          "data": {
+            "name": "Andra's Barbecue Beans Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/vegetables/andrabarbeans.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-10-08T15:03:18+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "PT60M",
+            "totalTime": "PT90M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Andra's Barbecue Beans Recipe",
+            "ingredients": [
+              "1 medium onion, (finely chopped)",
+              "1 clove garlic, (minced)",
+              "1/2 cup butter",
+              "1/4 cup cider vinegar",
+              "1/2 cup sugar ((granulated))",
+              "1 tablespoon prepared mustard",
+              "1 teaspoon Worcestershire sauce",
+              "3/4 cup catsup ((ketchup))",
+              "Salt (to taste)",
+              "2 (16-ounce) can pork and beans, (drained and rinsed)",
+              "2 (15 1/4-ounce) can red kidney beans, (drained and rinsed)",
+              "1 (14 1/4-ounce) can lima beans, (drained and rinsed*)"
+            ],
+            "instructions": [
+              "Stove Top Instructions:",
+              "Slow Cooker Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "4d7f10c4fe9b50e4c696013cd1fdac3b1425c817f44e89fa34244831cc6434d8"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+          "data": {
+            "name": "Absolute Best Chocolate Chip Cookie Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-05-06T03:55:02+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT15M",
+            "totalTime": "PT30M",
+            "recipeYield": [
+              "9",
+              "9 dozen"
+            ],
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Absolute Best Chocolate Chip Cookie Recipe",
+            "ingredients": [
+              "5 cups old-fashioned rolled oats",
+              "4 cups all-purpose flour",
+              "1 teaspoon salt",
+              "2 teaspoons baking powder",
+              "2 teaspoons baking soda",
+              "2 cups butter, (room temperature)",
+              "2 cups granulated sugar",
+              "2 cups (firmly-packed) brown sugar",
+              "4   eggs ",
+              "2 teaspoons pure vanilla extract",
+              "1 (24-ounce) package semisweet chocolate (chips)",
+              "3 cups nuts, (chopped (optional))"
+            ],
+            "instructions": [
+              "Preheat oven to 375 degrees F.  Either lightly grease or line cookie sheets with parchment paper or use the Silicone Baking Mats to prevent the cookies from sticking.",
+              "Make a powder out of the rolled oats by putting small amounts into the blender or food processor at a time.",
+              "In a large bowl, combine powdered rolled oats, flour, salt, baking powder, and baking soda.",
+              "In another large bowl, blend butter, granulated sugar, and brown sugar until light and creamy; stir in eggs and vanilla extract.  Add the flour mixture; stir until well blended. Stir in chocolate chips and nuts.",
+              "Roll dough into golf-ball-sized cookies.  Place 2 inches apart onto prepared cookie sheets. Bake 15 minutes or until light brown.  Remove from oven and cool on wire cooling racks.",
+              "Freezing the Dough:  You can freeze this dough. Form the dough into balls and place on a parchment-lined baking sheet.  Freeze and then place the balls of dough in a plastic bag, seal, and freeze.  When ready to bake the cookies, place the frozen balls of dough on a baking sheet and bake as directed above (you may have to increase baking time a few minutes)."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "2d35b72594e23871d060ca442fd606a3389879f95710a1cdde71e2a1457bb67c"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/Appetizers/Hummus.htm",
+          "data": {
+            "name": "Hummus with Pita Toast Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/Appetizers/Hummus.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-09T20:50:19+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "",
+            "totalTime": "",
+            "recipeYield": [
+              "3",
+              "3 cups"
+            ],
+            "recipeCategory": [
+              "Appetizer"
+            ],
+            "recipeCuisine": [
+              "Middle Eastern"
+            ],
+            "keywords": "Hummus with Pita Toast Recipe",
+            "ingredients": [
+              "2 cups or 1 (15-ounce) can garbanzo beans ((chick peas), drained and rinsed)",
+              "1/4 cup Tahini ((sesame seed paste)*)",
+              "1/3 cup lemon juice, (fresh-squeezed)",
+              "1 to 2 cloves garlic, (minced)",
+              "1/2 teaspoon salt",
+              "1/2 teaspoon ground cumin",
+              "1/4 cup parsley (leaves, finely-minced)",
+              "1 teaspoon sesame seed oil (or olive oil)",
+              "1 tablespoon ground sumac (or paprika (for garnish))",
+              "3/4 cup butter, (room temperature)",
+              "2 tablespoons parsley, (minced)",
+              "1 tablespoon chives, (fresh, minced)",
+              "1 tablespoon lemon juice, (fresh-squeezed)",
+              "1 clove garlic, (minced)",
+              "1/8 teaspoon salt",
+              "1/8 teaspoon white pepper",
+              "6 rounds pita bread"
+            ],
+            "instructions": [
+              "Hummus Instructions:",
+              "Pita Toast Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "bc08f3d20cb94e8214f7c5af1bd22392fc7a38f764e5eca104d715df1c97c787"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/cookie/ambrosiamacaroons.htm",
+          "data": {
+            "name": "Ambrosia Macaroon Cookies Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/cookie/ambrosiamacaroons.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-05-05T03:36:25+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT30M",
+            "totalTime": "PT50M",
+            "recipeYield": [
+              "45",
+              "45 cookies"
+            ],
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "Southern"
+            ],
+            "keywords": "Ambrosia Macaroon Cookies Recipe",
+            "ingredients": [
+              "1/2 cup unsalted butter, (room temperature)",
+              "3/4 cup granulated sugar",
+              "1/8 teaspoon salt",
+              "2 teaspoons orange zest ((peel), finely grated)",
+              "3 large eggs",
+              "24 ounces sweetened coconut, (flaked)",
+              "6 ounces bittersweet chocolate, (melted)"
+            ],
+            "instructions": [
+              "Preheat oven to 325 degrees F.  Position oven rack in center of oven.  Line three (3) rimmed cookie sheets with parchment paper or or line with Silicone Baking Mats.",
+              "In a large mixing bowl with an electric mixer on medium to medium-high speed, beat butter until smooth.  Add sugar and salt and beat until well blended.  Beat in the orange zest; then add eggs, one at a time until combined. Mix in coconut until combined.",
+              "Drop macaroon batter onto the prepared cookie sheets by tablespoonfuls, placing approximating 1 1/2 inches apart.  Always leave room between cookies on the cookie sheets.",
+              "Tip:  To keep your macaroon from spreading while baking – Do not grease the cookie sheet.  When baking cookies in batches, cool the cookie sheet to room temperature before placing more cookies on it.  You can do this quickly by running the bottom of the sheet under cool water for a few seconds.  A hot cookie sheet will melt the dough. ",
+              "Bake the macaroons, one (1) cookie sheet at a time, until golden on the bottom and browned in spots, approximately 25 to 30 minutes.  Remove from oven and let cool completely on the cookies sheets.",
+              "Melt the bittersweet chocolate.  Learn different techniques for How To Melt Chocolate.",
+              "Once the macaroons are cooled, drizzle the melted chocolate over the top of the macaroons.",
+              "Let chill on the cookie sheets until the chocolate is firm, about 30 minutes."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "af3c8b26d3dd5847c434e6e1a19a908ee1dc2cfacb87d452524035f301a07d47"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/pork/balsamicporkroast.htm",
+          "data": {
+            "name": "Slow Cooker Balsamic Pork Chops and Gravy Recipe:",
+            "description": "Low Heat: 8-10 hoursHigh Heat: 4-5 hours",
+            "url": "https://whatscookingamerica.net/pork/balsamicporkroast.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-05-13T16:52:27+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "PT480M",
+            "totalTime": "PT510M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Dutch Oven Balsamic Pork Chops and Gravy Recipe, Slow Cooker Balsamic Pork Chops and Gravy Recipe",
+            "ingredients": [
+              "7 to 8 thick pork chops*",
+              "Olive oil (or vegetable oil)",
+              "1/2 cup all-purpose flour",
+              "1/2 teaspoon coarse salt",
+              "1/2 teaspoon black pepper",
+              "1 teaspoon oregano, (dried)",
+              "1 teaspoon garlic powder",
+              "1 teaspoon rosemary, (dried)",
+              "1  bay leaf",
+              "4 slices bacon ((can substitute turkey bacon), diced)",
+              "1 large onion, (sliced 1/2-inch thick and quartered)",
+              "4  garlic (cloves, crushed)",
+              "1/4 to 1/3 cup good-quality balsamic vinegar, ((or to your taste))",
+              "2 cups white wine ((sweet or dry wine may be used)**)",
+              "2 to 3 cups chicken stock (or broth (homemade or purchased)***)",
+              "Salt (and pepper)",
+              "1/4 cup cornstarch",
+              "1/4 cup cold water",
+              "Carrots, (peeled and chopped into large chunks)",
+              "Potatoes, (peeled and cut in half)",
+              "Green beans, (ends trimmed****)"
+            ],
+            "instructions": [
+              "Slow Cooker Instructions:",
+              "Dutch Oven Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "022600c52a90fba1da45a69f116324a8b4251d685b389e8c5a497c8b0aa11d70"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/soup/15-beani-soup.htm",
+          "data": {
+            "name": "15-Bean Soup with Ham and Sausage Recipe:",
+            "description": "Savory and delicious 15-bean soup with ham and sausage",
+            "url": "https://whatscookingamerica.net/soup/15-beani-soup.htm",
+            "image": [
+              "https://images.nolanfoster.me/recipe-images/1755467525362-c1796f869ea1ab13.jpg"
+            ],
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-10T02:52:35+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT120M",
+            "totalTime": "",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Soup"
+            ],
+            "recipeCuisine": [
+              "Southern"
+            ],
+            "keywords": "15-Bean Soup with Ham and Sausage Recipe",
+            "ingredients": [
+              "1 pound bag of dried 15-Bean Soup Mix with Seasoning Packet*",
+              "Vegetable oil",
+              "1 large onion, (chopped)",
+              "3 to 4 cloves garlic, (minced)",
+              "1 pound cooked ham, (chopped)",
+              "1  ham bone (or 2 to 3 ham hocks**)",
+              "1 pound kielbasa sausage, (cut in half and sliced)",
+              "2 large carrots, (washed, peeled, and chopped)",
+              "1 small zucchini, (sliced (optional))",
+              "2 (15-ounce) cans tomatoes, (diced or stewed (with liquid))",
+              "1 (32-ounce) container chicken stock (or broth***)",
+              "Salt (and pepper to taste)"
+            ],
+            "instructions": [
+              "Dried Bean Preparation:",
+              "Stove Top Method:",
+              "Slow Cooker (Crock Pot) Method:",
+              "Instant Pot Pressure Cooker Method:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "originalImageUrl": [
+              "https://whatscookingamerica.net/wp-content/uploads/2015/04/15-Bean-Soup-SQ.jpg"
+            ],
+            "id": "7cb81931638aac4ace1a11f2866e33db51d44dfe2ebb7f1dc71242cd8a93c51c"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+          "data": {
+            "name": "Grilled Chicken Piccata Recipe - Picatta di Petto di Pollo alla Griglia:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-27T23:26:55+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "",
+            "totalTime": "PT20M",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "Italian"
+            ],
+            "keywords": "Grilled Chicken Piccata Recipe, Picatta di Petto di Pollo alla Griglia",
+            "ingredients": [
+              "4  chicken breasts* ",
+              "Olive oil",
+              "2 tablespoons rosemary ((leaves only), finely chopped)",
+              "Black pepper, (freshly ground)",
+              "2 tablespoons unsalted butter",
+              "Salt",
+              "2/3 cup dry white wine",
+              "Juice (of 1 lemon)",
+              "1 tablespoon lemon zest ((rind), finely chopped)",
+              "2 tablespoons capers, (rinsed and drained)",
+              "4 tablespoons Italian flat-leaf parsley, (chopped)"
+            ],
+            "instructions": [
+              "Place the chicken breasts between two (2) sheets of plastic wrap or parchment paper.  Using the side of a cleaver or a meat mallet, pound them to a uniform thickness of approximately 3/8 inch.",
+              "Place the breasts in a shallow pan and brush them with olive oil.  Sprinkle the rosemary and pepper on both sides of the the chicken and marinate at room temperature for approximately one hour.",
+              "Start a charcoal fire.  When the coals have developed a gray coating, and you can&rsquo;t hold your open palm six inches over the fire for a count of five, the fire is ready.",
+              "Grill the chicken breasts for approximately two minutes per side, then remove them from the grill.  Either proceed with the rest of the recipe below or refrigerate the chicken breasts and store in aluminum foil or a sealed container for up to 48 hours before completing the recipe.",
+              "When it is time to finish the dish in the kitchen, melt the butter with a pinch of salt in a saute pan. The pan should be large enough to hold the chicken breasts in one layer.  When the butter has melted and foamed, and the foam has subsided, add the chicken breasts.  Shake the pan and turn chicken pieces to coat with the butter.",
+              "Raise the heat to high and add the white wine.  Allow the wine to boil for a minute or two to evaporate the alcohol.  Reduce heat to medium and add the capers along with the lemon juice and rind (zest).  Keep liquid simmering, shaking the pan and turning the chicken breasts from time to time.  When the sauce has reduced and looks glossy, remove pan from heat.",
+              "To Serve, spoon a tablespoon of the sauce over each breast.  Serve the chicken, with any remaining sauce, on warmed dinner plates.  Sprinkle parsley over each portion.",
+              "Accompaniments:  Tuscan roasted potatoes and sauteed spinach.  Warmed, crusty bread and a simple green salad would be equally welcome",
+              "Makes 4 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "c428897878806e93aff1d6a8c52a5e1964a7af7e6b90073d9c39cbb5a8d3f557"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/salad/applesauce7up-jellosalad.htm",
+          "data": {
+            "name": "Applesauce 7-Up Jell-O Salad Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/salad/applesauce7up-jellosalad.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-06T18:57:17+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "",
+            "totalTime": "PT20M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Applesauce 7-Up Jell-O Salad Recipe",
+            "ingredients": [
+              "2 cups applesauce ((either purchased or homemade))",
+              "1 large (6-ounce) package JELL-O (Lime-flavored gelatin (any flavor of JELL-O may be used))",
+              "1 cup 7-Up (or Lemon-Lime Soda, chilled (do not use flat soda - you want the carbonation))",
+              "1 cup celery, (chopped (optional))",
+              "3 ounces cream cheese, (room temperature and chopped into blocks)",
+              "2 cups miniature marshmallows",
+              "1 cup whipping cream",
+              "1/4 cup pecans, (chopped)",
+              "Lime (wedges, thinly sliced)",
+              "1/4 cup (6 to 7) Maraschino cherries, (drained and sliced (juices drained onto a paper towel))",
+              "Rainbow Sprinkles"
+            ],
+            "instructions": [
+              "JELL-O Salad Instructions:",
+              "Whipped Cream Topping Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "1c3f702b46082bc93f081e216f081ad50aa9c6c8b6d6b1c20f3746ffc4f0685a"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/charlottebradley/quinoa.htm",
+          "data": {
+            "name": "Quinoa Tomato Salad Recipe:",
+            "description": "It is easy to see why quinoa was the one called the “gold of the Incas”. Quinoa (pronounced Keen-wah) is very nutritious, grows well even under harsh conditions, is easy to prepare, and can be used in a variety of ways.",
+            "url": "https://whatscookingamerica.net/charlottebradley/quinoa.htm",
+            "image": [
+              "https://images.nolanfoster.me/recipe-images/1755467538451-4cee07ada5a62f87.jpg"
+            ],
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-03T04:09:10+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "",
+            "totalTime": "",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Salad"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Quinoa History, Quinoa Tomato Salad Recipe",
+            "ingredients": [
+              "1 cup cooked quinoa*",
+              "1/4 cup olive oil",
+              "1/2 teaspoon salt",
+              "1/4 cup lemon juice, (freshly squeezed)",
+              "1 cup parsley, (freshly chopped)",
+              "3 medium-sized tomatoes, (diced)",
+              "1  cucumber, (diced)",
+              "2 bunches of green onions, (chopped)",
+              "2  carrots, (grated)",
+              "Optional Additions ((see below))"
+            ],
+            "instructions": [
+              "Cook quinoa (see directions above). Allow the quinoa to cool to just about room temperature and then fluff with a fork.",
+              "While the quinoa cools, combine olive oil, salt, lemon juice, tomatoes, cucumber, green onions, carrots, and parsley in a large bowl. Also add any Optional Additions that you desire.",
+              "Stir in the cooled quinoa.",
+              "NOTE: Can be eaten right away but the longer this salad sits, the more flavorful it becomes."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "originalImageUrl": [
+              "https://whatscookingamerica.net/wp-content/uploads/2015/03/tabouleh-salad5.jpg"
+            ],
+            "id": "bb23bb170ddf14172eb144802f713da0968d0902975be85576812797a5af1bc7"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/elleneaston/downton-abbey-cookbook-preview.htm",
+          "data": {
+            "name": "Cucumber Soup Recipe",
+            "description": "Large houses like Downton relied upon their kitchen gardens to supply most of their fruit and vegetable requirements. With enough money, almost anything could be produced, and in the Victorian era, the rich prided themselves on eating out-of-season produce, forced or retarded through skillful garden management. By the twentieth century, as land rents fell and many aristocrats struggled to maintain their estates, the acres of greenhouses were increasingly left to rot, and the boilers that had once heated the hothouses were abandoned. Some were turned into commercial market gardens, while others simply became less ambitious. But as any gardener knows, vegetable gardens left to their own devices produce a glut of produce, and skilled cooks need recipes to deal with that. The original recipe for this soup appeared in Eliza Acton&#x27;s Modern Cookery for Private Families, one of the best-sellers of the nineteenth century and remaining in print for over sixty years. Cooks who, like Mrs. Patmore, learned their art in the Victorian period would have known it well.",
+            "url": "https://whatscookingamerica.net/elleneaston/downton-abbey-cookbook-preview.htm",
+            "image": [
+              "https://images.nolanfoster.me/recipe-images/1755467542639-675bdff0d5babbd4.jpg",
+              "https://images.nolanfoster.me/recipe-images/1755467542615-d6a23ba34ea76756.jpg",
+              "https://images.nolanfoster.me/recipe-images/1755467542658-39805974e0401bc2.jpg"
+            ],
+            "author": {
+              "@id": "https://whatscookingamerica.net/#/schema/person/2dd6ac4d3272c2db2fa340f98ebfa83f"
+            },
+            "datePublished": "2019-08-25T21:55:04+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT90M",
+            "totalTime": "PT105M",
+            "recipeYield": "",
+            "recipeCategory": "",
+            "recipeCuisine": "",
+            "keywords": "",
+            "ingredients": [
+              "4  cucumbers (peeled and sliced 1 inch (2.5 cm) thick)",
+              "1  shallot (finely sliced)",
+              "2 1/2 cups (6 ml) chicken stock",
+              "2  teaspoons salt",
+              "1/2 teaspoon cayenne pepper",
+              "1 tablespoon rice flour",
+              "1 cup (240 ml) heavy cream",
+              "1 bunch fresh flat-leaf parsley (large stems discarded)"
+            ],
+            "instructions": [
+              "Combine the cucumbers, shallot, stock, salt and cayenne in a large saucepan and bring to a boil over high heat. Reduce the heat to a simmer, cover partially, and cook until the cucumbers are tender, about 45 minutes.",
+              "Remove from the heat and let cook slightly. Working in batches, transfer to a blender and puree until smooth. Return the soup to the pan and heat over medium-low heat. In a small bowl, stir the rice flour into the cream to dissolve it, and then stir the cream mixture into the soup. Keeping the soup at a gentle simmer, stir it continuously until it thickens, which will take about 10 minutes.",
+              "Just before serving, mince the parsley and stir it into the soup. Ladle the soup into bowls and serve hot."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "originalImageUrl": [
+              "https://whatscookingamerica.net/wp-content/uploads/2019/08/Cucumber-Soup-Recipe-sq.jpg",
+              "https://whatscookingamerica.net/wp-content/uploads/2019/08/Cucumber-Soup-Recipe-sq-500x375.jpg",
+              "https://whatscookingamerica.net/wp-content/uploads/2019/08/Cucumber-Soup-Recipe-sq-480x270.jpg"
+            ],
+            "id": "18734a74629803e5f8fd59189dd4f574452bc349fec3733fe9a22bcf26316fcc"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/sandwich/americanhamburger.htm",
+          "data": {
+            "name": "American Hamburger Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/sandwich/americanhamburger.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-05T16:26:53+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT10M",
+            "totalTime": "PT20M",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "American Hamburger Recipe",
+            "ingredients": [
+              "1 1/2 pounds lean ground beef  ((hamburger))",
+              "Salt (and pepper)",
+              "4  hamburger buns (or Kaiser rolls)",
+              "2 tablespoons butter, (melted)",
+              "Accompaniments ((see below))"
+            ],
+            "instructions": [
+              "Preheat barbecue grill; brush and oil the grates.",
+              "Lightly wet your hands with cold water; gently form ground beef into 4 patties, about 1-inch thick and larger than your bun.  When forming patties, handle as little as possible.  Loosely packed burgers are crisper on the outside and juicier inside.  Poke a hole in the center (this will stop the hamburger from rising in the center.  The hole will close while cooking).  ",
+              "Season the prepared patties with salt and pepper.",
+              "Place patties onto hot grill.  Cover barbecue with lid, open any vents, and cook 4 to 5 minutes; turn patties over and cook another 4 to 5 minutes (only turn patties once) or until cooked to desired doneness (do not press patties with spatula while cooking as juices will escape and the meat will dry out).  Remove from grill and transfer onto a serving plate.  ",
+              "NOTE: It is recommended that you cook the Hamburger patty to 160 degrees on your meat thermometer to eliminate any chance of e-coli.",
+              "Brush the hamburger buns or Kaiser rolls with melted butter; toast them on the grill, cut side down for 30 to 60 seconds.  Remove from grill and place on individual plates.  Place the cooked meat onto the bottom slice of the bun and add accompaniments of your choice (see below).",
+              "Makes 4 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "101a69553f18b139954ceac1406b422123439d585b15f82a99e633746068d336"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/candy/applecandy.htm",
+          "data": {
+            "name": "Aplets and Cotlets Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/candy/applecandy.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-24T21:41:49+00:00",
+            "prepTime": "PT25M",
+            "cookTime": "",
+            "totalTime": "",
+            "recipeYield": [
+              "64",
+              "64 candy squares"
+            ],
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "Northwestern"
+            ],
+            "keywords": "Aplets and Cotlets Recipe",
+            "ingredients": [
+              "1 cup Delicious apples, (chopped (red or golden))",
+              "Cold water",
+              "5 tablespoons reserved apple liquid",
+              "2 cups granulated sugar",
+              "3 1/2 envelopes of unflavored gelatin ((8 3/4 teaspoons or approximately 3 tablespoons)*)",
+              "1 cup water, (cold)",
+              "1/8 teaspoon rose culinary essence (or 1 tablespoon rose water**)",
+              "1 cup walnuts, (coarsely chopped)",
+              "Powdered sugar ((confectioners' sugar))",
+              "6 ounces apricots, (dried)",
+              "Cold water",
+              "5 tablespoons reserved apricot liquid",
+              "2 cups granulated sugar",
+              "3 1/2 envelopes of unflavored gelatin ((8 3/4 teaspoons or approximately 3 tablespoons)*)",
+              "1 cup water, (cold)",
+              "1 tablespoons lemon juice, (fresh-squeezed)",
+              "1 cup walnuts, (coarsely chopped)",
+              "Powdered sugar ((confectioners' sugar))"
+            ],
+            "instructions": [
+              "Northwest Apple Candy - Aplets Instructions:",
+              "Nothwest Apricot Candy - Cotlets Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "8601199a105b0c57c949d0a98a9a11ede6f68530af6dc2a87a7b6a57db8da7d2"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/vegetables/artichokecrab.htm",
+          "data": {
+            "name": "Artichoke Hearts With Crab Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/vegetables/artichokecrab.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-11T19:47:49+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "",
+            "totalTime": "PT30M",
+            "recipeYield": [
+              "6",
+              "6 serving"
+            ],
+            "recipeCategory": [
+              "Appetizer"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Artichoke Hearts With Crab Recipe",
+            "ingredients": [
+              "1 1/2 pounds crab meat ((blue crab meat, lump crab meat, or Dungeness crab meat), cooked*)",
+              "Juice (from 3 medium-size lemons, divided)",
+              "3 quarts cold water, (divided)",
+              "6 large artichokes",
+              "2 tablespoons fresh chives, (chopped)",
+              "2 strips red bell pepper, (diced (for garnish))",
+              "1/4 cup white wine vinegar",
+              "1 tablespoon plus 1 teaspoon Dijon mustard",
+              "Pinch of coarse salt (and freshly-ground white pepper)",
+              "1/2 cup walnut oil"
+            ],
+            "instructions": [
+              "Artichoke Hearts with Crab Instrucions:",
+              "Dijon Vinaigrette Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "52d6e1d3f12b9aab176371ab1981a774f30610b1ed76749adf04454a165947e9"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/lowfatsalmon.htm",
+          "data": {
+            "name": "Creamy Baked Salmon Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/lowfatsalmon.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-06-22T00:47:44+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT20M",
+            "totalTime": "PT35M",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Low-Fat Creamy Baked Salmon Recipe",
+            "ingredients": [
+              "2 pounds salmon (filets)",
+              "3/4 cup sour cream ",
+              "1/3 cup mayonnaise ",
+              "2 tablespoons all-purpose flour",
+              "2 tablespoons lemon juice, (fresh squeezed)",
+              "1/4 teaspoon dill weed, (dried)",
+              "1 (8-ounce) package cream cheese",
+              "1 clove garlic, (minced)",
+              "1/3 cup white wine",
+              "Salt (and pepper to taste)",
+              "Paprika"
+            ],
+            "instructions": [
+              "Preheat oven to 400 degrees F.  Wash salmon fillets and pat dry.  Grease a 9x13-inch baking pan.",
+              "Arrange salmon fillets, skin side down, in a single layer on the prepared baking pan.",
+              "In a medium bowl, with a wire whisk, blend sour cream, mayonnaise, flour, lemon juice, dill, cream cheese, garlic, and wine until smooth: spread over the salmon.  Sprinkle lightly with salt, pepper, and paprika.",
+              "Bake, uncovered, approximately 15 to 20 minutes or until a meat thermometer registers an internal temperature of 140 degrees F.  (salmon will be slightly opaque in thickest part).  During this time the meat continues to cook (meat temperature will rise 5 to 10 degrees after it is removed from the oven) and the juices redistribute.",
+              "Approximately cooking times for salmon:",
+              " 1/4 to 1/3-inch - 3 to 4 minutes",
+              "1/2 to 3/4-inch - 4 to 6 minutes",
+              "1 to 1 1/2-inch - 8 to 12 minutes",
+              "Remove from oven and transfer onto a serving platter."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "84a589bea6ffef529cb52adcd1e4c72d0398c103543ee18ffac7d1742caf8a9c"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/sauces_condiments/homemadechickenstock.htm",
+          "data": {
+            "name": "Homemade Chicken Stock Recipe",
+            "description": "",
+            "url": "https://whatscookingamerica.net/sauces_condiments/homemadechickenstock.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-05-01T13:15:40+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT90M",
+            "totalTime": "PT110M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Ingredient"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Homemade Chicken Stock Recipe",
+            "ingredients": [
+              "1 fully-cooked rotisserie chicken carcass (with some skin/meat left on the bones (any excess fat removed and discarded)*)",
+              "Cold water**",
+              "1 medium-sized onion, (chopped)",
+              "2 to 3 cloves of garlic, (sliced)",
+              "3 large carrots, (peeled and sliced)",
+              "2 to 3 ribs celery, (sliced)",
+              "Additional vegetables (of your choice***)",
+              "Salt (and freshly-ground black pepper to taste)"
+            ],
+            "instructions": [
+              "Stock Pot Instructions:",
+              "Slow Cooker Instructions:",
+              "Straining the Stock:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "84eeada597008097324909b98f8fa639eb9f74e429c1d46e2842191fa959fe89"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/KarenCalanchini/CrabCakes-TomatoCornSalad.htm",
+          "data": {
+            "name": "Crab Cakes with Tomato Corn Salad Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/KarenCalanchini/CrabCakes-TomatoCornSalad.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-05-30T16:29:29+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "",
+            "totalTime": "PT70M",
+            "recipeYield": [
+              "2",
+              "2 to 4 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Aioli Fusion Sauce Recipe, Crab Cakes with Tomato Corn Salad Recipe",
+            "ingredients": [
+              "12 to 14 ounces picked crab meat ((that has a good amount of lump crab))",
+              "1/2 cup mayonnaise ((good-quality))",
+              "3 tablespoons red bell pepper, (finely-diced)",
+              "3 tablespoons celery (heart, finely-diced)",
+              "2 tablespoons red onion, (finely-diced)",
+              "1 tablespoon lemon juice, (fresh-squeezed)",
+              "3 cups Panko (Japanese breadcrumbs)",
+              "Coarse salt (or sea salt and freshly-ground black pepper to taste)",
+              "Saffola oil (for frying)",
+              "1/2 cup mayonnaise, (good-quality)",
+              "Zest (and juice from 1/2 of a lime)",
+              "1 clove garlic, (minced)",
+              "1 teaspoon Chile Sauce ((Heinz is a good brand))",
+              "Salt (and white pepper to taste)",
+              "2 large ears corn, (steamed, boiled, or grilled until done (about 6 minutes) and cooled*)",
+              "1 pint (or more) sweet cherry tomatoes, (halved)",
+              "1 to 2 tablespoons cilantro, (chopped, stems may be chopped as well)",
+              "1/4 cup (or less) of seasoned rice vinegar",
+              "Coarse salt (or sea salt and freshly-ground black pepper to taste)"
+            ],
+            "instructions": [
+              "Crab Cakes Instructions:",
+              "Aioli Fusion Sauce Instructions:",
+              "Tomato Corn Salad Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "c4ffe8e2d9f708468b22b1bac2ccf7dafb9157af14438700bd7074c51e2e01f9"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/soup/cornvelvetsoup.htm",
+          "data": {
+            "name": "Corn Velvet Soup with Dungeness Crab Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/soup/cornvelvetsoup.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-13T20:57:14+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "PT60M",
+            "totalTime": "PT90M",
+            "recipeYield": [
+              "6",
+              "6 servings"
+            ],
+            "recipeCategory": [
+              "Soup"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Corn Velvet Soup with Dungeness Crab Recipe",
+            "ingredients": [
+              "3 tablespoons butter",
+              "3 tablespoons vegetable oil",
+              "2 medium-size white onions, (diced)",
+              "2 cloves garlic, (minced)",
+              "2  leeks ((white part only), cleaned and diced)",
+              "8 ears of corn, (fresh)",
+              "4 cups water",
+              "1  bay leaf",
+              "2 cups heavy cream",
+              "Coarse salt (and white pepper to taste)",
+              "Tabasco Sauce (to taste)",
+              "9 ounces fresh Dungeness crab meat, (picked through to remove shells)",
+              "Hot red chili oil ((for garnish))",
+              "Chives, (chopped (for garnish))"
+            ],
+            "instructions": [
+              "In a large soup pot or skillet, heat the butter with the vegetable oil over medium heat.  Stir in the onions, garlic, and leeks.  Cook over low heat, covered, for approximately 10 to 15 minutes, stirring occasionally, until the onions are very tender.",
+              "Meanwhile, slice the corn kernels from the cobs.  ",
+              "Cutting corn off the cob:  In a shallow bowl, hold ears of corn upright and, with a sharp knife, cut kernels from the cobs.  Then with blunt edge of the knife, scrape juice from cobs.  Set the corn aside and reserve the cobs for the broth.",
+              "Pour the 4 cups of water into the onion mixture; add the bay leaf and the corn cobs; bring the mixture just to a boil.  Reduce the heat to a simmer and cook for about 20 minutes.  Remove and discard the cobs. ",
+              "Add the corn kernels and the heavy cream, and simmer until the mixture is reduced by 1/3 (about 35 minutes).  Working in batches, puree the soup in a blender or food processor; then pass the soup through a fine sieve.  Reheat the soup over medium heat, stirring occasionally, until hot.  Season with salt, white pepper, and Tabasco.",
+              "To serve, ladle into pre-warmed soup bowls.  Distribute the crab evenly in the center of the soup bowls and garnish each bowl with chopped chives.  Dot  with red chili oil around the edges.",
+              "Makes 6 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "cdd32e28ebb16fb3f006e6300c0714fd98cb0b6452fec70f65351c73af2a4f69"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm",
+          "data": {
+            "name": "Grilled Cedar Planked Trout Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-06-10T05:09:08+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "PT20M",
+            "totalTime": "PT50M",
+            "recipeYield": [
+              "2",
+              "2 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Grilled Cedar Plank Trout Recipe",
+            "ingredients": [
+              "1 whole Trout, (fresh caught and cleaned (head can be on or off), gills removed (see below to learn how to clean trout))",
+              "Olive oil",
+              "Coarse salt (or sea salt)",
+              "Pepper, (freshly-ground)",
+              "Tarragon (sprigs)",
+              "Lemon (slices (cut in half))",
+              "2 sprigs of thyme",
+              "Lemon (slices (for garnish))"
+            ],
+            "instructions": [
+              "Soak the cedar plank submerged in water for 2 hours.",
+              "Preheat barbecue grill.",
+              "Brush the inside and outside of the trout with a little olive oil.  Sprinkle salt and pepper on the inside and outside of the trout.  Stuff the cavity with the tarragon sprigs, lemon slices and thyme sprigs.",
+              "Place prepared trout on the soaked cedar plank, and then put onto your preheated grill with indirect heat.  Close lid and cook approximately 15 to 20 minutes.  If you have a digital meat thermometer, the internal temperature in the center of the trout should reach 120 degrees F.  Remove from heat and cover with aluminum foil and let rest for approximately 7 to 10 minutes.  During this rest period, the temperature of the trout will rise to 140 degrees F.",
+              "After resting, cut off the hard fins from the tail and carefully remove the skin.  Open the cavity and carefully pull out the bones (by grabbing the backbone, they should come out in one piece).  Pull fish apart into serving pieces and plate.",
+              "Serve with the lemon slices that you grilled with the fish.  Add additional fresh lemon slices for garnish.",
+              "Makes 2 servings.",
+              "How To Clean Fresh-Caught Trout:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "6302478c79fc05c4822d855414880ac76a999381dbeae581ecb8f01eb97e8be5"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/elleneaston/20-layercrepecake.htm",
+          "data": {
+            "name": "20-layer Crepe Cake Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/elleneaston/20-layercrepecake.htm",
+            "image": "",
+            "author": "Ellen Easton © 2020 - All Rights Reserved",
+            "datePublished": "2015-05-05T14:56:14+00:00",
+            "prepTime": "PT60M",
+            "cookTime": "",
+            "totalTime": "PT60M",
+            "recipeYield": [
+              "1",
+              "1 Cake"
+            ],
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "French"
+            ],
+            "keywords": "20-layer Crepe Cake Recipe",
+            "ingredients": [
+              "2 cups heavy cream",
+              "1 tablespoon granulated sugar",
+              "Powdered sugar ((confectioners&#x27; sugar) for topping)",
+              "6 tablespoons butter",
+              "3 cups milk",
+              "6  eggs",
+              "1 1/2 cups all-purpose flour",
+              "7 tablespoons granulated sugar",
+              "Pinch of salt",
+              "1  egg",
+              "1 tablespoon all-purpose flour",
+              "2 tablespoons granulated sugar",
+              "1 tablespoons cornstarch",
+              "1 cup milk",
+              "1 teaspoon pure vanilla extract",
+              "1 teaspoon hot waster",
+              "2 tablespoons heavy cream, (whipped)"
+            ],
+            "instructions": [
+              "The day before making and assembling the cake, make the Crepe Batter and the Pastry Creme Filling (see recipes below); refrigerate overnight.",
+              "Remove the prepared Crepe Batter from the refrigerator and bring to room temperature:",
+              "Line baking sheets with parchment paper.",
+              "Using a nonstick or lightly-oiled crepe pan over medium-low heat.  ",
+              "Evenly distribute approximately 3 tablespoons Crepe Batter; swirl to cover the surface of the pan.  Cook approximately 1 minute or just until the bottom of the crepe becomes lightly browned.  ",
+              "Using your clean fingers, gently and carefully turn the crepe over and continue cooking the other side of the crepe for no longer than 5 seconds.  Remove the cooked crepe onto a prepared baking sheet (do not stack the crepes on top of each other).",
+              "Repeat this process until you have 20 perfect crepes.  NOTE: You might need to prepare a few practice crepes in the beginning.",
+              " ",
+              "Remove the prepared Pastry Creme Filling from the refrigerator:",
+              "Whip the 2 cups of heavy cream with the 1 tablespoon sugar.  Gently fold the whipped cream into the prepared chilled and thickened Pastry Creme Filling.",
+              " ",
+              "Assembly of 20-Layer Crepe Cake: ",
+              "Place one (1) prepared crepe on a large cake plate.",
+              "With a small spatula or wide blade knife, completely cover the crepe with a thin layer of the pastry cream mixture (approximately 1/4 cup).",
+              "Cover with another dry crepe and repeat covering with the Pastry Creme until you have reached 20 layers.",
+              "The 20th crepe will be the last or top layer.",
+              " ",
+              "Refrigerate the prepared cake for a minimum of 2 hours to let the pastry cream become firm.  Allow to stand at room temperature for 15 to 30 minutes before serving.  Dust with powdered (confectioners' sugar).",
+              "When ready to serve, slice into individual servings.  Garnish the plate with fresh berries.",
+              "Makes one (1) 20-Layer Cake.",
+              " ",
+              "Crepe Batter Instructions:",
+              "Pastry Creme Filling Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "bcba2c3a22c28b4830478aa1f046125195af00bce954587e87412763c6b18f83"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/appetizers/angelsonhorseback.htm",
+          "data": {
+            "name": "Angels on Horseback - Broiled Bacon Wrapped Oysters Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/appetizers/angelsonhorseback.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-12T01:30:39+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT15M",
+            "totalTime": "PT25M",
+            "recipeYield": [
+              "24",
+              "24 appetizers"
+            ],
+            "recipeCategory": [
+              "Appetizer"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Angels on Horseback Recipe, Broiled Bacon Wrapped Oysters Recipe",
+            "ingredients": [
+              "24 medium-size or small oysters, (fresh (live), shucked and drained*)",
+              "1/2 cup dry white wine",
+              "1 clove garlic, (minced)",
+              "Coarse salt",
+              "Black pepper, (freshly-ground)",
+              "Tabasco sauce (or hot sauce (to taste))",
+              "12 slices lean thin-cut bacon, (cut in half**)",
+              "24  buttered toast rounds ((optional))",
+              "Lemon (wedges)"
+            ],
+            "instructions": [
+              "Preheat the broiler of your oven. Drain oysters.",
+              "In a bowl, mix the wine, garlic, salt, pepper, and hot sauce together.  Add drained oysters and toss to coat; let marinate 20 minutes.",
+              "Cut the bacon in half and cook in a microwave oven for approximately 1 minute or pan fry until the edges begin to curl but the bacon is still flexible(do not completely cook the bacon).  Drain well.",
+              "Remove oysters from marinade,  Wrap each oyster in a bacon strip and secure with a damp wood toothpick or wood skewer, overlapping the bacon approximately 1 inch.  Place the bacon-wrapped oysters on a broiler pan.  Cook the oyster and crisp the bacon approximately 5 to 6 minutes on the first side, and another 2 to 4 minutes once you turn them over.  You will need to turn them once or twice to get a good crispiness on all sides.",
+              "NOTE: You may also cook these \"angels\" on an outdoor barbecue or range top grill.",
+              "Serve immediately with the cocktail pick, or the pick can be removed and the oyster placed on a buttered toast round. Serve with lemon wedges.  Some people like to serve these oysters with cocktail sauce or hot pepper sauce.",
+              "Makes 24 appetizers."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "0fc6c180ce7a3e31964fbd6724d8cd03ecd2790c9a3497a86f9a6f63a2532bb0"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/salmonrosemary.htm",
+          "data": {
+            "name": "Baked Salmon with Rosemary Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/salmonrosemary.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-05T23:53:46+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT12M",
+            "totalTime": "PT27M",
+            "recipeYield": [
+              "4",
+              "4 to 6 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Baked Salmon with Rosemary Recipe",
+            "ingredients": [
+              "2 large bunches of fresh rosemary",
+              "1 large red onion, (thinly sliced)",
+              "1 (2 to 3-pound) salmon (fillet with skin, 1 1/2-inches thick)",
+              "2 large lemons, (thinly sliced)",
+              "1/3 cup olive oil, (extra-virgin)",
+              "Coarse salt (and freshly-ground black pepper)"
+            ],
+            "instructions": [
+              "Preheat oven to 350 degrees F.",
+              "Arrange half of rosemary sprigs in single layer in center of heavy baking sheet.  Arrange sliced red onion on top of the rosemary.  Place salmon, skin side down, on the onion.  Sprinkle with salt and pepper.  Cover salmon with remaining rosemary sprigs.",
+              "Arrange lemon slices over rosemary.  Drizzle olive oil over. Sprinkle lemon slices with salt.  NOTE: Can be prepared 8 hours ahead, covered and refrigerated.",
+              "Bake, uncovered, 8 to 12 minutes or until a meat thermometer registers an internal temperature of 140 degrees F (salmon will be slightly opaque in thickest part). Remember the salmon continues to cook after it is removed from the heat source.  Carefully remove salmon from pan and transfer onto individual serving plates. Serve with roasted onions and lemon slices.",
+              "Approximate cooking times for salmon:",
+              "1/4 to 1/3-inch - 3 to 4 minutes",
+              "1/2 to 3/4-inch - 4 to 6 minutes",
+              "1 to 1 1/2-inch - 8 to 12 minutes",
+              "Makes 4 to 6 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "a18ae58de4889b83dba083a66871e73d203170ddfc1d53107d82483aad3dd51a"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/KarenCalanchini/MediterraneanStuffedShellsi.htm",
+          "data": {
+            "name": "Mediterranean Stuffed Shells Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/KarenCalanchini/MediterraneanStuffedShellsi.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-10-13T16:15:18+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT35M",
+            "totalTime": "PT55M",
+            "recipeYield": [
+              "6",
+              "6 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "Mediterranean"
+            ],
+            "keywords": "Mediterranean Stuffed Shells Recipe",
+            "ingredients": [
+              "Arrabbiata Sauce (or Marinara Sauce (see links to recipes in instructions below)*)",
+              "1 (12-ounce) box jumbo pasta shells ((also known as seashell pasta))",
+              "2 tablespoons olive oil, (extra-virgin, divided)",
+              "1 cup yellow onion, (chopped)",
+              "4 cloves garlic, (diced)",
+              "1/2 teaspoon thyme, (dried)",
+              "1 pound turkey thighs, (boneless, skinless, and ground**)",
+              "Salt (and freshly-ground pepper to taste)",
+              "1 (8-ounce) package frozen artichokes, (thawed and chopped***)",
+              "1 (15-ounce) container ricotta cheese",
+              "3/4 cup Parmesan Cheese, (freshly-grated)",
+              "2  eggs, (lightly beaten)",
+              "2 tablespoons parsley, (fresh, chopped)",
+              "1/4 cup basil (leaves, fresh (use small leaves whole and large leaves sliced))",
+              "1 1/2 cup mozzarella cheese, (grated)"
+            ],
+            "instructions": [
+              "If using either a homemade Marinara Sauce or Arrabbiata Sauce, prepare sauce in advance.  NOTE: You will need approximately 5 cups for this recipe.",
+              "Over high heat, bring a large pot of salted water to a boil.  Add the jumbo pasta shells, give them a gentle stir, and partially cook, stirring once or twice, until tender but still very firm to the bite, approximately 3 to 4 minutes.  Remove from heat, gently drain, rinse with cold water and drain again; set aside to cool.",
+              "Meanwhile, in a large skillet or frying pan over medium-high heat, saute the onion, garlic, and thyme until the onion is soft and just starting to brown.  Add the ground turkey, 1/2 teaspoon salt, and 1/4 teaspoon pepper; continue to cook, stirring occasionally, until the meat is cooked through.  Add the artichoke hearts, stirring to combine, and then remove from heat; set aside and let cool.",
+              "Preheat oven to 350 degrees F.  Cover the bottom of a 9x13x2-inch baking dish with 1 cup of the prepared Marinara Sauce or Arrabbiata Sauce; set aside.",
+              "In a large bowl, combine the cooled turkey mixture, ricotta cheese, parmesan cheese, eggs, parsley, and basil.  Add salt, and pepper to taste and stir to combine.",
+              "Stuffed Jumbo Pasta Shells:  Hold a cooked jumbo pasta shell in the palm of your hand.  Using a spoon, carefully stuff the shell with about 2 tablespoons of the prepared turkey mixture.  Nestle the stuffed shell, upright, into the sauce in the baking dish.  Continue filling the shells until the baking dish is full.  Your should have about 24 stuffed shells.  Drizzle the remaining 4 cups of Arrabbiata or Marinara Sauce over the stuffed shells and sprinkle the mozzarella cheese over the top.",
+              "Bake until the stuffed shells are heated through and the cheese is just beginning to brown, approximately 25 to 30 minutes.  ",
+              "Remove from oven and serve.  Makes approximately 6 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "9648879d270c80a6d0a92b550bc55ee98d7006acc57d01bfce4bf6800b8acf78"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/salmonbarbecue.htm",
+          "data": {
+            "name": "Barbecued Whole Salmon Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/salmonbarbecue.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-06-21T02:30:23+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT30M",
+            "totalTime": "PT45M",
+            "recipeYield": [
+              "8",
+              "8 to 10 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Barbecued Whole Salmon Recipe",
+            "ingredients": [
+              "1 whole fresh salmon ((approximately 5 to 7 pounds), gutted, scaled, cleaned and patted dry*)",
+              "Green onions",
+              "1 large orange, (unpeeled)",
+              "Salt (and coarsely-ground pepper)",
+              "Fresh thyme (leaves, finely chopped)",
+              "2 tablespoons butter"
+            ],
+            "instructions": [
+              "Preheat barbecue grill.",
+              "Cut the bulb of the onion off each whole green onion, separating the green leaves.",
+              "Cut orange into thin slices.",
+              "Place dressed salmon onto aluminum foil (shiny side in) about twice as long as the salmon.  Salt and pepper the cavity of the salmon.  Using a sharp knife, cut slits on the outside of the salmon approximately every two inches.  In each slit, place the leaf of a green onion and a slice of orange.  Sprinkle salt, pepper, and thyme leaves over the salmon.  Turn salmon over and repeat the above process.",
+              "In the cavity of the salmon, place any leftovers (onion bulbs, orange pieces, and thyme), and the 2 tablespoons butter.",
+              "Draw the aluminum foil up over the salmon, gathering the edges carefully but leaving an opening for the steam to escape.",
+              "Set the wrapped salmon on the preheated barbecue grill.  Prop the lid open, about inch, with tongs (this allows the smoke to swirl around a bit and give a little smoked taste to the salmon.  Cook salmon for about 20 to 30 minutes until salmon flakes easily when tested with a fork or until a meat thermometer registers an internal temperature registers 140 degrees F.  Remove from barbecue grill, remove aluminum foil, and transfer onto a serving platter to serve.",
+              "Makes 8 to 10 servings.",
+              " "
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "91a8ce25d500022ab6a4795b574a3ee19007d05d37e54182b9884032e07ec227"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/appetizers/chickpeaspread.htm",
+          "data": {
+            "name": "Chickpea Crostini Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/appetizers/chickpeaspread.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-03-31T22:49:38+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT10M",
+            "totalTime": "PT30M",
+            "recipeYield": [
+              "10",
+              "10 servings"
+            ],
+            "recipeCategory": [
+              "Appetizer"
+            ],
+            "recipeCuisine": [
+              "Italian"
+            ],
+            "keywords": "Chickpea Crostini Recipe",
+            "ingredients": [
+              "12-inch loaf of baguette bread",
+              "1 (15-ounce) can chickpeas ((garbanzo beans), drained)",
+              "1 medium carrot, (cut into small chunks)",
+              "1 small onion, (quartered)",
+              "2 medium celery stalks, (cut into small pieces)",
+              "2 sprigs flat Italian parsley",
+              "4 sprigs thyme, (fresh)",
+              "1 teaspoon salt (or to taste)",
+              "2 cups chicken stock (or broth)",
+              "1 to 2 tablespoons olive oil, (extra-virgin)",
+              "Balsamic Vinegar"
+            ],
+            "instructions": [
+              "Cut the baguette bread into 10 slices.  In the oven or on a grill, toast the bread (watch carefully).  Remove from oven and set aside.",
+              "Drain and rise the chickpeas in a colander.  Drain them well, shaking excess water off. ",
+              "In a medium saucepan over medium-high heat, add the chickpeas, carrot, onion, celery, parsley, thyme, salt, and chicken broth.  Bring just to a boil, then cover, reduce heat and cook approximately 8 to 10 minutes or until the vegetables are tender.  Remove from heat and drain the beans and vegetables, discarding the liquid and thyme stems.",
+              "Transfer chickpea mixture to a food processor.  While processing, drizzle some olive oil into the mixture until a chunky smooth texture is attained.",
+              "To serve, spread a thick helping of the chickpea mixture onto each slice of toasted baguette bread, then arrange them on serving plates.  Drizzle each with olive oil (optional) and then some balsamic vinegar.",
+              "Makes 10 servings, Serving size = 1/4 cup"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "0a17b7d889bb42a3eb5c77b5c728e5b9f53c5322a917f77c6f76b08d0a72bac1"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/bread/banana.htm",
+          "data": {
+            "name": "Almond Banana Bread Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/bread/banana.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-03T19:20:03+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT40M",
+            "totalTime": "PT55M",
+            "recipeYield": [
+              "1",
+              "1 large loaf"
+            ],
+            "recipeCategory": [
+              "Bread"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Almond Banana Bread Recipe, Banana Almond Yeast Bread Recipe",
+            "ingredients": [
+              "2/3 cup warm water  ((110 degrees F.))",
+              "2 tablespoons vegetable oil (or olive oil)",
+              "3 tablespoons granulated sugar",
+              "1 1/4 teaspoons salt",
+              "1  egg, (slightly beaten)",
+              "2 medium-sized bananas, (ripe and mashed with a fork*)",
+              "1/2 cup almonds, (sliced or chopped)",
+              "Zest (of 1 lemon, grated)",
+              "3 1/2 to 4 cups bread flour",
+              "3 teaspoons instant active dry yeast"
+            ],
+            "instructions": [
+              "Place all ingredients in the pan of the bread machine in the order suggested by the manufacturer.  Select dough setting and press start.  NOTE: Check the dough (don't be afraid to open the lid).  It should form a nice elastic ball.  If you think the dough is too moist, add additional flour (a tablespoon at a time).  The same is true if the dough is looking dry and gnarly.  Add warm water (a tablespoon at a time).",
+              "When dough cycle has finished, remove dough from pan and turn out onto a lightly floured surface.  Form dough into an oval, cover with plastic wrap, and let rest for 10 minutes.",
+              "After resting, turn dough bottom side up and press to flatten.  Fold dough into an envelope by folding the top 1/3 of the way to the bottom.  Then fold the bottom a 1/3 of the way over the top.  Then press dough with the palm of your hand to make an indentation down the center of the dough and fold the top completely to the bottom, sealing the seam with the palm of your hand.",
+              "Place on a jelly roll pan dusted with cornmeal; cover with plastic wrap and place in a warm spot to rise for approximately 30 minutes or until doubled.",
+              "Oven Rising:  Sometimes I use my oven for the rising. Turn the oven on for a minute or so, then turn it off again.  This will warm the oven and make it a great environment for rising bread.  If you can't comfortably press your hand against the inside of the oven door, the oven is too hot.  Let it stand open to cool a bit.",
+              "Cool or Refrigerator Rise:  If I don't have the time to wait for the rise to finish or I know that I will be interrupted before the completed rise, I do a cool rise.  A cool rise is when the dough is place in the refrigerator and left to rise slowly over night approximately 8 to 12 hours.  I usually do this after the first rise and the dough has been shaped into a loaf.",
+              "Preheat oven to 350 degrees F.",
+              "Bake for 35 to 40 minutes or until loaf sounds hollow when tapped.  A good check is to use an instant digital thermometer to test your bread.  The internal temperature should be between 200 and 210 degrees F.  ",
+              "Remove from oven and cool on a bread rack for about 10 minutes.  Remove from pan.",
+              "Makes 1 1/2-pound loaf.",
+              " "
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "4a63c48d5da67edeae64b81d6ac6d34dc821992c325e2a10e172578e13852733"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/Vegetables/TomatoesDrying.htm",
+          "data": {
+            "name": "Slow Roasted Tomatoes Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/Vegetables/TomatoesDrying.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-08-30T23:11:42+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT360M",
+            "totalTime": "PT375M",
+            "recipeYield": [
+              "4",
+              "4 cups"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Slow Roasted Tomatoes Recipe",
+            "ingredients": [
+              "4 to 5 pounds tomatoes, (vine-ripened*)",
+              "6  garlic (cloves, minced)",
+              "5 tablespoons olive oil, (extra-virgin)",
+              "Coarse salt (and freshly-ground pepper)",
+              "Olive oil, (extra-virgin)",
+              "Fresh basil (leaves)",
+              "Thyme (sprigs)"
+            ],
+            "instructions": [
+              "Slow-Roasted Tomatoes Instructions:",
+              "Roasted Tomatoes in Olive Oil Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "bc3b1c3ba1afd83be108bafdefd22bd65d22b66ad168862ef720e1a8d0af7597"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/salmondill.htm",
+          "data": {
+            "name": "Baked Salmon with Dill Sauce Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/salmondill.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-06T00:42:11+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT15M",
+            "totalTime": "PT25M",
+            "recipeYield": [
+              "4",
+              "4 to 6 Servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Baked Salmon with Dill Sauce Recipe",
+            "ingredients": [
+              "1 (2 to 3-pound) salmon (fillet (1 1/2-inches thick))",
+              "3 tablespoons olive oil, (extra-virgin)",
+              "Coarse salt (and freshly-ground black pepper)",
+              "1/2 cup mayonnaise",
+              "1/2 cup sour cream",
+              "3 tablespoons fresh parsley, (minced)",
+              "2 tablespoons Dijon-style mustard",
+              "2 tablespoons fresh dill weed, (minced)",
+              "2 teaspoons lemon juice (or lime juice)",
+              "Salt (and freshly-ground pepper to taste)"
+            ],
+            "instructions": [
+              "Baked Salmon with Dill Sauce Instructions:",
+              "Dill Mustard Sauce Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "6c24091628af09b3df4a813d7b7a2bcbf7685cfceabf2f8a2bdc6f9937b60996"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/bakedrainbowtrout.htm",
+          "data": {
+            "name": "Baked Rainbow Trout Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/bakedrainbowtrout.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-07-27T18:59:30+00:00",
+            "prepTime": "PT30M",
+            "cookTime": "PT30M",
+            "totalTime": "PT60M",
+            "recipeYield": [
+              "2",
+              "2 to 3 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Baked Rainbow Trout Recipe",
+            "ingredients": [
+              "2 to 3 whole Rainbow Trout (cleaned (head can be off), gills removed)",
+              "Olive oil, (extra-virgin)",
+              "Salt and pepper",
+              "Lemons, (thinly-sliced)",
+              "1 cup wine, (pinot noir)"
+            ],
+            "instructions": [
+              "How To Clean Fresh-Caught Trout:",
+              "How To Bake Fresh-Caught Trout:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "ac9e1a78c3750d93969dddffb89c9959d4b0fd7718218252abc57a0c37c3d5fa"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/seafood/grilled-trout.htm",
+          "data": {
+            "name": "Grilled Rainbow Trout Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/seafood/grilled-trout.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-06-09T19:38:15+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT15M",
+            "totalTime": "PT30M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Grilled Rainbow Trout Recipe",
+            "ingredients": [
+              "Fresh Trout ((about 1-pound each), cleaned (head can be on or off), gills removed)",
+              "Coarse salt (or sea salt)",
+              "Pepper, (freshly ground)",
+              "Other seasonings (to taste (optional))",
+              "Lemon (or lime, thinly sliced (optional))",
+              "Aluminum foil"
+            ],
+            "instructions": [
+              "My husband cleaned the trout just after he caught them by gutting them, cutting off the gills, and most importantly, scraping off the blood line off the backbone.  I also want the head cut off! ",
+              "How To Clean Fresh-Caught Trout:",
+              "How To Grill Fresh-Caught Trout:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "cd4815500e3928feccbb9e694b98d7d2b3b8e66a7313d41ce95b8202a24f288e"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/Poultry/BalsamicDijonChicken.htm",
+          "data": {
+            "name": "Grilled Balsamic-Dijon Chicken Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/Poultry/BalsamicDijonChicken.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-27T19:15:04+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT30M",
+            "totalTime": "PT50M",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Grilled Balsamic-Dijon Chicken Recipe",
+            "ingredients": [
+              "4 whole chicken breasts,  (boneless and skinless*)",
+              "1/4 cup balsamic vinegar, (good-quality and aged)",
+              "4 tablespoons Dijon mustard",
+              "3 cloves garlic, (minced)",
+              "Juice (of 1 lime)",
+              "1/2 cup (firmly-packed) brown sugar",
+              "1 1/2 teaspoons coarse salt",
+              "6 tablespoons olive oil, (extra-virgin)",
+              "Black pepper, (freshly ground, to taste)"
+            ],
+            "instructions": [
+              "Place chicken breasts, single layer, into an ungreased 13x9-inch baking dish or a resealable plastic bag.",
+              "In a large bowl, combine balsamic vinegar, whole grain mustard, Dijon mustard, garlic, lime juice, brown sugar, olive oil, and pepper.  Pour marinade over chicken breasts.  Cover and refrigerate for at least 8 hours (turning meat over several times).",
+              "Preheat Barbecue grill (spray grill with vegetable-oil cooking spray).  Place chicken onto hot grill and brush with remaining Balsamic-Dijon marinade.  Cover barbecue with lid, open any vents, and cook 20 to 30 minutes or until a meat thermometer registers an internal temperature of 165 degrees F. (juices will run clear when cut with the tip of a knife); turning and basting several times.",
+              "Remove from chicken from the grill, transfer onto a serving platter, and serve immediately.",
+              "Makes 4 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "9ffdb7fa3246377c5f9300b9648f6f1ed7faa54ba7d100c3966c6ca1a3a65cda"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash-cinnamon.htm",
+          "data": {
+            "name": "Roasted Butternut Squash and Cinnamon Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/karencalanchini/roastedbutternutsquash-cinnamon.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-10-23T19:09:37+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT20M",
+            "totalTime": "PT35M",
+            "recipeYield": [
+              "3",
+              "3 to 4 servings"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Roasted Butternut Squash and Cinnamon Recipe",
+            "ingredients": [
+              "1  butternut squash ((select one that is uniform in size from top to bottom))",
+              "4 tablespoons butter",
+              "1/4 cup brown sugar",
+              "Ground cinnamon (to taste)",
+              "Salt (and pepper to taste)",
+              "Sweet basil (leaves or fresh parsley (for garnish))"
+            ],
+            "instructions": [
+              "Preheat oven to 425 degrees F.  Line a small baking sheet with non-stick aluminum boil.",
+              "Slice the stem off the top of the butternut squash and discard.",
+              "Using a good vegetable peeler that is able to cut through the tough skin of the squash, peel the squash and discard the peels.",
+              "Using a very sharp, large knife, and starting at the solid end of the squash, cut six (6) 1/2-inch thick slices.  Set aside.",
+              "Remove the seeds from the remaining squash (a grapefruit spoon is great for this) cut into cubes and freeze for other uses.",
+              "In a small pan over low heat, melt the butter, brown sugar, and cinnamon until the sugar is dissolved.  Brush the butter/cinnamon mixture on both sides of the squash rounds and place on the prepared baking sheet.",
+              "Cook, approximately 20 minutes, or until the edges are caramelized and the squash is tender when pierced with a fork.  Remove from the oven.",
+              "Remove the cook squash with a spatula to a serving platter and brush with additional butter/cinnamon sauce.  Sprinkle with a few chopped basil leaves or parsley for added color.",
+              "Makes 3 to 4 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "bdf1d612248df3d1e44bcd416d7f53b8577559535f3ef3dd260c8eaa980f169b"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/bksalpiccata.htm",
+          "data": {
+            "name": "Baked Salmon Piccata Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/bksalpiccata.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-06-21T01:36:00+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT15M",
+            "totalTime": "PT30M",
+            "recipeYield": [
+              "4",
+              "4 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "Italian"
+            ],
+            "keywords": "Baked Salmon Piccata Recipe",
+            "ingredients": [
+              "4  salmon (steaks, 1-inch thick)",
+              "All-purpose flour ((for dredging))",
+              "1/4 cup plus 3 tablespoons butter, (divided)",
+              "3 tablespoons onion, (finely chopped)",
+              "1 clove garlic, (minced)",
+              "1 heaping tablespoon capers, (drained*)",
+              "1/8 teaspoon dried Italian seasonings, (crushed)",
+              "1/2 cup white wine",
+              "2 tablespoons lemon juice, (fresh-squeezed)",
+              "2 teaspoons beef broth"
+            ],
+            "instructions": [
+              "Preheat oven to 400 degrees F.  Wash salmon steaks, pat dry, and roll in flour.",
+              "In a large ovenproof frying pan or saute pan, heat 1/4 cup butter until it melts.  Briefly saute the salmon steaks, browning both sides.",
+              "Bake, covered, 10 to 15 minutes until a meat thermometer registers an internal temperature registers 140 degrees F. or until salmon is slightly opaque in thickest part (cut to test).  During this time the meat continues to cook (meat temperature will rise 5 to 10 degrees after it is removed from the oven) and the juices redistribute.  Remove from oven.  Reserve liquid in the pan and transfer salmon onto a warm serving platter.",
+              "Approximately cooking times for salmon:",
+              "1/4 to 1/3-inch - 3 to 4 minutes ",
+              "1/2 to 3/4-inch - 4 to 6 minutes ",
+              "1 to 1 1/2-inch - 8 to 12 minutes",
+              "Using the same pan over medium heat, stir together onion, garlic, capers, and Italian seasonings into the reserved liquid; simmer for 5 minutes.  Add white wine, lemon juice, and beef broth; stir until well blended.  Turn off heat, whisk in the remaining 3 tablespoons butter until blended.  Remove from heat, pour sauce over salmon, and serve immediately.",
+              "Makes 4 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "832f918e023b4959e2a9812bb5158f5a79ac1e7c4d0039ec5b2166cc81bbfaa2"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/vegetables/stuffedacorn.htm",
+          "data": {
+            "name": "Apple Stuffed Acorn Squash Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/vegetables/stuffedacorn.htm",
+            "image": [
+              "https://images.nolanfoster.me/recipe-images/1755467637809-59395e2c46da658d.jpg"
+            ],
+            "author": "What's Cooking America",
+            "datePublished": "2015-12-15T16:17:57+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT60M",
+            "totalTime": "PT70M",
+            "recipeYield": [
+              "2",
+              "2 servings"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Apple Stuffed Acorn Squash Recipe",
+            "ingredients": [
+              "1 large acorn squash, (halved and seeded)",
+              "1 cup water",
+              "3 tablespoons butter, (melted)",
+              "1/2 to 1 teaspoon lemon juice",
+              "1/2 teaspoon cinnamon, (ground)",
+              "2 tablespoons firmly packed brown sugar",
+              "1 large Granny Smith apple, (peeled, cored and chopped)",
+              "1/4 cup nuts (of your choice, chopped)"
+            ],
+            "instructions": [
+              "Heat oven to 350 degrees F.",
+              "To make Apple Stuffed Acorn Squash:  Cut squash in half lengthwise (from stem to end).  Use a spoon to scoop out the seeds and stringy stuff in the center of each squash half.  Score the insides of each half several times with a sharp knife.",
+              "Place acorn squash, cut side down, in a large baking pan or dish; pour water into bottom of pan around the squash.  Bake 20 minutes.  Remove from oven.",
+              "Meanwhile, in a bowl, combine butter, lemon juice, cinnamon, brown sugar, and chopped apples.  Divide mixture evenly among partially cooked squash and return to oven for 60 minutes or until tender when flesh is poked with a fork.",
+              "Sprinkle with chopped nuts to serve.",
+              "Makes 2 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "originalImageUrl": [
+              "https://whatscookingamerica.net/wp-content/uploads/2015/03/AppleAcornSquash4.jpg"
+            ],
+            "id": "0d70957ca1b521d9ebb462039ee16f4078a62a9e9f82ad54d60ca7170234dba2"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/salmonmayonnaise.htm",
+          "data": {
+            "name": "Barbecued Salmon With Herbed Mayonnaise Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/salmonmayonnaise.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-06-21T02:23:10+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "PT12M",
+            "totalTime": "PT22M",
+            "recipeYield": [
+              "4",
+              "4 to 6 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Barbecued Salmon With Herbed Mayonnaise Recipe",
+            "ingredients": [
+              "1 1/2 to 2 pounds salmon filet",
+              "1/3 cup mayonnaise ((light or non-fat))",
+              "2 tablespoons lime juice, (fresh-squeezed)",
+              "1/4 teaspoon herbs (of your choice, freshly-chopped)",
+              "Coarse salt (and coarsely-ground black pepper to taste)"
+            ],
+            "instructions": [
+              "Preheat barbecue grill. Wash salmon filet and pat dry.  Place salmon (skin side down) onto a large piece of aluminum foil.",
+              "In a small bowl, with a wire whisk, combine mayonnaise, lime juice, and herbs until smooth; spread over top of salmon.  Sprinkle lightly with salt and pepper.",
+              "Place salmon (with aluminum foil) onto hot grill of your barbecue.  Cover barbecue with lid, open any vents, and cook 8 to 12 minutes or until a meat thermometer registers an internal temperature of 145 degrees F. (salmon will be slightly opaque in thickest part).  During this time the salmon continues to cook (meat temperature will rise 5 to 10 degrees after it is removed from the grill) and the juices redistribute.",
+              "Approximately cooking times for salmon:",
+              "1/4 to 1/3-inch - 3 to 4 minutes",
+              "1/2 to 3/4-inch - 4 to 6 minutes",
+              "1 to 1 1/2-inch - 8 to 12 minutes",
+              "Carefully remove salmon from grill and transfer onto serving platter and serve.",
+              "Makes 4 to 6 servings."
+            ],
+            "nutrition": {
+              "@type": "NutritionInformation",
+              "calories": "228.7 kcal",
+              "fatContent": "13.3 g",
+              "servingSize": "1 serving"
+            },
+            "aggregateRating": {},
+            "id": "92dab0a63a316656a5db1f87b376e1bc4b8f513a743cde7516ea1e28e8a289cf"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/soup/chasenchili.htm",
+          "data": {
+            "name": "Chasen's Famous Chili Recipe:",
+            "description": "Chasens Famous Chili recipe from the cookbook Chasen’s – Where Hollywood Dined, by Betty Goodwin, published by Angel City Press, 1996.",
+            "url": "https://whatscookingamerica.net/soup/chasenchili.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-09T19:22:55+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT90M",
+            "totalTime": "PT110M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Chasens Famous Chili History and Recipe",
+            "ingredients": [
+              "1/2 pound dry pinto beans",
+              "Water",
+              "1 (28-ounce) can diced tomatoes (in juice)",
+              "1 large green bell pepper, (chopped)",
+              "2 tablespoons vegetable oil",
+              "3 cups onions, (coarsely chopped)",
+              "2 cloves garlic, (crushed)",
+              "1/2 cup parsley, (chopped)",
+              "1/2 cup butter",
+              "2 pounds beef chuck, (coarsely chopped*)",
+              "1 pound pork shoulder, (coarsely chopped*)",
+              "1/3 cup Gebhardt's chili powder",
+              "1 tablespoon salt",
+              "1 1/2 teaspoons pepper",
+              "1 1/2 teaspoons Farmer Brother's ground cumin**"
+            ],
+            "instructions": [
+              "Rinse the beans, picking out debris.  Place beans in a Dutch oven with water to cover.  Boil for two minutes.  Remove from heat.  Cover with lid and let stand one hour.  After one hour, drain off liquid and discard.",
+              "Rinse beans again.  Add just enough fresh water to cover the beans.  Bring mixture to a boil.  Reduce heat and simmer covered, for one hour or until tender.  Stir in tomatoes and their juice and let simmer five minutes.  ",
+              "In a large skillet, saute bell pepper in oil for five minutes.  Add onion and cook until tender, stirring frequently.  Stir in the garlic and parsley.  Add mixture to bean mixture.  Using the same skillet, melt the butter and saute beef and pork chuck until browned.  Drain.  Add to bean mixture along with the chili powder, salt, pepper and cumin.",
+              "Bring mixture just to a boil, reduce heat and simmer, covered, for one hour.  Uncover and cook 30 minutes more or to desired consistency.  Chili should not be too thick - it should be somewhat liquid but not runny like soup.  Skim of excess fat and serve.",
+              "NOTE:  You can freeze this chili for several months.  When reheating refrigerated leftover or frozen chili, add a few tablespoons of water to regain proper consistency.",
+              "Serves many."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "6042bdd48d42760643f2c108337dbc5a6a8b06b17584d27c24a34946445d5f2c"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/appetizers/artichokebenedict.htm",
+          "data": {
+            "name": "Artichoke Eggs Benedict Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/appetizers/artichokebenedict.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-14T21:54:24+00:00",
+            "prepTime": "PT50M",
+            "cookTime": "",
+            "totalTime": "PT50M",
+            "recipeYield": [
+              "4",
+              "4 serving"
+            ],
+            "recipeCategory": [
+              "Breakfast"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Artichoke Eggs Benedict Recipe, Hollandaise Sauce Recipe",
+            "ingredients": [
+              "4 medium California artichokes",
+              "4 slices (1/4-inch thick) Canadian bacon",
+              "4  eggs",
+              "3  egg (yolks)",
+              "1/4 cup water",
+              "2 tablespoons lemon juice, (fresh-squeezed)",
+              "1/2 cup butter, (cold, cut into eighths)",
+              "1/8 teaspoon paprika",
+              "Dash ground red pepper"
+            ],
+            "instructions": [
+              "Artichoke Eggs Benedict Instructions:",
+              "Hollandaise Sauce Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "4abfdf1b022da46cd4aa6d8cac2b8d679753cc1d9a686e28d90dea0f07015325"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/seafood/bakeddeviledcrab.htm",
+          "data": {
+            "name": "Baked Deviled Crab Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/seafood/bakeddeviledcrab.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-11T21:25:42+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT30M",
+            "totalTime": "PT45M",
+            "recipeYield": [
+              "8",
+              "8 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "Creole"
+            ],
+            "keywords": "Baked Deviled Crab Recipe, Crabmeat Dressing Recipe, Creole Tartar Sauce Recipe",
+            "ingredients": [
+              "1 pound lump crabmeat",
+              "1/2 cup mayonnaise",
+              "1 1/2 teaspoons Worcestershire sauce",
+              "1 teaspoon Creole seasoning",
+              "1/4 teaspoon cayenne pepper (or to taste)",
+              "1   egg, (slightly beaten)",
+              "2 tablespoons butter",
+              "1 stalk celery, (finely chopped)",
+              "1/2 medium onion, (finely chopped)",
+              "3  green onions (including green tops, finely chopped)",
+              "1/2 green bell pepper, (finely chopped)",
+              "1 tablespoon flat-leaf parsley, (minced)",
+              "1/2 cup fine dry bread crumbs ((approximately), plus additional for topping (about 2 tablespoons))",
+              "2 tablespoons butter, (melted)",
+              "1 cup mayonnaise ((preferably homemade or Best Foods brand))",
+              "1/4 cup Creole mustard",
+              "3 tablespoons flat-leaf parsley, (minced)",
+              "3 tablespoons green onions (with tops, minced)",
+              "1 tablespoon onion, (minced)",
+              "1/4 cup dill pickle, (chopped)",
+              "1/4 teaspoon cayenne pepper",
+              "Salt (to taste)",
+              "2 tablespoons lemon juice, (fresh squeezed)",
+              "1/4 teaspoon Worcestershire sauce"
+            ],
+            "instructions": [
+              "Baked Deviled Crab Instructions:",
+              "Creole Tartar Sauce Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "5cc9914bbb6b70cf9af50bb5553b4942a28e2d179651d5faa7155d8b303a2c21"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/appetizers/hummus.htm",
+          "data": {
+            "name": "Hummus with Pita Toast Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/appetizers/hummus.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-04-09T20:50:19+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "",
+            "totalTime": "",
+            "recipeYield": [
+              "3",
+              "3 cups"
+            ],
+            "recipeCategory": [
+              "Appetizer"
+            ],
+            "recipeCuisine": [
+              "Middle Eastern"
+            ],
+            "keywords": "Hummus with Pita Toast Recipe",
+            "ingredients": [
+              "2 cups or 1 (15-ounce) can garbanzo beans ((chick peas), drained and rinsed)",
+              "1/4 cup Tahini ((sesame seed paste)*)",
+              "1/3 cup lemon juice, (fresh-squeezed)",
+              "1 to 2 cloves garlic, (minced)",
+              "1/2 teaspoon salt",
+              "1/2 teaspoon ground cumin",
+              "1/4 cup parsley (leaves, finely-minced)",
+              "1 teaspoon sesame seed oil (or olive oil)",
+              "1 tablespoon ground sumac (or paprika (for garnish))",
+              "3/4 cup butter, (room temperature)",
+              "2 tablespoons parsley, (minced)",
+              "1 tablespoon chives, (fresh, minced)",
+              "1 tablespoon lemon juice, (fresh-squeezed)",
+              "1 clove garlic, (minced)",
+              "1/8 teaspoon salt",
+              "1/8 teaspoon white pepper",
+              "6 rounds pita bread"
+            ],
+            "instructions": [
+              "Hummus Instructions:",
+              "Pita Toast Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "09d87a50166119acf9acfcdd3346759983a95789d3bd575c9139b13e6dd7a160"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/history/akutaq_eskimoicecream.htm",
+          "data": {
+            "name": "Akutaq - Eskimo Ice Cream Recipes:",
+            "description": "This was a very hard recipe to record, as each family usually has its own version and usually has never written it down in an actual recipe.  They generally just make it from memory and feel.  After reading several descriptions on how to make Akutaq, I came up the the following recipe.  I have never, personally, made the following recipe.",
+            "url": "https://whatscookingamerica.net/history/akutaq_eskimoicecream.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-05-09T20:55:53+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "",
+            "totalTime": "PT15M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": [
+              "Native American"
+            ],
+            "keywords": "Akutaq- Eskimo Ice Cream Recipe",
+            "ingredients": [
+              "1 cup reindeer, (caribou, or moose fat (back fat)*)",
+              "1 cup animal oil ((seal, walrus, or whale), divided)",
+              "1/2 cup water (or 2 cups loose snow)",
+              "4 1/2 cups berries ((blueberries, cloudberries, cranberries, salmonberries, or blackberries), fresh)",
+              "1 cup solid vegetable shortening**",
+              "1 cup sugar, (granulated)",
+              "1/2 cup water (or berry juice (or 2 cups loose snow))",
+              "4 cups berries ((blueberries, cloudberries, cranberries, salmon berries, or blackberries), fresh***)"
+            ],
+            "instructions": [
+              "Traditional Eskimo Ice Cream Instructions:",
+              "Modern Eskimo Ice Cream Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "11f576a4e030cfbd1c64de57dfa78d7b45a9a9ef508e529c1a299df885d64a64"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/Salad/FreshFruitSalad.htm",
+          "data": {
+            "name": "",
+            "description": "",
+            "url": "https://whatscookingamerica.net/Salad/FreshFruitSalad.htm",
+            "image": "",
+            "author": {
+              "@id": "https://whatscookingamerica.net/#/schema/person/260a175023e237d3adc9958c2cd04336"
+            },
+            "datePublished": "2015-03-28T03:18:39+00:00",
+            "prepTime": "",
+            "cookTime": "",
+            "totalTime": "",
+            "recipeYield": "",
+            "recipeCategory": "",
+            "recipeCuisine": "",
+            "keywords": "",
+            "ingredients": [
+              "1-2-3 Fruit Dressing Dressing (see recipe below)",
+              "5 to 6 cups of a variety of fresh fruits of your choice be creative: "
+            ],
+            "instructions": [
+              "Prepare 1-2-3 Fruit Dressing; set aside until ready to use.",
+              "In a large bowl or container, combine all the mixed prepared fruits.",
+              "[object Object]",
+              "Pour prepared 1-2-3 Fruit Dressing over the cutup fruits; gently toss to coat all the fruit. Serve family style or for a gourmet look, serve in chilled cocktail glasses.",
+              "[object Object]",
+              "To store, cover and refrigerate for several hours before serving.",
+              "Makes 8 to 10 servings.",
+              " ",
+              "1-2-3 Fruit Dressing:",
+              "1 lemon - grated zest (rind) and juice",
+              "1 lime - grated zest (rind) and juice",
+              "1 orange - grated zest (rind) and juice",
+              "1 egg, well beaten",
+              "1 cup granulated sugar",
+              "NOTE: Grate the zest off of the citrus fruits first before juicing them.",
+              "In a saucepan over medium heat, combine the zest and juice from the lemon, lime, and orange. Add the beaten egg and sugar. Cook, stirring constantly, until mixture comes just to a boil; let boil 1 minute still stirring constantly.",
+              "[object Object]",
+              "Remove from heat and let cool before tossing with the fruit salad."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "e57039c33edb9f94b1ccecaa7717a9b32e1f5ffa8d80d9348513d822c0d6d515"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/salad/123fruitdressing.htm",
+          "data": {
+            "name": "1-2-3 Fruit Salad Dressing Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/salad/123fruitdressing.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-03-28T02:17:52+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT5M",
+            "totalTime": "PT20M",
+            "recipeYield": "",
+            "recipeCategory": "",
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "1-2-3 Fruit Salad Dressing Recipe",
+            "ingredients": [
+              "1  lemon, (greated zest (rind) and juice)",
+              "1  lime, (grated zest (rind) and juice)",
+              "1  orange (grated zest (rind) and juice)",
+              "1  egg, (well beaten)",
+              "1 cup granulated sugar"
+            ],
+            "instructions": [
+              "In a saucepan over medium heat, combine the zest and juice from the lemon, lime, and orange.  ",
+              "Add the beaten egg and granulated sugar.  ",
+              "Cook, stirring constantly, until mixture comes just to a boil; let boil 1 minute still stirring constantly.",
+              "Remove from heat and let cool before tossing with your fruit salad.",
+              " "
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "078565d028aaee4c1a14b80107832ff2b2be5865acdfa57b576e99c3418aa857"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/PanFriedTrout.htm",
+          "data": {
+            "name": "Pan-Fried Trout Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/PanFriedTrout.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-07-13T22:21:04+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT10M",
+            "totalTime": "PT25M",
+            "recipeYield": [
+              "2",
+              "2 servings"
+            ],
+            "recipeCategory": [
+              "Main Course"
+            ],
+            "recipeCuisine": [
+              "American"
+            ],
+            "keywords": "Pan-Fried Trout Recipe",
+            "ingredients": [
+              "1 or 2 whole (1-pound) Trout, (cleaned (head can be on or off), gills removed)",
+              "2 ounces butter*",
+              "1 plate of all-purpose flour",
+              "Salt (and pepper (to season the flour))"
+            ],
+            "instructions": [
+              "My husband cleaned the trout just after he caught them by gutting them, cutting off the gills, and most importantly, scraping off the blood line off the backbone.  I also want the head cut off!",
+              " ",
+              "How To Clean Fresh-Caught Trout:",
+              "First you need to cut the head off just before the Pectoral fin (this fin can be nipped off or left on).  This is an optional step, as some people want the head left on when cooking.",
+              "Hold fish with belly facing up.  Using your fillet knife, cut from the anal hole forward towards where the head was or still is.",
+              "After pulling out the entrails, take an old tooth brush and clean the blood vein that runs along the spine.  If that is not cleaned out it, will effect the taste.  Rinse the trout thoroughly (inside and out) and prepare to cook as you wish.",
+              "NOTE:  If you like to eat the fish skin, make sure you remove all the fish scales before cooking.  With the trout held firmly by the tail, scrape very firmly from the tail to the gills several times on both sides with a sharp knife.  I, personally, like to have my trout scaled before cooking.",
+              " ",
+              "How To Cook Fresh-Caught Trout:",
+              "When ready to cook, rinse the cleaned fish under cold water and pat dry with paper towels.  Drying will prevent the fish from steaming when you cook it.  Cut a few diagonal slashes along each side of the fish.  Roll the cleaned trout in flour seasoned with salt and pepper until covered.",
+              "Heat the butter in a frying pan until bubbling and then fry the trout for about 5 minutes on each side until golden brown.",
+              "To test for doneness when cooking the trout, insert a fork at the thickest point of the fish.  Perfectly cooked fish is nearly opaque, should be very moist, and will flake easily with a fork.  Fish that looks slightly dry is overcooked.  Undercooked fish will look translucent and raw.  If you have a digital meat thermometer, the internal temperature in the center of the fillet should reach 140 degrees F.",
+              "Serve with a slice of lemon for a slightly fresher, livelier taste.",
+              "Makes 2 servings."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "f14853e09f266ca572577628ba0ff3ae73591db74f2e84c163bf58e7ac59ed04"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/elleneaston/almondhoneypoundcake.htm",
+          "data": {
+            "name": "Almond Honey Pound Cake Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/elleneaston/almondhoneypoundcake.htm",
+            "image": "",
+            "author": "Ellen Easton © 2020 - All Rights Reserved",
+            "datePublished": "2015-05-05T15:13:03+00:00",
+            "prepTime": "PT20M",
+            "cookTime": "PT60M",
+            "totalTime": "PT80M",
+            "recipeYield": [
+              "1",
+              "1 cake"
+            ],
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Almond Honey Pound Cake Recipe",
+            "ingredients": [
+              "1/4 cup whole natural almonds, (crushed to small bitx and dust, divided)",
+              "3/4 cup cake flour, (sifted)",
+              "1/4 teaspoon baking powder",
+              "8 ounces almond paste",
+              "1 cup granulated sugar",
+              "1/4 teaspoon salt",
+              "1 tablespoon almond extract",
+              "12 tablespoons unsalted butter, (softened)",
+              "4 extra-large eggs",
+              "1/4 cup heavy cream",
+              "1 tablespoon honey",
+              "Granulated brown sugar",
+              "1/2 cup powdered sugar ((confectioners&#x27; sugar))",
+              "2 tablespoons lemon juice, (fresh-squeezed)",
+              "2 tablespoons orange juice, (fresh-squeezed)",
+              "1 tablespoon culinary Lavender flowers (or lavender buds)"
+            ],
+            "instructions": [
+              "Almond Honey Pound Cake Instructions:",
+              "Lavender Glaze Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "9fe846af06fa106c65b6cd3cd6c97c6bec8abbbd20b17bd16226bd420db2fb92"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/cynthiapineda/beans/pintobeans.htm",
+          "data": {
+            "name": "Basic Bean Recipe for Cooking Dried Beans:",
+            "description": "Every one cooks beans in their own way, and though some of the ingredients may overlap from recipe to recipe, very seldom are they two recipes the same.  So this is the way I make my beans, although even the way I do it may vary from pot to pot simply because of what I feel like adding to the dish on that day.Slow Cooker time: 12 hours low heat   |    Pressure Cooker time: 1 hour 30 minutes",
+            "url": "https://whatscookingamerica.net/cynthiapineda/beans/pintobeans.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-09-05T02:30:12+00:00",
+            "prepTime": "PT15M",
+            "cookTime": "PT180M",
+            "totalTime": "PT195M",
+            "recipeYield": [
+              "8",
+              "8 servings"
+            ],
+            "recipeCategory": [
+              "Side Dish"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Basic Bean Recipe for Cooking Dried Beans",
+            "ingredients": [
+              "2 cups beans, (dried, picked and sorted, then washed (yes, beans can have rocks and such in them))",
+              "2 to 3 quarts of water",
+              "2  garlic (cloves, peeled and crushed)",
+              "3 to 4  jalapeno chile peppers, (seeds and membranes removed and sliced into 1/8-inch pieces)",
+              "Salt (and freshly-ground black pepper to taste)",
+              "Bacon",
+              "1/8 teaspoon ground cumin",
+              "1 tablespoon chile powder",
+              "2 teaspoons paprika"
+            ],
+            "instructions": [
+              "Place the dried beans into a large pot.  Soak the beans overnight in warm water.  This will help to soften them. In the morning drain off the water, and cover with clean water.",
+              "Add the crushed garlic cloves and jalapeno chile peppers; bring the water just to a boil.  Turn down the heat to medium low and cook until the beans are soft and just almost done, approximately 2 hours.",
+              "At this time, you can also add the optional additions of bacon, cumin, chile powder, and/or paprika. You can use whatever of these you like, or whatever combination you prefer.  You might want to consider what you will be serving the beans with, and let that help you determine your additions. You don&rsquo;t want to overpower the taste of the beans.  After adding any of these Optional Ingredients, cook for another hour.",
+              "Once the beans are done, add the salt and pepper.  Do not add salt until after the beans are at least 80% cooked, as this will make the outer hull of the beans tough.",
+              "Using Slow Cooker (Crock Pot):",
+              "Using Pressure Cooker or Instant Pot Electric Pressure Cooker:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "615a4c65e1c23e53efd1d40f46cba7626844ae33e06c175af5e59b6c6ba070fc"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/sauces_condiments/aiolifusio-mayonnaisesauce.htm",
+          "data": {
+            "name": "Aioli Fusion Mayonnaise Sauce Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/sauces_condiments/aiolifusio-mayonnaisesauce.htm",
+            "image": "",
+            "author": "What's Cooking America",
+            "datePublished": "2015-12-22T13:57:03+00:00",
+            "prepTime": "PT10M",
+            "cookTime": "",
+            "totalTime": "PT10M",
+            "recipeYield": [
+              "1",
+              "1 1/2 cups"
+            ],
+            "recipeCategory": [
+              "Sauce"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Aioli Fusion Mayonnaise Sauce Recipe",
+            "ingredients": [
+              "1/2 cup of mayonnaise ((good quality))",
+              "Grated zest (and juice from 1/2 of a lime)",
+              "1 clove garlic, (minced)",
+              "1 teaspoon Chile Sauce ((Heinz is good brand))",
+              "Salt (and white pepper to taste)"
+            ],
+            "instructions": [
+              "In a bowl, combine the mayonnaise, lime juice, lime zest, garlic, and chile sauce, and mix well.  Add salt and pepper to taste.",
+              "Cover and refrigerate until ready to serve.",
+              "Makes approximately 3/4 cup."
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "61aef1f3ce25bc1f08b4c63595fe5737b0bd51c3192f5bbb3c34a09aad8cefb4"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    },
+    {
+      "results": [
+        {
+          "success": true,
+          "url": "https://whatscookingamerica.net/elleneaston/chociceboxcake.htm",
+          "data": {
+            "name": "Reva Paul's Chocolate Icebox Cake Recipe:",
+            "description": "",
+            "url": "https://whatscookingamerica.net/elleneaston/chociceboxcake.htm",
+            "image": "",
+            "author": "Ellen Easton © 2020 - All Rights Reserved",
+            "datePublished": "2015-05-06T14:46:35+00:00",
+            "prepTime": "PT40M",
+            "cookTime": "",
+            "totalTime": "PT40M",
+            "recipeYield": "",
+            "recipeCategory": [
+              "Dessert"
+            ],
+            "recipeCuisine": "",
+            "keywords": "Reva Paul's Chocolate Icebox Cake Recipe",
+            "ingredients": [
+              "24  Ladyfingers ",
+              "1 1/2 pounds (24 squares) semisweet chocolate",
+              "1 1/2 tablespoons instant coffee",
+              "1/2 cup boiling water",
+              "2 tablespoons pure vanilla extract",
+              "3  egg (yolks, separated*)",
+              "1/8 teaspoon salt",
+              "1/4 cup granulated sugar",
+              "1 cup heavy cream",
+              "Chocolate (shaving)",
+              "1 cup heavy whipping cream",
+              "2 teaspoons granulated sugar"
+            ],
+            "instructions": [
+              "Chocolate Icebox Cake Instructions:",
+              "Cake Topping Instructions:"
+            ],
+            "nutrition": {},
+            "aggregateRating": {},
+            "id": "80acc705dafa64c612186f32f03bf5878949d161dd6ce7e281b0bb6fae14f6a3"
+          },
+          "savedToKV": false,
+          "kvError": "Failed to save recipe: 404 Not Found"
+        }
+      ],
+      "summary": {
+        "total": 1,
+        "successful": 1,
+        "failed": 0,
+        "savedToKV": 0
+      }
+    }
+  ],
+  "summary": {
+    "total_urls_found": 52,
+    "total_scraped": 52,
+    "successful_scrapes": 0,
+    "failed_scrapes": 52,
+    "success_rate": 0.0
+  }
+}
