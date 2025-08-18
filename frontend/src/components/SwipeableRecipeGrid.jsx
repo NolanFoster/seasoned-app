@@ -16,26 +16,41 @@ function SwipeableRecipeGrid({ children, className = '', ...props }) {
     enableSnapping: true
   });
 
-  // Add visual indicators for swipe availability on mobile
+  // Add mobile carousel functionality
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
 
-    const checkScrollability = () => {
+    const checkMobileLayout = () => {
+      const isMobile = window.innerWidth <= 768;
       const isScrollable = grid.scrollWidth > grid.clientWidth;
+      
+      // Add mobile-carousel class on mobile devices
+      if (isMobile) {
+        grid.classList.add('mobile-carousel');
+        console.log('Mobile carousel activated - width:', window.innerWidth);
+      } else {
+        grid.classList.remove('mobile-carousel');
+        console.log('Desktop layout activated - width:', window.innerWidth);
+      }
+      
       grid.setAttribute('data-swipeable', isScrollable ? 'true' : 'false');
+      grid.setAttribute('data-mobile', isMobile ? 'true' : 'false');
     };
 
     // Check initially and on resize
-    checkScrollability();
-    window.addEventListener('resize', checkScrollability);
+    checkMobileLayout();
+    window.addEventListener('resize', checkMobileLayout);
     
     // Also check when children change (recipes load)
-    const observer = new MutationObserver(checkScrollability);
+    const observer = new MutationObserver(() => {
+      // Small delay to ensure DOM is updated
+      setTimeout(checkMobileLayout, 100);
+    });
     observer.observe(grid, { childList: true, subtree: true });
 
     return () => {
-      window.removeEventListener('resize', checkScrollability);
+      window.removeEventListener('resize', checkMobileLayout);
       observer.disconnect();
     };
   }, [children]);
