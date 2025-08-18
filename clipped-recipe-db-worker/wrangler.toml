@@ -28,6 +28,21 @@ database_id = "2b6e049b-bdfa-4291-be54-082c0d12146f"
 binding = "recipe_images"
 bucket_name = "recipe-images-staging"
 
+# Production environment
+[env.production]
+name = "clipped-recipe-db-worker"
+[env.production.vars]
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
+
+[env.production.d1_databases]
+binding = "DB"
+database_name = "recipe-db"
+database_id = "2b6e049b-bdfa-4291-be54-082c0d12146f"
+
+[env.production.r2_buckets]
+binding = "recipe_images"
+bucket_name = "recipe-images"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "recipe-db"

@@ -23,6 +23,19 @@ database_id = "69a59404-ca73-4760-bb87-0ac910752ca9"
 binding = "RECIPE_STORAGE"
 id = "3f8a3b17db9e4f8ea3eae83d864ad518"  # Using preview_id for staging
 
+# Production environment
+[env.production]
+name = "recipe-search-db"
+
+[env.production.d1_databases]
+binding = "SEARCH_DB"
+database_name = "recipe-search-db"
+database_id = "69a59404-ca73-4760-bb87-0ac910752ca9"
+
+[env.production.kv_namespaces]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
 # D1 Database for search graph
 [[d1_databases]]
 binding = "SEARCH_DB"
