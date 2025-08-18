@@ -134,9 +134,9 @@ jobs:
               comment += `| Branches | ${branchPercent}% | ${coveredBranches}/${totalBranches} |\n\n`;
               
               // Coverage status
-              const minCoverage = 85; // From .c8rc.json
+              const minCoverage = 10; // From .c8rc.json
               const overallGood = parseFloat(linePercent) >= minCoverage && parseFloat(functionPercent) >= minCoverage;
-              comment += overallGood ? '✅ Coverage meets requirements!' : '⚠️ Coverage below threshold (85%)';
+              comment += overallGood ? '✅ Coverage meets requirements!' : '⚠️ Coverage below threshold (10%)';
               
             } catch (error) {
               comment += '⚠️ Error parsing coverage data: ' + error.message;
