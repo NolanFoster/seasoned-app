@@ -1497,11 +1497,7 @@ function App() {
             {!isLoadingRecipes && (
               <>
                 {recipes.length > 0 ? (
-                  <Recommendations 
-                    onRecipeSelect={openRecipeView} 
-                    recipes={recipes}
-                    recommendations={recommendations}
-                  />
+                  <Recommendations onRecipeSelect={openRecipeView} />
                 ) : (
                   <div className="no-recipes-found">
                     <div className="no-recipes-content">
