@@ -29,7 +29,7 @@ binding = "AI"
 # Staging KV Namespaces for storing recipes
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
-id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+id = "dd001c20659a4d6982f6d650abcac880"
 
 # Production environment
 [env.production]
@@ -49,7 +49,7 @@ id = "dd001c20659a4d6982f6d650abcac880"
 [[kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
-preview_id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+preview_id = "dd001c20659a4d6982f6d650abcac880"
 
 [observability.logs]
 enabled = true

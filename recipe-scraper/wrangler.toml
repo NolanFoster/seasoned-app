@@ -25,7 +25,7 @@ name = "preview-recipe-scraper"
 [[kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
-preview_id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+preview_id = "dd001c20659a4d6982f6d650abcac880"
 
 # Durable Objects (if you want persistent storage)
 # [[durable_objects.bindings]]

@@ -21,7 +21,7 @@ database_id = "1c41b568-23cf-4b86-b6e8-03ae345b9492"
 # Staging KV Namespaces for recipe storage
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
-id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+id = "dd001c20659a4d6982f6d650abcac880"
 
 # Production environment
 [env.production]
