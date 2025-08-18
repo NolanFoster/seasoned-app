@@ -1502,13 +1502,27 @@ function App() {
             image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
             prep_time: recipeData.prepTime || recipeData.prep_time || null,
             cook_time: recipeData.cookTime || recipeData.cook_time || null,
-            recipe_yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || null,
+            recipe_yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
             source_url: recipeData.url || recipeData.source_url || '',
             // Include full recipe data for when user selects a result
-            ingredients: recipeData.ingredients || [],
-            instructions: recipeData.instructions || [],
-            recipeIngredient: recipeData.ingredients || [],
-            recipeInstructions: recipeData.instructions || []
+            ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
+            instructions: recipeData.instructions || recipeData.recipeInstructions || [],
+            recipeIngredient: recipeData.ingredients || recipeData.recipeIngredient || [],
+            recipeInstructions: recipeData.instructions || recipeData.recipeInstructions || [],
+            // Additional fields that might be available
+            prepTime: recipeData.prepTime || recipeData.prep_time || null,
+            cookTime: recipeData.cookTime || recipeData.cook_time || null,
+            recipeYield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+            yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+            video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
+            video: recipeData.video || null,
+            nutrition: recipeData.nutrition || {},
+            author: recipeData.author || '',
+            datePublished: recipeData.datePublished || '',
+            recipeCategory: recipeData.recipeCategory || '',
+            recipeCuisine: recipeData.recipeCuisine || '',
+            keywords: recipeData.keywords || '',
+            aggregateRating: recipeData.aggregateRating || {}
           };
         });
         
@@ -1677,6 +1691,8 @@ function App() {
                     key={recipe.id} 
                     className="search-result-item"
                     onClick={() => {
+                      // Open the recipe in fullscreen view
+                      openRecipeView(recipe);
                       // Clear search
                       setSearchInput('');
                       setSearchResults([]);
