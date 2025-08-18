@@ -4,10 +4,10 @@ import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
 import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://recipe-scraper.nolanfoster.workers.dev'; // Main recipe worker with KV storage
-const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL || 'https://recipe-clipper-worker.nolanfoster.workers.dev'; // Clipper worker
-const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev'; // Search database worker
-const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL || 'https://recipe-save-worker.nolanfoster.workers.dev'; // Recipe save worker
+const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV storage
+const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
+const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL; // Search database worker
+const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL; // Recipe save worker
 
 
 
@@ -646,7 +646,7 @@ function App() {
   // Function to get just the category names first for loading display
   async function getRecipeCategories() {
     try {
-      const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
+      const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
       
       const res = await fetchWithTimeout(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
@@ -696,8 +696,8 @@ function App() {
         setIsLoadingRecipes(true);
       }
       
-      const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
-      const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
+      const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
+      const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
       
       // Clear search cache when refreshing recipes to ensure fresh search results
       clearSearchCache();
