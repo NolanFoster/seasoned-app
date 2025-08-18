@@ -99,7 +99,7 @@ function App() {
     try {
       debugLogEmoji('🔍', `Using smart search for tag "${tag}"`);
       const searchRes = await fetchWithTimeout(
-        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=RECIPE&limit=6`,
+        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=recipe&limit=6`,
         { timeout: 10000 }
       );
       
@@ -1467,7 +1467,7 @@ function App() {
     setShowSearchResults(true);
     
     try {
-      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=RECIPE&limit=20`);
+      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=recipe&limit=20`);
       
       if (res.ok) {
         const result = await res.json();
