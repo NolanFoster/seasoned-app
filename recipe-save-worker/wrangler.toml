@@ -21,8 +21,8 @@ IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
 [env.staging]
 name = "staging-recipe-save-worker"
 [env.staging.vars]
-SEARCH_DB_URL = "https://staging-recipe-search-db.nolanfoster.workers.dev"
-IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -30,11 +30,11 @@ id = "dd001c20659a4d6982f6d650abcac880"
 
 [[env.staging.r2_buckets]]
 binding = "RECIPE_IMAGES"
-bucket_name = "recipe-images-staging"
+bucket_name = "recipe-images"
 
-# [[env.staging.durable_objects.bindings]]
-# name = "RECIPE_SAVER"
-# class_name = "RecipeSaver"
+[[env.staging.durable_objects.bindings]]
+name = "RECIPE_SAVER"
+class_name = "RecipeSaver"
 
 # Production environment
 [env.production]
@@ -69,7 +69,7 @@ class_name = "RecipeSaver"
 # Durable Object migrations
 [[migrations]]
 tag = "v1"
-new_classes = ["RecipeSaver"]
+new_sqlite_classes = ["RecipeSaver"]
 
 # R2 Bucket for recipe images
 [[r2_buckets]]

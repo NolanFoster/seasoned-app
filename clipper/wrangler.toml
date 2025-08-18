@@ -21,7 +21,7 @@ binding = "AI"
 name = "staging-clipper"
 [env.staging.vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
 [env.staging.ai]
 binding = "AI"

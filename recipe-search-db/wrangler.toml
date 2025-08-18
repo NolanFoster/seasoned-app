@@ -12,11 +12,14 @@ name = "preview-recipe-search-db"
 [env.staging]
 name = "staging-recipe-search-db"
 
+[env.staging.vars]
+# Add any environment variables here
+
 # Staging D1 Database for search graph
 [[env.staging.d1_databases]]
 binding = "SEARCH_DB"
-database_name = "recipe-search-db-staging"
-database_id = "1c41b568-23cf-4b86-b6e8-03ae345b9492"
+database_name = "recipe-search-db"
+database_id = "69a59404-ca73-4760-bb87-0ac910752ca9"
 
 # Staging KV Namespaces for recipe storage
 [[env.staging.kv_namespaces]]
