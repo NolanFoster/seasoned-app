@@ -36,7 +36,7 @@ bucket_name = "recipe-images"
 [env.staging.d1_databases]
 binding = "DB"
 database_name = "recipe-db-staging"
-database_id = "STAGING_DATABASE_ID_PLACEHOLDER"  # This needs to be updated with actual staging DB ID
+database_id = "REPLACE_WITH_STAGING_DB_ID"  # ⚠️  MUST be replaced with actual staging database ID
 
 [env.staging.r2_buckets]
 binding = "recipe_images"

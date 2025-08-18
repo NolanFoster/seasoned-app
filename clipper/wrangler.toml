@@ -18,7 +18,7 @@ IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
 # Staging KV Namespaces for storing recipes
 [env.staging.kv_namespaces]
 binding = "RECIPE_STORAGE"
-id = "STAGING_KV_NAMESPACE_ID_PLACEHOLDER"  # This needs to be updated with actual staging KV namespace ID
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 
 # Production environment
 [env.production]
