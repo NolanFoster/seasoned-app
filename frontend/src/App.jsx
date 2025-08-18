@@ -596,13 +596,16 @@ function App() {
         const data = await res.json();
         if (data.recommendations) {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
-          // Collect all recipes from all categories
-          const allRecipes = [];
+          // Collect all recipes from all categories using a Map
+          const recipesByCategory = new Map();
           const searchPromises = [];
           
           for (const [categoryName, tags] of Object.entries(data.recommendations)) {
             if (Array.isArray(tags)) {
               console.log(`📂 Processing category "${categoryName}" with ${tags.length} tags`);
+              // Initialize category in the map
+              recipesByCategory.set(categoryName, []);
+              
               // Create search promises for each tag using smart search
               for (const tag of tags) {
                 console.log(`🏷️  Processing tag: "${tag}"`);
@@ -634,14 +637,14 @@ function App() {
                       nutrition: recipe.nutrition || {},
                       aggregateRating: recipe.aggregateRating || {}
                     }));
-                    return transformedRecipes;
+                    return { category: categoryName, recipes: transformedRecipes };
                   } else {
                     console.log(`⚠️  Tag "${tag}" found no recipes`);
-                    return [];
+                    return { category: categoryName, recipes: [] };
                   }
                 }).catch(error => {
                   console.warn(`❌ Smart search failed for tag "${tag}":`, error);
-                  return []; // Return empty array for failed searches
+                  return { category: categoryName, recipes: [] }; // Return empty array for failed searches
                 });
                 
                 searchPromises.push(searchPromise);
@@ -653,20 +656,37 @@ function App() {
           try {
             const searchResults = await Promise.allSettled(searchPromises);
             searchResults.forEach(result => {
-              if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-                allRecipes.push(...result.value);
+              if (result.status === 'fulfilled' && result.value && result.value.category) {
+                const { category, recipes } = result.value;
+                const existingRecipes = recipesByCategory.get(category) || [];
+                recipesByCategory.set(category, [...existingRecipes, ...recipes]);
               }
             });
           } catch (error) {
             console.error('Error processing search results:', error);
           }
           
-          // Remove duplicates and set recipes
+          // Log results by category and collect all unique recipes
+          let totalUniqueRecipes = 0;
+          const allRecipes = [];
+          
+          for (const [categoryName, recipes] of recipesByCategory.entries()) {
+            // Remove duplicates within each category
+            const uniqueCategoryRecipes = recipes.filter((recipe, index, self) => 
+              index === self.findIndex(r => r.id === recipe.id)
+            );
+            
+            console.log(`📊 Category "${categoryName}": ${recipes.length} total recipes, ${uniqueCategoryRecipes.length} unique recipes`);
+            totalUniqueRecipes += uniqueCategoryRecipes.length;
+            allRecipes.push(...uniqueCategoryRecipes);
+          }
+          
+          // Remove duplicates across all categories
           const uniqueRecipes = allRecipes.filter((recipe, index, self) => 
             index === self.findIndex(r => r.id === recipe.id)
           );
           
-          console.log(`📊 Found ${uniqueRecipes.length} unique recipes from search results`);
+          console.log(`📊 Found ${totalUniqueRecipes} total recipes and ${uniqueRecipes.length} unique recipes across all categories`);
           setRecipes(uniqueRecipes);
           
           // If no recipes found, still clear loading state to prevent hanging
