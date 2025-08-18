@@ -5,6 +5,14 @@ const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'h
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
 
 function Recommendations({ onRecipeSelect, recipesByCategory }) {
+  // Debug logging
+  console.log('🔍 Recommendations component rendered with:', {
+    recipesByCategory: recipesByCategory,
+    recipesByCategorySize: recipesByCategory?.size,
+    recipesByCategoryType: typeof recipesByCategory,
+    hasRecipesByCategory: Boolean(recipesByCategory && recipesByCategory.size > 0)
+  });
+  
   // If recipesByCategory is provided, use it directly; otherwise fall back to fetching
   const [recommendations, setRecommendations] = useState(null);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
@@ -216,6 +224,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
 
   // If we have recipesByCategory, render them directly
   if (recipesByCategory && recipesByCategory.size > 0) {
+    console.log('✅ Using recipesByCategory for rendering');
     return (
       <div className="recommendations-container">
         {(() => {
@@ -223,7 +232,10 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
             // Track which recipes have been shown to avoid duplicates
             const shownRecipeIds = new Set();
             
-            return Array.from(recipesByCategory.entries()).map(([categoryName, recipes]) => {
+            const entries = Array.from(recipesByCategory.entries());
+            console.log('📊 recipesByCategory entries:', entries);
+            
+            return entries.map(([categoryName, recipes]) => {
               console.log(`🎯 Rendering category "${categoryName}" with ${recipes.length} recipes`);
               
               // Filter out duplicates across categories
@@ -334,6 +346,11 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
 
   // Fallback: If no recipesByCategory, use the original logic
   if (isLoadingRecommendations || recommendations) {
+    console.log('🔄 Using fallback rendering logic:', {
+      isLoadingRecommendations,
+      hasRecommendations: Boolean(recommendations),
+      hasRecommendationsData: Boolean(recommendations?.recommendations)
+    });
     return (
       <div className="recommendations-container">
         {(() => {
@@ -488,6 +505,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     );
   }
 
+  console.log('❌ No rendering conditions met, returning null');
   return null;
 }
 
