@@ -10,6 +10,44 @@
   transition: opacity $transition-normal;
 }
 
+/* Mobile Carousel Class - Applied directly via JavaScript */
+.recipe-grid.mobile-carousel {
+  display: flex !important;
+  flex-direction: row !important;
+  grid-template-columns: none !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x mandatory !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  gap: $spacing-md !important;
+  padding-bottom: 10px !important;
+  
+  /* DEBUG: Visual indicator */
+  border: 3px solid #ff0000 !important;
+  background: rgba(255, 0, 0, 0.1) !important;
+  
+  &::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .recipe-card {
+    flex: 0 0 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    scroll-snap-align: start !important;
+    margin-right: $spacing-md !important;
+    
+    /* DEBUG: Visual indicator */
+    border: 2px solid #00ff00 !important;
+    
+    &:last-child {
+      margin-right: $spacing-lg !important;
+    }
+  }
+}
+
 /* Recipe Card Styles */
 .recipe-card {
   @include glass-effect-strong;
@@ -462,27 +500,34 @@
   }
 }
 
-/* Responsive adjustments for recipe grid */
+/* Responsive adjustments for recipe grid - MOBILE CAROUSEL */
 @media (max-width: 768px) {
-  .recipe-grid {
-    margin-top: $spacing-xl + $spacing-md; /* Increased from $spacing-md to add more space */
-    gap: $spacing-md;
+  .recipe-grid,
+  .recipe-grid.category-recipes,
+  div.recipe-grid {
+    margin-top: $spacing-xl + $spacing-md !important; /* Increased from $spacing-md to add more space */
+    gap: $spacing-md !important;
     
-    /* Enable horizontal scrolling on mobile */
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-    padding-bottom: 10px;
-    position: relative;
+    /* Enable horizontal scrolling on mobile - FORCE OVERRIDE */
+    display: flex !important;
+    flex-direction: row !important;
+    grid-template-columns: none !important; /* Override any grid styles */
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
+    padding-bottom: 10px !important;
+    position: relative !important;
+    
+    /* DEBUG: Visual indicator that mobile styles are active */
+    border: 2px solid #ff0000 !important;
+    background: rgba(255, 0, 0, 0.1) !important;
     
     /* Hide scrollbar for WebKit browsers */
     &::-webkit-scrollbar {
-      display: none;
+      display: none !important;
     }
     
     /* Visual indicator for scrollable content */
@@ -510,44 +555,57 @@
   }
   
   .recipe-card {
-    flex: 0 0 280px; /* Fixed width for horizontal scrolling */
-    scroll-snap-align: start;
-    margin-right: $spacing-md;
+    flex: 0 0 280px !important; /* Fixed width for horizontal scrolling */
+    scroll-snap-align: start !important;
+    margin-right: $spacing-md !important;
+    min-width: 280px !important; /* Ensure minimum width */
+    max-width: 280px !important; /* Ensure maximum width */
+    
+    /* DEBUG: Visual indicator that mobile card styles are active */
+    border: 2px solid #00ff00 !important;
     
     &:last-child {
-      margin-right: $spacing-lg; /* Extra margin for last card */
+      margin-right: $spacing-lg !important; /* Extra margin for last card */
     }
   }
 }
 
 @media (max-width: 640px) {
-  .recipe-grid {
-    margin-top: $spacing-xl + $spacing-lg; /* Increased from $spacing-sm to ensure cards are below glass panel */
-    gap: $spacing-sm;
-    padding-left: $spacing-md;
-    padding-right: $spacing-md;
+  .recipe-grid,
+  .recipe-grid.category-recipes,
+  div.recipe-grid {
+    margin-top: $spacing-xl + $spacing-lg !important; /* Increased from $spacing-sm to ensure cards are below glass panel */
+    gap: $spacing-sm !important;
+    padding-left: $spacing-md !important;
+    padding-right: $spacing-md !important;
   }
   
   .recipe-card {
-    flex: 0 0 260px; /* Slightly smaller on smaller screens */
-    margin-right: $spacing-sm;
+    flex: 0 0 260px !important; /* Slightly smaller on smaller screens */
+    min-width: 260px !important;
+    max-width: 260px !important;
+    margin-right: $spacing-sm !important;
   }
 }
 
 @media (max-width: 480px) {
-  .recipe-grid {
-    margin-top: $spacing-xl + $spacing-md; /* Added more space instead of 0 */
-    gap: $spacing-sm;
-    padding-left: $spacing-sm;
-    padding-right: $spacing-sm;
+  .recipe-grid,
+  .recipe-grid.category-recipes,
+  div.recipe-grid {
+    margin-top: $spacing-xl + $spacing-md !important; /* Added more space instead of 0 */
+    gap: $spacing-sm !important;
+    padding-left: $spacing-sm !important;
+    padding-right: $spacing-sm !important;
   }
   
   .recipe-card {
-    flex: 0 0 240px; /* Even smaller on very small screens */
-    margin-right: $spacing-sm;
+    flex: 0 0 240px !important; /* Even smaller on very small screens */
+    min-width: 240px !important;
+    max-width: 240px !important;
+    margin-right: $spacing-sm !important;
     
     &:last-child {
-      margin-right: $spacing-md;
+      margin-right: $spacing-md !important;
     }
   }
 }
