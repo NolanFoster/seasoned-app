@@ -70,6 +70,8 @@ export default {
         return await migrateKVToSearch(request, env, corsHeaders);
       } else if (path === '/api/debug-kv' && method === 'GET') {
         return await debugKVStorage(request, env, corsHeaders);
+      } else if (path === '/api/populate-kv' && method === 'POST') {
+        return await populateKVSamples(request, env, corsHeaders);
       } else {
         return new Response(JSON.stringify({ error: 'Not found' }), {
           status: 404,
@@ -1169,6 +1171,192 @@ async function debugKVStorage(request, env, corsHeaders) {
       success: false,
       error: error.message,
       stack: error.stack
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Sample recipe data for KV population
+const sampleRecipes = [
+  {
+    url: "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+    data: {
+      name: "Asparagus with Orange Dressing and Toasted Hazelnuts Recipe",
+      description: "Delicious asparagus side dish with orange dressing",
+      url: "https://whatscookingamerica.net/vegetables/asparagusorange.htm",
+      image: "",
+      author: "What's Cooking America",
+      datePublished: "2016-02-21T08:32:33+00:00",
+      prepTime: "PT10M",
+      cookTime: "PT4M",
+      totalTime: "PT14M",
+      recipeYield: ["4", "4 servings"],
+      recipeCategory: ["Side Dish"],
+      recipeCuisine: ["American"],
+      keywords: "Asparagus with Orange Dressing and Toasted Hazelnuts Recipe",
+      ingredients: [
+        "2 tablespoons hazelnuts, (finely-chopped*)",
+        "1 1/2 to 2 pounds asparagus (stalks, washed and trimmed**)",
+        "1/4 teaspoon orange zest, (freshly-grated)",
+        "2 teaspoons orange juice, (fresh-squeezed)",
+        "1 teaspoon lemon juice, (fresh-squeezed)",
+        "2 tablespoons olive oil, (extra-virgin)",
+        "Coarse salt (and sea salt)",
+        "Black pepper, (coarsely-ground)"
+      ],
+      instructions: [
+        "Preheat oven to 375 degrees F.",
+        "Cook asparagus in a large frying pan of boiling salted water until crisp-tender, approximately 4 to 5 minutes; remove from heat and drain well in a colander.",
+        "Transfer hot asparagus to serving platter or individual serving plates.",
+        "In a small bowl, whisk together orange zest, orange juice, lemon juice, olive oil, salt, and pepper to taste. Spoon the prepared Orange Dressing over top or asparagus and sprinkle with chopped hazelnuts.",
+        "Makes 4 servings."
+      ],
+      nutrition: {},
+      tags: ["side dish", "asparagus", "orange", "hazelnuts", "american"],
+      scrapedAt: new Date().toISOString()
+    }
+  },
+  {
+    url: "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+    data: {
+      name: "Chocolate Chip Cookies",
+      description: "Classic homemade chocolate chip cookies",
+      url: "https://whatscookingamerica.net/cookie/chocchipcookies.htm",
+      image: "",
+      author: "What's Cooking America",
+      datePublished: "2016-02-21T08:32:33+00:00",
+      prepTime: "PT15M",
+      cookTime: "PT12M",
+      totalTime: "PT27M",
+      recipeYield: ["36", "36 cookies"],
+      recipeCategory: ["Dessert", "Cookie"],
+      recipeCuisine: ["American"],
+      keywords: "chocolate chip cookies recipe",
+      ingredients: [
+        "2 1/4 cups all-purpose flour",
+        "1 teaspoon baking soda",
+        "1 teaspoon salt",
+        "1 cup butter, softened",
+        "3/4 cup granulated sugar",
+        "3/4 cup packed brown sugar",
+        "2 large eggs",
+        "2 teaspoons vanilla extract",
+        "2 cups chocolate chips"
+      ],
+      instructions: [
+        "Preheat oven to 375°F (190°C).",
+        "In a medium bowl, whisk together flour, baking soda, and salt.",
+        "In a large bowl, cream together butter and both sugars until light and fluffy.",
+        "Beat in eggs one at a time, then stir in vanilla.",
+        "Gradually blend in flour mixture.",
+        "Stir in chocolate chips.",
+        "Drop rounded tablespoons of dough onto ungreased cookie sheets.",
+        "Bake for 9 to 11 minutes or until golden brown.",
+        "Cool on baking sheet for 2 minutes; remove to wire rack."
+      ],
+      nutrition: {},
+      tags: ["dessert", "cookies", "chocolate chip", "baking", "american"],
+      scrapedAt: new Date().toISOString()
+    }
+  },
+  {
+    url: "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+    data: {
+      name: "Grilled Chicken Breasts",
+      description: "Perfectly grilled chicken breasts with herbs",
+      url: "https://whatscookingamerica.net/Poultry/GrilledChickenBreasts.htm",
+      image: "",
+      author: "What's Cooking America",
+      datePublished: "2016-02-21T08:32:33+00:00",
+      prepTime: "PT20M",
+      cookTime: "PT15M",
+      totalTime: "PT35M",
+      recipeYield: ["4", "4 servings"],
+      recipeCategory: ["Main Dish"],
+      recipeCuisine: ["American"],
+      keywords: "grilled chicken breasts recipe",
+      ingredients: [
+        "4 boneless, skinless chicken breasts",
+        "2 tablespoons olive oil",
+        "2 teaspoons garlic powder",
+        "1 teaspoon dried oregano",
+        "1 teaspoon dried thyme",
+        "1 teaspoon salt",
+        "1/2 teaspoon black pepper",
+        "1 lemon, juiced"
+      ],
+      instructions: [
+        "Preheat grill to medium-high heat.",
+        "Pound chicken breasts to even thickness.",
+        "In a small bowl, mix olive oil, garlic powder, oregano, thyme, salt, and pepper.",
+        "Rub seasoning mixture all over chicken breasts.",
+        "Let marinate for 15-20 minutes.",
+        "Grill chicken for 6-7 minutes per side or until internal temperature reaches 165°F.",
+        "Remove from grill and let rest for 5 minutes.",
+        "Drizzle with lemon juice before serving."
+      ],
+      nutrition: {},
+      tags: ["main dish", "chicken", "grilled", "protein", "american"],
+      scrapedAt: new Date().toISOString()
+    }
+  }
+];
+
+/**
+ * Populate KV with sample recipes for testing migration
+ */
+async function populateKVSamples(request, env, corsHeaders) {
+  try {
+    console.log('🚀 Populating KV with sample recipes...');
+    
+    let successful = 0;
+    let failed = 0;
+    
+    for (const recipe of sampleRecipes) {
+      try {
+        console.log(`📝 Saving recipe: ${recipe.data.name}`);
+        
+        // Generate recipe ID from URL
+        const encoder = new TextEncoder();
+        const data = encoder.encode(recipe.url);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const recipeId = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Save to KV
+        await env.RECIPE_STORAGE.put(recipeId, JSON.stringify(recipe.data));
+        
+        successful++;
+        console.log(`✅ Successfully saved: ${recipe.data.name}`);
+      } catch (error) {
+        failed++;
+        console.error(`❌ Error saving: ${recipe.data.name} - ${error.message}`);
+      }
+    }
+    
+    const stats = {
+      total: sampleRecipes.length,
+      successful,
+      failed
+    };
+    
+    console.log('✅ KV population complete:', stats);
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Sample recipes populated successfully',
+      stats
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ KV population failed:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
