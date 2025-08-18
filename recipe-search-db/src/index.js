@@ -70,6 +70,8 @@ export default {
         return await migrateKVToSearch(request, env, corsHeaders);
       } else if (path === '/api/debug-kv' && method === 'GET') {
         return await debugKVStorage(request, env, corsHeaders);
+      } else if (path === '/api/cleanup' && method === 'POST') {
+        return await cleanupDatabase(request, env, corsHeaders);
       } else {
         return new Response(JSON.stringify({ error: 'Not found' }), {
           status: 404,
@@ -844,7 +846,7 @@ async function processKVRecipe(key, env) {
 async function createRecipeNodeFromKV(recipeId, recipeData, env) {
   const nodeData = {
     id: recipeId,
-    type: 'RECIPE',
+    type: 'recipe',
     properties: {
       title: recipeData.name || recipeData.title || 'Untitled Recipe',
       description: recipeData.description || '',
@@ -1114,6 +1116,45 @@ async function decompressKVData(compressedBase64) {
     
   } catch (error) {
     throw new Error(`Decompression failed: ${error.message}`);
+  }
+}
+
+// Cleanup function to reset the database
+async function cleanupDatabase(request, env, corsHeaders) {
+  try {
+    console.log('🧹 Starting database cleanup...');
+    
+    // Delete all data from tables in the correct order (respecting foreign keys)
+    const cleanupQueries = [
+      'DELETE FROM metadata',
+      'DELETE FROM edges', 
+      'DELETE FROM nodes',
+      'DELETE FROM nodes_fts'
+    ];
+    
+    for (const query of cleanupQueries) {
+      await env.SEARCH_DB.prepare(query).run();
+    }
+    
+    console.log('✅ Database cleanup completed');
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Database cleaned successfully',
+      timestamp: new Date().toISOString()
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Cleanup failed:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 }
 

@@ -23,12 +23,12 @@ SAVE_WORKER_URL = "https://staging-recipe-save-worker.nolanfoster.workers.dev"
 # Staging environment with separate database
 [[env.staging.d1_databases]]
 binding = "DB"
-database_name = "recipe-db-staging"
-database_id = "db352ab8-482f-4f5f-b134-07ecd8fb4b06"
+database_name = "recipe-db"
+database_id = "2b6e049b-bdfa-4291-be54-082c0d12146f"
 
 [[env.staging.r2_buckets]]
 binding = "recipe_images"
-bucket_name = "recipe-images-staging"
+bucket_name = "recipe-images"
 
 # Production environment
 [env.production]
