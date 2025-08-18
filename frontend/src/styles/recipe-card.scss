@@ -10,7 +10,7 @@
   transition: opacity $transition-normal;
 }
 
-/* Mobile Carousel Class - Applied directly via JavaScript */
+/* Mobile Carousel Class - Simple native scrolling approach */
 .recipe-grid.mobile-carousel {
   display: flex !important;
   flex-direction: row !important;
@@ -22,22 +22,13 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   gap: $spacing-md !important;
-  padding: 20px 10px 20px 10px !important; /* Increased padding for larger touch area */
+  padding: 10px !important;
   
-  /* Enhanced touch responsiveness */
-  touch-action: pan-x !important; /* Only allow horizontal panning */
-  user-select: none !important; /* Prevent text selection during swipe */
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
+  /* Simple, performant touch handling */
+  touch-action: pan-x !important;
+  scroll-behavior: smooth !important;
   
-  /* Larger touch target area */
-  margin: -10px 0 !important; /* Expand touch area vertically */
-  
-  /* Fix for choppy scrolling - ensure touch events aren't blocked */
-  pointer-events: auto !important;
-  z-index: 100 !important; /* Ensure grid is above other elements */
-  
+  /* Hide scrollbar */
   &::-webkit-scrollbar {
     display: none !important;
   }
@@ -49,28 +40,8 @@
     scroll-snap-align: start !important;
     margin-right: $spacing-md !important;
     
-    /* Enhanced touch feedback */
-    touch-action: pan-x !important;
-    transition: transform 0.2s ease !important;
-    
-    /* Fix blocking elements - allow touch events to bubble up */
-    pointer-events: auto !important;
-    position: relative !important;
-    
-    /* Prevent child elements from blocking swipe gestures */
-    * {
-      pointer-events: none !important; /* Disable pointer events on all children */
-      touch-action: inherit !important;
-    }
-    
-    /* Re-enable pointer events only for interactive elements when needed */
-    &:hover * {
-      pointer-events: auto !important;
-    }
-    
-    &:active {
-      transform: scale(0.98) !important; /* Subtle feedback on touch */
-    }
+    /* Simple touch handling - let browser handle everything */
+    touch-action: auto !important;
     
     &:last-child {
       margin-right: $spacing-lg !important;
@@ -530,106 +501,57 @@
   }
 }
 
-/* Responsive adjustments for recipe grid - MOBILE CAROUSEL */
+/* Fallback mobile styles for browsers that don't support the JS mobile detection */
 @media (max-width: 768px) {
-  .recipe-grid,
-  .recipe-grid.category-recipes,
-  div.recipe-grid {
-    margin-top: $spacing-xl + $spacing-md !important; /* Increased from $spacing-md to add more space */
-    gap: $spacing-md !important;
-    
-    /* Enable horizontal scrolling on mobile - FORCE OVERRIDE */
+  .recipe-grid:not(.mobile-carousel) {
     display: flex !important;
     flex-direction: row !important;
-    grid-template-columns: none !important; /* Override any grid styles */
+    grid-template-columns: none !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     scroll-snap-type: x mandatory !important;
     -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important; /* Firefox */
-    -ms-overflow-style: none !important; /* IE and Edge */
-    padding-bottom: 10px !important;
-    position: relative !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    gap: $spacing-md !important;
+    padding: 10px !important;
+    touch-action: pan-x !important;
+    scroll-behavior: smooth !important;
     
-    /* Hide scrollbar for WebKit browsers */
     &::-webkit-scrollbar {
       display: none !important;
     }
-    
-    /* Visual indicator for scrollable content */
-    &[data-swipeable="true"]::before {
-      content: "";
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 30px;
-      background: linear-gradient(to left, rgba(0, 0, 0, 0.1), transparent);
-      pointer-events: none;
-      z-index: 10;
-      border-radius: 0 $border-radius-lg 0 0;
-    }
-    
-    /* Enhanced touch feedback */
-    &[data-swipe-container="true"] {
-      cursor: grab;
-      
-      &:active {
-        cursor: grabbing;
-      }
-    }
   }
   
-  .recipe-card {
-    flex: 0 0 280px !important; /* Fixed width for horizontal scrolling */
+  .recipe-grid:not(.mobile-carousel) .recipe-card {
+    flex: 0 0 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
     scroll-snap-align: start !important;
     margin-right: $spacing-md !important;
-    min-width: 280px !important; /* Ensure minimum width */
-    max-width: 280px !important; /* Ensure maximum width */
+    touch-action: auto !important;
     
     &:last-child {
-      margin-right: $spacing-lg !important; /* Extra margin for last card */
+      margin-right: $spacing-lg !important;
     }
   }
 }
 
 @media (max-width: 640px) {
-  .recipe-grid,
-  .recipe-grid.category-recipes,
-  div.recipe-grid {
-    margin-top: $spacing-xl + $spacing-lg !important; /* Increased from $spacing-sm to ensure cards are below glass panel */
-    gap: $spacing-sm !important;
-    padding-left: $spacing-md !important;
-    padding-right: $spacing-md !important;
-  }
-  
-  .recipe-card {
+  .recipe-grid.mobile-carousel .recipe-card,
+  .recipe-grid:not(.mobile-carousel) .recipe-card {
     flex: 0 0 260px !important; /* Slightly smaller on smaller screens */
     min-width: 260px !important;
     max-width: 260px !important;
-    margin-right: $spacing-sm !important;
   }
 }
 
 @media (max-width: 480px) {
-  .recipe-grid,
-  .recipe-grid.category-recipes,
-  div.recipe-grid {
-    margin-top: $spacing-xl + $spacing-md !important; /* Added more space instead of 0 */
-    gap: $spacing-sm !important;
-    padding-left: $spacing-sm !important;
-    padding-right: $spacing-sm !important;
-  }
-  
-  .recipe-card {
+  .recipe-grid.mobile-carousel .recipe-card,
+  .recipe-grid:not(.mobile-carousel) .recipe-card {
     flex: 0 0 240px !important; /* Even smaller on very small screens */
     min-width: 240px !important;
     max-width: 240px !important;
-    margin-right: $spacing-sm !important;
-    
-    &:last-child {
-      margin-right: $spacing-md !important;
-    }
   }
 }
 
