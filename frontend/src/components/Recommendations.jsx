@@ -4,21 +4,40 @@ import { formatDuration } from '../../../shared/utility-functions.js';
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
 
-function Recommendations({ onRecipeSelect }) {
+function Recommendations({ onRecipeSelect, recipesByCategory }) {
+  // If recipesByCategory is provided, use it directly; otherwise fall back to fetching
   const [recommendations, setRecommendations] = useState(null);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [externalRecipes, setExternalRecipes] = useState({});
 
   useEffect(() => {
+    // If recipesByCategory is provided, skip fetching recommendations
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      setIsLoadingRecommendations(false);
+      return;
+    }
+    
     // Fetch recommendations but don't let it block the app
     fetchRecommendations().catch(err => {
       console.error('Failed to fetch initial recommendations:', err);
     });
-  }, []);
+  }, [recipesByCategory]);
 
-  // Fetch external recipes when recommendations change
+  // Fetch external recipes when recommendations change (only if recipesByCategory not provided)
   useEffect(() => {
+    // If recipesByCategory is provided, use it directly
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      const externalData = {};
+      for (const [categoryName, recipes] of recipesByCategory.entries()) {
+        externalData[categoryName] = recipes;
+      }
+      setExternalRecipes(externalData);
+      setIsLoadingRecommendations(false);
+      return;
+    }
+    
+    // Otherwise, fetch recommendations and external recipes
     if (recommendations && recommendations.recommendations) {
       const fetchExternalRecipes = async () => {
         const externalData = {};
@@ -37,7 +56,7 @@ function Recommendations({ onRecipeSelect }) {
       };
       fetchExternalRecipes();
     }
-  }, [recommendations]);
+  }, [recommendations, recipesByCategory]);
 
   async function fetchRecommendations() {
     try {

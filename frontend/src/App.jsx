@@ -51,6 +51,7 @@ function App() {
   const [searchResults, setSearchResults] = useState([]); // New state for search results
   const [isSearching, setIsSearching] = useState(false); // New state for search loading
   const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
+  const [recipesByCategory, setRecipesByCategory] = useState(new Map()); // Store recipes organized by category
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
   const seasoningCanvasRef = useRef(null);
@@ -597,14 +598,14 @@ function App() {
         if (data.recommendations) {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
           // Collect all recipes from all categories using a Map
-          const recipesByCategory = new Map();
+          const newRecipesByCategory = new Map();
           const searchPromises = [];
           
           for (const [categoryName, tags] of Object.entries(data.recommendations)) {
             if (Array.isArray(tags)) {
               console.log(`📂 Processing category "${categoryName}" with ${tags.length} tags`);
               // Initialize category in the map
-              recipesByCategory.set(categoryName, []);
+              newRecipesByCategory.set(categoryName, []);
               
               // Create search promises for each tag using smart search
               for (const tag of tags) {
@@ -658,8 +659,8 @@ function App() {
             searchResults.forEach(result => {
               if (result.status === 'fulfilled' && result.value && result.value.category) {
                 const { category, recipes } = result.value;
-                const existingRecipes = recipesByCategory.get(category) || [];
-                recipesByCategory.set(category, [...existingRecipes, ...recipes]);
+                const existingRecipes = newRecipesByCategory.get(category) || [];
+                newRecipesByCategory.set(category, [...existingRecipes, ...recipes]);
               }
             });
           } catch (error) {
@@ -670,7 +671,7 @@ function App() {
           let totalUniqueRecipes = 0;
           const allRecipes = [];
           
-          for (const [categoryName, recipes] of recipesByCategory.entries()) {
+          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
             // Remove duplicates within each category
             const uniqueCategoryRecipes = recipes.filter((recipe, index, self) => 
               index === self.findIndex(r => r.id === recipe.id)
@@ -688,6 +689,7 @@ function App() {
           
           console.log(`📊 Found ${totalUniqueRecipes} total recipes and ${uniqueRecipes.length} unique recipes across all categories`);
           setRecipes(uniqueRecipes);
+          setRecipesByCategory(newRecipesByCategory); // Update the state with organized recipes
           
           // If no recipes found, still clear loading state to prevent hanging
           if (uniqueRecipes.length === 0) {
@@ -1517,7 +1519,10 @@ function App() {
             {!isLoadingRecipes && (
               <>
                 {recipes.length > 0 ? (
-                  <Recommendations onRecipeSelect={openRecipeView} />
+                  <Recommendations 
+                    onRecipeSelect={openRecipeView} 
+                    recipesByCategory={recipesByCategory}
+                  />
                 ) : (
                   <div className="no-recipes-found">
                     <div className="no-recipes-content">
