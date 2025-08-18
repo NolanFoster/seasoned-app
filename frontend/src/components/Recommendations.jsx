@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
-const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
-const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
+const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
+const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
 
 function Recommendations({ onRecipeSelect, recipesByCategory }) {
   // Debug flag - set to true to enable detailed logging

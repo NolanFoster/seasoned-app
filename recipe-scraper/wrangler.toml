@@ -12,9 +12,38 @@ workers_dev = true
 [vars]
 # Add any environment variables here
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
+SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.preview]
 name = "preview-recipe-scraper"
+[env.preview.vars]
+SAVE_WORKER_URL = "https://preview-recipe-save-worker.nolanfoster.workers.dev"
+
+[env.staging]
+name = "staging-recipe-scraper"
+[env.staging.vars]
+SAVE_WORKER_URL = "https://staging-recipe-save-worker.nolanfoster.workers.dev"
+
+[[env.staging.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+
+[[env.staging.r2_buckets]]
+binding = "RECIPE_IMAGES"
+bucket_name = "recipe-images-staging"
+
+[env.production]
+name = "recipe-scraper"
+[env.production.vars]
+SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
+
+[[env.production.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
+[[env.production.r2_buckets]]
+binding = "RECIPE_IMAGES"
+bucket_name = "recipe-images"
 
 # Routes (optional - for custom domains)
 # [[routes]]

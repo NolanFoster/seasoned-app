@@ -991,7 +991,7 @@ export class RecipeSaver {
     const startTime = Date.now();
 
     try {
-      const searchDbUrl = this.env.SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
+      const searchDbUrl = this.env.SEARCH_DB_URL;
       
       if (operation === 'create' || operation === 'update') {
         // Create or update node in search database

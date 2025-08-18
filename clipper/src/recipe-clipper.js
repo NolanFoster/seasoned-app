@@ -41,7 +41,7 @@ export default {
             const recipeId = await generateRecipeId(pageUrl);
             
             // Use recipe-save-worker to delete the recipe
-            const deleteResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+            const deleteResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/delete`, {
               method: 'DELETE',
               headers: {
                 'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ export default {
           }
           
           // Save the extracted recipe using recipe-save-worker
-          const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+          const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/save`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
