@@ -10,6 +10,45 @@
   transition: opacity $transition-normal;
 }
 
+/* Mobile Carousel Class - Simple native scrolling approach */
+.recipe-grid.mobile-carousel {
+  display: flex !important;
+  flex-direction: row !important;
+  grid-template-columns: none !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x mandatory !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  gap: $spacing-md !important;
+  padding: 10px !important;
+  
+  /* Simple, performant touch handling */
+  touch-action: pan-x !important;
+  scroll-behavior: smooth !important;
+  
+  /* Hide scrollbar */
+  &::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .recipe-card {
+    flex: 0 0 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    scroll-snap-align: start !important;
+    margin-right: $spacing-md !important;
+    
+    /* Simple touch handling - let browser handle everything */
+    touch-action: auto !important;
+    
+    &:last-child {
+      margin-right: $spacing-lg !important;
+    }
+  }
+}
+
 /* Recipe Card Styles */
 .recipe-card {
   @include glass-effect-strong;
@@ -422,25 +461,97 @@
   text-decoration: underline;
 }
 
-/* Responsive adjustments for recipe grid */
+/* Mobile Carousel Enhancements */
 @media (max-width: 768px) {
-  .recipe-grid {
-    margin-top: $spacing-xl + $spacing-md; /* Increased from $spacing-md to add more space */
-    gap: $spacing-md;
+  .recommendation-category {
+    position: relative;
+    
+    /* Add swipe hint for first category */
+    &:first-child::after {
+      content: "← Swipe to explore →";
+      position: absolute;
+      top: 50px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 500;
+      z-index: 100;
+      animation: swipeHint 3s ease-in-out;
+      pointer-events: none;
+      opacity: 0;
+    }
+  }
+}
+
+@keyframes swipeHint {
+  0%, 20% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  30%, 70% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  80%, 100% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+
+/* Fallback mobile styles for browsers that don't support the JS mobile detection */
+@media (max-width: 768px) {
+  .recipe-grid:not(.mobile-carousel) {
+    display: flex !important;
+    flex-direction: row !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    gap: $spacing-md !important;
+    padding: 10px !important;
+    touch-action: pan-x !important;
+    scroll-behavior: smooth !important;
+    
+    &::-webkit-scrollbar {
+      display: none !important;
+    }
+  }
+  
+  .recipe-grid:not(.mobile-carousel) .recipe-card {
+    flex: 0 0 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    scroll-snap-align: start !important;
+    margin-right: $spacing-md !important;
+    touch-action: auto !important;
+    
+    &:last-child {
+      margin-right: $spacing-lg !important;
+    }
   }
 }
 
 @media (max-width: 640px) {
-  .recipe-grid {
-    margin-top: $spacing-xl + $spacing-lg; /* Increased from $spacing-sm to ensure cards are below glass panel */
-    gap: $spacing-md;
+  .recipe-grid.mobile-carousel .recipe-card,
+  .recipe-grid:not(.mobile-carousel) .recipe-card {
+    flex: 0 0 260px !important; /* Slightly smaller on smaller screens */
+    min-width: 260px !important;
+    max-width: 260px !important;
   }
 }
 
 @media (max-width: 480px) {
-  .recipe-grid {
-    margin-top: $spacing-xl + $spacing-md; /* Added more space instead of 0 */
-    gap: $spacing-sm;
+  .recipe-grid.mobile-carousel .recipe-card,
+  .recipe-grid:not(.mobile-carousel) .recipe-card {
+    flex: 0 0 240px !important; /* Even smaller on very small screens */
+    min-width: 240px !important;
+    max-width: 240px !important;
   }
 }
 
