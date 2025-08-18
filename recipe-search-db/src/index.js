@@ -44,8 +44,6 @@ export default {
         return await deleteEdge(edgeId, env, corsHeaders);
       } else if (path === '/api/search' && method === 'GET') {
         return await searchNodes(request, env, corsHeaders);
-      } else if (path === '/api/smart-search' && method === 'GET') {
-        return await smartSearchNodes(request, env, corsHeaders);
       } else if (path === '/api/debug/search' && method === 'GET') {
         return await debugSearch(request, env, corsHeaders);
       } else if (path === '/api/graph' && method === 'GET') {
@@ -56,11 +54,10 @@ export default {
         });
       } else if (path === '/api/version' && method === 'GET') {
         return new Response(JSON.stringify({ 
-          version: '1.3.0',
+          version: '1.1.0',
           features: {
             partialWordSearch: true,
-            smartSearch: true,
-            description: 'Supports partial word search and simplified smart search'
+            description: 'Supports partial word search by appending * to search terms'
           },
           timestamp: new Date().toISOString() 
         }), {
@@ -115,10 +112,10 @@ async function getNodes(request, env, corsHeaders) {
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
   let query = `
-    SELECT n.*, m.status
+    SELECT n.* 
     FROM nodes n
-    LEFT JOIN metadata m ON n.id = m.node_id
-    WHERE (m.status = 'ACTIVE' OR m.status IS NULL)
+    JOIN metadata m ON n.id = m.node_id
+    WHERE m.status = 'ACTIVE'
   `;
   let params = [];
 
@@ -391,9 +388,9 @@ async function searchNodes(request, env, corsHeaders) {
   let sqlQuery = `
     SELECT n.*, m.status, m.version
     FROM nodes n
-    LEFT JOIN metadata m ON n.id = m.node_id
+    JOIN metadata m ON n.id = m.node_id
     JOIN nodes_fts fts ON n.rowid = fts.rowid
-    WHERE fts.properties MATCH ? AND (m.status = 'ACTIVE' OR m.status IS NULL)
+    WHERE fts.properties MATCH ? AND m.status = 'ACTIVE'
   `;
   
   let params = [ftsQuery];
@@ -403,7 +400,7 @@ async function searchNodes(request, env, corsHeaders) {
     params.push(type);
   }
 
-  sqlQuery += ' LIMIT ?';
+  sqlQuery += ' ORDER BY rank LIMIT ?';
   params.push(limit);
 
   const result = await env.SEARCH_DB.prepare(sqlQuery).bind(...params).all();
@@ -419,60 +416,6 @@ async function searchNodes(request, env, corsHeaders) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
-
-// Simple search without fallback logic
-async function smartSearchNodes(request, env, corsHeaders) {
-  const url = new URL(request.url);
-  const query = url.searchParams.get('q');
-  const type = url.searchParams.get('type');
-  const limit = parseInt(url.searchParams.get('limit') || '50');
-
-  if (!query) {
-    throw new Error('Smart search query parameter "q" is required');
-  }
-
-  // Perform single search with the query
-  const results = await searchNodesInternal(query, type, limit, env);
-  
-  return new Response(JSON.stringify({
-    query,
-    strategy: 'simple',
-    results: results.map(node => ({
-      ...node,
-      properties: JSON.parse(node.properties)
-    }))
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
-}
-
-// Helper function to search nodes internally
-async function searchNodesInternal(query, type, limit, env) {
-  const ftsQuery = query.replace(/['"]/g, '').endsWith('*') ? query : query + '*';
-  
-  let sqlQuery = `
-    SELECT n.*, m.status, m.version
-    FROM nodes n
-    LEFT JOIN metadata m ON n.id = m.node_id
-    JOIN nodes_fts fts ON n.rowid = fts.rowid
-    WHERE fts.properties MATCH ? AND (m.status = 'ACTIVE' OR m.status IS NULL)
-  `;
-  
-  let params = [ftsQuery];
-
-  if (type) {
-    sqlQuery += ' AND n.type = ?';
-    params.push(type);
-  }
-
-  sqlQuery += ' LIMIT ?';
-  params.push(limit);
-
-  const result = await env.SEARCH_DB.prepare(sqlQuery).bind(...params).all();
-  return result.results || [];
-}
-
-
 
 // Graph operations
 async function getGraph(request, env, corsHeaders) {

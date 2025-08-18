@@ -74,7 +74,12 @@ export default {
       if (pathname === '/recipe' && request.method === 'POST') {
         try {
           console.log('POST /recipe endpoint called');
+          console.log('Request headers:', Object.fromEntries(request.headers.entries()));
+          console.log('Request method:', request.method);
+          console.log('Request URL:', request.url);
+          
           const body = await request.json();
+          console.log('Request body parsed successfully:', body);
           console.log('Request body received:', {
             hasName: !!body.name,
             hasDescription: !!body.description,
@@ -96,6 +101,12 @@ export default {
           });
           
           // Call recipe-save-worker to create the recipe
+          console.log('Calling recipe-save-worker to create recipe:', {
+            url: body.source_url || `manual://${Date.now()}`,
+            hasTitle: !!body.title,
+            hasIngredients: !!body.ingredients,
+            hasInstructions: !!body.recipeInstructions
+          });
           const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
             method: 'POST',
             headers: {
@@ -109,6 +120,9 @@ export default {
             })
           });
           
+          console.log('Recipe save response status:', recipeSaveResponse.status);
+          console.log('Recipe save response headers:', Object.fromEntries(recipeSaveResponse.headers.entries()));
+          
           if (!recipeSaveResponse.ok) {
             const errorText = await recipeSaveResponse.text();
             console.error('Failed to create recipe:', recipeSaveResponse.status, errorText);
@@ -119,6 +133,7 @@ export default {
           }
           
           const result = await recipeSaveResponse.json();
+          console.log('Recipe save response body:', result);
           console.log('Recipe created with ID:', result.id);
           
           return new Response(JSON.stringify({ id: result.id, message: 'Recipe created' }), {
@@ -149,6 +164,7 @@ export default {
         const body = await request.json();
         
         // Call recipe-save-worker to update the recipe
+        console.log('Calling recipe-save-worker to update recipe:', { id, updates: body });
         const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
           method: 'PUT',
           headers: {
@@ -187,6 +203,7 @@ export default {
         const id = pathname.split('/')[2];
         
         // Call recipe-save-worker to delete the recipe
+        console.log('Calling recipe-save-worker to delete recipe:', { id });
         const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
           method: 'DELETE',
           headers: {

@@ -1,7 +1,7 @@
 // Recipe Save Worker with Durable Object for atomic writes
 // This worker handles saving recipes to KV storage and synchronizing with the search database
 
-import { compressData, generateRecipeId } from '../../shared/kv-storage.js';
+import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
 
 // Utility function for structured logging
 function log(level, message, data = {}, context = {}) {
@@ -75,6 +75,8 @@ export class RecipeSaver {
         response = await this.handleDelete(request, requestId);
       } else if (path === '/status' && method === 'GET') {
         response = await this.handleStatus(request, requestId);
+      } else if (path === '/get' && method === 'GET') {
+        response = await this.handleGet(request, requestId);
       } else {
         log('warn', 'Unknown endpoint requested', { requestId, path, method });
         response = new Response(JSON.stringify({ error: 'Not found' }), {
@@ -313,7 +315,6 @@ export class RecipeSaver {
 
           // Decompress existing recipe
           log('debug', 'Decompressing existing recipe', { requestId, recipeId });
-          const { decompressData } = await import('../../shared/kv-storage.js');
           const existingRecipe = await decompressData(compressedData);
           log('debug', 'Existing recipe decompressed', { 
             requestId, 
@@ -464,7 +465,6 @@ export class RecipeSaver {
 
           // Decompress to get image URLs for cleanup
           log('debug', 'Decompressing recipe for image cleanup', { requestId, recipeId });
-          const { decompressData } = await import('../../shared/kv-storage.js');
           const recipe = await decompressData(compressedData);
           log('debug', 'Recipe decompressed for deletion', { 
             requestId, 
@@ -590,6 +590,66 @@ export class RecipeSaver {
     } catch (error) {
       const duration = Date.now() - startTime;
       log('error', 'Status check failed', {
+        requestId,
+        error: error.message,
+        stack: error.stack,
+        duration: `${duration}ms`
+      });
+      throw error;
+    }
+  }
+
+  async handleGet(request, requestId) {
+    log('info', 'Starting get operation', { requestId });
+    const startTime = Date.now();
+
+    try {
+      const url = new URL(request.url);
+      const recipeId = url.searchParams.get('id');
+
+      if (!recipeId) {
+        log('warn', 'Get request validation failed', { requestId, hasRecipeId: !!recipeId });
+        return new Response(JSON.stringify({ error: 'Recipe ID is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      log('debug', 'Fetching recipe from KV', { requestId, recipeId });
+      const compressedData = await this.env.RECIPE_STORAGE.get(recipeId);
+
+      if (!compressedData) {
+        log('warn', 'Recipe not found', { requestId, recipeId });
+        return new Response(JSON.stringify({ error: 'Recipe not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      log('debug', 'Decompressing recipe', { requestId, recipeId });
+      const recipe = await decompressData(compressedData);
+      log('debug', 'Recipe decompressed', { 
+        requestId, 
+        recipeId, 
+        title: recipe.title,
+        hasImageUrl: !!recipe.imageUrl,
+        imageCount: recipe.images?.length || 0
+      });
+
+      const duration = Date.now() - startTime;
+      log('info', 'Get operation completed successfully', {
+        requestId,
+        recipeId,
+        duration: `${duration}ms`,
+        title: recipe.title
+      });
+
+      return new Response(JSON.stringify(recipe), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      log('error', 'Get operation failed', {
         requestId,
         error: error.message,
         stack: error.stack,

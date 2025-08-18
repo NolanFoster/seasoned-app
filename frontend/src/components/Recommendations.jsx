@@ -5,8 +5,18 @@ const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'h
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
 
 function Recommendations({ onRecipeSelect, recipesByCategory }) {
+  // Debug flag - set to true to enable detailed logging
+  const DEBUG_MODE = false;
+  
+  // Helper function for debug logging with emojis
+  const debugLogEmoji = (emoji, message, data = {}) => {
+    if (DEBUG_MODE) {
+      console.log(`${emoji} ${message}`, data);
+    }
+  };
+  
   // Debug logging
-  console.log('🔍 Recommendations component rendered with:', {
+  debugLogEmoji('🔍', 'Recommendations component rendered with:', {
     recipesByCategory: recipesByCategory,
     recipesByCategorySize: recipesByCategory?.size,
     recipesByCategoryType: typeof recipesByCategory,
@@ -22,6 +32,33 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
   useEffect(() => {
     // If recipesByCategory is provided, skip fetching recommendations
     if (recipesByCategory && recipesByCategory.size > 0) {
+      debugLogEmoji('��', 'Using recipesByCategory directly:', {
+        size: recipesByCategory.size,
+        categories: Array.from(recipesByCategory.keys())
+      });
+      
+      const externalData = {};
+      for (const [categoryName, recipes] of recipesByCategory.entries()) {
+        debugLogEmoji('📋', `Processing category "${categoryName}" with ${recipes.length} recipes:`, {
+          sampleRecipe: recipes[0] ? {
+            id: recipes[0].id,
+            name: recipes[0].name,
+            hasIngredients: recipes[0].ingredients?.length > 0,
+            hasInstructions: recipes[0].instructions?.length > 0,
+            ingredientCount: recipes[0].ingredients?.length || 0,
+            instructionCount: recipes[0].instructions?.length || 0
+          } : 'No recipes'
+        });
+        externalData[categoryName] = recipes;
+      }
+      
+      debugLogEmoji('🎯', 'Final externalData:', {
+        categoryCount: Object.keys(externalData).length,
+        categories: Object.keys(externalData),
+        totalRecipes: Object.values(externalData).reduce((sum, recipes) => sum + recipes.length, 0)
+      });
+      
+      setExternalRecipes(externalData);
       setIsLoadingRecommendations(false);
       return;
     }
@@ -29,6 +66,16 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     // Fetch recommendations but don't let it block the app
     fetchRecommendations().catch(err => {
       console.error('Failed to fetch initial recommendations:', err);
+    });
+  }, [recipesByCategory]);
+
+  // Monitor changes to recipesByCategory
+  useEffect(() => {
+    debugLogEmoji('🔄', 'recipesByCategory changed:', {
+      hasRecipesByCategory: Boolean(recipesByCategory),
+      size: recipesByCategory?.size || 0,
+      categories: recipesByCategory ? Array.from(recipesByCategory.keys()) : [],
+      timestamp: new Date().toISOString()
     });
   }, [recipesByCategory]);
 
@@ -88,7 +135,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       }
       
       const currentDate = new Date().toISOString().split('T')[0];
-      console.log('Fetching recommendations for date:', currentDate, 'location:', location);
+      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
       
       const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
@@ -105,7 +152,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       
       if (res.ok) {
         const data = await res.json();
-        console.log('Recommendations received:', data);
+        debugLogEmoji('��', 'Recommendations received:', data);
         
         // Filter out inappropriate seasonal recommendations
         if (data.recommendations && data.season) {
@@ -168,7 +215,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     try {
       // Combine all tags into one search query for the category
       const categoryQuery = tags.join(' ');
-      console.log(`🔍 Searching for category with combined query: "${categoryQuery}"`);
+      debugLogEmoji('🔍', `Searching for category with combined query: "${categoryQuery}"`);
       
       // Use smart search endpoint with the combined category query
       const results = await searchWithSmartSearch(categoryQuery, limit);
@@ -196,11 +243,11 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           };
         });
         
-        console.log(`✅ Category "${categoryQuery}" found ${transformedResults.length} recipes`);
+        debugLogEmoji('✅', `Category "${categoryQuery}" found ${transformedResults.length} recipes`);
         return transformedResults;
       }
       
-      console.log(`⚠️ Category "${categoryQuery}" found no recipes`);
+      debugLogEmoji('⚠️', `Category "${categoryQuery}" found no recipes`);
       return [];
     } catch (e) {
       console.error(`Error searching for category "${tags.join(' ')}":`, e);
@@ -224,22 +271,22 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
 
   // If we have recipesByCategory, render them directly
   if (recipesByCategory && recipesByCategory.size > 0) {
-    console.log('✅ Using recipesByCategory for rendering');
+    debugLogEmoji('✅', 'Using recipesByCategory for rendering');
     return (
       <div className="recommendations-container">
         {(() => {
           try {
             const entries = Array.from(recipesByCategory.entries());
-            console.log('📊 recipesByCategory entries:', entries);
+            debugLogEmoji('📊', 'recipesByCategory entries:', entries);
             
             return entries.map(([categoryName, recipes]) => {
-              console.log(`🎯 Rendering category "${categoryName}" with ${recipes.length} recipes`);
+              debugLogEmoji('🎯', `Rendering category "${categoryName}" with ${recipes.length} recipes`);
               
               // For now, show all recipes in each category without cross-category deduplication
               // This prevents the blank page issue while we debug the data structure
               const sortedRecipes = recipes.slice(0, 6);
               
-              console.log(`📊 Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
+              debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
               
               // Only show category if it has recipes
               if (sortedRecipes.length === 0) return null;
@@ -248,8 +295,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
                   <div className="recipe-grid category-recipes">
-                    {sortedRecipes.map((recipe) => (
-                      <div key={`${categoryName}-${recipe.id}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                    {sortedRecipes.map((recipe, index) => (
+                      <div key={`${categoryName}-${recipe.id}-${index}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
                         <div className="recipe-card-image">
                           {/* Main image display */}
                           {(recipe.image || recipe.image_url) ? (
@@ -336,7 +383,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
 
   // Fallback: If no recipesByCategory, use the original logic
   if (isLoadingRecommendations || recommendations) {
-    console.log('🔄 Using fallback rendering logic:', {
+    debugLogEmoji('🔄', 'Using fallback rendering logic:', {
       isLoadingRecommendations,
       hasRecommendations: Boolean(recommendations),
       hasRecommendationsData: Boolean(recommendations?.recommendations)
@@ -377,12 +424,12 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 return null;
               }
               
-              console.log(`Processing category: ${categoryName} with tags:`, tags);
+              debugLogEmoji('🔄', `Processing category: ${categoryName} with tags:`, tags);
               
               // Get external recipes for this category (no longer using local recipes)
               const categoryExternalRecipes = externalRecipes[categoryName] || [];
               
-              console.log(`📊 Category "${categoryName}": ${categoryExternalRecipes.length} total recipes, ${tags.length} tags`);
+              debugLogEmoji('📊', `Category "${categoryName}": ${categoryExternalRecipes.length} total recipes, ${tags.length} tags`);
               
               // Filter out duplicates across categories
               const uniqueExternalRecipes = categoryExternalRecipes.filter(external => 
@@ -392,7 +439,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               // Take up to 6 recipes for this category
               const sortedRecipes = uniqueExternalRecipes.slice(0, 6);
               
-              console.log(`🎯 Category "${categoryName}": ${uniqueExternalRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
+              debugLogEmoji('🎯', `Category "${categoryName}": ${uniqueExternalRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
               
               // Add selected recipes to the shown set
               sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
@@ -404,8 +451,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
                   <div className="recipe-grid category-recipes">
-                    {sortedRecipes.map((recipe) => (
-                      <div key={`${categoryName}-${recipe.id}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                    {sortedRecipes.map((recipe, index) => (
+                      <div key={`${categoryName}-${recipe.id}-${index}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
                         <div className="recipe-card-image">
                           {/* Main image display */}
                           {(recipe.image || recipe.image_url) ? (
@@ -495,7 +542,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     );
   }
 
-  console.log('❌ No rendering conditions met, returning null');
+  debugLogEmoji('❌', 'No rendering conditions met, returning null');
   return null;
 }
 

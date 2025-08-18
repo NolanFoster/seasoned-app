@@ -120,7 +120,7 @@ function App() {
     try {
       debugLogEmoji('🔍', `Fetching complete recipe data for ID: ${recipeId}`);
       const response = await fetchWithTimeout(
-        `${SAVE_WORKER_URL}/recipe/get?id=${recipeId}`,
+        `${API_URL}/recipes?id=${recipeId}`,
         { timeout: 15000 }
       );
       
