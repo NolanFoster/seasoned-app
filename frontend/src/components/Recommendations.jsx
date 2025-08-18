@@ -229,27 +229,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       <div className="recommendations-container">
         {(() => {
           try {
-            // Track which recipes have been shown to avoid duplicates
-            const shownRecipeIds = new Set();
-            
             const entries = Array.from(recipesByCategory.entries());
             console.log('📊 recipesByCategory entries:', entries);
             
             return entries.map(([categoryName, recipes]) => {
               console.log(`🎯 Rendering category "${categoryName}" with ${recipes.length} recipes`);
               
-              // Filter out duplicates across categories
-              const uniqueRecipes = recipes.filter(recipe => 
-                !shownRecipeIds.has(recipe.id)
-              );
-              
-              // Take up to 6 recipes for this category
-              const sortedRecipes = uniqueRecipes.slice(0, 6);
+              // For now, show all recipes in each category without cross-category deduplication
+              // This prevents the blank page issue while we debug the data structure
+              const sortedRecipes = recipes.slice(0, 6);
               
               console.log(`📊 Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
-              
-              // Add selected recipes to the shown set
-              sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));
               
               // Only show category if it has recipes
               if (sortedRecipes.length === 0) return null;
@@ -259,7 +249,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                   <h2 className="category-title">{categoryName}</h2>
                   <div className="recipe-grid category-recipes">
                     {sortedRecipes.map((recipe) => (
-                      <div key={recipe.id} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                      <div key={`${categoryName}-${recipe.id}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
                         <div className="recipe-card-image">
                           {/* Main image display */}
                           {(recipe.image || recipe.image_url) ? (
@@ -415,7 +405,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                   <h2 className="category-title">{categoryName}</h2>
                   <div className="recipe-grid category-recipes">
                     {sortedRecipes.map((recipe) => (
-                      <div key={recipe.id} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                      <div key={`${categoryName}-${recipe.id}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
                         <div className="recipe-card-image">
                           {/* Main image display */}
                           {(recipe.image || recipe.image_url) ? (
