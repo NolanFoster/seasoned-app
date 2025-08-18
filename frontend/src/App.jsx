@@ -115,18 +115,63 @@ function App() {
     }
   }
 
-  // Function to fetch complete recipe data from KV storage
+  // Function to fetch complete recipe data from KV storage via recipe-save-worker
+  // This fixes the issue where smart search returns limited data and full recipe data
+  // needs to be fetched from the recipe-save-worker which has direct KV access
   async function fetchCompleteRecipeData(recipeId) {
     try {
       debugLogEmoji('🔍', `Fetching complete recipe data for ID: ${recipeId}`);
+      
+      // First try the recipe-save-worker which has direct KV access
+      // The worker routes /recipe/get to the Durable Object's /get endpoint
       const response = await fetchWithTimeout(
-        `${API_URL}/recipes?id=${recipeId}`,
+        `${SAVE_WORKER_URL}/recipe/get?id=${recipeId}`,
         { timeout: 15000 }
       );
       
       if (response.ok) {
-        const completeRecipe = await response.json();
-        debugLogEmoji('✅', `Complete recipe data fetched for ID: ${recipeId}`, {
+        const recipeData = await response.json();
+        
+        // Validate that we got meaningful recipe data
+        // Recipe-save-worker returns data in a nested structure: { id, url, data: { actual recipe data } }
+        const actualRecipeData = recipeData.data || recipeData;
+        if (recipeData && actualRecipeData && (actualRecipeData.title || actualRecipeData.name)) {
+          debugLogEmoji('✅', `Complete recipe data fetched from save worker for ID: ${recipeId}`, {
+            hasData: !!actualRecipeData,
+            hasTitle: !!(actualRecipeData.title || actualRecipeData.name),
+            hasIngredients: !!(actualRecipeData.ingredients && actualRecipeData.ingredients.length > 0),
+            hasInstructions: !!(actualRecipeData.instructions && actualRecipeData.instructions.length > 0),
+            ingredientCount: actualRecipeData.ingredients?.length || 0,
+            instructionCount: actualRecipeData.instructions?.length || 0
+          });
+          
+          // Return the recipe data in the expected format
+          // If recipeData already has a data property, use it as-is, otherwise wrap it
+          return recipeData.data ? recipeData : {
+            id: recipeId,
+            data: recipeData
+          };
+        } else {
+          debugLogEmoji('⚠️', `Invalid recipe data from save worker for ID: ${recipeId}`, recipeData);
+        }
+      } else {
+        const errorText = await response.text();
+        debugLogEmoji('⚠️', `Save worker request failed for ID: ${recipeId}`, {
+          status: response.status,
+          error: errorText
+        });
+      }
+      
+      // Fallback to the old API endpoint
+      debugLogEmoji('🔄', `Falling back to old API for recipe ID: ${recipeId}`);
+      const fallbackResponse = await fetchWithTimeout(
+        `${API_URL}/recipes?id=${recipeId}`,
+        { timeout: 15000 }
+      );
+      
+      if (fallbackResponse.ok) {
+        const completeRecipe = await fallbackResponse.json();
+        debugLogEmoji('✅', `Complete recipe data fetched from fallback API for ID: ${recipeId}`, {
           hasData: !!completeRecipe.data,
           hasTitle: !!(completeRecipe.data?.title || completeRecipe.title),
           hasIngredients: !!(completeRecipe.data?.ingredients || completeRecipe.ingredients),
@@ -134,8 +179,12 @@ function App() {
         });
         return completeRecipe;
       } else {
-        const errorText = await response.text();
-        console.warn(`⚠️ Failed to fetch complete recipe data for ID: ${recipeId}:`, response.status, errorText);
+        const errorText = await fallbackResponse.text();
+        console.warn(`⚠️ Both save worker and fallback API failed for recipe ID: ${recipeId}`, {
+          saveWorkerStatus: response?.status,
+          fallbackStatus: fallbackResponse.status,
+          fallbackError: errorText
+        });
         return null;
       }
     } catch (error) {
