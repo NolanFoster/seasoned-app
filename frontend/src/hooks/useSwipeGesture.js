@@ -24,11 +24,21 @@ export const useSwipeGesture = (containerRef, options = {}) => {
 
     let animationFrame = null;
 
+    const getEventCoordinates = (e) => {
+      // Handle both touch and pointer events
+      if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.clientX !== undefined) {
+        return { x: e.clientX, y: e.clientY };
+      }
+      return { x: 0, y: 0 };
+    };
+
     const handleTouchStart = (e) => {
-      const touch = e.touches[0];
+      const coords = getEventCoordinates(e);
       touchStartRef.current = {
-        x: touch.clientX,
-        y: touch.clientY,
+        x: coords.x,
+        y: coords.y,
         time: Date.now()
       };
       initialScrollLeftRef.current = container.scrollLeft;
@@ -45,12 +55,12 @@ export const useSwipeGesture = (containerRef, options = {}) => {
     };
 
     const handleTouchMove = (e) => {
-      const touch = e.touches[0];
-      const deltaX = touch.clientX - touchStartRef.current.x;
-      const deltaY = touch.clientY - touchStartRef.current.y;
+      const coords = getEventCoordinates(e);
+      const deltaX = coords.x - touchStartRef.current.x;
+      const deltaY = coords.y - touchStartRef.current.y;
       
-      // Check if this is a horizontal swipe (not vertical scroll)
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      // More generous touch detection - lower threshold for horizontal swipe detection
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 3) {
         isDraggingRef.current = true;
         e.preventDefault(); // Prevent vertical scrolling when swiping horizontally
         
@@ -60,8 +70,8 @@ export const useSwipeGesture = (containerRef, options = {}) => {
       }
       
       touchMoveRef.current = {
-        x: touch.clientX,
-        y: touch.clientY,
+        x: coords.x,
+        y: coords.y,
         time: Date.now()
       };
     };
@@ -73,7 +83,7 @@ export const useSwipeGesture = (containerRef, options = {}) => {
       const deltaTime = touchMoveRef.current.time - touchStartRef.current.time;
       const velocity = deltaX / deltaTime; // pixels per millisecond
       
-      if (enableMomentum && Math.abs(velocity) > 0.5) {
+      if (enableMomentum && Math.abs(velocity) > 0.2) {
         // Apply momentum scrolling
         const momentumDistance = velocity * momentumMultiplier * 100; // Convert to reasonable distance
         const targetScrollLeft = container.scrollLeft - momentumDistance;
@@ -142,10 +152,15 @@ export const useSwipeGesture = (containerRef, options = {}) => {
       }, 300);
     };
 
-    // Add passive listeners for better performance
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    // Add optimized event listeners for better touch performance
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    // Add pointer events for better cross-device support
+    container.addEventListener('pointerdown', handleTouchStart, { passive: false });
+    container.addEventListener('pointermove', handleTouchMove, { passive: false });
+    container.addEventListener('pointerup', handleTouchEnd, { passive: true });
 
     // Cleanup
     return () => {
@@ -155,6 +170,9 @@ export const useSwipeGesture = (containerRef, options = {}) => {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('pointerdown', handleTouchStart);
+      container.removeEventListener('pointermove', handleTouchMove);
+      container.removeEventListener('pointerup', handleTouchEnd);
     };
   }, [sensitivity, momentumMultiplier, snapThreshold, enableMomentum, enableSnapping]);
 

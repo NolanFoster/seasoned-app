@@ -10,8 +10,9 @@ function SwipeableRecipeGrid({ children, className = '', ...props }) {
   
   // Initialize swipe gesture hook with optimized settings for recipe cards
   const { scrollToCard, scrollLeft, scrollRight } = useSwipeGesture(gridRef, {
-    sensitivity: 0.4, // Slightly higher sensitivity for better responsiveness
-    momentumMultiplier: 2.0, // Moderate momentum for smooth but controlled scrolling
+    sensitivity: 0.8, // Higher sensitivity for better touch responsiveness
+    momentumMultiplier: 3.0, // Increased momentum for smoother scrolling
+    snapThreshold: 0.2, // Lower threshold for easier snapping
     enableMomentum: true,
     enableSnapping: true
   });
