@@ -8,8 +8,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "test": "node tests/run-tests.js",
-    "test:coverage": "c8 --reporter=text --reporter=lcov node tests/run-tests.js",
-    "coverage": "c8 --reporter=text --reporter=html node tests/run-tests.js"
+    "test:coverage": "npx c8 --reporter=text --reporter=lcov node tests/run-tests.js",
+    "coverage": "npx c8 --reporter=text --reporter=html node tests/run-tests.js"
   },
   "keywords": [
     "cloudflare",
