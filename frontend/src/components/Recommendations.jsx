@@ -2,45 +2,42 @@ import React, { useEffect, useState } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
+const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
 
-function Recommendations({ onRecipeSelect, recipes, recommendations: recommendationsProp }) {
-  const [recommendations, setRecommendations] = useState(recommendationsProp);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(!recommendationsProp);
+function Recommendations({ onRecipeSelect }) {
+  const [recommendations, setRecommendations] = useState(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [externalRecipes, setExternalRecipes] = useState({});
 
   useEffect(() => {
-    // Only fetch recommendations if they weren't passed as props
-    if (!recommendationsProp) {
-      fetchRecommendations().catch(err => {
-        console.error('Failed to fetch initial recommendations:', err);
-      });
-    }
-  }, [recommendationsProp]);
+    // Fetch recommendations but don't let it block the app
+    fetchRecommendations().catch(err => {
+      console.error('Failed to fetch initial recommendations:', err);
+    });
+  }, []);
 
-  // Process recipes data when recipes or recommendations change
+  // Fetch external recipes when recommendations change
   useEffect(() => {
-    if (recipes && recommendations && recommendations.recommendations) {
-      console.log(`🔄 Processing ${recipes.length} recipes for recommendations display`);
-      
-      // Group recipes by category based on recommendations
-      const externalData = {};
-      for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
-        if (Array.isArray(tags)) {
-          // Find recipes that match this category's tags
-          const categoryRecipes = recipes.filter(recipe => {
-            const recipeText = `${recipe.name} ${recipe.description} ${recipe.ingredients?.join(' ')}`.toLowerCase();
-            return tags.some(tag => recipeText.includes(tag.toLowerCase()));
-          });
-          
-          externalData[categoryName] = categoryRecipes;
-          console.log(`📊 Category "${categoryName}": ${categoryRecipes.length} matching recipes`);
+    if (recommendations && recommendations.recommendations) {
+      const fetchExternalRecipes = async () => {
+        const externalData = {};
+        for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
+          if (Array.isArray(tags)) {
+            try {
+              const externalRecipes = await searchRecipesByTags(tags, 6);
+              externalData[categoryName] = externalRecipes;
+            } catch (error) {
+              console.error(`Error fetching external recipes for ${categoryName}:`, error);
+              externalData[categoryName] = [];
+            }
+          }
         }
-      }
-      
-      setExternalRecipes(externalData);
+        setExternalRecipes(externalData);
+      };
+      fetchExternalRecipes();
     }
-  }, [recipes, recommendations]);
+  }, [recommendations]);
 
   async function fetchRecommendations() {
     try {
@@ -135,7 +132,68 @@ function Recommendations({ onRecipeSelect, recipes, recommendations: recommendat
     }
   }
 
+  // New function to search for recipes matching recommendation category
+  async function searchRecipesByTags(tags, limit = 3) {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return [];
+    }
+    
+    try {
+      // Combine all tags into one search query for the category
+      const categoryQuery = tags.join(' ');
+      console.log(`🔍 Searching for category with combined query: "${categoryQuery}"`);
+      
+      // Use smart search endpoint with the combined category query
+      const results = await searchWithSmartSearch(categoryQuery, limit);
+      
+      if (results && results.length > 0) {
+        // Transform results to frontend format
+        const transformedResults = results.map(node => {
+          const properties = node.properties;
+          return {
+            id: node.id,
+            name: properties.title || properties.name || 'Untitled Recipe',
+            description: properties.description || '',
+            image: properties.image || properties.image_url || '',
+            image_url: properties.image || properties.image_url || '',
+            prep_time: properties.prepTime || properties.prep_time || null,
+            cook_time: properties.cookTime || properties.cook_time || null,
+            recipe_yield: properties.servings || properties.recipeYield || properties.recipe_yield || null,
+            source_url: properties.url || properties.source_url || '',
+            ingredients: properties.ingredients || [],
+            instructions: properties.instructions || [],
+            recipeIngredient: properties.ingredients || [],
+            recipeInstructions: properties.instructions || [],
+            // Mark as external recipe
+            isExternal: true
+          };
+        });
+        
+        console.log(`✅ Category "${categoryQuery}" found ${transformedResults.length} recipes`);
+        return transformedResults;
+      }
+      
+      console.log(`⚠️ Category "${categoryQuery}" found no recipes`);
+      return [];
+    } catch (e) {
+      console.error(`Error searching for category "${tags.join(' ')}":`, e);
+      return [];
+    }
+  }
 
+  // Helper function to search using smart search endpoint
+  async function searchWithSmartSearch(query, limit = 1) {
+    try {
+      const res = await fetch(`${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
+      if (res.ok) {
+        const result = await res.json();
+        return result.results || [];
+      }
+    } catch (e) {
+      console.error(`Error searching for query "${query}":`, e);
+    }
+    return [];
+  }
 
   if (isLoadingRecommendations || recommendations) {
     return (
