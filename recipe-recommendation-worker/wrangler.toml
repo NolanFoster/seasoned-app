@@ -10,14 +10,23 @@ binding = "AI"
 name = "recipe-recommendation-worker"
 vars = { }
 
+[env.production.ai]
+binding = "AI"
+
 [env.preview]
 name = "preview-recipe-recommendation-worker"
 vars = { }
+
+[env.preview.ai]
+binding = "AI"
 
 # Staging environment
 [env.staging]
 name = "staging-recipe-recommendation-worker"
 vars = { }
+
+[env.staging.ai]
+binding = "AI"
 
 # Note: With Cloudflare AI binding, you don't need OpenAI API keys
 # The AI models are provided by Cloudflare Workers AI

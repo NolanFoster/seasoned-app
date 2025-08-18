@@ -6,8 +6,16 @@ compatibility_date = "2024-08-09"
 [ai]
 binding = "AI"
 
+# Environment variables
+[vars]
+GPT_API_URL = "https://api.openai.com/v1/chat/completions"
+IMAGE_DOMAIN = "https://images.nolanfoster.me"
+
 [env.preview]
 name = "preview-clipper"
+
+[env.preview.ai]
+binding = "AI"
 
 [env.staging]
 name = "staging-clipper"
@@ -15,21 +23,13 @@ name = "staging-clipper"
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
 
+[env.staging.ai]
+binding = "AI"
+
 # Staging KV Namespaces for storing recipes
-[env.staging.kv_namespaces]
+[[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "3f8a3b17db9e4f8ea3eae83d864ad518"
-
-# Production environment
-[env.production]
-name = "recipe-clipper-worker"
-[env.production.vars]
-GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
-
-[env.production.kv_namespaces]
-binding = "RECIPE_STORAGE"
-id = "dd001c20659a4d6982f6d650abcac880"
 
 # Production environment
 [env.production]
@@ -38,7 +38,10 @@ name = "clipper"
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
-[env.production.kv_namespaces]
+[env.production.ai]
+binding = "AI"
+
+[[env.production.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
 
@@ -47,11 +50,6 @@ id = "dd001c20659a4d6982f6d650abcac880"
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
 preview_id = "3f8a3b17db9e4f8ea3eae83d864ad518"
-
-# Environment variables
-[vars]
-GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
 
 [observability.logs]
 enabled = true

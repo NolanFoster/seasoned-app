@@ -36,26 +36,15 @@ cd ..
 # Deploy frontend to production
 echo "🌐 Deploying frontend to production..."
 cd frontend
-<<<<<<< HEAD
-npm run deploy:prod
-=======
 npm run deploy:production
->>>>>>> origin/staging
 cd ..
 
 echo "✅ All production deployments completed!"
 echo ""
 echo "Production URLs:"
 echo "- Frontend: https://seasoned-frontend.pages.dev (main branch)"
-<<<<<<< HEAD
-echo "- Main DB Worker: https://clipped-recipe-db-worker.nolanfoster.workers.dev"
-echo "- Search DB: https://recipe-search-db.nolanfoster.workers.dev"
-echo "- Save Worker: https://recipe-save-worker.nolanfoster.workers.dev"
-echo "- Clipper: https://clipper.nolanfoster.workers.dev"
-=======
 echo "- Main DB Worker: https://recipe-worker.nolanfoster.workers.dev"
 echo "- Search DB: https://recipe-search-db.nolanfoster.workers.dev"
 echo "- Save Worker: https://recipe-save-worker.nolanfoster.workers.dev"
 echo "- Clipper: https://recipe-clipper-worker.nolanfoster.workers.dev"
->>>>>>> origin/staging
 echo "- Recommendations: https://recipe-recommendation-worker.nolanfoster.workers.dev"
