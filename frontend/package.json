@@ -12,7 +12,7 @@
     "test:coverage": "jest --coverage",
     "deploy": "npm run build && wrangler pages deploy dist",
     "deploy:staging": "cp .env.staging .env.local && npm run build && wrangler pages deploy dist --branch staging",
-    "deploy:production": "npm run build && wrangler pages deploy dist --branch main",
+    "deploy:production": "cp .env.production .env.local && npm run build && wrangler pages deploy dist --branch main",
     "deploy:prod": "npm run deploy:production"
   },
   "dependencies": {

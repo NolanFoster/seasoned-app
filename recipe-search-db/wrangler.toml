@@ -16,7 +16,7 @@ name = "staging-recipe-search-db"
 [[env.staging.d1_databases]]
 binding = "SEARCH_DB"
 database_name = "recipe-search-db-staging"
-database_id = "REPLACE_WITH_STAGING_SEARCH_DB_ID"  # ⚠️  MUST be replaced with actual staging search database ID
+database_id = "1c41b568-23cf-4b86-b6e8-03ae345b9492"
 
 # Staging KV Namespaces for recipe storage
 [[env.staging.kv_namespaces]]

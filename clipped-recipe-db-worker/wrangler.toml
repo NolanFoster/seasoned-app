@@ -21,7 +21,7 @@ IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "recipe-db-staging"
-database_id = "REPLACE_WITH_STAGING_DB_ID"  # ⚠️  MUST be replaced with actual staging database ID
+database_id = "db352ab8-482f-4f5f-b134-07ecd8fb4b06"
 
 [[env.staging.r2_buckets]]
 binding = "recipe_images"
