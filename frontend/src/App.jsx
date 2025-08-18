@@ -17,6 +17,7 @@ function App() {
   const [cachedCategoryNames, setCachedCategoryNames] = useState([]); // Cache category names for instant display
   const [searchCache, setSearchCache] = useState(new Map()); // Cache search results by query
   const [isRefreshingRecipes, setIsRefreshingRecipes] = useState(false); // Prevent multiple simultaneous refreshes
+  const [isInitializing, setIsInitializing] = useState(true); // Track if we're in initial load
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState([]);
@@ -59,19 +60,198 @@ function App() {
   const searchTimeoutRef = useRef(null); // Add ref for debounce timeout
   const recipeContentRef = useRef(null);
 
+  // Helper function to add timeout to fetch calls
+  function fetchWithTimeout(url, options = {}) {
+    const { timeout = 10000, ...fetchOptions } = options;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    return fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal
+    }).finally(() => {
+      clearTimeout(timeoutId);
+    });
+  }
+
+  // Smart search function with progressive fallback
+  async function smartSearch(tag, maxRetries = 4) {
+    const searchStrategies = [
+      // Strategy 1: Original tag
+      () => searchRecipesByTag(tag),
+      // Strategy 2: Break down into words
+      () => searchRecipesByWords(tag),
+      // Strategy 3: Use first word only
+      () => searchRecipesByFirstWord(tag),
+      // Strategy 4: Try broader search terms
+      () => searchRecipesByBroaderTerms(tag),
+      // Strategy 5: Use common recipe terms
+      () => searchRecipesByCommonTerms(tag)
+    ];
+
+    for (let i = 0; i < Math.min(maxRetries, searchStrategies.length); i++) {
+      try {
+        console.log(`🔍 Trying search strategy ${i + 1} for tag "${tag}"`);
+        const results = await searchStrategies[i]();
+        if (results && results.length > 0) {
+          console.log(`✅ Strategy ${i + 1} succeeded for "${tag}": found ${results.length} recipes`);
+          return results;
+        }
+      } catch (error) {
+        console.warn(`⚠️ Strategy ${i + 1} failed for "${tag}":`, error);
+      }
+    }
+    
+    console.warn(`❌ All search strategies failed for tag "${tag}"`);
+    return [];
+  }
+
+  // Search by original tag
+  async function searchRecipesByTag(tag) {
+    const searchRes = await fetchWithTimeout(
+      `${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(tag)}&type=RECIPE&limit=3`,
+      { timeout: 8000 }
+    );
+    
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      return searchData.results || [];
+    }
+    return [];
+  }
+
+  // Search by breaking down tag into individual words
+  async function searchRecipesByWords(tag) {
+    // Filter out common stop words and short words
+    const stopWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an']);
+    const words = tag.split(/\s+/)
+      .filter(word => word.length > 2 && !stopWords.has(word.toLowerCase()))
+      .slice(0, 3); // Limit to first 3 meaningful words
+    
+    if (words.length === 0) return [];
+    
+    console.log(`🔍 Breaking down "${tag}" into words: [${words.join(', ')}]`);
+    
+    const wordPromises = words.map(word => 
+      fetchWithTimeout(
+        `${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(word)}&type=RECIPE&limit=2`,
+        { timeout: 6000 }
+      ).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          return data.results || [];
+        }
+        return [];
+      }).catch(() => [])
+    );
+    
+    const results = await Promise.allSettled(wordPromises);
+    const allResults = [];
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+        console.log(`✅ Word "${words[index]}" found ${result.value.length} recipes`);
+        allResults.push(...result.value);
+      }
+    });
+    
+    return allResults;
+  }
+
+  // Search by first word only
+  async function searchRecipesByFirstWord(tag) {
+    const firstWord = tag.split(/\s+/)[0];
+    if (firstWord.length <= 2) return [];
+    
+    return await searchRecipesByTag(firstWord);
+  }
+
+  // Search by broader, more general terms
+  async function searchRecipesByBroaderTerms(tag) {
+    const tagLower = tag.toLowerCase();
+    
+    // Define broader categories based on the tag
+    const broaderTerms = [];
+    
+    // Food type categories
+    if (tagLower.includes('chicken') || tagLower.includes('beef') || tagLower.includes('pork')) {
+      broaderTerms.push('meat', 'protein');
+    } else if (tagLower.includes('salmon') || tagLower.includes('fish') || tagLower.includes('seafood')) {
+      broaderTerms.push('fish', 'seafood');
+    } else if (tagLower.includes('vegetable') || tagLower.includes('carrot') || tagLower.includes('broccoli')) {
+      broaderTerms.push('vegetable', 'healthy');
+    } else if (tagLower.includes('pasta') || tagLower.includes('noodle') || tagLower.includes('rice')) {
+      broaderTerms.push('grain', 'carbohydrate');
+    } else if (tagLower.includes('cake') || tagLower.includes('cookie') || tagLower.includes('dessert')) {
+      broaderTerms.push('dessert', 'sweet');
+    } else if (tagLower.includes('soup') || tagLower.includes('stew') || tagLower.includes('chili')) {
+      broaderTerms.push('soup', 'comfort food');
+    }
+    
+    // If no specific broader terms found, use general ones
+    if (broaderTerms.length === 0) {
+      broaderTerms.push('main dish', 'entree');
+    }
+    
+    // Try the first broader term
+    return await searchRecipesByTag(broaderTerms[0]);
+  }
+
+  // Search by common recipe terms related to the tag
+  async function searchRecipesByCommonTerms(tag) {
+    const commonTerms = ['recipe', 'food', 'cooking', 'meal', 'dish'];
+    const tagLower = tag.toLowerCase();
+    
+    // Find related common terms
+    const relatedTerms = commonTerms.filter(term => 
+      !tagLower.includes(term) && term.length > 2
+    );
+    
+    if (relatedTerms.length === 0) return [];
+    
+    // Try the first related term
+    return await searchRecipesByTag(relatedTerms[0]);
+  }
+
   useEffect(() => {
     // Initialize with recommendations instead of fetchRecipes
     // First get categories for loading display, then get full recipes
     const initializeRecipes = async () => {
-      await getRecipeCategories(); // Get category names first
-      setIsLoadingRecipes(true); // Start loading state after categories are loaded
-      await getRecipesFromRecommendations(); // Then get full recipes
+      setIsLoadingRecipes(true); // Start loading state immediately
+      
+      // Add a small delay to prevent rapid state changes and ensure smooth loading
+      const minLoadingTime = 800; // Minimum loading time in milliseconds
+      const startTime = Date.now();
+      
+      try {
+        await getRecipeCategories(); // Get category names first
+        await getRecipesFromRecommendations(); // Then get full recipes
+        
+        // Ensure minimum loading time for smooth UX
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime < minLoadingTime) {
+          await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+        }
+      } catch (error) {
+        console.error('❌ Error during initialization:', error);
+        // Even if there's an error, we should show some content
+        setRecipes([]);
+      } finally {
+        setIsInitializing(false); // Mark initialization as complete
+        setIsLoadingRecipes(false); // Ensure loading state is cleared
+        console.log('✅ Initialization completed');
+      }
     };
     initializeRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
 
-
+  // Clear loading state when recipes are loaded and initialization is complete
+  useEffect(() => {
+    if (!isInitializing && recipes.length > 0 && isLoadingRecipes) {
+      setIsLoadingRecipes(false);
+    }
+  }, [isInitializing, recipes.length, isLoadingRecipes]);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -458,7 +638,7 @@ function App() {
     try {
       const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
       
-      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
+      const res = await fetchWithTimeout(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -468,7 +648,8 @@ function App() {
         body: JSON.stringify({
           location: 'San Francisco, CA', // Default location
           date: new Date().toISOString().split('T')[0]
-        })
+        }),
+        timeout: 15000 // 15 second timeout for recommendations
       });
       
       if (res.ok) {
@@ -499,7 +680,12 @@ function App() {
     
     try {
       setIsRefreshingRecipes(true);
-      // Loading state is managed externally for better control
+      // Only set loading state if it's not already set (prevents flickering)
+      // This prevents conflicts when called from functions that already set isLoadingRecipes
+      if (!isLoadingRecipes) {
+        setIsLoadingRecipes(true);
+      }
+      
       const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
       const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
       
@@ -507,7 +693,7 @@ function App() {
       clearSearchCache();
       
       // Get recommendations
-      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
+      const res = await fetchWithTimeout(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -517,7 +703,8 @@ function App() {
         body: JSON.stringify({
           location: 'San Francisco, CA', // Default location
           date: new Date().toISOString().split('T')[0]
-        })
+        }),
+        timeout: 15000 // 15 second timeout for recommendations
       });
       
       if (res.ok) {
@@ -526,64 +713,98 @@ function App() {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
           // Collect all recipes from all categories
           const allRecipes = [];
+          const searchPromises = [];
+          
           for (const [categoryName, tags] of Object.entries(data.recommendations)) {
             if (Array.isArray(tags)) {
-              try {
-                // Search for recipes by tags
-                for (const tag of tags) {
-                  const searchRes = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(tag)}&type=RECIPE&limit=3`);
-                  if (searchRes.ok) {
-                    const searchData = await searchRes.json();
-                    if (searchData.results && searchData.results.length > 0) {
-                      // Transform to frontend format and add to collection
-                      const transformedRecipes = searchData.results.map(recipe => ({
-                        id: recipe.id,
-                        name: recipe.name || '',
-                        description: recipe.description || '',
-                        image: recipe.image || recipe.image_url || '',
-                        image_url: recipe.image || recipe.image_url || '',
-                        ingredients: recipe.ingredients || recipe.recipeIngredient || [],
-                        instructions: recipe.instructions || recipe.recipeInstructions || [],
-                        recipeIngredient: recipe.recipeIngredient || recipe.ingredients || [],
-                        recipeInstructions: recipe.recipeInstructions || recipe.instructions || [],
-                        prep_time: recipe.prepTime || recipe.prep_time || null,
-                        cook_time: recipe.cookTime || recipe.cook_time || null,
-                        recipe_yield: recipe.recipeYield || recipe.recipe_yield || recipe.yield || null,
-                        source_url: recipe.source_url || recipe.url || '',
-                        video_url: recipe.video?.contentUrl || recipe.video_url || null,
-                        video: recipe.video || null,
-                        author: recipe.author || '',
-                        datePublished: recipe.datePublished || '',
-                        recipeCategory: recipe.recipeCategory || '',
-                        recipeCuisine: recipe.recipeCuisine || '',
-                        keywords: recipe.keywords || '',
-                        nutrition: recipe.nutrition || {},
-                        aggregateRating: recipe.aggregateRating || {}
-                      }));
-                      allRecipes.push(...transformedRecipes);
-                    }
+              console.log(`📂 Processing category "${categoryName}" with ${tags.length} tags`);
+              // Create search promises for each tag using smart search with fallback
+              for (const tag of tags) {
+                console.log(`🏷️  Processing tag: "${tag}"`);
+                const searchPromise = smartSearch(tag, 4).then(recipes => {
+                  if (recipes && recipes.length > 0) {
+                    console.log(`✅ Tag "${tag}" successfully found ${recipes.length} recipes`);
+                    // Transform to frontend format and add to collection
+                    const transformedRecipes = recipes.map(recipe => ({
+                      id: recipe.id,
+                      name: recipe.name || '',
+                      description: recipe.description || '',
+                      image: recipe.image || recipe.image_url || '',
+                      image_url: recipe.image || recipe.image_url || '',
+                      ingredients: recipe.ingredients || recipe.recipeIngredient || [],
+                      instructions: recipe.instructions || recipe.recipeInstructions || [],
+                      recipeIngredient: recipe.recipeIngredient || recipe.ingredients || [],
+                      recipeInstructions: recipe.recipeInstructions || recipe.instructions || [],
+                      prep_time: recipe.prepTime || recipe.prep_time || null,
+                      cook_time: recipe.cookTime || recipe.cook_time || null,
+                      recipe_yield: recipe.recipeYield || recipe.recipe_yield || recipe.yield || null,
+                      source_url: recipe.source_url || recipe.url || '',
+                      video_url: recipe.video?.contentUrl || recipe.video_url || null,
+                      video: recipe.video || null,
+                      author: recipe.author || '',
+                      datePublished: recipe.datePublished || '',
+                      recipeCategory: recipe.recipeCategory || '',
+                      recipeCuisine: recipe.recipeCuisine || '',
+                      keywords: recipe.keywords || '',
+                      nutrition: recipe.nutrition || {},
+                      aggregateRating: recipe.aggregateRating || {}
+                    }));
+                    return transformedRecipes;
+                  } else {
+                    console.log(`⚠️  Tag "${tag}" found no recipes after all strategies`);
+                    return [];
                   }
-                }
-              } catch (error) {
-                console.error(`Error fetching recipes for category ${categoryName}:`, error);
+                }).catch(error => {
+                  console.warn(`❌ Smart search failed for tag "${tag}":`, error);
+                  return []; // Return empty array for failed searches
+                });
+                
+                searchPromises.push(searchPromise);
               }
             }
+          }
+          
+          // Wait for all search promises to resolve (with timeout)
+          try {
+            const searchResults = await Promise.allSettled(searchPromises);
+            searchResults.forEach(result => {
+              if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+                allRecipes.push(...result.value);
+              }
+            });
+          } catch (error) {
+            console.error('Error processing search results:', error);
           }
           
           // Remove duplicates and set recipes
           const uniqueRecipes = allRecipes.filter((recipe, index, self) => 
             index === self.findIndex(r => r.id === recipe.id)
           );
+          
+          console.log(`📊 Found ${uniqueRecipes.length} unique recipes from search results`);
           setRecipes(uniqueRecipes);
+          
+          // If no recipes found, still clear loading state to prevent hanging
+          if (uniqueRecipes.length === 0) {
+            console.warn('⚠️ No recipes found from search results, showing empty state');
+          }
+        } else {
+          console.warn('⚠️ No recommendations data received');
+          setRecipes([]);
         }
+      } else {
+        console.error('❌ Failed to fetch recommendations:', res.status);
+        setRecipes([]);
       }
     } catch (e) {
       console.error('Error getting recipes from recommendations:', e);
       setRecipes([]);
       setIsRefreshingRecipes(false);
     } finally {
+      // Always clear loading state to prevent hanging
       setIsLoadingRecipes(false);
       setIsRefreshingRecipes(false);
+      console.log('✅ Recipe loading process completed');
     }
   }
 
@@ -1357,7 +1578,6 @@ function App() {
             {/* Show loading cards while recipes are loading */}
             {isLoadingRecipes && (
               <div className="loading-recommendations">
-                <h2 className="loading-title">Loading Recommendations...</h2>
                 {/* Show green loading bar initially, then cached categories when available */}
                 {cachedCategoryNames.length > 0 ? (
                   // Use cached category names for instant display
@@ -1390,7 +1610,32 @@ function App() {
             
             {/* Show recommendations when loaded */}
             {!isLoadingRecipes && (
-              <Recommendations onRecipeSelect={openRecipeView} />
+              <>
+                {recipes.length > 0 ? (
+                  <Recommendations onRecipeSelect={openRecipeView} />
+                ) : (
+                  <div className="no-recipes-found">
+                    <div className="no-recipes-content">
+                      <h2>No Recipes Found</h2>
+                      <p>We couldn't load any recipes at the moment. This might be due to:</p>
+                      <ul>
+                        <li>Network connectivity issues</li>
+                        <li>Search service temporarily unavailable</li>
+                        <li>No recipes matching current recommendations</li>
+                      </ul>
+                      <button 
+                        className="retry-button"
+                        onClick={() => {
+                          setIsLoadingRecipes(true);
+                          getRecipesFromRecommendations();
+                        }}
+                      >
+                        🔄 Try Again
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
