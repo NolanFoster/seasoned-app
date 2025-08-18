@@ -403,7 +403,7 @@ async function searchNodes(request, env, corsHeaders) {
     params.push(type);
   }
 
-  sqlQuery += ' ORDER BY rank LIMIT ?';
+  sqlQuery += ' LIMIT ?';
   params.push(limit);
 
   const result = await env.SEARCH_DB.prepare(sqlQuery).bind(...params).all();
@@ -465,7 +465,7 @@ async function searchNodesInternal(query, type, limit, env) {
     params.push(type);
   }
 
-  sqlQuery += ' ORDER BY rank LIMIT ?';
+  sqlQuery += ' LIMIT ?';
   params.push(limit);
 
   const result = await env.SEARCH_DB.prepare(sqlQuery).bind(...params).all();
