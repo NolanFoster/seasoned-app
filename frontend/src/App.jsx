@@ -53,6 +53,7 @@ function App() {
   const [showSearchResults, setShowSearchResults] = useState(false); // New state to show/hide search results
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
+  const [recommendations, setRecommendations] = useState({}); // State for storing recommendation categories
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -596,6 +597,8 @@ function App() {
         const data = await res.json();
         if (data.recommendations) {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
+          // Store the recommendations data
+          setRecommendations(data.recommendations);
           // Collect all recipes from all categories
           const allRecipes = [];
           const searchPromises = [];
