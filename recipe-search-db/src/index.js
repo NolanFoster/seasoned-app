@@ -392,11 +392,10 @@ async function searchNodes(request, env, corsHeaders) {
     SELECT n.*, m.status, m.version
     FROM nodes n
     LEFT JOIN metadata m ON n.id = m.node_id
-    JOIN nodes_fts fts ON n.rowid = fts.rowid
-    WHERE fts.properties MATCH ? AND (m.status = 'ACTIVE' OR m.status IS NULL)
+    WHERE (m.status = 'ACTIVE' OR m.status IS NULL)
   `;
   
-  let params = [ftsQuery];
+  let params = [];
 
   if (type) {
     sqlQuery += ' AND n.type = ?';
@@ -454,11 +453,10 @@ async function searchNodesInternal(query, type, limit, env) {
     SELECT n.*, m.status, m.version
     FROM nodes n
     LEFT JOIN metadata m ON n.id = m.node_id
-    JOIN nodes_fts fts ON n.rowid = fts.rowid
-    WHERE fts.properties MATCH ? AND (m.status = 'ACTIVE' OR m.status IS NULL)
+    WHERE (m.status = 'ACTIVE' OR m.status IS NULL)
   `;
   
-  let params = [ftsQuery];
+  let params = [];
 
   if (type) {
     sqlQuery += ' AND n.type = ?';
