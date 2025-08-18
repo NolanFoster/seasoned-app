@@ -357,6 +357,7 @@ MIT License - see LICENSE file for details
 - [Environment Setup](ENVIRONMENT_SETUP.md) - Setting up your development environment
 - [Deployment Setup](DEPLOYMENT_SETUP.md) - Deploying to Cloudflare
 - [Branch Strategy](BRANCH_STRATEGY.md) - Git workflow and branching
+- [Staging Setup](STAGING_SETUP.md) - Setting up staging environment with database isolation
 
 ## Support
 

@@ -11,7 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "deploy": "npm run build && wrangler pages deploy dist",
-    "deploy:staging": "npm run build && wrangler pages deploy dist --branch staging",
+    "deploy:staging": "cp .env.staging .env.local && npm run build && wrangler pages deploy dist --branch staging",
     "deploy:prod": "npm run build && wrangler pages deploy dist --branch main"
   },
   "dependencies": {

@@ -9,6 +9,17 @@ binding = "AI"
 [env.preview]
 name = "preview-clipper"
 
+[env.staging]
+name = "staging-clipper"
+[env.staging.vars]
+GPT_API_URL = "https://api.openai.com/v1/chat/completions"
+IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+
+# Staging KV Namespaces for storing recipes
+[env.staging.kv_namespaces]
+binding = "RECIPE_STORAGE"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"  # Using preview_id for staging
+
 # KV Namespaces for storing recipes
 [[kv_namespaces]]
 binding = "RECIPE_STORAGE"

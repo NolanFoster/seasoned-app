@@ -17,6 +17,13 @@ name = "preview-recipe-save-worker"
 SEARCH_DB_URL = "https://preview-recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
 
+# Staging environment
+[env.staging]
+name = "staging-recipe-save-worker"
+[env.staging.vars]
+SEARCH_DB_URL = "https://staging-recipe-search-db.nolanfoster.workers.dev"
+IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+
 # Production environment
 [env.production]
 name = "recipe-save-worker"
