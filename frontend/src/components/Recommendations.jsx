@@ -132,35 +132,25 @@ function Recommendations({ onRecipeSelect }) {
     }
   }
 
-  // New function to search for recipes matching recommendation tags
+  // New function to search for recipes matching recommendation category
   async function searchRecipesByTags(tags, limit = 3) {
     if (!tags || !Array.isArray(tags) || tags.length === 0) {
       return [];
     }
     
     try {
-      // Search for each tag using smart search
-      const searchPromises = tags.map(async (tag) => {
-        try {
-          // Use smart search endpoint for better results
-          let results = await searchWithSmartSearch(tag, Math.ceil(limit / tags.length));
-          return results || [];
-        } catch (e) {
-          console.error(`Error searching for tag "${tag}":`, e);
-          return [];
-        }
-      });
+      // Combine all tags into one search query for the category
+      const categoryQuery = tags.join(' ');
+      console.log(`🔍 Searching for category with combined query: "${categoryQuery}"`);
       
-      const searchResults = await Promise.all(searchPromises);
+      // Use smart search endpoint with the combined category query
+      const results = await searchWithSmartSearch(categoryQuery, limit);
       
-      // Flatten and deduplicate results
-      const allResults = searchResults.flat();
-      const uniqueResults = new Map();
-      
-      allResults.forEach(node => {
-        if (!uniqueResults.has(node.id)) {
+      if (results && results.length > 0) {
+        // Transform results to frontend format
+        const transformedResults = results.map(node => {
           const properties = node.properties;
-          uniqueResults.set(node.id, {
+          return {
             id: node.id,
             name: properties.title || properties.name || 'Untitled Recipe',
             description: properties.description || '',
@@ -176,14 +166,17 @@ function Recommendations({ onRecipeSelect }) {
             recipeInstructions: properties.instructions || [],
             // Mark as external recipe
             isExternal: true
-          });
-        }
-      });
+          };
+        });
+        
+        console.log(`✅ Category "${categoryQuery}" found ${transformedResults.length} recipes`);
+        return transformedResults;
+      }
       
-      // Return up to the limit, prioritizing recipes that match multiple tags
-      return Array.from(uniqueResults.values()).slice(0, limit);
+      console.log(`⚠️ Category "${categoryQuery}" found no recipes`);
+      return [];
     } catch (e) {
-      console.error('Error searching recipes by tags:', e);
+      console.error(`Error searching for category "${tags.join(' ')}":`, e);
       return [];
     }
   }
