@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
+import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || 'https://recipe-recommendation-worker.nolanfoster.workers.dev';
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL || 'https://recipe-search-db.nolanfoster.workers.dev';
@@ -294,7 +295,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               return (
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
-                  <div className="recipe-grid category-recipes">
+                  <SwipeableRecipeGrid>
                     {sortedRecipes.map((recipe, index) => (
                       <div key={`${categoryName}-${recipe.id}-${index}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
                         <div className="recipe-card-image">
@@ -368,7 +369,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </SwipeableRecipeGrid>
                 </div>
               );
             });
@@ -398,7 +399,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               return loadingCategories.map(categoryName => (
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
-                  <div className="recipe-grid category-recipes">
+                  <SwipeableRecipeGrid>
                     {[1, 2, 3].map(index => (
                       <div key={index} className="recipe-card loading-card">
                         <div className="recipe-card-image loading-pulse">
@@ -409,7 +410,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </SwipeableRecipeGrid>
                 </div>
               ));
             }
@@ -450,7 +451,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               return (
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
-                  <div className="recipe-grid category-recipes">
+                  <SwipeableRecipeGrid>
                     {sortedRecipes.map((recipe, index) => (
                       <div key={`${categoryName}-${recipe.id}-${index}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
                         <div className="recipe-card-image">
@@ -529,7 +530,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </SwipeableRecipeGrid>
                 </div>
               );
             });
