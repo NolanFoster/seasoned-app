@@ -66,6 +66,102 @@ export function formatDuration(duration) {
 }
 
 /**
+ * Convert a decimal number to a fraction string
+ * @param {number} decimal - Decimal number to convert
+ * @returns {string} Fraction string (e.g., "1/3")
+ */
+export function decimalToFraction(decimal) {
+  if (!decimal || isNaN(decimal)) return '';
+  
+  // Handle whole numbers
+  const whole = Math.floor(decimal);
+  const fractionalPart = decimal - whole;
+  
+  // If it's a whole number, return it as is
+  if (fractionalPart < 0.01) {
+    return whole.toString();
+  }
+  
+  // Common fractions mapping for better accuracy
+  const commonFractions = [
+    { decimal: 0.125, fraction: '1/8' },
+    { decimal: 0.25, fraction: '1/4' },
+    { decimal: 0.333, fraction: '1/3' },
+    { decimal: 0.375, fraction: '3/8' },
+    { decimal: 0.5, fraction: '1/2' },
+    { decimal: 0.625, fraction: '5/8' },
+    { decimal: 0.666, fraction: '2/3' },
+    { decimal: 0.75, fraction: '3/4' },
+    { decimal: 0.875, fraction: '7/8' }
+  ];
+  
+  // Check for common fractions (within tolerance)
+  for (const { decimal: commonDec, fraction } of commonFractions) {
+    if (Math.abs(fractionalPart - commonDec) < 0.01) {
+      return whole > 0 ? `${whole} ${fraction}` : fraction;
+    }
+  }
+  
+  // Calculate fraction using continued fractions algorithm
+  const tolerance = 0.01;
+  let numerator = 1;
+  let denominator = 1;
+  let previousNumerator = 0;
+  let previousDenominator = 1;
+  let currentValue = fractionalPart;
+  
+  for (let i = 0; i < 10; i++) {
+    const integerPart = Math.floor(currentValue);
+    const temp = numerator;
+    numerator = integerPart * numerator + previousNumerator;
+    previousNumerator = temp;
+    
+    const temp2 = denominator;
+    denominator = integerPart * denominator + previousDenominator;
+    previousDenominator = temp2;
+    
+    if (Math.abs(fractionalPart - numerator / denominator) < tolerance) {
+      break;
+    }
+    
+    currentValue = 1 / (currentValue - integerPart);
+  }
+  
+  // Format the result
+  if (whole > 0) {
+    return `${whole} ${numerator}/${denominator}`;
+  } else {
+    return `${numerator}/${denominator}`;
+  }
+}
+
+/**
+ * Format an ingredient string, converting decimals to fractions
+ * @param {string} ingredient - Ingredient string that may contain decimal amounts
+ * @returns {string} Formatted ingredient string with fractions
+ */
+export function formatIngredientAmount(ingredient) {
+  if (!ingredient || typeof ingredient !== 'string') return ingredient || '';
+  
+  // Regular expression to match decimal numbers with optional leading digits
+  // This will match patterns like "0.33333", "1.5", "2.25", etc.
+  const decimalPattern = /\b(\d+\.?\d*)\b/g;
+  
+  return ingredient.replace(decimalPattern, (match) => {
+    const decimal = parseFloat(match);
+    if (isNaN(decimal)) return match;
+    
+    // Only convert if it looks like it should be a fraction
+    // (has decimal places or is a common fraction value)
+    if (decimal % 1 === 0) {
+      return match; // Keep whole numbers as is
+    }
+    
+    return decimalToFraction(decimal);
+  });
+}
+
+/**
  * Check if a string is a valid URL
  * @param {string} string - String to validate as URL
  * @returns {boolean} True if valid URL, false otherwise

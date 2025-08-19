@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { formatDuration, isValidUrl } from '../../shared/utility-functions.js'
+import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js'
 import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
 import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
@@ -2251,7 +2251,7 @@ function App() {
                             <h4>Ingredients ({(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).length})</h4>
                             <ul className="recipe-preview-ingredients">
                               {(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).map((ingredient, index) => (
-                                <li key={index}>{ingredient}</li>
+                                <li key={index}>{formatIngredientAmount(ingredient)}</li>
                               ))}
                             </ul>
                           </div>
@@ -2830,7 +2830,7 @@ function App() {
                   <h2>Ingredients</h2>
                   <ul className="ingredients-list">
                     {(selectedRecipe.recipeIngredient || selectedRecipe.ingredients || []).map((ingredient, index) => (
-                      <li key={index}>{ingredient}</li>
+                      <li key={index}>{formatIngredientAmount(ingredient)}</li>
                     ))}
                   </ul>
                 </div>
