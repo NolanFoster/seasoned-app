@@ -71,7 +71,10 @@ export function formatDuration(duration) {
  * @returns {string} Fraction string (e.g., "1/3")
  */
 export function decimalToFraction(decimal) {
-  if (!decimal || isNaN(decimal)) return '';
+  if (decimal === null || decimal === undefined || isNaN(decimal)) return '';
+  
+  // Handle zero explicitly
+  if (decimal === 0) return '0';
   
   // Handle whole numbers
   const whole = Math.floor(decimal);
@@ -85,13 +88,17 @@ export function decimalToFraction(decimal) {
   // Common fractions mapping for better accuracy
   const commonFractions = [
     { decimal: 0.125, fraction: '1/8' },
+    { decimal: 0.2, fraction: '1/5' },
     { decimal: 0.25, fraction: '1/4' },
     { decimal: 0.333, fraction: '1/3' },
     { decimal: 0.375, fraction: '3/8' },
+    { decimal: 0.4, fraction: '2/5' },
     { decimal: 0.5, fraction: '1/2' },
+    { decimal: 0.6, fraction: '3/5' },
     { decimal: 0.625, fraction: '5/8' },
     { decimal: 0.666, fraction: '2/3' },
     { decimal: 0.75, fraction: '3/4' },
+    { decimal: 0.8, fraction: '4/5' },
     { decimal: 0.875, fraction: '7/8' }
   ];
   
@@ -111,6 +118,8 @@ export function decimalToFraction(decimal) {
   let currentValue = fractionalPart;
   
   for (let i = 0; i < 10; i++) {
+    if (currentValue === 0) break;
+    
     const integerPart = Math.floor(currentValue);
     const temp = numerator;
     numerator = integerPart * numerator + previousNumerator;
@@ -124,7 +133,10 @@ export function decimalToFraction(decimal) {
       break;
     }
     
-    currentValue = 1 / (currentValue - integerPart);
+    const remainder = currentValue - integerPart;
+    if (remainder < 0.0001) break; // Avoid division by very small numbers
+    
+    currentValue = 1 / remainder;
   }
   
   // Format the result
@@ -136,18 +148,53 @@ export function decimalToFraction(decimal) {
 }
 
 /**
- * Format an ingredient string, converting decimals to fractions
- * @param {string} ingredient - Ingredient string that may contain decimal amounts
- * @returns {string} Formatted ingredient string with fractions
+ * Format an ingredient string, converting decimals and unicode fractions to consistent ASCII fractions
+ * @param {string} ingredient - Ingredient string that may contain decimal amounts or unicode fractions
+ * @returns {string} Formatted ingredient string with consistent ASCII fractions
  */
 export function formatIngredientAmount(ingredient) {
-  if (!ingredient || typeof ingredient !== 'string') return ingredient || '';
+  if (!ingredient || typeof ingredient !== 'string') return '';
   
-  // Regular expression to match decimal numbers with optional leading digits
-  // This will match patterns like "0.33333", "1.5", "2.25", etc.
+  // First, replace Unicode fractions with ASCII equivalents
+  const unicodeFractionMap = {
+    '½': '1/2',
+    '⅓': '1/3',
+    '⅔': '2/3',
+    '¼': '1/4',
+    '¾': '3/4',
+    '⅕': '1/5',
+    '⅖': '2/5',
+    '⅗': '3/5',
+    '⅘': '4/5',
+    '⅙': '1/6',
+    '⅚': '5/6',
+    '⅐': '1/7',
+    '⅛': '1/8',
+    '⅜': '3/8',
+    '⅝': '5/8',
+    '⅞': '7/8',
+    '⅑': '1/9',
+    '⅒': '1/10'
+  };
+  
+  // Replace Unicode fractions - handle both standalone and those adjacent to numbers
+  let formattedIngredient = ingredient;
+  
+  // Handle mixed numbers with Unicode fractions first (e.g., "1⅓" should become "1 1/3")
+  formattedIngredient = formattedIngredient.replace(/(\d+)([½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅐⅛⅜⅝⅞⅑⅒])/g, (match, whole, unicode) => {
+    const ascii = unicodeFractionMap[unicode] || unicode;
+    return `${whole} ${ascii}`;
+  });
+  
+  // Then replace standalone Unicode fractions
+  for (const [unicode, ascii] of Object.entries(unicodeFractionMap)) {
+    formattedIngredient = formattedIngredient.replace(new RegExp(unicode, 'g'), ascii);
+  }
+  
+  // Then, convert decimal numbers to fractions
   const decimalPattern = /\b(\d+\.?\d*)\b/g;
   
-  return ingredient.replace(decimalPattern, (match) => {
+  return formattedIngredient.replace(decimalPattern, (match) => {
     const decimal = parseFloat(match);
     if (isNaN(decimal)) return match;
     
