@@ -100,7 +100,7 @@ function App() {
     try {
       debugLogEmoji('🔍', `Using smart search for tag "${tag}"`);
       const searchRes = await fetchWithTimeout(
-        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=recipe&limit=6`,
+        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=recipe&limit=10`,
         { timeout: 10000 }
       );
       

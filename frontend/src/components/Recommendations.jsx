@@ -100,7 +100,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
         for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
           if (Array.isArray(tags)) {
             try {
-              const externalRecipes = await searchRecipesByTags(tags, 6);
+              const externalRecipes = await searchRecipesByTags(tags, 10);
               externalData[categoryName] = externalRecipes;
             } catch (error) {
               console.error(`Error fetching external recipes for ${categoryName}:`, error);
@@ -321,7 +321,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               
               // For now, show all recipes in each category without cross-category deduplication
               // This prevents the blank page issue while we debug the data structure
-              const sortedRecipes = recipes.slice(0, 6);
+              const sortedRecipes = recipes.slice(0, 10);
               
               debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
               
@@ -473,8 +473,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 !shownRecipeIds.has(external.id)
               );
               
-              // Take up to 6 recipes for this category
-              const sortedRecipes = uniqueExternalRecipes.slice(0, 6);
+              // Take up to 10 recipes for this category
+              const sortedRecipes = uniqueExternalRecipes.slice(0, 10);
               
               debugLogEmoji('🎯', `Category "${categoryName}": ${uniqueExternalRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
               
