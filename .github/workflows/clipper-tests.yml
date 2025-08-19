@@ -39,22 +39,144 @@ jobs:
         cache: 'npm'
         cache-dependency-path: clipper/package-lock.json
     
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lcov
+    
     - name: Install Worker Dependencies
       working-directory: ./clipper
       run: npm ci
     
-    - name: Run Worker Tests
+    - name: Run Worker Tests with Coverage
       working-directory: ./clipper
       run: |
-        # Run tests if test script exists
-        if npm run | grep -q "test"; then
+        # Debug: Show test files
+        echo "📋 Test files in directory:"
+        ls -la tests/
+        
+        # Run tests with coverage collection
+        if npm run | grep -q "test:coverage"; then
+          echo "🔍 Running npm run test:coverage"
+          npm run test:coverage
+        elif npm run | grep -q "test"; then
+          echo "🔍 Running npm test"
           npm test
         else
           echo "No test script found in package.json"
+          exit 1
         fi
-        
-        # Note: Worker tests currently don't generate coverage reports
-        # Consider adding coverage collection for worker tests in the future
+    
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: clipper-coverage-reports
+        path: |
+          clipper/coverage/
+        retention-days: 30
+    
+    - name: Coverage Summary
+      working-directory: ./clipper
+      run: |
+        if [ -f coverage/lcov.info ]; then
+          echo "## 📊 Clipper Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Extract coverage percentages from lcov.info
+          if command -v lcov >/dev/null 2>&1; then
+            lcov --summary coverage/lcov.info 2>/dev/null | grep -E "(lines|functions|branches)" >> $GITHUB_STEP_SUMMARY || true
+          fi
+          
+          # Also show text summary if available
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "Coverage data collected successfully ✅" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage summary file not found ⚠️" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "## ⚠️ No Coverage Data Generated" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage collection may have failed or no tests were run." >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Comment Coverage Report on PR
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          let comment = '## 📊 Clipper Coverage Report\n\n';
+          
+          const coveragePath = 'clipper/coverage/lcov.info';
+          if (fs.existsSync(coveragePath)) {
+            try {
+              // Read and parse coverage data
+              const coverageData = fs.readFileSync(coveragePath, 'utf8');
+              const lines = coverageData.split('\n');
+              
+              let totalLines = 0, coveredLines = 0;
+              let totalFunctions = 0, coveredFunctions = 0;
+              let totalBranches = 0, coveredBranches = 0;
+              
+              for (const line of lines) {
+                if (line.startsWith('LF:')) totalLines += parseInt(line.split(':')[1]);
+                if (line.startsWith('LH:')) coveredLines += parseInt(line.split(':')[1]);
+                if (line.startsWith('FNF:')) totalFunctions += parseInt(line.split(':')[1]);
+                if (line.startsWith('FNH:')) coveredFunctions += parseInt(line.split(':')[1]);
+                if (line.startsWith('BRF:')) totalBranches += parseInt(line.split(':')[1]);
+                if (line.startsWith('BRH:')) coveredBranches += parseInt(line.split(':')[1]);
+              }
+              
+              const linePercent = totalLines > 0 ? ((coveredLines / totalLines) * 100).toFixed(1) : 'N/A';
+              const functionPercent = totalFunctions > 0 ? ((coveredFunctions / totalFunctions) * 100).toFixed(1) : 'N/A';
+              const branchPercent = totalBranches > 0 ? ((coveredBranches / totalBranches) * 100).toFixed(1) : 'N/A';
+              
+              comment += `| Metric | Coverage | Covered/Total |\n`;
+              comment += `|--------|----------|---------------|\n`;
+              comment += `| Lines | ${linePercent}% | ${coveredLines}/${totalLines} |\n`;
+              comment += `| Functions | ${functionPercent}% | ${coveredFunctions}/${totalFunctions} |\n`;
+              comment += `| Branches | ${branchPercent}% | ${coveredBranches}/${totalBranches} |\n\n`;
+              
+              // Coverage status
+              const minCoverage = 10; // From .c8rc.json
+              const overallGood = parseFloat(linePercent) >= minCoverage && parseFloat(functionPercent) >= minCoverage;
+              comment += overallGood ? '✅ Coverage meets requirements!' : '⚠️ Coverage below threshold (10%)';
+              
+            } catch (error) {
+              comment += '⚠️ Error parsing coverage data: ' + error.message;
+            }
+          } else {
+            comment += '❌ No coverage data found. Tests may have failed or coverage collection is not working properly.';
+          }
+          
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const existingComment = comments.find(comment => 
+            comment.body.includes('📊 Clipper Coverage Report')
+          );
+          
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: comment
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }
 
   lint-worker:
     name: Clipper Code Quality Checks

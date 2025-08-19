@@ -12,11 +12,17 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Load crypto polyfill for Node.js test environment
+import './setup-crypto-polyfill.js';
+
 console.log('🧪 Running Recipe Clipper Tests...\n');
 
-// Get all test files
+// Get all test files (excluding manual/integration tests)
 const testFiles = readdirSync(__dirname)
-  .filter(file => file.endsWith('.js') && file !== 'run-tests.js')
+  .filter(file => file.endsWith('.js') && 
+    file !== 'run-tests.js' && 
+    file !== 'setup-crypto-polyfill.js' && 
+    file !== 'test-integration.js')  // Excluded from automated testing
   .sort();
 
 console.log(`📋 Found ${testFiles.length} test files:`);
