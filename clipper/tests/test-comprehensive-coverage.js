@@ -33,6 +33,7 @@ const createMockEnv = (overrides = {}) => ({
     delete: async (key) => { return { success: true }; },
     ...(overrides.RECIPE_STORAGE || overrides.RECIPES || {})
   },
+  SAVE_WORKER_URL: 'https://recipe-save-worker.example.com',
   AI: {
     run: async (model, options) => {
       // Return properly formatted AI response
