@@ -8,7 +8,9 @@
     ".": "./kv-storage.js",
     "./kv-storage": "./kv-storage.js",
     "./utility-functions": "./utility-functions.js",
-    "./utils": "./utility-functions.js"
+    "./utils": "./utility-functions.js",
+    "./nutrition-calculator": "./nutrition-calculator.js",
+    "./nutrition": "./nutrition-calculator.js"
   },
   "scripts": {
     "test": "node test-simple.js",
@@ -16,6 +18,7 @@
     "test:vitest": "vitest run test-image-service.js",
     "test:image": "vitest run test-image-service.js",
     "test:utility": "node test-utility-functions.js",
+    "test:nutrition": "node test-nutrition-calculator.js",
     "test:all": "node ../test-refactoring-complete.js"
   },
   "keywords": [
