@@ -7,10 +7,14 @@ A Cloudflare Worker that provides recipe recommendations based on location and d
 - 🌍 Location-based recommendations
 - 📅 Seasonal and date-aware suggestions
 - 🏷️ Returns categorized recipe tags
-- 🤖 Powered by Cloudflare Workers AI (GPT-OSS-20B model)
+- 🤖 Powered by Cloudflare Workers AI (Llama 3.1 8B model)
 - 🔄 Fallback to curated mock data when AI is unavailable
 - 🔐 No API keys required - uses Cloudflare's AI binding
 - 🚀 Deployed on Cloudflare's edge network
+- 📊 **Comprehensive observability with structured logging, metrics, and analytics**
+- 🔍 **Request tracking with unique IDs for debugging**
+- ⚡ **Performance monitoring and error categorization**
+- 📈 **Real-time metrics and health monitoring endpoints**
 
 ## API Endpoints
 
@@ -42,12 +46,43 @@ Get recipe recommendations based on location and date.
 
 ### `GET /health`
 
-Health check endpoint.
+Enhanced health check endpoint with service diagnostics.
 
 **Response:**
 ```json
 {
-  "status": "healthy"
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "requestId": "req_1642248600000_abc123def",
+  "services": {
+    "ai": "healthy"
+  },
+  "metrics": {
+    "uptime": 1000,
+    "totalRequests": 150
+  }
+}
+```
+
+### `GET /metrics`
+
+Real-time metrics endpoint for monitoring and observability.
+
+**Response:**
+```json
+{
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "requestId": "req_1642248600000_abc123def",
+  "metrics": {
+    "requests_total": {"count": 100},
+    "request_duration": {"count": 95, "avg": 131.58, "min": 89, "max": 450},
+    "ai_requests": {"count": 85},
+    "ai_success": {"count": 80}
+  },
+  "summary": {
+    "totalMetrics": 25,
+    "uptime": 3600000
+  }
 }
 ```
 
@@ -86,12 +121,44 @@ The test suite includes:
 - Mock data validation
 - Error handling tests
 
+## Observability
+
+This worker includes comprehensive observability features for production monitoring:
+
+### Key Features
+- **Structured JSON logging** with consistent fields across all operations
+- **Request tracking** with unique IDs for end-to-end tracing
+- **Performance metrics** including AI model response times and parsing duration
+- **Error categorization** for better debugging and alerting
+- **Cloudflare Analytics integration** for usage patterns and performance analysis
+- **Health monitoring** with service status checks
+- **Real-time metrics endpoint** for monitoring dashboards
+
+### Monitoring Endpoints
+- `GET /health` - Service health with AI binding status
+- `GET /metrics` - Real-time performance metrics
+
+### Log Analysis
+```bash
+# View real-time logs
+npm run logs
+
+# Filter error logs
+wrangler tail | jq 'select(.level == "error")'
+
+# Monitor AI performance
+wrangler tail | jq 'select(.message | contains("AI")) | {requestId, duration, model}'
+```
+
+For detailed observability documentation, see [OBSERVABILITY.md](./OBSERVABILITY.md).
+
 ## Architecture
 
 The worker uses:
-- **Cloudflare Workers AI** with GPT-OSS-20B model for generating contextual recommendations
+- **Cloudflare Workers AI** with Llama 3.1 8B model for generating contextual recommendations
 - **Fallback mock data** for reliability when AI is unavailable
 - **Edge deployment** for low latency worldwide
+- **Analytics Engine** for metrics collection and analysis
 - **No external API dependencies** - runs entirely on Cloudflare's infrastructure
 
 ## How It Works
