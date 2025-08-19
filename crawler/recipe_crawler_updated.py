@@ -171,6 +171,7 @@ class RecipeCrawler:
                     }
                 
                 logger.info(f"Recipe JSON-LD found at {url}, sending to clipper")
+            
             # The clipper uses POST /clip endpoint
             payload = {
                 'url': url
@@ -249,7 +250,7 @@ class RecipeCrawler:
         return results
     
     def scrape_batch(self, urls: List[str], save: bool = True, 
-                    avoid_overwrite: bool = False, check_jsonld: bool = True) -> Dict[str, Any]]:
+                    avoid_overwrite: bool = False, check_jsonld: bool = True) -> Dict[str, Any]:
         """
         Clip multiple recipes in a single batch request
         
@@ -317,7 +318,7 @@ class RecipeCrawler:
             # This would need to be handled by a different service
             logger.warning("Recipe retrieval by ID is not supported by the clipper")
             return {'error': 'Recipe retrieval by ID is not supported by the clipper'}
-            
+                
         except Exception as e:
             logger.error(f"Error getting recipe {recipe_id}: {e}")
             return {'error': str(e)}
@@ -339,7 +340,7 @@ class RecipeCrawler:
             # The clipper doesn't have a /recipes endpoint
             logger.warning("Recipe listing is not supported by the clipper")
             return {'error': 'Recipe listing is not supported by the clipper'}
-            
+                
         except Exception as e:
             logger.error(f"Error listing recipes: {e}")
             return {'error': str(e)}
@@ -361,7 +362,7 @@ class RecipeCrawler:
             # The clipper doesn't have a delete endpoint
             logger.warning("Recipe deletion is not supported by the clipper")
             return False
-            
+                
         except Exception as e:
             logger.error(f"Error deleting recipe {recipe_id}: {e}")
             return False
@@ -758,6 +759,8 @@ def main():
     parser.add_argument('--history-file', help='Custom filename for URL history')
     parser.add_argument('--show-stats', action='store_true',
                        help='Show URL attempt statistics after crawling')
+    parser.add_argument('--skip-jsonld-check', action='store_true',
+                       help='Skip JSON-LD validation before sending to clipper')
     
     args = parser.parse_args()
     
@@ -809,9 +812,13 @@ def main():
     logger.info(f"Starting crawl of {len(urls)} URLs...")
     
     # Perform crawling
+    check_jsonld = not args.skip_jsonld_check
+    
     if args.batch:
         logger.info("Using batch mode (sequential processing)...")
-        batch_result = crawler.scrape_batch(urls, not args.no_save, args.avoid_overwrite)
+        if check_jsonld:
+            logger.info("JSON-LD validation is enabled")
+        batch_result = crawler.scrape_batch(urls, not args.no_save, args.avoid_overwrite, check_jsonld)
         if 'results' in batch_result:
             results = batch_result['results']
             save_results_to_file(results, args.output)
@@ -820,8 +827,10 @@ def main():
             results = []
     else:
         logger.info("Using individual request mode...")
+        if check_jsonld:
+            logger.info("JSON-LD validation is enabled")
         results = crawler.scrape_multiple_recipes(urls, not args.no_save, 
-                                                args.avoid_overwrite, args.delay)
+                                                args.avoid_overwrite, args.delay, check_jsonld)
         save_results_to_file(results, args.output)
     
     # Print summary
@@ -839,7 +848,7 @@ def main():
                         failed += 1
             else:
                 # Individual mode result
-                if result.get('success'):
+                if result.get('success') or result.get('name'):
                     successful += 1
                 else:
                     failed += 1
