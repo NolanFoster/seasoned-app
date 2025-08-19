@@ -125,13 +125,49 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       if (!userLocation && navigator.geolocation) {
         try {
           const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            navigator.geolocation.getCurrentPosition(resolve, reject, { 
+              timeout: 10000,
+              enableHighAccuracy: true,
+              maximumAge: 300000 // Cache for 5 minutes
+            });
           });
-          // For now, just use a general location based on coordinates
-          location = `${position.coords.latitude.toFixed(2)}°N, ${position.coords.longitude.toFixed(2)}°W`;
+          
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          // Try to get city name using reverse geocoding
+          try {
+            const geocodeResponse = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+            );
+            
+            if (geocodeResponse.ok) {
+              const geocodeData = await geocodeResponse.json();
+              const city = geocodeData.city || geocodeData.locality;
+              const region = geocodeData.principalSubdivision || geocodeData.countryName;
+              
+              if (city && region) {
+                location = `${city}, ${region}`;
+              } else if (city) {
+                location = city;
+              } else {
+                // Fallback to coordinates if no city found
+                location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+              }
+            } else {
+              // Fallback to coordinates if geocoding fails
+              location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+            }
+          } catch (geocodeError) {
+            console.log('Reverse geocoding failed, using coordinates');
+            location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+          }
+          
           setUserLocation(location);
+          debugLogEmoji('📍', 'Got user location:', location);
         } catch (geoError) {
           console.log('Could not get user location, using default');
+          debugLogEmoji('❌', 'Geolocation failed:', geoError.message);
         }
       }
       
