@@ -33,6 +33,7 @@ const createMockEnv = (overrides = {}) => ({
     delete: async (key) => {},
     ...(overrides.RECIPE_STORAGE || overrides.RECIPES || {})
   },
+  SAVE_WORKER_URL: 'https://recipe-save-worker.example.com',
   AI: {
     run: async (model, options) => ({
       response: JSON.stringify({
