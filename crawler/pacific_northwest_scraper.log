@@ -1,0 +1,1211 @@
+2025-08-19 03:02:35,563 - INFO - Starting Pacific Northwest recipe scraping...
+2025-08-19 03:02:35,563 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/
+2025-08-19 03:02:35,563 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/ (attempt 1)
+2025-08-19 03:02:36,492 - INFO - Found 96 recipe links and 7 pagination links on this page
+2025-08-19 03:02:37,492 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/2/
+2025-08-19 03:02:37,493 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/2/ (attempt 1)
+2025-08-19 03:02:38,718 - INFO - Found 96 recipe links and 6 pagination links on this page
+2025-08-19 03:02:39,719 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/3/
+2025-08-19 03:02:39,719 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/3/ (attempt 1)
+2025-08-19 03:02:40,625 - INFO - Found 96 recipe links and 5 pagination links on this page
+2025-08-19 03:02:41,625 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/4/
+2025-08-19 03:02:41,625 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/4/ (attempt 1)
+2025-08-19 03:02:43,094 - INFO - Found 96 recipe links and 4 pagination links on this page
+2025-08-19 03:02:44,094 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/5/
+2025-08-19 03:02:44,094 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/5/ (attempt 1)
+2025-08-19 03:02:45,336 - INFO - Found 96 recipe links and 3 pagination links on this page
+2025-08-19 03:02:46,336 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/6/
+2025-08-19 03:02:46,336 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/6/ (attempt 1)
+2025-08-19 03:02:47,677 - INFO - Found 96 recipe links and 2 pagination links on this page
+2025-08-19 03:02:48,678 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/7/
+2025-08-19 03:02:48,678 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/7/ (attempt 1)
+2025-08-19 03:02:49,894 - INFO - Found 96 recipe links and 1 pagination links on this page
+2025-08-19 03:02:50,894 - INFO - Processing page: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/8/
+2025-08-19 03:02:50,895 - INFO - Fetching URL: https://whatscookingamerica.net/category/american-regional-foods/pacific-northwest/page/8/ (attempt 1)
+2025-08-19 03:02:52,089 - INFO - Found 94 recipe links and 0 pagination links on this page
+2025-08-19 03:02:53,089 - INFO - Total unique recipe links found: 631
+2025-08-19 03:02:53,089 - INFO - Found 631 recipe links to scrape
+2025-08-19 03:02:53,090 - INFO - Progress: 1/631
+2025-08-19 03:02:53,090 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm
+2025-08-19 03:02:53,090 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm (attempt 1)
+2025-08-19 03:02:53,127 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm
+2025-08-19 03:02:54,127 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm (attempt 2)
+2025-08-19 03:02:54,151 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm
+2025-08-19 03:02:56,151 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm (attempt 3)
+2025-08-19 03:02:56,169 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm
+2025-08-19 03:02:56,169 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbksalpiccata.htm after 3 attempts
+2025-08-19 03:02:58,169 - INFO - Progress: 2/631
+2025-08-19 03:02:58,169 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm
+2025-08-19 03:02:58,169 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm (attempt 1)
+2025-08-19 03:02:58,287 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:03:00,287 - INFO - Progress: 3/631
+2025-08-19 03:03:00,287 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Crab+Cakes+with+Orange+Dill+Sauce+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakesorange.htm
+2025-08-19 03:03:00,287 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Crab+Cakes+with+Orange+Dill+Sauce+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakesorange.htm (attempt 1)
+2025-08-19 03:03:00,514 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:03:02,514 - INFO - Progress: 4/631
+2025-08-19 03:03:02,514 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm
+2025-08-19 03:03:02,514 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm (attempt 1)
+2025-08-19 03:03:02,670 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:03:04,670 - INFO - Progress: 5/631
+2025-08-19 03:03:04,670 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm
+2025-08-19 03:03:04,670 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm (attempt 1)
+2025-08-19 03:03:04,798 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:03:06,799 - INFO - Progress: 6/631
+2025-08-19 03:03:06,799 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Grilled+Candied+Salmon+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcandiedsalmon.htm
+2025-08-19 03:03:06,799 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Grilled+Candied+Salmon+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcandiedsalmon.htm (attempt 1)
+2025-08-19 03:03:06,974 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:03:08,975 - INFO - Progress: 7/631
+2025-08-19 03:03:08,975 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm
+2025-08-19 03:03:08,975 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm (attempt 1)
+2025-08-19 03:03:09,051 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:10,051 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm (attempt 2)
+2025-08-19 03:03:10,118 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:12,118 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm (attempt 3)
+2025-08-19 03:03:12,155 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:12,155 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm after 3 attempts
+2025-08-19 03:03:14,156 - INFO - Progress: 8/631
+2025-08-19 03:03:14,156 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:03:14,156 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 1)
+2025-08-19 03:03:14,247 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:03:16,248 - INFO - Progress: 9/631
+2025-08-19 03:03:16,248 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Smoked+Salmon+Roulades+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm
+2025-08-19 03:03:16,248 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Smoked+Salmon+Roulades+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm (attempt 1)
+2025-08-19 03:03:16,415 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:03:18,415 - INFO - Progress: 10/631
+2025-08-19 03:03:18,415 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm
+2025-08-19 03:03:18,415 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm (attempt 1)
+2025-08-19 03:03:18,431 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm
+2025-08-19 03:03:19,431 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm (attempt 2)
+2025-08-19 03:03:19,453 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm
+2025-08-19 03:03:21,453 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm (attempt 3)
+2025-08-19 03:03:21,473 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm
+2025-08-19 03:03:21,473 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm after 3 attempts
+2025-08-19 03:03:23,473 - INFO - Progress: 11/631
+2025-08-19 03:03:23,473 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Crab+Recipe+Collection&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm
+2025-08-19 03:03:23,474 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Crab+Recipe+Collection&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm (attempt 1)
+2025-08-19 03:03:23,653 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:03:25,654 - INFO - Progress: 12/631
+2025-08-19 03:03:25,654 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm
+2025-08-19 03:03:25,654 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 1)
+2025-08-19 03:03:25,742 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:26,743 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 2)
+2025-08-19 03:03:26,950 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:28,951 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 3)
+2025-08-19 03:03:29,011 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:29,011 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm after 3 attempts
+2025-08-19 03:03:31,012 - INFO - Progress: 13/631
+2025-08-19 03:03:31,012 - INFO - Scraping recipe: https://whatscookingamerica.net/elleneaston/salmonmousse.htm
+2025-08-19 03:03:31,012 - INFO - Fetching URL: https://whatscookingamerica.net/elleneaston/salmonmousse.htm (attempt 1)
+2025-08-19 03:03:32,560 - INFO - Successfully scraped: Salmon Mousse with Cucumber Sauce Recipe
+2025-08-19 03:03:34,560 - INFO - Progress: 14/631
+2025-08-19 03:03:34,560 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fraisin.htm
+2025-08-19 03:03:34,560 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fraisin.htm (attempt 1)
+2025-08-19 03:03:34,644 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:03:36,644 - INFO - Results saved to: pacific_northwest_recipes_partial_10.json
+2025-08-19 03:03:36,644 - INFO - Progress: 15/631
+2025-08-19 03:03:36,644 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Corn+Velvet+Soup+with+Dungeness+Crab+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm
+2025-08-19 03:03:36,644 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Corn+Velvet+Soup+with+Dungeness+Crab+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm (attempt 1)
+2025-08-19 03:03:36,852 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:03:38,852 - INFO - Progress: 16/631
+2025-08-19 03:03:38,853 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm
+2025-08-19 03:03:38,853 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm (attempt 1)
+2025-08-19 03:03:38,869 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm
+2025-08-19 03:03:39,869 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm (attempt 2)
+2025-08-19 03:03:39,886 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm
+2025-08-19 03:03:41,887 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm (attempt 3)
+2025-08-19 03:03:41,905 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm
+2025-08-19 03:03:41,905 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmongoat.htm after 3 attempts
+2025-08-19 03:03:43,906 - INFO - Progress: 17/631
+2025-08-19 03:03:43,906 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm
+2025-08-19 03:03:43,906 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm (attempt 1)
+2025-08-19 03:03:43,966 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:44,966 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm (attempt 2)
+2025-08-19 03:03:45,013 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:47,013 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm (attempt 3)
+2025-08-19 03:03:47,129 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:47,130 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm after 3 attempts
+2025-08-19 03:03:49,130 - INFO - Progress: 18/631
+2025-08-19 03:03:49,130 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm
+2025-08-19 03:03:49,130 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm (attempt 1)
+2025-08-19 03:03:49,190 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:50,190 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm (attempt 2)
+2025-08-19 03:03:50,394 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:52,395 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm (attempt 3)
+2025-08-19 03:03:52,479 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:03:52,479 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm after 3 attempts
+2025-08-19 03:03:54,479 - INFO - Progress: 19/631
+2025-08-19 03:03:54,479 - INFO - Scraping recipe: https://whatscookingamerica.net/fruit/blackberrycreampie.htm
+2025-08-19 03:03:54,479 - INFO - Fetching URL: https://whatscookingamerica.net/fruit/blackberrycreampie.htm (attempt 1)
+2025-08-19 03:03:56,045 - INFO - Successfully scraped: Blackberry Cream Pie Recipe
+2025-08-19 03:03:58,045 - INFO - Progress: 20/631
+2025-08-19 03:03:58,046 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/smsalmonsushisquarei.htm
+2025-08-19 03:03:58,046 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/smsalmonsushisquarei.htm (attempt 1)
+2025-08-19 03:04:11,239 - INFO - Successfully scraped: Smoked Salmon Sushi Squares Recipe
+2025-08-19 03:04:13,240 - INFO - Progress: 21/631
+2025-08-19 03:04:13,240 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Outdoor+Smoked+Salmon+Dinner+-+Menus+and+Recipes&url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fdinner19.htm
+2025-08-19 03:04:13,240 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Outdoor+Smoked+Salmon+Dinner+-+Menus+and+Recipes&url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fdinner19.htm (attempt 1)
+2025-08-19 03:04:13,435 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:04:15,435 - INFO - Progress: 22/631
+2025-08-19 03:04:15,436 - INFO - Scraping recipe: https://whatscookingamerica.net/halibuthazelnut.htm
+2025-08-19 03:04:15,436 - INFO - Fetching URL: https://whatscookingamerica.net/halibuthazelnut.htm (attempt 1)
+2025-08-19 03:04:27,898 - INFO - Successfully scraped: Grilled Halibut with Hazelnut Crust Recipe
+2025-08-19 03:04:29,899 - INFO - Progress: 23/631
+2025-08-19 03:04:29,899 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm
+2025-08-19 03:04:29,899 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm (attempt 1)
+2025-08-19 03:04:29,918 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm
+2025-08-19 03:04:30,918 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm (attempt 2)
+2025-08-19 03:04:30,935 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm
+2025-08-19 03:04:32,936 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm (attempt 3)
+2025-08-19 03:04:32,955 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm
+2025-08-19 03:04:32,955 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm after 3 attempts
+2025-08-19 03:04:34,956 - INFO - Progress: 24/631
+2025-08-19 03:04:34,956 - INFO - Scraping recipe: https://whatscookingamerica.net/cake/blackberryclafouti.htm
+2025-08-19 03:04:34,956 - INFO - Fetching URL: https://whatscookingamerica.net/cake/blackberryclafouti.htm (attempt 1)
+2025-08-19 03:04:47,553 - INFO - Successfully scraped: Blackberry Clafouti Recipe
+2025-08-19 03:04:49,553 - INFO - Progress: 25/631
+2025-08-19 03:04:49,553 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fgrilled-trout.htm
+2025-08-19 03:04:49,553 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fgrilled-trout.htm (attempt 1)
+2025-08-19 03:04:49,727 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:04:51,728 - INFO - Progress: 26/631
+2025-08-19 03:04:51,728 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Smoked+Salmon+and+Caviar+Canapes+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcaviarcanape.htm
+2025-08-19 03:04:51,728 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Smoked+Salmon+and+Caviar+Canapes+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcaviarcanape.htm (attempt 1)
+2025-08-19 03:04:51,910 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:04:53,910 - INFO - Progress: 27/631
+2025-08-19 03:04:53,910 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberrywinesauce.htm
+2025-08-19 03:04:53,910 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberrywinesauce.htm (attempt 1)
+2025-08-19 03:04:54,020 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:04:56,020 - INFO - Progress: 28/631
+2025-08-19 03:04:56,020 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Oyster+Shooter+-+Oyster+Cocktail+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm
+2025-08-19 03:04:56,020 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Oyster+Shooter+-+Oyster+Cocktail+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm (attempt 1)
+2025-08-19 03:04:56,184 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:04:58,186 - INFO - Results saved to: pacific_northwest_recipes_partial_20.json
+2025-08-19 03:04:58,186 - INFO - Progress: 29/631
+2025-08-19 03:04:58,186 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm
+2025-08-19 03:04:58,186 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 1)
+2025-08-19 03:04:58,202 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm
+2025-08-19 03:04:59,202 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 2)
+2025-08-19 03:04:59,218 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm
+2025-08-19 03:05:01,218 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 3)
+2025-08-19 03:05:01,235 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm
+2025-08-19 03:05:01,235 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm after 3 attempts
+2025-08-19 03:05:03,236 - INFO - Results saved to: pacific_northwest_recipes_partial_20.json
+2025-08-19 03:05:03,236 - INFO - Progress: 30/631
+2025-08-19 03:05:03,236 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm
+2025-08-19 03:05:03,236 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm (attempt 1)
+2025-08-19 03:05:03,256 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm
+2025-08-19 03:05:04,256 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm (attempt 2)
+2025-08-19 03:05:04,274 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm
+2025-08-19 03:05:06,275 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm (attempt 3)
+2025-08-19 03:05:06,291 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm
+2025-08-19 03:05:06,291 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm after 3 attempts
+2025-08-19 03:05:08,292 - INFO - Results saved to: pacific_northwest_recipes_partial_20.json
+2025-08-19 03:05:08,292 - INFO - Progress: 31/631
+2025-08-19 03:05:08,292 - INFO - Scraping recipe: https://whatscookingamerica.net/fruit/blackberryupsidedowncake.htm
+2025-08-19 03:05:08,292 - INFO - Fetching URL: https://whatscookingamerica.net/fruit/blackberryupsidedowncake.htm (attempt 1)
+2025-08-19 03:05:09,983 - INFO - Successfully scraped: Blackberry Upside-Down Cake Recipe
+2025-08-19 03:05:11,983 - INFO - Progress: 32/631
+2025-08-19 03:05:11,983 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Gourmet+Hot+Crab+Dip+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm
+2025-08-19 03:05:11,983 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Gourmet+Hot+Crab+Dip+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm (attempt 1)
+2025-08-19 03:05:12,154 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:05:14,154 - INFO - Progress: 33/631
+2025-08-19 03:05:14,155 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:05:14,155 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 1)
+2025-08-19 03:05:14,173 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:05:15,174 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 2)
+2025-08-19 03:05:15,200 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:05:17,201 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 3)
+2025-08-19 03:05:17,221 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:05:17,221 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm after 3 attempts
+2025-08-19 03:05:19,221 - INFO - Progress: 34/631
+2025-08-19 03:05:19,221 - INFO - Scraping recipe: https://whatscookingamerica.net/crabrecipes.htm
+2025-08-19 03:05:19,221 - INFO - Fetching URL: https://whatscookingamerica.net/crabrecipes.htm (attempt 1)
+2025-08-19 03:05:21,233 - INFO - Successfully scraped: Crab Recipe Collection
+2025-08-19 03:05:23,233 - INFO - Progress: 35/631
+2025-08-19 03:05:23,233 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm
+2025-08-19 03:05:23,233 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm (attempt 1)
+2025-08-19 03:05:23,250 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm
+2025-08-19 03:05:24,250 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm (attempt 2)
+2025-08-19 03:05:24,269 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm
+2025-08-19 03:05:26,269 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm (attempt 3)
+2025-08-19 03:05:26,288 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm
+2025-08-19 03:05:26,288 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm after 3 attempts
+2025-08-19 03:05:28,288 - INFO - Progress: 36/631
+2025-08-19 03:05:28,288 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm
+2025-08-19 03:05:28,288 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm (attempt 1)
+2025-08-19 03:05:28,396 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:05:30,396 - INFO - Progress: 37/631
+2025-08-19 03:05:30,396 - INFO - Scraping recipe: https://whatscookingamerica.net/sauces_condiments/blackberrywinesauce.htm
+2025-08-19 03:05:30,396 - INFO - Fetching URL: https://whatscookingamerica.net/sauces_condiments/blackberrywinesauce.htm (attempt 1)
+2025-08-19 03:05:31,618 - INFO - Successfully scraped: Blackberry Wine Sauce Recipe
+2025-08-19 03:05:33,618 - INFO - Progress: 38/631
+2025-08-19 03:05:33,618 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm
+2025-08-19 03:05:33,618 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm (attempt 1)
+2025-08-19 03:05:33,699 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:05:34,699 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm (attempt 2)
+2025-08-19 03:05:34,771 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:05:36,772 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm (attempt 3)
+2025-08-19 03:05:36,812 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:05:36,812 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsuerobinson%2Fblackberrycrisp.htm after 3 attempts
+2025-08-19 03:05:38,812 - INFO - Progress: 39/631
+2025-08-19 03:05:38,812 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm
+2025-08-19 03:05:38,812 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm (attempt 1)
+2025-08-19 03:05:38,831 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm
+2025-08-19 03:05:39,831 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm (attempt 2)
+2025-08-19 03:05:39,847 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm
+2025-08-19 03:05:41,848 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm (attempt 3)
+2025-08-19 03:05:41,864 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm
+2025-08-19 03:05:41,865 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm after 3 attempts
+2025-08-19 03:05:43,865 - INFO - Progress: 40/631
+2025-08-19 03:05:43,865 - INFO - Scraping recipe: https://whatscookingamerica.net/history/chowder/westcoastchowder.htm
+2025-08-19 03:05:43,865 - INFO - Fetching URL: https://whatscookingamerica.net/history/chowder/westcoastchowder.htm (attempt 1)
+2025-08-19 03:05:45,128 - INFO - Successfully scraped: West Coast Clam Chowder History
+2025-08-19 03:05:47,128 - INFO - Progress: 41/631
+2025-08-19 03:05:47,128 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm
+2025-08-19 03:05:47,128 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabcakesdungeness.htm (attempt 1)
+2025-08-19 03:05:47,269 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:05:49,269 - INFO - Progress: 42/631
+2025-08-19 03:05:49,269 - INFO - Scraping recipe: https://whatscookingamerica.net/poultry/chickenblackberry.htm
+2025-08-19 03:05:49,269 - INFO - Fetching URL: https://whatscookingamerica.net/poultry/chickenblackberry.htm (attempt 1)
+2025-08-19 03:06:01,961 - INFO - Successfully scraped: Poached Chicken Breasts with Blackberry Cabernet Sauce Recipe
+2025-08-19 03:06:03,961 - INFO - Progress: 43/631
+2025-08-19 03:06:03,962 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fdinner19.htm
+2025-08-19 03:06:03,962 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fdinner19.htm (attempt 1)
+2025-08-19 03:06:04,063 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:06:06,063 - INFO - Progress: 44/631
+2025-08-19 03:06:06,064 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm
+2025-08-19 03:06:06,064 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 1)
+2025-08-19 03:06:06,170 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:06:08,171 - INFO - Results saved to: pacific_northwest_recipes_partial_30.json
+2025-08-19 03:06:08,172 - INFO - Progress: 45/631
+2025-08-19 03:06:08,172 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm
+2025-08-19 03:06:08,172 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm (attempt 1)
+2025-08-19 03:06:08,247 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:09,248 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm (attempt 2)
+2025-08-19 03:06:09,291 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:11,291 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm (attempt 3)
+2025-08-19 03:06:11,341 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:11,341 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm after 3 attempts
+2025-08-19 03:06:13,343 - INFO - Results saved to: pacific_northwest_recipes_partial_30.json
+2025-08-19 03:06:13,343 - INFO - Progress: 46/631
+2025-08-19 03:06:13,343 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Flindasandberg%2Fentrees%2Fovenroastedcrab.htm
+2025-08-19 03:06:13,343 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Flindasandberg%2Fentrees%2Fovenroastedcrab.htm (attempt 1)
+2025-08-19 03:06:13,418 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:06:15,418 - INFO - Progress: 47/631
+2025-08-19 03:06:15,418 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/herbedphyllo.htm
+2025-08-19 03:06:15,418 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/herbedphyllo.htm (attempt 1)
+2025-08-19 03:06:28,070 - INFO - Successfully scraped: Phyllo Purses with Herbs, Brie Cheese, and Salmon Lox Recipe
+2025-08-19 03:06:30,071 - INFO - Progress: 48/631
+2025-08-19 03:06:30,071 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm
+2025-08-19 03:06:30,071 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm (attempt 1)
+2025-08-19 03:06:30,087 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm
+2025-08-19 03:06:31,087 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm (attempt 2)
+2025-08-19 03:06:31,103 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm
+2025-08-19 03:06:33,103 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm (attempt 3)
+2025-08-19 03:06:33,120 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm
+2025-08-19 03:06:33,120 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm after 3 attempts
+2025-08-19 03:06:35,120 - INFO - Progress: 49/631
+2025-08-19 03:06:35,120 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Fresh+Herb+Roasted+Salmon+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm
+2025-08-19 03:06:35,120 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Fresh+Herb+Roasted+Salmon+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm (attempt 1)
+2025-08-19 03:06:35,309 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:06:37,309 - INFO - Progress: 50/631
+2025-08-19 03:06:37,309 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Artichoke+Hearts+with+Crab+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrab.htm
+2025-08-19 03:06:37,309 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Artichoke+Hearts+with+Crab+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrab.htm (attempt 1)
+2025-08-19 03:06:37,479 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:06:39,479 - INFO - Progress: 51/631
+2025-08-19 03:06:39,479 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm
+2025-08-19 03:06:39,479 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm (attempt 1)
+2025-08-19 03:06:39,544 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:40,544 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm (attempt 2)
+2025-08-19 03:06:40,596 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:42,596 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm (attempt 3)
+2025-08-19 03:06:42,672 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:42,672 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fclamchowder.htm after 3 attempts
+2025-08-19 03:06:44,672 - INFO - Progress: 52/631
+2025-08-19 03:06:44,672 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm
+2025-08-19 03:06:44,672 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm (attempt 1)
+2025-08-19 03:06:44,711 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:45,711 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm (attempt 2)
+2025-08-19 03:06:45,921 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:47,922 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm (attempt 3)
+2025-08-19 03:06:47,966 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:06:47,966 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm after 3 attempts
+2025-08-19 03:06:49,966 - INFO - Progress: 53/631
+2025-08-19 03:06:49,966 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokesalmon.htm
+2025-08-19 03:06:49,966 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokesalmon.htm (attempt 1)
+2025-08-19 03:06:50,057 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:06:52,057 - INFO - Progress: 54/631
+2025-08-19 03:06:52,057 - INFO - Scraping recipe: https://whatscookingamerica.net/seafood/grilled-trout.htm
+2025-08-19 03:06:52,057 - INFO - Fetching URL: https://whatscookingamerica.net/seafood/grilled-trout.htm (attempt 1)
+2025-08-19 03:06:54,049 - INFO - Successfully scraped: Grilled Rainbow Trout Recipe
+2025-08-19 03:06:56,049 - INFO - Progress: 55/631
+2025-08-19 03:06:56,049 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=No+Cook+Freezer+Blackberry+Jam+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm
+2025-08-19 03:06:56,049 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=No+Cook+Freezer+Blackberry+Jam+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm (attempt 1)
+2025-08-19 03:06:56,227 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:06:58,227 - INFO - Progress: 56/631
+2025-08-19 03:06:58,227 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Smoked+Salmon+and+Caviar+Terrine+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm
+2025-08-19 03:06:58,228 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Smoked+Salmon+and+Caviar+Terrine+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm (attempt 1)
+2025-08-19 03:06:58,393 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:07:00,393 - INFO - Progress: 57/631
+2025-08-19 03:07:00,393 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm
+2025-08-19 03:07:00,393 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm (attempt 1)
+2025-08-19 03:07:00,412 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm
+2025-08-19 03:07:01,412 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm (attempt 2)
+2025-08-19 03:07:01,431 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm
+2025-08-19 03:07:03,431 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm (attempt 3)
+2025-08-19 03:07:03,452 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm
+2025-08-19 03:07:03,452 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcinnamonblackberrycobbler.htm after 3 attempts
+2025-08-19 03:07:05,452 - INFO - Progress: 58/631
+2025-08-19 03:07:05,452 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm
+2025-08-19 03:07:05,452 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 1)
+2025-08-19 03:07:05,524 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:06,525 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 2)
+2025-08-19 03:07:06,681 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:08,682 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 3)
+2025-08-19 03:07:08,731 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:08,731 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm after 3 attempts
+2025-08-19 03:07:10,731 - INFO - Progress: 59/631
+2025-08-19 03:07:10,731 - INFO - Scraping recipe: https://whatscookingamerica.net/pork/cuban-pulled-pork.htm
+2025-08-19 03:07:10,731 - INFO - Fetching URL: https://whatscookingamerica.net/pork/cuban-pulled-pork.htm (attempt 1)
+2025-08-19 03:07:12,293 - INFO - Successfully scraped: Cuban Mojo Pulled Pork Recipe
+2025-08-19 03:07:14,293 - INFO - Progress: 60/631
+2025-08-19 03:07:14,294 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Lemon+Pan-Fried+Trout+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm
+2025-08-19 03:07:14,294 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Lemon+Pan-Fried+Trout+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm (attempt 1)
+2025-08-19 03:07:14,471 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:07:16,473 - INFO - Results saved to: pacific_northwest_recipes_partial_40.json
+2025-08-19 03:07:16,473 - INFO - Progress: 61/631
+2025-08-19 03:07:16,473 - INFO - Scraping recipe: https://whatscookingamerica.net/pork/blackberrywinepork.htm
+2025-08-19 03:07:16,473 - INFO - Fetching URL: https://whatscookingamerica.net/pork/blackberrywinepork.htm (attempt 1)
+2025-08-19 03:07:17,889 - INFO - Successfully scraped: Grilled Pork Loin with Blackberry-Wine Sauce Recipe
+2025-08-19 03:07:19,889 - INFO - Progress: 62/631
+2025-08-19 03:07:19,889 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm
+2025-08-19 03:07:19,889 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm (attempt 1)
+2025-08-19 03:07:19,956 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:20,956 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm (attempt 2)
+2025-08-19 03:07:21,013 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:23,014 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm (attempt 3)
+2025-08-19 03:07:23,057 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:23,057 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm after 3 attempts
+2025-08-19 03:07:25,057 - INFO - Progress: 63/631
+2025-08-19 03:07:25,057 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm
+2025-08-19 03:07:25,057 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm (attempt 1)
+2025-08-19 03:07:25,102 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:26,102 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm (attempt 2)
+2025-08-19 03:07:26,161 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:28,161 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm (attempt 3)
+2025-08-19 03:07:28,304 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:28,304 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm after 3 attempts
+2025-08-19 03:07:30,304 - INFO - Progress: 64/631
+2025-08-19 03:07:30,304 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm
+2025-08-19 03:07:30,304 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm (attempt 1)
+2025-08-19 03:07:30,379 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:31,379 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm (attempt 2)
+2025-08-19 03:07:31,430 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:33,431 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm (attempt 3)
+2025-08-19 03:07:33,716 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:07:33,716 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm after 3 attempts
+2025-08-19 03:07:35,717 - INFO - Progress: 65/631
+2025-08-19 03:07:35,717 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Huckleberry+Information+and+History&url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm
+2025-08-19 03:07:35,717 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Huckleberry+Information+and+History&url=https%3A%2F%2Fwhatscookingamerica.net%2Fhistory%2Fhuckleberryhistory.htm (attempt 1)
+2025-08-19 03:07:35,890 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:07:37,890 - INFO - Progress: 66/631
+2025-08-19 03:07:37,890 - INFO - Scraping recipe: https://whatscookingamerica.net/karencalanchini/salmoncakes-cremefraiche.htm
+2025-08-19 03:07:37,890 - INFO - Fetching URL: https://whatscookingamerica.net/karencalanchini/salmoncakes-cremefraiche.htm (attempt 1)
+2025-08-19 03:07:39,965 - INFO - Successfully scraped: Salmon Cakes with Creme Fraiche Sauce Recipe
+2025-08-19 03:07:41,965 - INFO - Progress: 67/631
+2025-08-19 03:07:41,965 - INFO - Scraping recipe: https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm
+2025-08-19 03:07:41,965 - INFO - Fetching URL: https://whatscookingamerica.net/karencalanchini/grilledcedarplankedtrout.htm (attempt 1)
+2025-08-19 03:07:54,755 - INFO - Successfully scraped: Grilled Cedar Plank Trout Recipe
+2025-08-19 03:07:56,755 - INFO - Progress: 68/631
+2025-08-19 03:07:56,755 - INFO - Scraping recipe: https://whatscookingamerica.net/vegetables/chanterellecustard.htm
+2025-08-19 03:07:56,755 - INFO - Fetching URL: https://whatscookingamerica.net/vegetables/chanterellecustard.htm (attempt 1)
+2025-08-19 03:07:57,984 - INFO - Successfully scraped: Chanterelle Custard, Hazelnut Arugula Salad Recipe
+2025-08-19 03:07:59,984 - INFO - Progress: 69/631
+2025-08-19 03:07:59,984 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm
+2025-08-19 03:07:59,985 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm (attempt 1)
+2025-08-19 03:08:00,137 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:08:02,138 - INFO - Progress: 70/631
+2025-08-19 03:08:02,138 - INFO - Scraping recipe: https://whatscookingamerica.net/blkbrypie.htm
+2025-08-19 03:08:02,138 - INFO - Fetching URL: https://whatscookingamerica.net/blkbrypie.htm (attempt 1)
+2025-08-19 03:08:15,286 - INFO - Successfully scraped: Summertime Blackberry Pie Recipe
+2025-08-19 03:08:17,287 - INFO - Progress: 71/631
+2025-08-19 03:08:17,287 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm
+2025-08-19 03:08:17,287 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm (attempt 1)
+2025-08-19 03:08:17,355 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:08:18,355 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm (attempt 2)
+2025-08-19 03:08:18,409 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:08:20,409 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm (attempt 3)
+2025-08-19 03:08:20,540 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:08:20,540 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm after 3 attempts
+2025-08-19 03:08:22,540 - INFO - Progress: 72/631
+2025-08-19 03:08:22,540 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpork%2Fblackberrywinepork.htm
+2025-08-19 03:08:22,540 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpork%2Fblackberrywinepork.htm (attempt 1)
+2025-08-19 03:08:22,645 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:08:24,645 - INFO - Progress: 73/631
+2025-08-19 03:08:24,645 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm
+2025-08-19 03:08:24,645 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm (attempt 1)
+2025-08-19 03:08:24,698 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm
+2025-08-19 03:08:25,699 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm (attempt 2)
+2025-08-19 03:08:25,735 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm
+2025-08-19 03:08:27,736 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm (attempt 3)
+2025-08-19 03:08:27,769 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm
+2025-08-19 03:08:27,770 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fsalmonchowder.htm after 3 attempts
+2025-08-19 03:08:29,770 - INFO - Progress: 74/631
+2025-08-19 03:08:29,770 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/smsalmoncucumber.htm
+2025-08-19 03:08:29,770 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/smsalmoncucumber.htm (attempt 1)
+2025-08-19 03:08:42,602 - INFO - Successfully scraped: Smoked Salmon in Cucumber Cups Recipe
+2025-08-19 03:08:44,602 - INFO - Progress: 75/631
+2025-08-19 03:08:44,602 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm
+2025-08-19 03:08:44,602 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm (attempt 1)
+2025-08-19 03:08:44,637 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm
+2025-08-19 03:08:45,637 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm (attempt 2)
+2025-08-19 03:08:45,674 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm
+2025-08-19 03:08:47,674 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm (attempt 3)
+2025-08-19 03:08:47,711 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm
+2025-08-19 03:08:47,712 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fsalmoncakes-cremefraiche.htm after 3 attempts
+2025-08-19 03:08:49,712 - INFO - Progress: 76/631
+2025-08-19 03:08:49,712 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrycobbler.htm
+2025-08-19 03:08:49,712 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrycobbler.htm (attempt 1)
+2025-08-19 03:08:49,798 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:08:51,800 - INFO - Results saved to: pacific_northwest_recipes_partial_50.json
+2025-08-19 03:08:51,801 - INFO - Progress: 77/631
+2025-08-19 03:08:51,801 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrytorte.htm
+2025-08-19 03:08:51,801 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrytorte.htm (attempt 1)
+2025-08-19 03:08:51,882 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:08:53,882 - INFO - Progress: 78/631
+2025-08-19 03:08:53,882 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm
+2025-08-19 03:08:53,882 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm (attempt 1)
+2025-08-19 03:08:53,950 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:08:54,951 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm (attempt 2)
+2025-08-19 03:08:55,011 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:08:57,011 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm (attempt 3)
+2025-08-19 03:08:57,174 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:08:57,175 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbeverage%2Foystershooter.htm after 3 attempts
+2025-08-19 03:08:59,175 - INFO - Progress: 79/631
+2025-08-19 03:08:59,175 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/easystreetcrab.htm
+2025-08-19 03:08:59,175 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/easystreetcrab.htm (attempt 1)
+2025-08-19 03:09:01,245 - INFO - Successfully scraped: Easy Street Crab Dip Recipe
+2025-08-19 03:09:03,245 - INFO - Progress: 80/631
+2025-08-19 03:09:03,246 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Hazelnut+Shortbread+Cookies+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcookie%2Fhazelnutshortbread.htm
+2025-08-19 03:09:03,246 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Hazelnut+Shortbread+Cookies+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcookie%2Fhazelnutshortbread.htm (attempt 1)
+2025-08-19 03:09:03,434 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:09:05,434 - INFO - Progress: 81/631
+2025-08-19 03:09:05,434 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm
+2025-08-19 03:09:05,434 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 1)
+2025-08-19 03:09:05,469 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm
+2025-08-19 03:09:06,469 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 2)
+2025-08-19 03:09:06,504 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm
+2025-08-19 03:09:08,504 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 3)
+2025-08-19 03:09:08,542 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm
+2025-08-19 03:09:08,542 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm after 3 attempts
+2025-08-19 03:09:10,542 - INFO - Progress: 82/631
+2025-08-19 03:09:10,542 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm
+2025-08-19 03:09:10,542 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm (attempt 1)
+2025-08-19 03:09:10,618 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:09:11,618 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm (attempt 2)
+2025-08-19 03:09:11,673 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:09:13,673 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm (attempt 3)
+2025-08-19 03:09:13,715 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:09:13,715 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-jam.htm after 3 attempts
+2025-08-19 03:09:15,716 - INFO - Progress: 83/631
+2025-08-19 03:09:15,716 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm
+2025-08-19 03:09:15,716 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 1)
+2025-08-19 03:09:15,772 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:09:16,772 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 2)
+2025-08-19 03:09:16,817 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:09:18,818 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 3)
+2025-08-19 03:09:18,895 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:09:18,895 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm after 3 attempts
+2025-08-19 03:09:20,895 - INFO - Progress: 84/631
+2025-08-19 03:09:20,895 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm
+2025-08-19 03:09:20,895 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm (attempt 1)
+2025-08-19 03:09:21,035 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:09:23,035 - INFO - Progress: 85/631
+2025-08-19 03:09:23,035 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Barbecued+Salmon+with+Herb+Mayonnaise+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm
+2025-08-19 03:09:23,035 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Barbecued+Salmon+with+Herb+Mayonnaise+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 1)
+2025-08-19 03:09:23,202 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:09:25,202 - INFO - Progress: 86/631
+2025-08-19 03:09:25,202 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm
+2025-08-19 03:09:25,202 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm (attempt 1)
+2025-08-19 03:09:25,238 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm
+2025-08-19 03:09:26,238 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm (attempt 2)
+2025-08-19 03:09:26,272 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm
+2025-08-19 03:09:28,272 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm (attempt 3)
+2025-08-19 03:09:28,308 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm
+2025-08-19 03:09:28,309 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Frebeccawagner%2Frebecca-panfriedtrout.htm after 3 attempts
+2025-08-19 03:09:30,309 - INFO - Progress: 87/631
+2025-08-19 03:09:30,309 - INFO - Scraping recipe: https://whatscookingamerica.net/karencalanchini/cheesetoastpears.htm
+2025-08-19 03:09:30,309 - INFO - Fetching URL: https://whatscookingamerica.net/karencalanchini/cheesetoastpears.htm (attempt 1)
+2025-08-19 03:09:43,199 - INFO - Successfully scraped: Cheese Toast with Pears Recipe
+2025-08-19 03:09:45,200 - INFO - Progress: 88/631
+2025-08-19 03:09:45,200 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm
+2025-08-19 03:09:45,200 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm (attempt 1)
+2025-08-19 03:09:45,236 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm
+2025-08-19 03:09:46,236 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm (attempt 2)
+2025-08-19 03:09:46,271 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm
+2025-08-19 03:09:48,272 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm (attempt 3)
+2025-08-19 03:09:48,306 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm
+2025-08-19 03:09:48,306 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon.htm after 3 attempts
+2025-08-19 03:09:50,306 - INFO - Progress: 89/631
+2025-08-19 03:09:50,307 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Stuffed+Snow+Peas+with+Crab+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm
+2025-08-19 03:09:50,307 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Stuffed+Snow+Peas+with+Crab+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsnowpeas.htm (attempt 1)
+2025-08-19 03:09:50,492 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:09:52,493 - INFO - Progress: 90/631
+2025-08-19 03:09:52,493 - INFO - Scraping recipe: https://whatscookingamerica.net/karencalanchini/grilledcedarplankedwildsalmon.htm
+2025-08-19 03:09:52,493 - INFO - Fetching URL: https://whatscookingamerica.net/karencalanchini/grilledcedarplankedwildsalmon.htm (attempt 1)
+2025-08-19 03:09:54,176 - INFO - Successfully scraped: Grilled Cedar Plank Salmon Recipe
+2025-08-19 03:09:56,177 - INFO - Progress: 91/631
+2025-08-19 03:09:56,177 - INFO - Scraping recipe: https://whatscookingamerica.net/salmon.htm
+2025-08-19 03:09:56,177 - INFO - Fetching URL: https://whatscookingamerica.net/salmon.htm (attempt 1)
+2025-08-19 03:09:57,619 - INFO - Successfully scraped: Pacific Salmon – The Story of Pacific Salmon
+2025-08-19 03:09:59,620 - INFO - Progress: 92/631
+2025-08-19 03:09:59,620 - INFO - Scraping recipe: https://whatscookingamerica.net/seafood/crabcakesdungeness.htm
+2025-08-19 03:09:59,620 - INFO - Fetching URL: https://whatscookingamerica.net/seafood/crabcakesdungeness.htm (attempt 1)
+2025-08-19 03:10:01,043 - INFO - Successfully scraped: Dungeness Crab Cakes Recipe
+2025-08-19 03:10:03,046 - INFO - Results saved to: pacific_northwest_recipes_partial_60.json
+2025-08-19 03:10:03,046 - INFO - Progress: 93/631
+2025-08-19 03:10:03,046 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedtrout.htm
+2025-08-19 03:10:03,046 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedtrout.htm (attempt 1)
+2025-08-19 03:10:03,132 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:10:05,132 - INFO - Progress: 94/631
+2025-08-19 03:10:05,132 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm
+2025-08-19 03:10:05,132 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm (attempt 1)
+2025-08-19 03:10:05,248 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:10:07,248 - INFO - Progress: 95/631
+2025-08-19 03:10:07,248 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakesorange.htm
+2025-08-19 03:10:07,248 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakesorange.htm (attempt 1)
+2025-08-19 03:10:07,319 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:10:09,319 - INFO - Progress: 96/631
+2025-08-19 03:10:09,319 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcandy%2Fapplecandy.htm
+2025-08-19 03:10:09,319 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcandy%2Fapplecandy.htm (attempt 1)
+2025-08-19 03:10:09,394 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:10:11,394 - INFO - Progress: 97/631
+2025-08-19 03:10:11,394 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Blackberry+Jelly+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm
+2025-08-19 03:10:11,394 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Blackberry+Jelly+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 1)
+2025-08-19 03:10:11,559 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:10:13,559 - INFO - Progress: 98/631
+2025-08-19 03:10:13,560 - INFO - Scraping recipe: https://whatscookingamerica.net/vegetables/artichokecrabsalad.htm
+2025-08-19 03:10:13,560 - INFO - Fetching URL: https://whatscookingamerica.net/vegetables/artichokecrabsalad.htm (attempt 1)
+2025-08-19 03:10:15,011 - INFO - Successfully scraped: Stuffed Artichokes with Crab Salad Recipe
+2025-08-19 03:10:17,012 - INFO - Progress: 99/631
+2025-08-19 03:10:17,012 - INFO - Scraping recipe: https://whatscookingamerica.net/cake/papahydnhazeltorte.htm
+2025-08-19 03:10:17,012 - INFO - Fetching URL: https://whatscookingamerica.net/cake/papahydnhazeltorte.htm (attempt 1)
+2025-08-19 03:10:29,935 - INFO - Successfully scraped: Oregon Chocolate Hazelnut Torte Recipe
+2025-08-19 03:10:31,935 - INFO - Progress: 100/631
+2025-08-19 03:10:31,935 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm
+2025-08-19 03:10:31,935 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm (attempt 1)
+2025-08-19 03:10:31,972 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm
+2025-08-19 03:10:32,972 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm (attempt 2)
+2025-08-19 03:10:33,006 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm
+2025-08-19 03:10:35,006 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm (attempt 3)
+2025-08-19 03:10:35,042 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm
+2025-08-19 03:10:35,042 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinotnoir.htm after 3 attempts
+2025-08-19 03:10:37,042 - INFO - Progress: 101/631
+2025-08-19 03:10:37,042 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm
+2025-08-19 03:10:37,042 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm (attempt 1)
+2025-08-19 03:10:37,121 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:10:38,121 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm (attempt 2)
+2025-08-19 03:10:38,163 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:10:40,163 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm (attempt 3)
+2025-08-19 03:10:40,207 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:10:40,207 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcornvelvetsoup.htm after 3 attempts
+2025-08-19 03:10:42,207 - INFO - Progress: 102/631
+2025-08-19 03:10:42,207 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Pecan+Crusted+Trout+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm
+2025-08-19 03:10:42,208 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Pecan+Crusted+Trout+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcynthiapineda%2Fpecanfish%2Fpecancrustedfish.htm (attempt 1)
+2025-08-19 03:10:42,387 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:10:44,388 - INFO - Progress: 103/631
+2025-08-19 03:10:44,388 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm
+2025-08-19 03:10:44,388 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm (attempt 1)
+2025-08-19 03:10:44,440 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:10:45,440 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm (attempt 2)
+2025-08-19 03:10:45,483 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:10:47,483 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm (attempt 3)
+2025-08-19 03:10:47,534 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:10:47,534 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffreshsalmonburger.htm after 3 attempts
+2025-08-19 03:10:49,534 - INFO - Progress: 104/631
+2025-08-19 03:10:49,534 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Chocolate+Hazelnut+Swirl+Cheesecake+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:10:49,534 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Chocolate+Hazelnut+Swirl+Cheesecake+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 1)
+2025-08-19 03:10:49,713 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:10:51,714 - INFO - Progress: 105/631
+2025-08-19 03:10:51,714 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrycreampie.htm
+2025-08-19 03:10:51,714 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrycreampie.htm (attempt 1)
+2025-08-19 03:10:51,853 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:10:53,855 - INFO - Results saved to: pacific_northwest_recipes_partial_70.json
+2025-08-19 03:10:53,856 - INFO - Progress: 106/631
+2025-08-19 03:10:53,856 - INFO - Scraping recipe: https://whatscookingamerica.net/bakedrainbowtrout.htm
+2025-08-19 03:10:53,856 - INFO - Fetching URL: https://whatscookingamerica.net/bakedrainbowtrout.htm (attempt 1)
+2025-08-19 03:10:55,128 - INFO - Successfully scraped: Baked Rainbow Trout Recipe
+2025-08-19 03:10:57,128 - INFO - Progress: 107/631
+2025-08-19 03:10:57,128 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm
+2025-08-19 03:10:57,128 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm (attempt 1)
+2025-08-19 03:10:57,164 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm
+2025-08-19 03:10:58,164 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm (attempt 2)
+2025-08-19 03:10:58,200 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm
+2025-08-19 03:11:00,200 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm (attempt 3)
+2025-08-19 03:11:00,235 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm
+2025-08-19 03:11:00,235 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fgourmetcrabdip.htm after 3 attempts
+2025-08-19 03:11:02,236 - INFO - Progress: 108/631
+2025-08-19 03:11:02,236 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm
+2025-08-19 03:11:02,236 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm (attempt 1)
+2025-08-19 03:11:02,270 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm
+2025-08-19 03:11:03,270 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm (attempt 2)
+2025-08-19 03:11:03,304 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm
+2025-08-19 03:11:05,305 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm (attempt 3)
+2025-08-19 03:11:05,339 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm
+2025-08-19 03:11:05,340 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakedsalmon-lemonherbs.htm after 3 attempts
+2025-08-19 03:11:07,340 - INFO - Progress: 109/631
+2025-08-19 03:11:07,340 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm
+2025-08-19 03:11:07,340 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm (attempt 1)
+2025-08-19 03:11:07,378 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm
+2025-08-19 03:11:08,379 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm (attempt 2)
+2025-08-19 03:11:08,414 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm
+2025-08-19 03:11:10,414 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm (attempt 3)
+2025-08-19 03:11:10,451 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm
+2025-08-19 03:11:10,451 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm after 3 attempts
+2025-08-19 03:11:12,452 - INFO - Progress: 110/631
+2025-08-19 03:11:12,452 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm
+2025-08-19 03:11:12,452 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm (attempt 1)
+2025-08-19 03:11:12,511 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:13,511 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm (attempt 2)
+2025-08-19 03:11:13,563 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:15,563 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm (attempt 3)
+2025-08-19 03:11:15,617 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:15,617 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokedsalmonterrines.htm after 3 attempts
+2025-08-19 03:11:17,618 - INFO - Progress: 111/631
+2025-08-19 03:11:17,618 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm
+2025-08-19 03:11:17,618 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm (attempt 1)
+2025-08-19 03:11:17,665 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:18,666 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm (attempt 2)
+2025-08-19 03:11:18,719 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:20,719 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm (attempt 3)
+2025-08-19 03:11:20,766 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:20,766 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbarbecuedribs.htm after 3 attempts
+2025-08-19 03:11:22,766 - INFO - Progress: 112/631
+2025-08-19 03:11:22,766 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncrostini.htm
+2025-08-19 03:11:22,766 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncrostini.htm (attempt 1)
+2025-08-19 03:11:22,854 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:11:24,854 - INFO - Progress: 113/631
+2025-08-19 03:11:24,854 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm
+2025-08-19 03:11:24,854 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm (attempt 1)
+2025-08-19 03:11:24,911 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:25,911 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm (attempt 2)
+2025-08-19 03:11:25,965 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:27,966 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm (attempt 3)
+2025-08-19 03:11:28,008 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:11:28,008 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm after 3 attempts
+2025-08-19 03:11:30,008 - INFO - Progress: 114/631
+2025-08-19 03:11:30,008 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Blackberry+Barbecue+Sauce+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fdoc-lawrence%2Fcelebratingredwhiteblue.htm
+2025-08-19 03:11:30,008 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Blackberry+Barbecue+Sauce+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fdoc-lawrence%2Fcelebratingredwhiteblue.htm (attempt 1)
+2025-08-19 03:11:30,193 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:11:32,194 - INFO - Progress: 115/631
+2025-08-19 03:11:32,194 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Asparagus+with+Orange+Dressing+and+Toasted+Hazelnuts+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm
+2025-08-19 03:11:32,194 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Asparagus+with+Orange+Dressing+and+Toasted+Hazelnuts+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm (attempt 1)
+2025-08-19 03:11:32,377 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:11:34,377 - INFO - Progress: 116/631
+2025-08-19 03:11:34,377 - INFO - Scraping recipe: https://whatscookingamerica.net/poachsalmonpinot.htm
+2025-08-19 03:11:34,377 - INFO - Fetching URL: https://whatscookingamerica.net/poachsalmonpinot.htm (attempt 1)
+2025-08-19 03:11:35,546 - INFO - Successfully scraped: Pinot Noir Poached Salmon Recipe
+2025-08-19 03:11:37,546 - INFO - Progress: 117/631
+2025-08-19 03:11:37,546 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpork%2Fblackberryribs.htm
+2025-08-19 03:11:37,546 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpork%2Fblackberryribs.htm (attempt 1)
+2025-08-19 03:11:37,710 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:11:39,711 - INFO - Progress: 118/631
+2025-08-19 03:11:39,711 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm
+2025-08-19 03:11:39,711 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm (attempt 1)
+2025-08-19 03:11:39,797 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:11:41,797 - INFO - Progress: 119/631
+2025-08-19 03:11:41,797 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm
+2025-08-19 03:11:41,797 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fclamsfried.htm (attempt 1)
+2025-08-19 03:11:41,872 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:11:43,873 - INFO - Progress: 120/631
+2025-08-19 03:11:43,873 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm
+2025-08-19 03:11:43,873 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm (attempt 1)
+2025-08-19 03:11:43,923 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm
+2025-08-19 03:11:44,923 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm (attempt 2)
+2025-08-19 03:11:44,959 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm
+2025-08-19 03:11:46,959 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm (attempt 3)
+2025-08-19 03:11:46,995 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm
+2025-08-19 03:11:46,995 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fwildgame.htm after 3 attempts
+2025-08-19 03:11:48,995 - INFO - Progress: 121/631
+2025-08-19 03:11:48,995 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm
+2025-08-19 03:11:48,995 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm (attempt 1)
+2025-08-19 03:11:49,030 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm
+2025-08-19 03:11:50,030 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm (attempt 2)
+2025-08-19 03:11:50,064 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm
+2025-08-19 03:11:52,064 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm (attempt 3)
+2025-08-19 03:11:52,098 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm
+2025-08-19 03:11:52,098 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare2.htm after 3 attempts
+2025-08-19 03:11:54,098 - INFO - Progress: 122/631
+2025-08-19 03:11:54,098 - INFO - Scraping recipe: https://whatscookingamerica.net/cynthiapineda/pecanfish/pecancrustedfish.htm
+2025-08-19 03:11:54,098 - INFO - Fetching URL: https://whatscookingamerica.net/cynthiapineda/pecanfish/pecancrustedfish.htm (attempt 1)
+2025-08-19 03:11:55,415 - INFO - Successfully scraped: Pecan Crusted Trout Recipe
+2025-08-19 03:11:57,415 - INFO - Progress: 123/631
+2025-08-19 03:11:57,415 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Barbecued+Salmon+Dinner+-+Menus+and+Recipes&url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm
+2025-08-19 03:11:57,415 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Barbecued+Salmon+Dinner+-+Menus+and+Recipes&url=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm (attempt 1)
+2025-08-19 03:11:57,583 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:11:59,586 - INFO - Results saved to: pacific_northwest_recipes_partial_80.json
+2025-08-19 03:11:59,587 - INFO - Progress: 124/631
+2025-08-19 03:11:59,587 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/hazelnuthummus.htm
+2025-08-19 03:11:59,587 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/hazelnuthummus.htm (attempt 1)
+2025-08-19 03:12:00,895 - INFO - Successfully scraped: Hazelnut Hummus Recipe
+2025-08-19 03:12:02,895 - INFO - Progress: 125/631
+2025-08-19 03:12:02,895 - INFO - Scraping recipe: https://whatscookingamerica.net/q-a/encroute.htm
+2025-08-19 03:12:02,895 - INFO - Fetching URL: https://whatscookingamerica.net/q-a/encroute.htm (attempt 1)
+2025-08-19 03:12:04,490 - INFO - Successfully scraped: Salmon en Croute
+2025-08-19 03:12:06,490 - INFO - Progress: 126/631
+2025-08-19 03:12:06,490 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm
+2025-08-19 03:12:06,490 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm (attempt 1)
+2025-08-19 03:12:06,591 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:12:07,592 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm (attempt 2)
+2025-08-19 03:12:07,647 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:12:09,647 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm (attempt 3)
+2025-08-19 03:12:09,702 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:12:09,702 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fcrabtomatonapoleon.htm after 3 attempts
+2025-08-19 03:12:11,703 - INFO - Progress: 127/631
+2025-08-19 03:12:11,703 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm
+2025-08-19 03:12:11,703 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm (attempt 1)
+2025-08-19 03:12:11,772 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:12:12,772 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm (attempt 2)
+2025-08-19 03:12:12,823 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:12:14,823 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm (attempt 3)
+2025-08-19 03:12:14,866 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:12:14,866 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Flavenderbread.htm after 3 attempts
+2025-08-19 03:12:16,866 - INFO - Progress: 128/631
+2025-08-19 03:12:16,866 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm
+2025-08-19 03:12:16,866 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fgrilledcedarplankedwildsalmon.htm (attempt 1)
+2025-08-19 03:12:16,951 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:12:18,952 - INFO - Progress: 129/631
+2025-08-19 03:12:18,952 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Salmon+en+Croute&url=https%3A%2F%2Fwhatscookingamerica.net%2Fq-a%2Fencroute.htm
+2025-08-19 03:12:18,952 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Salmon+en+Croute&url=https%3A%2F%2Fwhatscookingamerica.net%2Fq-a%2Fencroute.htm (attempt 1)
+2025-08-19 03:12:19,117 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:12:21,117 - INFO - Progress: 130/631
+2025-08-19 03:12:21,117 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm
+2025-08-19 03:12:21,117 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 1)
+2025-08-19 03:12:21,211 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:12:23,211 - INFO - Progress: 131/631
+2025-08-19 03:12:23,211 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Raisin+Hazelnut+Bread+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fraisin.htm
+2025-08-19 03:12:23,211 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Raisin+Hazelnut+Bread+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fraisin.htm (attempt 1)
+2025-08-19 03:12:23,381 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:12:25,381 - INFO - Progress: 132/631
+2025-08-19 03:12:25,382 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm
+2025-08-19 03:12:25,382 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm (attempt 1)
+2025-08-19 03:12:25,460 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:12:27,461 - INFO - Progress: 133/631
+2025-08-19 03:12:27,461 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm
+2025-08-19 03:12:27,461 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm (attempt 1)
+2025-08-19 03:12:27,496 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm
+2025-08-19 03:12:28,496 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm (attempt 2)
+2025-08-19 03:12:28,532 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm
+2025-08-19 03:12:30,532 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm (attempt 3)
+2025-08-19 03:12:30,568 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm
+2025-08-19 03:12:30,568 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fmenu%2Fbbqsalmon.htm after 3 attempts
+2025-08-19 03:12:32,568 - INFO - Progress: 134/631
+2025-08-19 03:12:32,569 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Blackberry+Cream+Pie+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrycreampie.htm
+2025-08-19 03:12:32,569 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Blackberry+Cream+Pie+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberrycreampie.htm (attempt 1)
+2025-08-19 03:12:32,747 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:12:34,748 - INFO - Progress: 135/631
+2025-08-19 03:12:34,748 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Truffle+Custard+with+Crab+and+Caviar+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm
+2025-08-19 03:12:34,748 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Truffle+Custard+with+Crab+and+Caviar+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Ftruffles%2Fcrabcaviarcustard.htm (attempt 1)
+2025-08-19 03:12:34,927 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:12:36,927 - INFO - Progress: 136/631
+2025-08-19 03:12:36,927 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm
+2025-08-19 03:12:36,927 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fseafood%2Fbakeddeviledcrab.htm (attempt 1)
+2025-08-19 03:12:37,060 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:12:39,063 - INFO - Results saved to: pacific_northwest_recipes_partial_90.json
+2025-08-19 03:12:39,063 - INFO - Progress: 137/631
+2025-08-19 03:12:39,063 - INFO - Scraping recipe: https://whatscookingamerica.net/vegetables/asparagusorange.htm
+2025-08-19 03:12:39,063 - INFO - Fetching URL: https://whatscookingamerica.net/vegetables/asparagusorange.htm (attempt 1)
+2025-08-19 03:12:51,485 - INFO - Successfully scraped: Asparagus with Orange Dressing and Toasted Hazelnuts Recipe
+2025-08-19 03:12:53,486 - INFO - Progress: 138/631
+2025-08-19 03:12:53,486 - INFO - Scraping recipe: https://whatscookingamerica.net/history/smelt.htm
+2025-08-19 03:12:53,486 - INFO - Fetching URL: https://whatscookingamerica.net/history/smelt.htm (attempt 1)
+2025-08-19 03:13:06,589 - INFO - Successfully scraped: Smelt History and Recipe
+2025-08-19 03:13:08,589 - INFO - Progress: 139/631
+2025-08-19 03:13:08,589 - INFO - Scraping recipe: https://whatscookingamerica.net/salmonrosemary.htm
+2025-08-19 03:13:08,589 - INFO - Fetching URL: https://whatscookingamerica.net/salmonrosemary.htm (attempt 1)
+2025-08-19 03:13:10,037 - INFO - Successfully scraped: Baked Salmon with Rosemary Recipe
+2025-08-19 03:13:12,037 - INFO - Progress: 140/631
+2025-08-19 03:13:12,037 - INFO - Scraping recipe: https://whatscookingamerica.net/recipeindex.htm
+2025-08-19 03:13:12,037 - INFO - Fetching URL: https://whatscookingamerica.net/recipeindex.htm (attempt 1)
+2025-08-19 03:13:14,057 - INFO - Successfully scraped: Best Recipe Collection – Indexed By Food Type
+2025-08-19 03:13:16,057 - INFO - Progress: 141/631
+2025-08-19 03:13:16,057 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm
+2025-08-19 03:13:16,057 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 1)
+2025-08-19 03:13:16,091 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm
+2025-08-19 03:13:17,091 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 2)
+2025-08-19 03:13:17,127 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm
+2025-08-19 03:13:19,127 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm (attempt 3)
+2025-08-19 03:13:19,161 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm
+2025-08-19 03:13:19,161 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonbarbecue.htm after 3 attempts
+2025-08-19 03:13:21,161 - INFO - Progress: 142/631
+2025-08-19 03:13:21,162 - INFO - Scraping recipe: https://whatscookingamerica.net/poultry/chickenmckenzie.htm
+2025-08-19 03:13:21,162 - INFO - Fetching URL: https://whatscookingamerica.net/poultry/chickenmckenzie.htm (attempt 1)
+2025-08-19 03:13:33,818 - INFO - Successfully scraped: Chicken McKenzie Recipe
+2025-08-19 03:13:35,818 - INFO - Progress: 143/631
+2025-08-19 03:13:35,818 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm
+2025-08-19 03:13:35,818 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm (attempt 1)
+2025-08-19 03:13:35,883 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:13:36,884 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm (attempt 2)
+2025-08-19 03:13:36,930 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:13:38,931 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm (attempt 3)
+2025-08-19 03:13:39,087 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:13:39,087 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberryclafouti.htm after 3 attempts
+2025-08-19 03:13:41,088 - INFO - Progress: 144/631
+2025-08-19 03:13:41,088 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm
+2025-08-19 03:13:41,088 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm (attempt 1)
+2025-08-19 03:13:41,211 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:13:42,212 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm (attempt 2)
+2025-08-19 03:13:42,258 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:13:44,259 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm (attempt 3)
+2025-08-19 03:13:44,297 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:13:44,297 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fhazelnut.htm after 3 attempts
+2025-08-19 03:13:46,297 - INFO - Progress: 145/631
+2025-08-19 03:13:46,297 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm
+2025-08-19 03:13:46,297 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm (attempt 1)
+2025-08-19 03:13:46,393 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:13:48,394 - INFO - Progress: 146/631
+2025-08-19 03:13:48,394 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm
+2025-08-19 03:13:48,394 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 1)
+2025-08-19 03:13:48,441 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm
+2025-08-19 03:13:49,442 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 2)
+2025-08-19 03:13:49,476 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm
+2025-08-19 03:13:51,476 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm (attempt 3)
+2025-08-19 03:13:51,512 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm
+2025-08-19 03:13:51,512 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbakedrainbowtrout.htm after 3 attempts
+2025-08-19 03:13:53,513 - INFO - Progress: 147/631
+2025-08-19 03:13:53,513 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm
+2025-08-19 03:13:53,513 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm (attempt 1)
+2025-08-19 03:13:53,549 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm
+2025-08-19 03:13:54,549 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm (attempt 2)
+2025-08-19 03:13:54,583 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm
+2025-08-19 03:13:56,583 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm (attempt 3)
+2025-08-19 03:13:56,617 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm
+2025-08-19 03:13:56,617 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Flowfatsalmon.htm after 3 attempts
+2025-08-19 03:13:58,617 - INFO - Progress: 148/631
+2025-08-19 03:13:58,617 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Felleneaston%2Fsalmonmousse.htm
+2025-08-19 03:13:58,617 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Felleneaston%2Fsalmonmousse.htm (attempt 1)
+2025-08-19 03:13:58,832 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:14:00,832 - INFO - Progress: 149/631
+2025-08-19 03:14:00,832 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fhazelnuthummus.htm
+2025-08-19 03:14:00,832 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fhazelnuthummus.htm (attempt 1)
+2025-08-19 03:14:00,944 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:14:02,944 - INFO - Progress: 150/631
+2025-08-19 03:14:02,944 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinwheels.htm
+2025-08-19 03:14:02,944 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonpinwheels.htm (attempt 1)
+2025-08-19 03:14:03,020 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:14:05,020 - INFO - Progress: 151/631
+2025-08-19 03:14:05,020 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm
+2025-08-19 03:14:05,021 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 1)
+2025-08-19 03:14:05,057 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm
+2025-08-19 03:14:06,057 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 2)
+2025-08-19 03:14:06,092 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm
+2025-08-19 03:14:08,092 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 3)
+2025-08-19 03:14:08,126 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm
+2025-08-19 03:14:08,126 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm after 3 attempts
+2025-08-19 03:14:10,126 - INFO - Progress: 152/631
+2025-08-19 03:14:10,126 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Stuffed+Artichokes+with+Crab+Salad+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm
+2025-08-19 03:14:10,126 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Stuffed+Artichokes+with+Crab+Salad+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm (attempt 1)
+2025-08-19 03:14:10,305 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:14:12,309 - INFO - Results saved to: pacific_northwest_recipes_partial_100.json
+2025-08-19 03:14:12,309 - INFO - Progress: 153/631
+2025-08-19 03:14:12,309 - INFO - Scraping recipe: https://whatscookingamerica.net/lindasandberg/entrees/ovenroastedcrab.htm
+2025-08-19 03:14:12,309 - INFO - Fetching URL: https://whatscookingamerica.net/lindasandberg/entrees/ovenroastedcrab.htm (attempt 1)
+2025-08-19 03:14:14,116 - INFO - Successfully scraped: Oven Roasted Dungeness Crab Recipe
+2025-08-19 03:14:16,116 - INFO - Progress: 154/631
+2025-08-19 03:14:16,117 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm
+2025-08-19 03:14:16,117 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm (attempt 1)
+2025-08-19 03:14:16,175 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:17,175 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm (attempt 2)
+2025-08-19 03:14:17,272 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:19,272 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm (attempt 3)
+2025-08-19 03:14:19,332 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:19,332 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmonroulades.htm after 3 attempts
+2025-08-19 03:14:21,332 - INFO - Progress: 155/631
+2025-08-19 03:14:21,332 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm
+2025-08-19 03:14:21,332 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm (attempt 1)
+2025-08-19 03:14:21,398 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:22,398 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm (attempt 2)
+2025-08-19 03:14:22,455 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:24,455 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm (attempt 3)
+2025-08-19 03:14:24,514 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:24,514 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpanfriedtrout.htm after 3 attempts
+2025-08-19 03:14:26,514 - INFO - Progress: 156/631
+2025-08-19 03:14:26,514 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm
+2025-08-19 03:14:26,514 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm (attempt 1)
+2025-08-19 03:14:26,596 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:27,597 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm (attempt 2)
+2025-08-19 03:14:27,648 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:29,649 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm (attempt 3)
+2025-08-19 03:14:29,702 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:14:29,702 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm after 3 attempts
+2025-08-19 03:14:31,702 - INFO - Progress: 157/631
+2025-08-19 03:14:31,702 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Chanterelle+Custard%2C+Hazelnut+Arugula+Salad+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm
+2025-08-19 03:14:31,702 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Chanterelle+Custard%2C+Hazelnut+Arugula+Salad+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fchanterellecustard.htm (attempt 1)
+2025-08-19 03:14:31,859 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:14:33,859 - INFO - Progress: 158/631
+2025-08-19 03:14:33,860 - INFO - Scraping recipe: https://whatscookingamerica.net/bread/bananapecanbread.htm
+2025-08-19 03:14:33,860 - INFO - Fetching URL: https://whatscookingamerica.net/bread/bananapecanbread.htm (attempt 1)
+2025-08-19 03:14:35,423 - INFO - Successfully scraped: Banana Pecan Bread Recipe
+2025-08-19 03:14:37,423 - INFO - Progress: 159/631
+2025-08-19 03:14:37,423 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm
+2025-08-19 03:14:37,423 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm (attempt 1)
+2025-08-19 03:14:37,457 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm
+2025-08-19 03:14:38,457 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm (attempt 2)
+2025-08-19 03:14:38,493 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm
+2025-08-19 03:14:40,493 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm (attempt 3)
+2025-08-19 03:14:40,527 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm
+2025-08-19 03:14:40,527 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsauces_condiments%2Fblackberry-freezerjelly.htm after 3 attempts
+2025-08-19 03:14:42,527 - INFO - Progress: 160/631
+2025-08-19 03:14:42,527 - INFO - Scraping recipe: https://whatscookingamerica.net/karencalanchini/cinnamonblackberrycobbler.htm
+2025-08-19 03:14:42,527 - INFO - Fetching URL: https://whatscookingamerica.net/karencalanchini/cinnamonblackberrycobbler.htm (attempt 1)
+2025-08-19 03:14:44,491 - INFO - Successfully scraped: Blackberry Cinnamon Cobbler Recipe
+2025-08-19 03:14:46,492 - INFO - Progress: 161/631
+2025-08-19 03:14:46,492 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm
+2025-08-19 03:14:46,492 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm (attempt 1)
+2025-08-19 03:14:46,526 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm
+2025-08-19 03:14:47,526 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm (attempt 2)
+2025-08-19 03:14:47,561 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm
+2025-08-19 03:14:49,561 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm (attempt 3)
+2025-08-19 03:14:49,598 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm
+2025-08-19 03:14:49,598 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsoup%2Fcaufiflowerhazelnut.htm after 3 attempts
+2025-08-19 03:14:51,598 - INFO - Progress: 162/631
+2025-08-19 03:14:51,599 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Salmon+Spring+Rolls+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fspringrollssalmon.htm
+2025-08-19 03:14:51,599 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Salmon+Spring+Rolls+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fspringrollssalmon.htm (attempt 1)
+2025-08-19 03:14:51,786 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:14:53,786 - INFO - Progress: 163/631
+2025-08-19 03:14:53,787 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Blackberry+Coffee+Cake+with+Sour+Cream+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm
+2025-08-19 03:14:53,787 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Blackberry+Coffee+Cake+with+Sour+Cream+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fblackberrycoffeecake.htm (attempt 1)
+2025-08-19 03:14:53,954 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:14:55,954 - INFO - Progress: 164/631
+2025-08-19 03:14:55,954 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm
+2025-08-19 03:14:55,955 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fasparagusorange.htm (attempt 1)
+2025-08-19 03:14:56,071 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:14:58,071 - INFO - Progress: 165/631
+2025-08-19 03:14:58,071 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpoultry%2Fchickenmckenzie.htm
+2025-08-19 03:14:58,071 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpoultry%2Fchickenmckenzie.htm (attempt 1)
+2025-08-19 03:14:58,148 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:15:00,148 - INFO - Progress: 166/631
+2025-08-19 03:15:00,148 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/smsalmoncrostini.htm
+2025-08-19 03:15:00,148 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/smsalmoncrostini.htm (attempt 1)
+2025-08-19 03:15:01,874 - INFO - Successfully scraped: Smoked Salmon Crostini Recipe
+2025-08-19 03:15:03,874 - INFO - Progress: 167/631
+2025-08-19 03:15:03,874 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm
+2025-08-19 03:15:03,874 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm (attempt 1)
+2025-08-19 03:15:03,912 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm
+2025-08-19 03:15:04,912 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm (attempt 2)
+2025-08-19 03:15:04,948 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm
+2025-08-19 03:15:06,948 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm (attempt 3)
+2025-08-19 03:15:06,986 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm
+2025-08-19 03:15:06,987 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakes.htm after 3 attempts
+2025-08-19 03:15:08,987 - INFO - Progress: 168/631
+2025-08-19 03:15:08,987 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm
+2025-08-19 03:15:08,987 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm (attempt 1)
+2025-08-19 03:15:09,021 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm
+2025-08-19 03:15:10,021 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm (attempt 2)
+2025-08-19 03:15:10,056 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm
+2025-08-19 03:15:12,056 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm (attempt 3)
+2025-08-19 03:15:12,090 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm
+2025-08-19 03:15:12,090 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fsmokesalmon2.htm after 3 attempts
+2025-08-19 03:15:14,090 - INFO - Progress: 169/631
+2025-08-19 03:15:14,090 - INFO - Scraping recipe: https://whatscookingamerica.net/cake/chocolatehazelnutcheeseck.htm
+2025-08-19 03:15:14,090 - INFO - Fetching URL: https://whatscookingamerica.net/cake/chocolatehazelnutcheeseck.htm (attempt 1)
+2025-08-19 03:15:15,474 - INFO - Successfully scraped: Chocolate Hazelnut Swirl Cheesecake Recipe
+2025-08-19 03:15:17,478 - INFO - Results saved to: pacific_northwest_recipes_partial_110.json
+2025-08-19 03:15:17,478 - INFO - Progress: 170/631
+2025-08-19 03:15:17,478 - INFO - Scraping recipe: https://whatscookingamerica.net/vegetables/cauliflowergratin.htm
+2025-08-19 03:15:17,478 - INFO - Fetching URL: https://whatscookingamerica.net/vegetables/cauliflowergratin.htm (attempt 1)
+2025-08-19 03:15:18,961 - INFO - Successfully scraped: Cauliflower Gratin with Gruyere and Hazelnuts Recipe
+2025-08-19 03:15:20,961 - INFO - Progress: 171/631
+2025-08-19 03:15:20,961 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm
+2025-08-19 03:15:20,961 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm (attempt 1)
+2025-08-19 03:15:21,030 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:22,031 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm (attempt 2)
+2025-08-19 03:15:22,079 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:24,079 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm (attempt 3)
+2025-08-19 03:15:24,118 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:24,118 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonhazelnut.htm after 3 attempts
+2025-08-19 03:15:26,118 - INFO - Progress: 172/631
+2025-08-19 03:15:26,118 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm
+2025-08-19 03:15:26,118 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm (attempt 1)
+2025-08-19 03:15:26,169 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:27,169 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm (attempt 2)
+2025-08-19 03:15:27,212 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:29,213 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm (attempt 3)
+2025-08-19 03:15:29,260 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:29,260 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcrabappetizer.htm after 3 attempts
+2025-08-19 03:15:31,261 - INFO - Progress: 173/631
+2025-08-19 03:15:31,261 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm
+2025-08-19 03:15:31,261 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm (attempt 1)
+2025-08-19 03:15:31,314 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:32,314 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm (attempt 2)
+2025-08-19 03:15:32,379 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:34,379 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm (attempt 3)
+2025-08-19 03:15:34,434 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:15:34,434 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fkarencalanchini%2Fcrabcakes-tomatocornsalad.htm after 3 attempts
+2025-08-19 03:15:36,435 - INFO - Progress: 174/631
+2025-08-19 03:15:36,435 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Summertime+Blackberry+Pie+is+worth+the+scratches+and+stained+hands+you+get+when+picking+your+own+fresh+wild+blackberries.+%23pie+%23blackberries&url=https%3A%2F%2Fwhatscookingamerica.net%2Fblkbrypie.htm
+2025-08-19 03:15:36,435 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Summertime+Blackberry+Pie+is+worth+the+scratches+and+stained+hands+you+get+when+picking+your+own+fresh+wild+blackberries.+%23pie+%23blackberries&url=https%3A%2F%2Fwhatscookingamerica.net%2Fblkbrypie.htm (attempt 1)
+2025-08-19 03:15:36,611 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:15:38,612 - INFO - Progress: 175/631
+2025-08-19 03:15:38,612 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm
+2025-08-19 03:15:38,612 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm (attempt 1)
+2025-08-19 03:15:38,646 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm
+2025-08-19 03:15:39,646 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm (attempt 2)
+2025-08-19 03:15:39,683 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm
+2025-08-19 03:15:41,683 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm (attempt 3)
+2025-08-19 03:15:41,718 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm
+2025-08-19 03:15:41,718 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fbread%2Fmaplehazel.htm after 3 attempts
+2025-08-19 03:15:43,719 - INFO - Progress: 176/631
+2025-08-19 03:15:43,719 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberryrecipes.htm
+2025-08-19 03:15:43,719 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Ffruit%2Fblackberryrecipes.htm (attempt 1)
+2025-08-19 03:15:43,813 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:15:45,813 - INFO - Progress: 177/631
+2025-08-19 03:15:45,813 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm
+2025-08-19 03:15:45,813 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm (attempt 1)
+2025-08-19 03:15:45,849 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm
+2025-08-19 03:15:46,850 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm (attempt 2)
+2025-08-19 03:15:46,885 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm
+2025-08-19 03:15:48,885 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm (attempt 3)
+2025-08-19 03:15:48,921 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm
+2025-08-19 03:15:48,921 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabcakecitrus.htm after 3 attempts
+2025-08-19 03:15:50,921 - INFO - Progress: 178/631
+2025-08-19 03:15:50,921 - INFO - Scraping recipe: https://whatscookingamerica.net/smokedsalmonterrines.htm
+2025-08-19 03:15:50,921 - INFO - Fetching URL: https://whatscookingamerica.net/smokedsalmonterrines.htm (attempt 1)
+2025-08-19 03:15:52,435 - INFO - Successfully scraped: Smoked Salmon and Caviar Terrine Recipe
+2025-08-19 03:15:54,435 - INFO - Progress: 179/631
+2025-08-19 03:15:54,435 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm
+2025-08-19 03:15:54,435 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm (attempt 1)
+2025-08-19 03:15:54,529 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:15:56,530 - INFO - Progress: 180/631
+2025-08-19 03:15:56,530 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm
+2025-08-19 03:15:56,530 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm (attempt 1)
+2025-08-19 03:15:56,564 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm
+2025-08-19 03:15:57,565 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm (attempt 2)
+2025-08-19 03:15:57,600 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm
+2025-08-19 03:15:59,600 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm (attempt 3)
+2025-08-19 03:15:59,635 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm
+2025-08-19 03:15:59,635 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmontartare.htm after 3 attempts
+2025-08-19 03:16:01,636 - INFO - Progress: 181/631
+2025-08-19 03:16:01,636 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm
+2025-08-19 03:16:01,636 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 1)
+2025-08-19 03:16:01,708 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:02,708 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 2)
+2025-08-19 03:16:02,771 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:04,771 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm (attempt 3)
+2025-08-19 03:16:04,818 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:04,818 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fbbjelly.htm after 3 attempts
+2025-08-19 03:16:06,818 - INFO - Progress: 182/631
+2025-08-19 03:16:06,818 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm
+2025-08-19 03:16:06,818 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 1)
+2025-08-19 03:16:06,877 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:07,877 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 2)
+2025-08-19 03:16:07,928 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:09,928 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm (attempt 3)
+2025-08-19 03:16:10,003 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:10,003 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcake%2Fchocolatehazelnutcheeseck.htm after 3 attempts
+2025-08-19 03:16:12,004 - INFO - Progress: 183/631
+2025-08-19 03:16:12,004 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm
+2025-08-19 03:16:12,004 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm (attempt 1)
+2025-08-19 03:16:12,040 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm
+2025-08-19 03:16:13,041 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm (attempt 2)
+2025-08-19 03:16:13,076 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm
+2025-08-19 03:16:15,076 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm (attempt 3)
+2025-08-19 03:16:15,115 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm
+2025-08-19 03:16:15,115 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fgreenbeanhazelnut.htm after 3 attempts
+2025-08-19 03:16:17,115 - INFO - Progress: 184/631
+2025-08-19 03:16:17,115 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm
+2025-08-19 03:16:17,115 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm (attempt 1)
+2025-08-19 03:16:17,195 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:18,195 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm (attempt 2)
+2025-08-19 03:16:18,243 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:20,243 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm (attempt 3)
+2025-08-19 03:16:20,339 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:20,339 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fcrabrecipes.htm after 3 attempts
+2025-08-19 03:16:22,339 - INFO - Progress: 185/631
+2025-08-19 03:16:22,339 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm
+2025-08-19 03:16:22,339 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 1)
+2025-08-19 03:16:22,430 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:23,431 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 2)
+2025-08-19 03:16:23,484 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:25,484 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm (attempt 3)
+2025-08-19 03:16:25,624 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:25,624 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fsalmonmayonnaise.htm after 3 attempts
+2025-08-19 03:16:27,624 - INFO - Progress: 186/631
+2025-08-19 03:16:27,624 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm
+2025-08-19 03:16:27,625 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm (attempt 1)
+2025-08-19 03:16:27,659 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm
+2025-08-19 03:16:28,660 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm (attempt 2)
+2025-08-19 03:16:28,694 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm
+2025-08-19 03:16:30,694 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm (attempt 3)
+2025-08-19 03:16:30,731 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm
+2025-08-19 03:16:30,731 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fmincemeatgrandma.htm after 3 attempts
+2025-08-19 03:16:32,731 - INFO - Progress: 187/631
+2025-08-19 03:16:32,731 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fsmsalmon.htm
+2025-08-19 03:16:32,731 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fpasta_rice_main%2Fsmsalmon.htm (attempt 1)
+2025-08-19 03:16:32,824 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:16:34,824 - INFO - Progress: 188/631
+2025-08-19 03:16:34,825 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm
+2025-08-19 03:16:34,825 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm (attempt 1)
+2025-08-19 03:16:34,891 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:35,892 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm (attempt 2)
+2025-08-19 03:16:35,943 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:37,943 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm (attempt 3)
+2025-08-19 03:16:37,985 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:37,985 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fmincemeatpie.htm after 3 attempts
+2025-08-19 03:16:39,985 - INFO - Progress: 189/631
+2025-08-19 03:16:39,985 - INFO - Scraping recipe: https://whatscookingamerica.net/appetizers/smsalmonroulades.htm
+2025-08-19 03:16:39,985 - INFO - Fetching URL: https://whatscookingamerica.net/appetizers/smsalmonroulades.htm (attempt 1)
+2025-08-19 03:16:52,721 - INFO - Successfully scraped: Smoked Salmon Roulades Recipe
+2025-08-19 03:16:54,721 - INFO - Progress: 190/631
+2025-08-19 03:16:54,721 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm
+2025-08-19 03:16:54,721 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm (attempt 1)
+2025-08-19 03:16:54,795 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:55,795 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm (attempt 2)
+2025-08-19 03:16:55,841 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:57,841 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm (attempt 3)
+2025-08-19 03:16:57,900 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:16:57,900 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fvegetables%2Fartichokecrabsalad.htm after 3 attempts
+2025-08-19 03:16:59,900 - INFO - Progress: 191/631
+2025-08-19 03:16:59,900 - INFO - Scraping recipe: https://twitter.com/intent/tweet?text=Grilled+Halibut+with+Hazelnut+Crust+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm
+2025-08-19 03:16:59,900 - INFO - Fetching URL: https://twitter.com/intent/tweet?text=Grilled+Halibut+with+Hazelnut+Crust+Recipe&url=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm (attempt 1)
+2025-08-19 03:17:00,094 - INFO - Successfully scraped: JavaScript is not available.
+2025-08-19 03:17:02,095 - INFO - Progress: 192/631
+2025-08-19 03:17:02,095 - INFO - Scraping recipe: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm
+2025-08-19 03:17:02,095 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm (attempt 1)
+2025-08-19 03:17:02,192 - WARNING - Attempt 1 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:17:03,192 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm (attempt 2)
+2025-08-19 03:17:03,241 - WARNING - Attempt 2 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:17:05,241 - INFO - Fetching URL: https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm (attempt 3)
+2025-08-19 03:17:05,316 - WARNING - Attempt 3 failed for https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm: 403 Client Error: Forbidden for url: https://www.kitchenaid.com/recipes
+2025-08-19 03:17:05,316 - ERROR - Failed to fetch https://www.yummly.com/urb/verify?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fsmsalmoncucumber.htm after 3 attempts
+2025-08-19 03:17:07,316 - INFO - Progress: 193/631
+2025-08-19 03:17:07,317 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm
+2025-08-19 03:17:07,317 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm (attempt 1)
+2025-08-19 03:17:07,350 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm
+2025-08-19 03:17:08,351 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm (attempt 2)
+2025-08-19 03:17:08,384 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm
+2025-08-19 03:17:10,384 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm (attempt 3)
+2025-08-19 03:17:10,418 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm
+2025-08-19 03:17:10,418 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fherbedphyllo.htm after 3 attempts
+2025-08-19 03:17:12,418 - INFO - Progress: 194/631
+2025-08-19 03:17:12,418 - INFO - Scraping recipe: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm
+2025-08-19 03:17:12,419 - INFO - Fetching URL: https://pinterest.com/pin/create/button/?url=https%3A%2F%2Fwhatscookingamerica.net%2Fappetizers%2Fcountrypate.htm (attempt 1)
+2025-08-19 03:17:12,501 - INFO - Successfully scraped: Pin Builder
+2025-08-19 03:17:14,501 - INFO - Progress: 195/631
+2025-08-19 03:17:14,501 - INFO - Scraping recipe: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm
+2025-08-19 03:17:14,501 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm (attempt 1)
+2025-08-19 03:17:14,536 - WARNING - Attempt 1 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm
+2025-08-19 03:17:15,536 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm (attempt 2)
+2025-08-19 03:17:15,570 - WARNING - Attempt 2 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm
+2025-08-19 03:17:17,571 - INFO - Fetching URL: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm (attempt 3)
+2025-08-19 03:17:17,607 - WARNING - Attempt 3 failed for https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm: 400 Client Error: Bad Request for url: https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm
+2025-08-19 03:17:17,607 - ERROR - Failed to fetch https://www.facebook.com/share.php?u=https%3A%2F%2Fwhatscookingamerica.net%2Fhalibuthazelnut.htm after 3 attempts
+2025-08-19 03:17:19,607 - INFO - Progress: 196/631
+2025-08-19 03:17:19,608 - INFO - Scraping recipe: https://whatscookingamerica.net/menu/bbqsalmon.htm
+2025-08-19 03:17:19,608 - INFO - Fetching URL: https://whatscookingamerica.net/menu/bbqsalmon.htm (attempt 1)
+2025-08-19 03:17:20,812 - INFO - Successfully scraped: Barbecued Salmon Dinner – Menus and Recipes
+2025-08-19 03:17:22,817 - INFO - Results saved to: pacific_northwest_recipes_partial_120.json
+2025-08-19 03:17:22,817 - INFO - Progress: 197/631
+2025-08-19 03:17:22,817 - INFO - Scraping recipe: https://whatscookingamerica.net/salad/cabbagecrabsalad.htm
+2025-08-19 03:17:22,817 - INFO - Fetching URL: https://whatscookingamerica.net/salad/cabbagecrabsalad.htm (attempt 1)
+2025-08-19 03:17:35,697 - INFO - Scraping interrupted by user
+2025-08-19 03:17:35,701 - INFO - Results saved to: pacific_northwest_recipes_interrupted.json
