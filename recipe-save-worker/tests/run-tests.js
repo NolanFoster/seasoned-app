@@ -18,7 +18,8 @@ console.log('🧪 Running Recipe Save Worker tests...\n');
 
 const testFiles = [
   'tests/worker.test.js',
-  'tests/image-processing.test.js'
+  'tests/image-processing.test.js',
+  'tests/nutrition-integration.test.js'
 ];
 
 let allTestsPassed = true;
