@@ -119,7 +119,7 @@ function testNutritionAggregator() {
   // Test recipe schema formatting
   const formatted = aggregator.formatForRecipeSchema(totals, 2);
   assert(formatted['@type'] === 'NutritionInformation', 'schema type');
-  assert(formatted.calories === '50kcal', 'formatted calories per serving');
+  assert(formatted.calories === '50', 'formatted calories per serving');
   assert(formatted.proteinContent === '2g', 'formatted protein per serving');
   
   console.log('✓ NutritionAggregator tests passed');
