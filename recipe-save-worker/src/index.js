@@ -46,8 +46,18 @@ export function parseIngredientsForNutrition(ingredients) {
   }
 
   return ingredients.map(ingredient => {
+    // Skip null and undefined
+    if (ingredient === null || ingredient === undefined) {
+      return null;
+    }
+    
     // Handle string ingredients
     if (typeof ingredient === 'string') {
+      // Skip empty strings
+      if (!ingredient.trim()) {
+        return null;
+      }
+      
       // Try to parse quantity, unit, and name from string
       // Common patterns: "2 cups flour", "1 tablespoon olive oil", "3 large eggs"
       const match = ingredient.match(/^(\d+(?:\.\d+)?|\d+\/\d+)\s*(\w+)?\s+(.+)$/);
@@ -89,7 +99,7 @@ export function parseIngredientsForNutrition(ingredients) {
       }
       
       // If it has a different structure, try to extract what we can
-      const name = ingredient.name || ingredient.ingredient || ingredient.item || JSON.stringify(ingredient);
+      const name = ingredient.name || ingredient.ingredient || ingredient.item || '';
       const quantity = parseFloat(ingredient.quantity || ingredient.amount || ingredient.value || 1);
       const unit = ingredient.unit || ingredient.measure || 'unit';
       
@@ -100,13 +110,9 @@ export function parseIngredientsForNutrition(ingredients) {
       };
     }
     
-    // Fallback for any other type
-    return {
-      name: String(ingredient),
-      quantity: 1,
-      unit: 'unit'
-    };
-  }).filter(ing => ing.name && ing.quantity > 0); // Filter out invalid ingredients
+    // For any other type, return null to filter out
+    return null;
+  }).filter(ing => ing && ing.name && ing.quantity > 0); // Filter out null/invalid ingredients
 }
 
 // Durable Object class for handling atomic recipe saves
