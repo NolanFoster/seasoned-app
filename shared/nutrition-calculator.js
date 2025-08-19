@@ -77,6 +77,136 @@ class USDANutritionClient {
  * Unit conversion utilities for ingredients
  */
 const UnitConverter = {
+  // Ingredient-specific densities (g/ml) for accurate volume-to-weight conversion
+  ingredientDensities: {
+    // Liquids and wet ingredients
+    'water': 1.0,
+    'milk': 1.03,
+    'whole milk': 1.03,
+    'skim milk': 1.033,
+    'buttermilk': 1.03,
+    'cream': 0.98,
+    'heavy cream': 0.98,
+    'whipping cream': 0.98,
+    'sour cream': 1.0,
+    'yogurt': 1.03,
+    'greek yogurt': 1.1,
+    
+    // Oils and fats
+    'oil': 0.92,
+    'olive oil': 0.915,
+    'vegetable oil': 0.92,
+    'canola oil': 0.92,
+    'coconut oil': 0.924,
+    'butter': 0.911,
+    'margarine': 0.91,
+    'shortening': 0.867,
+    'lard': 0.92,
+    
+    // Sweeteners
+    'honey': 1.42,
+    'maple syrup': 1.33,
+    'corn syrup': 1.38,
+    'molasses': 1.41,
+    'agave': 1.32,
+    
+    // Vinegars and condiments
+    'vinegar': 1.01,
+    'apple cider vinegar': 1.01,
+    'balsamic vinegar': 1.08,
+    'soy sauce': 1.13,
+    'ketchup': 1.14,
+    'mayonnaise': 0.91,
+    'mustard': 1.05,
+    
+    // Alcohols
+    'wine': 0.99,
+    'beer': 1.01,
+    'spirits': 0.95,
+    'vodka': 0.95,
+    'rum': 0.95,
+    'whiskey': 0.95,
+    
+    // Dry ingredients (when measured by volume)
+    'flour': 0.593,
+    'all-purpose flour': 0.593,
+    'bread flour': 0.606,
+    'cake flour': 0.496,
+    'whole wheat flour': 0.606,
+    'sugar': 0.849,
+    'granulated sugar': 0.849,
+    'brown sugar': 0.721,
+    'powdered sugar': 0.561,
+    'confectioners sugar': 0.561,
+    
+    // Salts and leaveners
+    'salt': 1.217,
+    'table salt': 1.217,
+    'kosher salt': 0.608,
+    'sea salt': 1.02,
+    'baking powder': 0.721,
+    'baking soda': 0.689,
+    'yeast': 0.512,
+    
+    // Grains and starches
+    'rice': 0.753,
+    'white rice': 0.753,
+    'brown rice': 0.88,
+    'oats': 0.41,
+    'rolled oats': 0.41,
+    'quinoa': 0.658,
+    'cornstarch': 0.629,
+    'cornmeal': 0.673,
+    
+    // Nuts and seeds (roughly chopped)
+    'almonds': 0.529,
+    'walnuts': 0.481,
+    'pecans': 0.449,
+    'cashews': 0.545,
+    'peanuts': 0.657,
+    'sunflower seeds': 0.609,
+    'sesame seeds': 0.641,
+    'chia seeds': 0.61,
+    'flax seeds': 0.673,
+    
+    // Other common ingredients
+    'cocoa powder': 0.497,
+    'protein powder': 0.449,
+    'breadcrumbs': 0.241,
+    'parmesan cheese': 0.561,
+    'shredded cheese': 0.241
+  },
+
+  // Specific count/item weights for common ingredients
+  specificItemWeights: {
+    // Vegetables
+    'garlic clove': 4,
+    'garlic': 4,
+    'onion small': 110,
+    'onion medium': 170,
+    'onion large': 285,
+    'egg': 50,
+    'egg large': 50,
+    'egg medium': 44,
+    'egg small': 38,
+    
+    // Fruits
+    'lemon': 60,
+    'lime': 44,
+    'orange': 154,
+    'apple': 182,
+    'banana': 118,
+    'strawberry': 12,
+    'blueberry': 1,
+    
+    // Other items
+    'slice bread': 25,
+    'slice bacon': 8,
+    'chicken breast': 174,
+    'cookie': 16,
+    'cracker': 3
+  },
+
   // Common volume conversions to milliliters
   volumeToMl: {
     'ml': 1,
@@ -122,25 +252,104 @@ const UnitConverter = {
 
   // Common count/serving conversions (approximate)
   countToGrams: {
-    'small': 100,
-    'medium': 150,
-    'large': 200,
-    'piece': 100,
-    'pieces': 100,
-    'item': 100,
-    'items': 100,
+    'small': 50,
+    'medium': 100,
+    'large': 150,
+    'piece': 50,
+    'pieces': 50,
+    'item': 50,
+    'items': 50,
     'serving': 100,
-    'servings': 100
+    'servings': 100,
+    'slice': 30,
+    'slices': 30,
+    'clove': 4,
+    'cloves': 4,
+    'head': 150,
+    'bunch': 150,
+    'sprig': 2,
+    'sprigs': 2,
+    'leaf': 1,
+    'leaves': 1,
+    'stalk': 40,
+    'stalks': 40
+  },
+
+  /**
+   * Get the appropriate density for an ingredient
+   * @param {string} ingredientName - Name of the ingredient
+   * @returns {number} Density in g/ml
+   */
+  getDensityForIngredient(ingredientName) {
+    const normalized = ingredientName.toLowerCase().trim();
+    
+    // Direct match
+    if (this.ingredientDensities[normalized]) {
+      return this.ingredientDensities[normalized];
+    }
+    
+    // Check if ingredient contains key words
+    for (const [key, density] of Object.entries(this.ingredientDensities)) {
+      if (normalized.includes(key) || key.includes(normalized)) {
+        return density;
+      }
+    }
+    
+    // Check for common patterns
+    if (normalized.includes('flour')) return this.ingredientDensities['flour'];
+    if (normalized.includes('sugar') && !normalized.includes('brown') && !normalized.includes('powdered')) return this.ingredientDensities['sugar'];
+    if (normalized.includes('oil')) return this.ingredientDensities['oil'];
+    if (normalized.includes('butter')) return this.ingredientDensities['butter'];
+    if (normalized.includes('milk')) return this.ingredientDensities['milk'];
+    if (normalized.includes('cream')) return this.ingredientDensities['cream'];
+    if (normalized.includes('honey')) return this.ingredientDensities['honey'];
+    if (normalized.includes('syrup')) return this.ingredientDensities['maple syrup'];
+    
+    // Default density
+    return 1.0;
+  },
+
+  /**
+   * Get specific weight for counted items
+   * @param {string} ingredientName - Name of the ingredient
+   * @param {string} unit - Unit of measurement
+   * @returns {number|null} Weight in grams or null if not found
+   */
+  getSpecificItemWeight(ingredientName, unit) {
+    const normalizedIngredient = ingredientName.toLowerCase().trim();
+    const normalizedUnit = unit.toLowerCase().trim();
+    
+    // Check for specific item weights
+    if (this.specificItemWeights[normalizedIngredient]) {
+      return this.specificItemWeights[normalizedIngredient];
+    }
+    
+    // Check for patterns like "garlic clove"
+    const combined = `${normalizedIngredient} ${normalizedUnit}`;
+    if (this.specificItemWeights[combined]) {
+      return this.specificItemWeights[combined];
+    }
+    
+    // Check if the unit contains size information
+    if (normalizedUnit.includes('small') || normalizedUnit.includes('medium') || normalizedUnit.includes('large')) {
+      const sizeKey = `${normalizedIngredient} ${normalizedUnit}`;
+      if (this.specificItemWeights[sizeKey]) {
+        return this.specificItemWeights[sizeKey];
+      }
+    }
+    
+    return null;
   },
 
   /**
    * Convert ingredient quantity to grams
    * @param {number} quantity - Quantity value
    * @param {string} unit - Unit of measurement
-   * @param {number} density - Density for volume to weight conversion (g/ml)
+   * @param {string} ingredientName - Name of the ingredient (optional)
+   * @param {number} customDensity - Custom density override (optional)
    * @returns {number} Weight in grams
    */
-  convertToGrams(quantity, unit, density = 1) {
+  convertToGrams(quantity, unit, ingredientName = '', customDensity = null) {
     const normalizedUnit = unit.toLowerCase().trim();
     
     // Direct weight conversion
@@ -148,10 +357,21 @@ const UnitConverter = {
       return quantity * this.weightToGrams[normalizedUnit];
     }
     
+    // Check for specific item weights first
+    if (ingredientName) {
+      const specificWeight = this.getSpecificItemWeight(ingredientName, normalizedUnit);
+      if (specificWeight !== null) {
+        return quantity * specificWeight;
+      }
+    }
+    
     // Volume to weight conversion (using density)
     if (this.volumeToMl[normalizedUnit]) {
       const volumeMl = quantity * this.volumeToMl[normalizedUnit];
-      return volumeMl * density; // Convert ml to grams using density
+      // Use custom density, ingredient-specific density, or default
+      const density = customDensity || 
+                     (ingredientName ? this.getDensityForIngredient(ingredientName) : 1.0);
+      return volumeMl * density;
     }
     
     // Count/serving conversion
@@ -160,7 +380,7 @@ const UnitConverter = {
     }
     
     // Default: assume grams if unit not recognized
-    console.warn(`Unknown unit "${unit}", assuming grams`);
+    console.warn(`Unknown unit "${unit}" for ingredient "${ingredientName}", assuming grams`);
     return quantity;
   }
 };
@@ -343,7 +563,8 @@ export async function calculateNutritionalFacts(ingredients, apiKey, servings = 
         const weightGrams = UnitConverter.convertToGrams(
           ingredient.quantity,
           ingredient.unit || 'g',
-          ingredient.density || 1
+          ingredient.name,
+          ingredient.density || null
         );
 
         // Extract nutrition data for this ingredient
