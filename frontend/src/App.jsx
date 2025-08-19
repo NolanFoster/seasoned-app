@@ -2194,7 +2194,7 @@ function App() {
             <div className="overlay-content recipe-preview-overlay">
               <div className="form-panel glass recipe-preview-panel">
                 {/* Save Progress Overlay */}
-                {isSavingRecipe && (
+                {false && isSavingRecipe && (
                   <div className="save-progress-overlay">
                     <div className="save-progress-content">
                       <div className="save-spinner">🔄</div>
