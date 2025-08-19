@@ -28,12 +28,39 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
   const [recommendations, setRecommendations] = useState(null);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState('prompt'); // 'granted', 'denied', 'prompt'
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [externalRecipes, setExternalRecipes] = useState({});
+
+  // Check location permission status on mount
+  useEffect(() => {
+    const checkLocationPermission = async () => {
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          setLocationPermissionStatus(permission.state);
+          
+          // Listen for permission changes
+          permission.addEventListener('change', () => {
+            setLocationPermissionStatus(permission.state);
+            if (permission.state === 'granted') {
+              // If permission was just granted, fetch recommendations with location
+              fetchRecommendations();
+            }
+          });
+        } catch (err) {
+          console.log('Permissions API not fully supported:', err);
+        }
+      }
+    };
+    
+    checkLocationPermission();
+  }, []);
 
   useEffect(() => {
     // If recipesByCategory is provided, skip fetching recommendations
     if (recipesByCategory && recipesByCategory.size > 0) {
-      debugLogEmoji('��', 'Using recipesByCategory directly:', {
+      debugLogEmoji('🎯', 'Using recipesByCategory directly:', {
         size: recipesByCategory.size,
         categories: Array.from(recipesByCategory.keys())
       });
@@ -114,16 +141,23 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     }
   }, [recommendations, recipesByCategory]);
 
-  async function fetchRecommendations() {
+  async function fetchRecommendations(forceLocationRequest = false) {
     try {
       setIsLoadingRecommendations(true);
       
       // Try to get user's location or use a default
       let location = userLocation || 'San Francisco, CA'; // Default location
+      let locationAttempted = false;
       
       // Try to get user's location from browser
-      if (!userLocation && navigator.geolocation) {
+      if (!userLocation && navigator.geolocation && (locationPermissionStatus !== 'denied' || forceLocationRequest)) {
         try {
+          locationAttempted = true;
+          console.log('Requesting geolocation...', { 
+            permissionStatus: locationPermissionStatus,
+            forceRequest: forceLocationRequest 
+          });
+          
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { 
               timeout: 10000,
@@ -164,10 +198,16 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           }
           
           setUserLocation(location);
+          setShowLocationPrompt(false);
           debugLogEmoji('📍', 'Got user location:', location);
         } catch (geoError) {
-          console.log('Could not get user location, using default');
+          console.error('Could not get user location:', geoError);
           debugLogEmoji('❌', 'Geolocation failed:', geoError.message);
+          
+          // Show location prompt if this was the first attempt and permission might be needed
+          if (locationAttempted && !forceLocationRequest && locationPermissionStatus === 'prompt') {
+            setShowLocationPrompt(true);
+          }
         }
       }
       
