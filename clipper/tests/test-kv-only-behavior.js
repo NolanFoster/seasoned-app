@@ -34,6 +34,7 @@ const createMockEnv = (kvOperations = {}) => ({
     delete: kvOperations.delete || (async (key) => {}),
     list: kvOperations.list || (async (options) => ({ keys: [], cursor: null, list_complete: true }))
   },
+  SAVE_WORKER_URL: 'https://recipe-save-worker.example.com',
   AI: {
     run: async (model, options) => ({
       output: [{
