@@ -29,6 +29,65 @@ function App() {
     }
   };
   
+  // Function to parse time mentions in text and render with timer buttons
+  const renderInstructionWithTimers = (text) => {
+    // Regex to match various time formats:
+    // - X minute(s), X min(s), X hour(s), X hr(s), X second(s), X sec(s)
+    // - X-Y minutes, X to Y minutes, etc.
+    const timeRegex = /(\d+(?:\s*[-–—]\s*\d+|\s+to\s+\d+)?)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?)\b/gi;
+    
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = timeRegex.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lastIndex}`}>
+            {text.slice(lastIndex, match.index)}
+          </span>
+        );
+      }
+      
+      // Add the time mention with a timer button
+      const timeText = match[0];
+      parts.push(
+        <span key={`time-${match.index}`} className="time-mention-wrapper">
+          <span className="time-mention">{timeText}</span>
+          <button 
+            className="timer-button-inline"
+            title={`Set timer for ${timeText}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Timer functionality will be added later
+            }}
+          >
+            <img 
+              src="/timer.svg" 
+              alt="Timer" 
+              className="timer-icon-inline"
+            />
+          </button>
+        </span>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text after the last match
+    if (lastIndex < text.length) {
+      parts.push(
+        <span key={`text-${lastIndex}`}>
+          {text.slice(lastIndex)}
+        </span>
+      );
+    }
+    
+    return parts.length > 0 ? parts : text;
+  };
+  
   // Recipes are now populated by the recommendations system instead of direct API calls
   const [recipes, setRecipes] = useState([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false); // Loading state for recipes
@@ -2841,7 +2900,7 @@ function App() {
                   <ol className="instructions-list">
                     {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
                       <li key={index}>
-                        {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                        {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
                       </li>
                     ))}
                   </ol>
