@@ -260,7 +260,7 @@ class NutritionAggregator {
 
     return {
       "@type": "NutritionInformation",
-      calories: this.formatNutrientValue(perServing.calories, 'kcal'),
+      calories: this.formatNutrientValue(perServing.calories, 'Cal'),
       proteinContent: this.formatNutrientValue(perServing.proteinContent, 'g'),
       fatContent: this.formatNutrientValue(perServing.fatContent, 'g'),
       carbohydrateContent: this.formatNutrientValue(perServing.carbohydrateContent, 'g'),

@@ -123,7 +123,7 @@ describe('Nutrition Integration', () => {
         url: 'https://example.com/recipe',
         ingredients: ['2 cups flour'],
         nutrition: {
-          calories: '200kcal',
+          calories: '200Cal',
           proteinContent: '5g'
         }
       };

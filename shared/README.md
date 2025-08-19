@@ -306,7 +306,7 @@ The nutrition data is returned in Recipe schema format compatible with the exist
 ```json
 {
   "@type": "NutritionInformation",
-  "calories": "250kcal",
+  "calories": "250Cal",
   "proteinContent": "8.5g",
   "fatContent": "12.3g",
   "carbohydrateContent": "28.7g",
