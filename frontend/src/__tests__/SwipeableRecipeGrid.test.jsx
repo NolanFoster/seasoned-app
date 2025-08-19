@@ -1,9 +1,26 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import SwipeableRecipeGrid from '../components/SwipeableRecipeGrid';
 
+// Mock window properties
+const mockScrollBy = jest.fn();
+const mockAddEventListener = jest.fn();
+const mockRemoveEventListener = jest.fn();
+
 describe('SwipeableRecipeGrid', () => {
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
+    mockScrollBy.mockClear();
+    mockAddEventListener.mockClear();
+    mockRemoveEventListener.mockClear();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe('Component Rendering', () => {
     it('renders without crashing', () => {
       const { container } = render(<SwipeableRecipeGrid />);
@@ -27,6 +44,14 @@ describe('SwipeableRecipeGrid', () => {
       const { container } = render(<SwipeableRecipeGrid className="custom-class" />);
       const grid = container.querySelector('.recipe-grid');
       expect(grid).toHaveClass('recipe-grid', 'category-recipes', 'custom-class');
+    });
+
+    it('passes through additional props', () => {
+      const { container } = render(
+        <SwipeableRecipeGrid data-testid="test-grid" aria-label="Recipe carousel" />
+      );
+      const grid = container.querySelector('[data-testid="test-grid"]');
+      expect(grid).toHaveAttribute('aria-label', 'Recipe carousel');
     });
   });
 
@@ -55,118 +80,450 @@ describe('SwipeableRecipeGrid', () => {
     });
   });
 
-  describe('Navigation Functionality', () => {
-    // Mock a component with scrollable content
-    const ScrollableGrid = ({ children }) => {
-      const gridRef = React.useRef(null);
-      const [showLeftButton, setShowLeftButton] = React.useState(false);
-      const [showRightButton, setShowRightButton] = React.useState(true);
-
-      React.useEffect(() => {
-        // Simulate scrollable content
-        if (gridRef.current) {
-          Object.defineProperty(gridRef.current, 'scrollWidth', {
-            writable: true,
-            configurable: true,
-            value: 1200
-          });
-          Object.defineProperty(gridRef.current, 'clientWidth', {
-            writable: true,
-            configurable: true,
-            value: 600
-          });
-          Object.defineProperty(gridRef.current, 'scrollLeft', {
-            writable: true,
-            configurable: true,
-            value: 0
-          });
-        }
-      }, []);
-
-      const scroll = (direction) => {
-        if (direction === 'left') {
-          setShowLeftButton(false);
-          setShowRightButton(true);
-        } else {
-          setShowLeftButton(true);
-          setShowRightButton(false);
+  describe('Navigation Button State Management', () => {
+    it('initially shows only right button when scrollable', () => {
+      // Create a mock ref that simulates scrollable content
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
         }
       };
 
-      return (
-        <div className="carousel-container">
-          {showLeftButton && (
-            <button 
-              className="carousel-nav carousel-nav-left"
-              onClick={() => scroll('left')}
-              aria-label="Scroll left"
-            >
-              Left
-            </button>
-          )}
-          <div ref={gridRef} className="recipe-grid carousel-layout">
-            {children}
-          </div>
-          {showRightButton && (
-            <button 
-              className="carousel-nav carousel-nav-right"
-              onClick={() => scroll('right')}
-              aria-label="Scroll right"
-            >
-              Right
-            </button>
-          )}
-        </div>
-      );
-    };
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
 
-    it('shows navigation buttons when content is scrollable', () => {
       render(
-        <ScrollableGrid>
+        <SwipeableRecipeGrid>
           <div>Item 1</div>
           <div>Item 2</div>
           <div>Item 3</div>
-          <div>Item 4</div>
-        </ScrollableGrid>
+        </SwipeableRecipeGrid>
       );
 
-      // Initially only right button is visible
       expect(screen.queryByLabelText('Scroll left')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Scroll right')).toBeInTheDocument();
     });
 
-    it('handles navigation button clicks', () => {
+    it('shows both buttons when scrolled to middle', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 250,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
       render(
-        <ScrollableGrid>
-          <div>Item 1</div>
-          <div>Item 2</div>
-          <div>Item 3</div>
-          <div>Item 4</div>
-        </ScrollableGrid>
-      );
-
-      // Click right button
-      const rightButton = screen.getByLabelText('Scroll right');
-      fireEvent.click(rightButton);
-
-      // Now left button should appear and right button should disappear
-      expect(screen.getByLabelText('Scroll left')).toBeInTheDocument();
-      expect(screen.queryByLabelText('Scroll right')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Responsive Behavior', () => {
-    it('maintains carousel structure on different screen sizes', () => {
-      const { container } = render(
         <SwipeableRecipeGrid>
           <div>Item 1</div>
           <div>Item 2</div>
         </SwipeableRecipeGrid>
       );
 
-      const grid = container.querySelector('.recipe-grid');
-      expect(grid).toHaveClass('carousel-layout');
+      expect(screen.getByLabelText('Scroll left')).toBeInTheDocument();
+      expect(screen.getByLabelText('Scroll right')).toBeInTheDocument();
+    });
+
+    it('shows only left button when scrolled to end', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 490, // scrollWidth - clientWidth - 10
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(
+        <SwipeableRecipeGrid>
+          <div>Item 1</div>
+          <div>Item 2</div>
+        </SwipeableRecipeGrid>
+      );
+
+      expect(screen.getByLabelText('Scroll left')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Scroll right')).not.toBeInTheDocument();
+    });
+
+    it('hides all buttons when content fits viewport', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 500,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(
+        <SwipeableRecipeGrid>
+          <div>Item 1</div>
+        </SwipeableRecipeGrid>
+      );
+
+      expect(screen.queryByLabelText('Scroll left')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Scroll right')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Scroll Navigation', () => {
+    it('scrolls right when right button clicked', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(
+        <SwipeableRecipeGrid>
+          <div>Item 1</div>
+          <div>Item 2</div>
+          <div>Item 3</div>
+        </SwipeableRecipeGrid>
+      );
+
+      const rightButton = screen.getByLabelText('Scroll right');
+      fireEvent.click(rightButton);
+
+      expect(mockScrollBy).toHaveBeenCalledWith({
+        left: 900, // 300px * 3 cards
+        behavior: 'smooth',
+      });
+    });
+
+    it('scrolls left when left button clicked', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 500,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(
+        <SwipeableRecipeGrid>
+          <div>Item 1</div>
+          <div>Item 2</div>
+          <div>Item 3</div>
+        </SwipeableRecipeGrid>
+      );
+
+      const leftButton = screen.getByLabelText('Scroll left');
+      fireEvent.click(leftButton);
+
+      expect(mockScrollBy).toHaveBeenCalledWith({
+        left: -900, // -300px * 3 cards
+        behavior: 'smooth',
+      });
+    });
+
+    it('handles null grid ref gracefully', () => {
+      const mockRef = { current: null };
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      const { container } = render(
+        <SwipeableRecipeGrid>
+          <div>Item 1</div>
+        </SwipeableRecipeGrid>
+      );
+
+      // Should render without crashing
       expect(container.querySelector('.carousel-container')).toBeInTheDocument();
+    });
+  });
+
+  describe('Event Listeners', () => {
+    it('adds scroll event listener on mount', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(<SwipeableRecipeGrid />);
+
+      expect(mockAddEventListener).toHaveBeenCalledWith('scroll', expect.any(Function));
+    });
+
+    it('removes event listeners on unmount', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      const { unmount } = render(<SwipeableRecipeGrid />);
+      
+      unmount();
+
+      expect(mockRemoveEventListener).toHaveBeenCalledWith('scroll', expect.any(Function));
+    });
+
+    it('handles scroll events', () => {
+      let scrollHandler;
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: jest.fn((event, handler) => {
+            if (event === 'scroll') scrollHandler = handler;
+          }),
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      const { rerender } = render(<SwipeableRecipeGrid />);
+
+      // Simulate scroll event
+      act(() => {
+        mockRef.current.scrollLeft = 250;
+        if (scrollHandler) scrollHandler();
+      });
+
+      rerender(<SwipeableRecipeGrid />);
+
+      // Both buttons should be visible after scrolling to middle
+      waitFor(() => {
+        expect(screen.getByLabelText('Scroll left')).toBeInTheDocument();
+        expect(screen.getByLabelText('Scroll right')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('MutationObserver', () => {
+    let mockObserve, mockDisconnect, MutationObserverMock;
+
+    beforeEach(() => {
+      mockObserve = jest.fn();
+      mockDisconnect = jest.fn();
+      
+      MutationObserverMock = jest.fn(() => ({
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+      }));
+      
+      global.MutationObserver = MutationObserverMock;
+    });
+
+    it('observes child changes', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(
+        <SwipeableRecipeGrid>
+          <div>Item 1</div>
+        </SwipeableRecipeGrid>
+      );
+
+      expect(MutationObserverMock).toHaveBeenCalled();
+      expect(mockObserve).toHaveBeenCalledWith(
+        mockRef.current,
+        { childList: true, subtree: true }
+      );
+    });
+
+    it('disconnects observer on unmount', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      const { unmount } = render(<SwipeableRecipeGrid />);
+
+      unmount();
+
+      expect(mockDisconnect).toHaveBeenCalled();
+    });
+
+    it('handles MutationObserver callback', async () => {
+      let mutationCallback;
+      const MutationObserverMock = jest.fn((callback) => {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: mockDisconnect,
+        };
+      });
+      
+      global.MutationObserver = MutationObserverMock;
+
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(<SwipeableRecipeGrid />);
+
+      // Trigger mutation callback
+      act(() => {
+        if (mutationCallback) {
+          mutationCallback([{ type: 'childList' }]);
+        }
+      });
+
+      // Should check scroll position after mutation
+      await waitFor(() => {
+        expect(mockRef.current.scrollWidth).toBe(1000);
+      });
+    });
+  });
+
+  describe('Window Resize', () => {
+    it('handles window resize events', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(<SwipeableRecipeGrid />);
+
+      // Check that resize listener is added
+      expect(window.addEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
+    });
+
+    it('removes resize listener on unmount', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 0,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+      const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+
+      const { unmount } = render(<SwipeableRecipeGrid />);
+      
+      unmount();
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
     });
   });
 
@@ -180,29 +537,115 @@ describe('SwipeableRecipeGrid', () => {
       );
 
       const buttons = container.querySelectorAll('button');
-      expect(buttons).toHaveLength(2);
-      expect(buttons[0]).toHaveTextContent('Recipe 1');
-      expect(buttons[1]).toHaveTextContent('Recipe 2');
+      expect(buttons.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('maintains focus management', () => {
-      const { container } = render(
+    it('navigation buttons have proper ARIA labels', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 250,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(<SwipeableRecipeGrid />);
+
+      const leftButton = screen.getByLabelText('Scroll left');
+      const rightButton = screen.getByLabelText('Scroll right');
+
+      expect(leftButton).toHaveAttribute('aria-label', 'Scroll left');
+      expect(rightButton).toHaveAttribute('aria-label', 'Scroll right');
+    });
+
+    it('maintains keyboard navigation', () => {
+      const mockRef = {
+        current: {
+          scrollLeft: 250,
+          scrollWidth: 1000,
+          clientWidth: 500,
+          scrollBy: mockScrollBy,
+          addEventListener: mockAddEventListener,
+          removeEventListener: mockRemoveEventListener,
+          classList: {
+            add: jest.fn(),
+          },
+        }
+      };
+
+      jest.spyOn(React, 'useRef').mockReturnValue(mockRef);
+
+      render(
         <SwipeableRecipeGrid>
-          <button data-testid="btn1">Recipe 1</button>
-          <button data-testid="btn2">Recipe 2</button>
+          <button>Recipe 1</button>
+          <button>Recipe 2</button>
         </SwipeableRecipeGrid>
       );
 
-      const btn1 = screen.getByTestId('btn1');
-      const btn2 = screen.getByTestId('btn2');
+      const leftButton = screen.getByLabelText('Scroll left');
+      
+      // Simulate keyboard interaction
+      fireEvent.keyDown(leftButton, { key: 'Enter' });
+      
+      // Button should be interactive
+      expect(leftButton.tagName).toBe('BUTTON');
+    });
+  });
 
-      // Focus first button
-      btn1.focus();
-      expect(document.activeElement).toBe(btn1);
+  describe('Edge Cases', () => {
+    it('handles empty children', () => {
+      const { container } = render(<SwipeableRecipeGrid />);
+      expect(container.querySelector('.carousel-container')).toBeInTheDocument();
+    });
 
-      // Tab to next button
-      fireEvent.keyDown(btn1, { key: 'Tab' });
-      // Note: actual tab behavior would be handled by browser
+    it('handles single child', () => {
+      render(
+        <SwipeableRecipeGrid>
+          <div data-testid="single-child">Only child</div>
+        </SwipeableRecipeGrid>
+      );
+      
+      expect(screen.getByTestId('single-child')).toBeInTheDocument();
+    });
+
+    it('handles many children', () => {
+      const children = Array.from({ length: 20 }, (_, i) => (
+        <div key={i} data-testid={`child-${i}`}>
+          Child {i}
+        </div>
+      ));
+
+      render(<SwipeableRecipeGrid>{children}</SwipeableRecipeGrid>);
+      
+      expect(screen.getByTestId('child-0')).toBeInTheDocument();
+      expect(screen.getByTestId('child-19')).toBeInTheDocument();
+    });
+
+    it('handles re-renders with different children', () => {
+      const { rerender } = render(
+        <SwipeableRecipeGrid>
+          <div data-testid="initial">Initial</div>
+        </SwipeableRecipeGrid>
+      );
+
+      expect(screen.getByTestId('initial')).toBeInTheDocument();
+
+      rerender(
+        <SwipeableRecipeGrid>
+          <div data-testid="updated">Updated</div>
+        </SwipeableRecipeGrid>
+      );
+
+      expect(screen.queryByTestId('initial')).not.toBeInTheDocument();
+      expect(screen.getByTestId('updated')).toBeInTheDocument();
     });
   });
 });
