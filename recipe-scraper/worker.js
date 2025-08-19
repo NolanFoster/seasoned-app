@@ -380,7 +380,7 @@ export default {
             }
             
             // Call recipe-save-worker to save the recipe
-            const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+            const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/save`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -437,7 +437,7 @@ export default {
       
       console.log('Calling recipe-save-worker to list recipes');
       // Use recipe-save-worker to list recipes
-      const listResponse = await fetch(`https://recipe-save-worker.nolanfoster.workers.dev/recipes?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`, {
+      const listResponse = await fetch(`${env.SAVE_WORKER_URL}/recipes?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -484,7 +484,7 @@ export default {
       }
       
       // Use recipe-save-worker to get the recipe
-      const getResponse = await fetch(`https://recipe-save-worker.nolanfoster.workers.dev/recipes?id=${recipeId}`, {
+              const getResponse = await fetch(`${env.SAVE_WORKER_URL}/recipes?id=${recipeId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -522,7 +522,7 @@ export default {
       }
       
       // Call recipe-save-worker to delete the recipe
-      const recipeDeleteResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+              const recipeDeleteResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

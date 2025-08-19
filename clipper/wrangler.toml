@@ -10,9 +10,12 @@ binding = "AI"
 [vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
+SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.preview]
 name = "preview-clipper"
+[env.preview.vars]
+SAVE_WORKER_URL = "https://preview-recipe-save-worker.nolanfoster.workers.dev"
 
 [env.preview.ai]
 binding = "AI"
@@ -20,8 +23,9 @@ binding = "AI"
 [env.staging]
 name = "staging-clipper"
 [env.staging.vars]
-GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+SAVE_WORKER_URL = "https://staging-recipe-save-worker.nolanfoster.workers.dev"
 
 [env.staging.ai]
 binding = "AI"
@@ -29,7 +33,7 @@ binding = "AI"
 # Staging KV Namespaces for storing recipes
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
-id = "dd001c20659a4d6982f6d650abcac880"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 
 # Production environment
 [env.production]
@@ -37,6 +41,7 @@ name = "clipper"
 [env.production.vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
+SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.production.ai]
 binding = "AI"

@@ -7,10 +7,17 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
     "test": "node --experimental-vm-modules tests/run-tests.js",
     "test:watch": "nodemon --watch src --watch tests --exec 'npm test'",
     "test:coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov node --experimental-vm-modules tests/run-tests.js",
-    "coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov node --experimental-vm-modules tests/run-tests.js"
+    "coverage": "c8 --include=\"src/**/*.js\" --reporter=text --reporter=lcov node --experimental-vm-modules tests/run-tests.js",
+    "logs": "wrangler tail",
+    "logs:staging": "wrangler tail --env staging",
+    "logs:production": "wrangler tail --env production",
+    "analytics": "wrangler analytics",
+    "metrics": "curl -X GET \"$(wrangler whoami --json | jq -r '.account_id')/workers/scripts/recipe-recommendation-worker/metrics\""
   },
   "keywords": [
     "cloudflare",
@@ -19,7 +26,11 @@
     "recommendations",
     "ai",
     "llm",
-    "gpt-oss"
+    "gpt-oss",
+    "observability",
+    "metrics",
+    "analytics",
+    "monitoring"
   ],
   "author": "",
   "license": "MIT",
@@ -29,5 +40,6 @@
     "node-fetch": "^3.3.2",
     "nodemon": "^3.0.2",
     "wrangler": "^4.28.1"
-  }
+  },
+  "dependencies": {}
 }

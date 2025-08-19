@@ -107,7 +107,7 @@ export default {
             hasIngredients: !!body.ingredients,
             hasInstructions: !!body.recipeInstructions
           });
-          const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+          const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/save`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export default {
         
         // Call recipe-save-worker to update the recipe
         console.log('Calling recipe-save-worker to update recipe:', { id, updates: body });
-        const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
+        const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/update`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -204,7 +204,7 @@ export default {
         
         // Call recipe-save-worker to delete the recipe
         console.log('Calling recipe-save-worker to delete recipe:', { id });
-        const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete', {
+        const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/delete`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -286,7 +286,7 @@ export default {
           
           if (imageUrl) {
             // Update recipe with image URL using recipe-save-worker
-            const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/update', {
+            const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/update`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -335,7 +335,7 @@ export default {
           }
           
           // Call recipe-save-worker to create the recipe
-          const recipeSaveResponse = await fetch('https://recipe-save-worker.nolanfoster.workers.dev/recipe/save', {
+          const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/save`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
