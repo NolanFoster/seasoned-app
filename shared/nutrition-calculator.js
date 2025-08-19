@@ -260,7 +260,7 @@ class NutritionAggregator {
 
     return {
       "@type": "NutritionInformation",
-      calories: this.formatNutrientValue(perServing.calories, 'kcal'),
+      calories: this.formatNutrientValue(perServing.calories, '', true),  // No unit for calories
       proteinContent: this.formatNutrientValue(perServing.proteinContent, 'g'),
       fatContent: this.formatNutrientValue(perServing.fatContent, 'g'),
       carbohydrateContent: this.formatNutrientValue(perServing.carbohydrateContent, 'g'),
@@ -279,15 +279,22 @@ class NutritionAggregator {
    * Format a nutrient value with appropriate precision and unit
    * @param {number} value - Nutrient value
    * @param {string} unit - Unit of measurement
+   * @param {boolean} isCalories - Whether this is for calories (special formatting)
    * @returns {string} Formatted value with unit
    */
-  formatNutrientValue(value, unit) {
+  formatNutrientValue(value, unit, isCalories = false) {
     if (value === undefined || value === null || isNaN(value)) {
       return '';
     }
     
     // Round to 1 decimal place for most nutrients
     const rounded = Math.round(value * 10) / 10;
+    
+    // For calories, return just the number without unit
+    if (isCalories || !unit) {
+      return rounded.toString();
+    }
+    
     return `${rounded}${unit}`;
   }
 }

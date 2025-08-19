@@ -2738,7 +2738,7 @@ function App() {
                     <>
                       <div className="calories-section">
                         <span className="calories-label">Calories</span>
-                        <span className="calories-value">{selectedRecipe.nutrition.calories.replace(' kcal', '')}</span>
+                        <span className="calories-value">{selectedRecipe.nutrition.calories}</span>
                       </div>
                       <div className="nutrition-divider medium"></div>
                     </>
