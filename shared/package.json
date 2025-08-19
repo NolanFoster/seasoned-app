@@ -18,6 +18,7 @@
     "test:vitest": "vitest run test-image-service.js",
     "test:image": "vitest run test-image-service.js",
     "test:utility": "node test-utility-functions.js",
+    "test:utility:vitest": "vitest run __tests__/utility-functions.test.js",
     "test:nutrition": "node test-nutrition-calculator.js",
     "test:all": "node ../test-refactoring-complete.js"
   },
