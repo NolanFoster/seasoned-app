@@ -3,7 +3,7 @@ import worker from './index.js';
 
 describe('Recipe View Worker', () => {
   const mockEnv = {
-    RECIPE_API_URL: 'https://test-api.example.com'
+    RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.example.com'
   };
 
   describe('GET /', () => {
@@ -59,7 +59,7 @@ describe('Recipe View Worker', () => {
       
       // Verify API was called correctly
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://test-api.example.com/recipes?id=test123',
+        'https://test-save-worker.example.com/recipe/get?id=test123',
         expect.objectContaining({
           headers: expect.objectContaining({
             'Accept': 'application/json'

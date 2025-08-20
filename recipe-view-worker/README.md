@@ -5,7 +5,7 @@ This worker provides shareable recipe pages with a beautiful full-screen view. I
 ## Overview
 
 The Recipe View Worker serves as a web service that:
-- Fetches recipe data from the main recipe API
+- Fetches recipe data from the recipe save worker
 - Generates beautifully formatted HTML pages for recipes
 - Provides shareable URLs for individual recipes
 - Supports social media sharing with Open Graph meta tags
@@ -61,13 +61,13 @@ wrangler deploy --env production
 
 ## Environment Variables
 
-- `RECIPE_API_URL` - The URL of the main recipe API worker
+- `RECIPE_SAVE_WORKER_URL` - The URL of the recipe save worker that provides recipe data
 
 ## Architecture
 
 The worker:
 1. Receives a GET request with a recipe ID
-2. Fetches the recipe data from the main recipe API
+2. Fetches the recipe data from the recipe save worker
 3. Generates a complete HTML page with:
    - Embedded styles for a beautiful full-screen view
    - Recipe title, timing information, ingredients, and instructions

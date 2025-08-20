@@ -33,9 +33,9 @@ export default {
       const recipeId = recipeMatch[1];
       
       try {
-        // Fetch recipe data from the recipe API
-        const apiUrl = env.RECIPE_API_URL || 'https://recipe-scraper.recipesage2.workers.dev';
-        const recipeResponse = await fetch(`${apiUrl}/recipes?id=${recipeId}`, {
+        // Fetch recipe data from the recipe save worker
+        const apiUrl = env.RECIPE_SAVE_WORKER_URL || 'https://recipe-save-worker.recipesage2.workers.dev';
+        const recipeResponse = await fetch(`${apiUrl}/recipe/get?id=${recipeId}`, {
           headers: {
             'Accept': 'application/json'
           }
