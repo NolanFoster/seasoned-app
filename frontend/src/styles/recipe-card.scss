@@ -13,7 +13,10 @@
 /* Carousel Container */
 .carousel-container {
   position: relative;
-  width: 100%;
+  width: calc(100% + #{$spacing-md * 2}); /* Add back the container's padding on each side */
+  margin-left: calc(-1 * #{$spacing-md}); /* Negative margin to extend to edge */
+  margin-right: calc(-1 * #{$spacing-md});
+  overflow: visible; /* Ensure cards aren't clipped */
 }
 
 /* Carousel Layout - Works on both mobile and desktop */
@@ -28,7 +31,7 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   gap: $spacing-md !important;
-  padding: 10px 60px !important; /* Add padding for navigation buttons */
+  padding: 10px 0 !important; /* Remove horizontal padding to allow cards to reach edges */
   
   /* Simple, performant touch handling */
   touch-action: pan-x !important;
@@ -49,8 +52,13 @@
     /* Simple touch handling - let browser handle everything */
     touch-action: auto !important;
     
+    /* Add padding to first and last cards for better edge alignment */
+    &:first-child {
+      margin-left: $spacing-md !important;
+    }
+    
     &:last-child {
-      margin-right: $spacing-lg !important;
+      margin-right: $spacing-md !important;
     }
   }
 }
@@ -103,12 +111,21 @@
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .recipe-grid.carousel-layout {
-    padding: 10px !important; /* Remove extra padding on mobile */
+    padding: 10px 0 !important; /* Remove horizontal padding on mobile */
     
     .recipe-card {
       flex: 0 0 280px !important;
       min-width: 280px !important;
       max-width: 280px !important;
+      
+      /* Add padding to first and last cards on mobile */
+      &:first-child {
+        margin-left: 10px !important; /* Small margin for visual padding */
+      }
+      
+      &:last-child {
+        margin-right: 10px !important; /* Small margin for visual padding */
+      }
     }
   }
   
@@ -130,7 +147,7 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   gap: $spacing-md !important;
-  padding: 10px !important;
+  padding: 10px 0 !important; /* Remove horizontal padding */
   
   /* Simple, performant touch handling */
   touch-action: pan-x !important;
@@ -151,8 +168,13 @@
     /* Simple touch handling - let browser handle everything */
     touch-action: auto !important;
     
+    /* Add padding to first and last cards */
+    &:first-child {
+      margin-left: $spacing-sm !important;
+    }
+    
     &:last-child {
-      margin-right: $spacing-lg !important;
+      margin-right: $spacing-sm !important;
     }
   }
 }
@@ -622,7 +644,7 @@
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
     gap: $spacing-md !important;
-    padding: 10px !important;
+    padding: 10px 0 !important; /* Remove horizontal padding for edge-to-edge cards */
     touch-action: pan-x !important;
     scroll-behavior: smooth !important;
     
@@ -639,8 +661,13 @@
     margin-right: $spacing-md !important;
     touch-action: auto !important;
     
+    /* Add padding to first and last cards */
+    &:first-child {
+      margin-left: $spacing-sm !important;
+    }
+    
     &:last-child {
-      margin-right: $spacing-lg !important;
+      margin-right: $spacing-sm !important;
     }
   }
 }
