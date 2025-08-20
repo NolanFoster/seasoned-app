@@ -29,63 +29,57 @@ function App() {
     }
   };
   
-  // Function to parse time mentions in text and render with timer buttons
+  // Function to parse time mentions in text and render with timer buttons at the end
   const renderInstructionWithTimers = (text) => {
     // Regex to match various time formats:
     // - X minute(s), X min(s), X hour(s), X hr(s), X second(s), X sec(s)
     // - X-Y minutes, X to Y minutes, etc.
     const timeRegex = /(\d+(?:\s*[-–—]\s*\d+|\s+to\s+\d+)?)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?)\b/gi;
     
-    const parts = [];
-    let lastIndex = 0;
+    const timers = [];
     let match;
     
+    // Find all time mentions
     while ((match = timeRegex.exec(text)) !== null) {
-      // Add text before the match
-      if (match.index > lastIndex) {
-        parts.push(
-          <span key={`text-${lastIndex}`}>
-            {text.slice(lastIndex, match.index)}
-          </span>
-        );
-      }
-      
-      // Add the time mention with a timer button
       const timeText = match[0];
-      parts.push(
-        <span key={`time-${match.index}`} className="time-mention-wrapper">
-          <span className="time-mention">{timeText}</span>
-          <button 
-            className="timer-button-inline"
-            title={`Set timer for ${timeText}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Timer functionality will be added later
-            }}
-          >
-            <img 
-              src="/timer.svg" 
-              alt="Timer" 
-              className="timer-icon-inline"
-            />
-          </button>
-        </span>
-      );
-      
-      lastIndex = match.index + match[0].length;
+      timers.push({
+        text: timeText,
+        index: match.index
+      });
     }
     
-    // Add remaining text after the last match
-    if (lastIndex < text.length) {
-      parts.push(
-        <span key={`text-${lastIndex}`}>
-          {text.slice(lastIndex)}
-        </span>
-      );
+    // If no timers found, return the original text
+    if (timers.length === 0) {
+      return text;
     }
     
-    return parts.length > 0 ? parts : text;
+    // Return the full text followed by timer buttons
+    return (
+      <div className="instruction-with-timers">
+        <div className="instruction-text">{text}</div>
+        <div className="timer-buttons-container">
+          {timers.map((timer, index) => (
+            <button 
+              key={`timer-${timer.index}`}
+              className="timer-button-inline"
+              title={`Set timer for ${timer.text}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Timer functionality will be added later
+              }}
+            >
+              <img 
+                src="/timer.svg" 
+                alt="Timer" 
+                className="timer-icon-inline"
+              />
+              <span className="timer-text">Set timer for {timer.text}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
   
   // Recipes are now populated by the recommendations system instead of direct API calls

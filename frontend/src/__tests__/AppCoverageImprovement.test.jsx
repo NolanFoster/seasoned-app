@@ -176,7 +176,7 @@ describe('App Component Coverage Improvement', () => {
       window.dispatchEvent(event);
 
       await waitFor(() => {
-        const timerButton = screen.getByRole('button', { name: /10 minutes/i });
+        const timerButton = screen.getByRole('button', { name: /Set timer for 10 minutes/i });
         fireEvent.click(timerButton);
         // Timer functionality test - just ensure it doesn't crash
       });
