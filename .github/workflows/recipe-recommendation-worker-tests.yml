@@ -53,8 +53,8 @@ jobs:
     - name: Run Worker Tests with Coverage
       working-directory: ./recipe-recommendation-worker
       run: |
-        echo "Running tests with coverage..."
-        npm run coverage
+        echo "Running tests with Vitest coverage..."
+        npm run test:coverage
         echo "✅ Tests passed successfully!"
     
     - name: Check Coverage Thresholds
@@ -63,15 +63,36 @@ jobs:
       run: |
         echo "### Recipe Recommendation Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
         
-        # Extract coverage percentages
-        COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)
-        echo "$COVERAGE_OUTPUT"
+        # Extract coverage percentages from Vitest
+        if [ -f coverage/coverage-summary.json ]; then
+          COVERAGE_OUTPUT=$(cat coverage/coverage-summary.json)
+          echo "Coverage summary found"
+        else
+          echo "No coverage summary found, using lcov"
+          COVERAGE_OUTPUT=""
+        fi
         
-        # Parse coverage percentages (statements, branches, functions, lines)
-        STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s*:\s*\K[\d.]+' || echo "0")
-        BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s*:\s*\K[\d.]+' || echo "0")
-        FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s*:\s*\K[\d.]+' || echo "0")
-        LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s*:\s*\K[\d.]+' || echo "0")
+        # Parse coverage percentages from Vitest JSON or lcov
+        if [ -f coverage/coverage-summary.json ]; then
+          # Parse from Vitest JSON output
+          STATEMENTS=$(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)
+          BRANCHES=$(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)
+          FUNCTIONS=$(jq -r '.total.functions.pct // 0' coverage/coverage-summary.json)
+          LINES=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
+        elif [ -f coverage/lcov.info ]; then
+          # Fall back to parsing lcov.info
+          LCOV_SUMMARY=$(lcov --summary coverage/lcov.info 2>&1)
+          STATEMENTS=$(echo "$LCOV_SUMMARY" | grep -oP 'lines\.*:\s*\K[\d.]+' || echo "0")
+          BRANCHES=$(echo "$LCOV_SUMMARY" | grep -oP 'branches\.*:\s*\K[\d.]+' || echo "0")
+          FUNCTIONS=$(echo "$LCOV_SUMMARY" | grep -oP 'functions\.*:\s*\K[\d.]+' || echo "0")
+          LINES=$STATEMENTS
+        else
+          echo "No coverage data found"
+          STATEMENTS=0
+          BRANCHES=0
+          FUNCTIONS=0
+          LINES=0
+        fi
         
         # Set coverage thresholds
         THRESHOLD_STATEMENTS=40

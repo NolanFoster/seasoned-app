@@ -1,19 +1,19 @@
-name: Recipe Search DB Tests
+name: Recipe Save Worker Tests
 
 on:
   push:
     branches: [ main, staging ]
     paths:
-      - 'recipe-search-db/**'
-      - '.github/workflows/recipe-search-db-tests.yml'
+      - 'recipe-save-worker/**'
+      - '.github/workflows/recipe-save-worker-tests.yml'
       - 'shared/**'
       - 'package.json'
       - 'package-lock.json'
   pull_request:
     branches: [ main, staging ]
     paths:
-      - 'recipe-search-db/**'
-      - '.github/workflows/recipe-search-db-tests.yml'
+      - 'recipe-save-worker/**'
+      - '.github/workflows/recipe-save-worker-tests.yml'
       - 'shared/**'
       - 'package.json'
       - 'package-lock.json'
@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   test-worker:
-    name: Recipe Search DB Tests
+    name: Recipe Save Worker Tests
     runs-on: ubuntu-latest
     
     steps:
@@ -37,19 +37,19 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: recipe-search-db/package-lock.json
-    
-    - name: Install Worker Dependencies
-      working-directory: ./recipe-search-db
-      run: npm ci
+        cache-dependency-path: recipe-save-worker/package-lock.json
     
     - name: Install System Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y lcov
     
+    - name: Install Worker Dependencies
+      working-directory: ./recipe-save-worker
+      run: npm ci
+    
     - name: Run Worker Tests with Coverage
-      working-directory: ./recipe-search-db
+      working-directory: ./recipe-save-worker
       run: |
         echo "Running tests with Vitest coverage..."
         npm run test:coverage
@@ -59,16 +59,16 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: recipe-search-db-coverage-reports
+        name: recipe-save-worker-coverage-reports
         path: |
-          recipe-search-db/coverage/
+          recipe-save-worker/coverage/
         retention-days: 30
     
     - name: Coverage Summary
-      working-directory: ./recipe-search-db
+      working-directory: ./recipe-save-worker
       run: |
         if [ -f coverage/lcov.info ]; then
-          echo "## 📊 Recipe Search DB Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Recipe Save Worker Coverage Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Extract coverage percentages from lcov.info
@@ -86,7 +86,7 @@ jobs:
         fi
 
   lint-worker:
-    name: Recipe Search DB Code Quality Checks
+    name: Recipe Save Worker Code Quality Checks
     runs-on: ubuntu-latest
     
     steps:
@@ -98,7 +98,7 @@ jobs:
         node-version: '18'
     
     - name: Lint Worker
-      working-directory: ./recipe-search-db
+      working-directory: ./recipe-save-worker
       run: |
         npm ci
         if npm run | grep -q "lint"; then

@@ -43,18 +43,47 @@ jobs:
       working-directory: ./recipe-scraper
       run: npm ci
     
-    - name: Run Worker Tests
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lcov
+    
+    - name: Run Worker Tests with Coverage
       working-directory: ./recipe-scraper
       run: |
-        # Run tests if test script exists, otherwise skip
-        if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
+        echo "Running tests with Vitest coverage..."
+        npm run test:coverage
+        echo "✅ Tests passed successfully!"
+    
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: recipe-scraper-coverage-reports
+        path: |
+          recipe-scraper/coverage/
+        retention-days: 30
+    
+    - name: Coverage Summary
+      working-directory: ./recipe-scraper
+      run: |
+        if [ -f coverage/lcov.info ]; then
+          echo "## 📊 Recipe Scraper Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Extract coverage percentages from lcov.info
+          if command -v lcov >/dev/null 2>&1; then
+            lcov --summary coverage/lcov.info 2>/dev/null | grep -E "(lines|functions|branches)" >> $GITHUB_STEP_SUMMARY || true
+          fi
+          
+          # Show Vitest coverage summary
+          if [ -f coverage/coverage-final.json ]; then
+            echo "Coverage data collected successfully ✅" >> $GITHUB_STEP_SUMMARY
+          fi
         else
-          echo "No test script found in package.json"
+          echo "## ⚠️ No Coverage Data Generated" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage collection may have failed or no tests were run." >> $GITHUB_STEP_SUMMARY
         fi
-        
-        # Note: Worker tests currently don't generate coverage reports
-        # Consider adding coverage collection for worker tests in the future
 
   lint-worker:
     name: Recipe Scraper Code Quality Checks
