@@ -84,12 +84,38 @@ class MockD1Database {
   }
 
   addMockRecipe(recipe) {
-    this.recipes.push({
-      ...recipe,
+    // Convert the recipe to database format (what would be stored in D1)
+    const dbRecipe = {
       id: recipe.id || this.recipes.length + 1,
+      name: recipe.name,
+      description: recipe.description,
+      ingredients: typeof recipe.ingredients === 'string' ? recipe.ingredients : JSON.stringify(recipe.ingredients || []),
+      instructions: typeof recipe.instructions === 'string' ? recipe.instructions : JSON.stringify(recipe.instructions || []),
+      image_url: recipe.image_url,
+      source_url: recipe.source_url,
       created_at: recipe.created_at || new Date().toISOString(),
-      updated_at: recipe.updated_at || new Date().toISOString()
-    });
+      updated_at: recipe.updated_at || new Date().toISOString(),
+      // Additional fields that might be in the database
+      recipe_ingredient: recipe.recipe_ingredient || (typeof recipe.ingredients === 'string' ? recipe.ingredients : JSON.stringify(recipe.ingredients || [])),
+      recipe_instructions: recipe.recipe_instructions || (typeof recipe.instructions === 'string' ? recipe.instructions : JSON.stringify(recipe.instructions || [])),
+      nutrition_calories: recipe.nutrition_calories || '',
+      nutrition_protein: recipe.nutrition_protein || '',
+      nutrition_fat: recipe.nutrition_fat || '',
+      nutrition_carbohydrate: recipe.nutrition_carbohydrate || '',
+      nutrition_fiber: recipe.nutrition_fiber || '',
+      nutrition_sugar: recipe.nutrition_sugar || '',
+      nutrition_sodium: recipe.nutrition_sodium || '',
+      nutrition_cholesterol: recipe.nutrition_cholesterol || '',
+      nutrition_saturated_fat: recipe.nutrition_saturated_fat || '',
+      nutrition_trans_fat: recipe.nutrition_trans_fat || '',
+      nutrition_unsaturated_fat: recipe.nutrition_unsaturated_fat || '',
+      nutrition_serving_size: recipe.nutrition_serving_size || '',
+      aggregate_rating_value: recipe.aggregate_rating_value || null,
+      aggregate_rating_count: recipe.aggregate_rating_count || null,
+      review_count: recipe.review_count || null,
+      video_url: recipe.video_url || null
+    };
+    this.recipes.push(dbRecipe);
   }
 
   clearRecipes() {
@@ -152,7 +178,11 @@ class MockRequest {
 
   async json() {
     if (typeof this.body === 'string') {
-      return JSON.parse(this.body);
+      try {
+        return JSON.parse(this.body);
+      } catch (e) {
+        throw new SyntaxError(`Unexpected token in JSON at position 0`);
+      }
     }
     return this.body;
   }
@@ -214,7 +244,7 @@ class MockResponse extends Response {
 }
 
 // Mock fetch for recipe extraction and save worker
-const mockFetch = (url, options) => {
+const mockFetch = (url, options, env) => {
   // Mock save worker endpoints
   if (url.includes('mock-save-worker.example.com')) {
     if (url.includes('/recipe/save')) {
@@ -222,6 +252,16 @@ const mockFetch = (url, options) => {
       const body = JSON.parse(options.body);
       const recipe = body.recipe || body;
       const mockId = Math.floor(Math.random() * 1000) + 1;
+      
+      // Also add to mock database if env is provided
+      if (env && env.DB) {
+        env.DB.addMockRecipe({
+          id: mockId,
+          ...recipe,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
       
       return Promise.resolve(new MockResponse(JSON.stringify({
         id: mockId,
@@ -300,8 +340,203 @@ const mockFetch = (url, options) => {
     }));
   }
   
+  if (url.includes('jsonld-recipe.com')) {
+    const html = `
+      <html>
+        <head>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org/",
+            "@type": "Recipe",
+            "name": "Amazing Pasta Carbonara",
+            "description": "A classic Italian pasta dish with eggs, cheese, and bacon",
+            "recipeIngredient": [
+              "400g spaghetti",
+              "200g guanciale or pancetta",
+              "4 large eggs",
+              "100g Pecorino Romano cheese",
+              "Black pepper to taste"
+            ],
+            "recipeInstructions": [
+              {
+                "@type": "HowToStep",
+                "text": "Cook spaghetti in salted boiling water until al dente"
+              },
+              {
+                "@type": "HowToStep",
+                "text": "Meanwhile, cut guanciale into small cubes and cook until crispy"
+              },
+              {
+                "@type": "HowToStep",
+                "text": "Beat eggs with grated Pecorino and black pepper"
+              },
+              {
+                "@type": "HowToStep",
+                "text": "Drain pasta, mix with guanciale, then add egg mixture off heat"
+              }
+            ]
+          }
+          </script>
+        </head>
+        <body></body>
+      </html>
+    `;
+    return Promise.resolve(new MockResponse(html, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    }));
+  }
+  
+  // Mock microdata recipe page
+  if (url.includes('microdata-recipe.com')) {
+    const html = `
+      <html>
+        <body>
+          <div itemscope itemtype="http://schema.org/Recipe">
+            <h1 itemprop="name">Homemade Pizza</h1>
+            <p itemprop="description">Easy homemade pizza recipe</p>
+            <img itemprop="image" src="https://example.com/pizza.jpg" />
+            
+            <h2>Ingredients</h2>
+            <ul>
+              <li itemprop="recipeIngredient">Pizza dough</li>
+              <li itemprop="recipeIngredient">Tomato sauce</li>
+              <li itemprop="recipeIngredient">Mozzarella cheese</li>
+              <li itemprop="recipeIngredient">Fresh basil</li>
+            </ul>
+            
+            <h2>Instructions</h2>
+            <ol>
+              <li itemprop="recipeInstructions">Roll out the pizza dough</li>
+              <li itemprop="recipeInstructions">Spread tomato sauce evenly</li>
+              <li itemprop="recipeInstructions">Add mozzarella cheese</li>
+              <li itemprop="recipeInstructions">Bake at 450°F for 12-15 minutes</li>
+            </ol>
+          </div>
+        </body>
+      </html>
+    `;
+    return Promise.resolve(new MockResponse(html, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    }));
+  }
+
+  // Mock multiple JSON-LD blocks
+  if (url.includes('multiple-jsonld.com')) {
+    const html = `
+      <html>
+        <head>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Recipe Site"
+          }
+          </script>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org/",
+            "@type": "Recipe",
+            "name": "Chocolate Cake",
+            "description": "Rich chocolate cake recipe",
+            "recipeIngredient": ["flour", "sugar", "cocoa", "eggs"],
+            "recipeInstructions": ["Mix dry ingredients", "Add wet ingredients", "Bake"]
+          }
+          </script>
+        </head>
+      </html>
+    `;
+    return Promise.resolve(new MockResponse(html, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    }));
+  }
+
+  // Mock nested instructions
+  if (url.includes('nested-instructions.com')) {
+    const html = `
+      <html>
+        <head>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org/",
+            "@type": "Recipe",
+            "name": "Complex Recipe",
+            "description": "A recipe with nested instructions",
+            "recipeIngredient": ["ingredient 1", "ingredient 2", "ingredient 3"],
+            "recipeInstructions": [
+              {
+                "@type": "HowToSection",
+                "name": "Prepare the base",
+                "itemListElement": [
+                  {
+                    "@type": "HowToStep",
+                    "text": "Step 1 of section 1"
+                  },
+                  {
+                    "@type": "HowToStep",
+                    "text": "Step 2 of section 1"
+                  }
+                ]
+              },
+              {
+                "@type": "HowToStep",
+                "text": "Final assembly step"
+              }
+            ]
+          }
+          </script>
+        </head>
+      </html>
+    `;
+    return Promise.resolve(new MockResponse(html, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    }));
+  }
+
+  // Mock no recipe page
+  if (url.includes('no-recipe.com')) {
+    const html = `
+      <html>
+        <head><title>Not a Recipe</title></head>
+        <body>
+          <h1>This is not a recipe page</h1>
+          <p>Just some regular content.</p>
+        </body>
+      </html>
+    `;
+    return Promise.resolve(new MockResponse(html, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    }));
+  }
+
+  // Mock invalid JSON-LD
+  if (url.includes('invalid-json.com')) {
+    const html = `
+      <html>
+        <head>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org/",
+            "@type": "Recipe",
+            "name": "Broken Recipe",
+            invalid json here
+          }
+          </script>
+        </head>
+      </html>
+    `;
+    return Promise.resolve(new MockResponse(html, { 
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    }));
+  }
+
   // Mock 404 response
-  if (url.includes('not-found')) {
+  if (url.includes('404-page.com') || url.includes('not-found')) {
     return Promise.resolve(new MockResponse('Not Found', { status: 404 }));
   }
   
@@ -318,6 +553,7 @@ function createMockEnv() {
     DB: new MockD1Database(),
     R2_BUCKET: new MockR2Bucket(),
     IMAGES_BASE_URL: 'https://test-images.example.com',
+    IMAGE_DOMAIN: 'https://test-images.example.com',
     SAVE_WORKER_URL: 'https://mock-save-worker.example.com'
   };
 }

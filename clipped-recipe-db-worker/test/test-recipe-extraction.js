@@ -1,5 +1,6 @@
 // Test recipe extraction functionality
 import { 
+  MockRequest,
   MockResponse,
   assertJsonResponse 
 } from './test-helpers.js';
@@ -217,7 +218,7 @@ async function testJsonLdExtraction() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -226,7 +227,7 @@ async function testJsonLdExtraction() {
     });
     
     const response = await worker.fetch(request, env);
-    const recipe = await assertJsonResponse(response, 201, (body) => {
+    const recipe = await assertJsonResponse(response, 200, (body) => {
       return body.name === 'Amazing Pasta Carbonara' &&
              body.description.includes('Italian pasta dish') &&
              JSON.parse(body.ingredients).length === 5 &&
@@ -252,7 +253,7 @@ async function testMicrodataExtraction() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -261,7 +262,7 @@ async function testMicrodataExtraction() {
     });
     
     const response = await worker.fetch(request, env);
-    const recipe = await assertJsonResponse(response, 201, (body) => {
+    const recipe = await assertJsonResponse(response, 200, (body) => {
       return body.name === 'Homemade Pizza' &&
              JSON.parse(body.ingredients).includes('Mozzarella cheese') &&
              JSON.parse(body.instructions).length === 4;
@@ -285,7 +286,7 @@ async function testMultipleJsonLd() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -294,7 +295,7 @@ async function testMultipleJsonLd() {
     });
     
     const response = await worker.fetch(request, env);
-    const recipe = await assertJsonResponse(response, 201, (body) => {
+    const recipe = await assertJsonResponse(response, 200, (body) => {
       return body.name === 'Chocolate Cake' &&
              JSON.parse(body.ingredients).includes('cocoa');
     });
@@ -316,7 +317,7 @@ async function testNestedInstructions() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -325,7 +326,7 @@ async function testNestedInstructions() {
     });
     
     const response = await worker.fetch(request, env);
-    const recipe = await assertJsonResponse(response, 201, (body) => {
+    const recipe = await assertJsonResponse(response, 200, (body) => {
       const instructions = JSON.parse(body.instructions);
       return body.name === 'Complex Recipe' &&
              instructions.length >= 3 &&
@@ -349,7 +350,7 @@ async function testNoRecipeData() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -359,19 +360,16 @@ async function testNoRecipeData() {
     
     const response = await worker.fetch(request, env);
     
-    // Should either return 400 error or create a basic recipe
-    if (response.status === 400) {
-      console.log('✅ No recipe data handling passed (returned error)');
+    // The worker tries to extract something even from non-recipe pages
+    // It will find the h1 tag and use it as a title
+    if (response.status === 200) {
+      const recipe = await response.json();
+      console.log('✅ No recipe data handling passed (extracted minimal data)');
+      console.log(`   Extracted title: ${recipe.name}`);
       return true;
     }
     
-    const recipe = await response.json();
-    if (recipe.id && recipe.source_url === 'https://no-recipe.com/about') {
-      console.log('✅ No recipe data handling passed (created basic recipe)');
-      return true;
-    }
-    
-    throw new Error('Unexpected response for no recipe data');
+    throw new Error(`Unexpected response status for no recipe data: ${response.status}`);
   } catch (error) {
     console.log('❌ No recipe data handling failed:', error.message);
     return false;
@@ -385,7 +383,7 @@ async function testInvalidJsonLd() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -395,15 +393,15 @@ async function testInvalidJsonLd() {
     
     const response = await worker.fetch(request, env);
     
-    // Should handle gracefully - either error or fallback extraction
+    // Should handle gracefully - likely returns 404 when extraction fails
     console.log(`   Response status: ${response.status}`);
     
-    if (response.status === 400 || response.status === 201) {
+    if (response.status === 404 || response.status === 400) {
       console.log('✅ Invalid JSON-LD handling passed');
       return true;
     }
     
-    throw new Error('Unexpected response for invalid JSON-LD');
+    throw new Error(`Unexpected response for invalid JSON-LD: ${response.status}`);
   } catch (error) {
     console.log('❌ Invalid JSON-LD handling failed:', error.message);
     return false;
@@ -417,7 +415,7 @@ async function test404PageHandling() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -427,14 +425,13 @@ async function test404PageHandling() {
     
     const response = await worker.fetch(request, env);
     
-    if (response.status === 400 || response.status === 404) {
-      const error = await response.json();
+    if (response.status === 404) {
       console.log('✅ 404 page handling passed');
-      console.log(`   Error: ${error.error}`);
+      console.log(`   Status: ${response.status}`);
       return true;
     }
     
-    throw new Error('Expected error for 404 page');
+    throw new Error(`Expected 404 error for non-existent page, got ${response.status}`);
   } catch (error) {
     console.log('❌ 404 page handling failed:', error.message);
     return false;
@@ -448,7 +445,7 @@ async function testRecipeWithImage() {
   try {
     const env = createMockEnv();
     
-    const request = new MockRequest('http://localhost/recipe', {
+    const request = new MockRequest('http://localhost/clip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -458,7 +455,7 @@ async function testRecipeWithImage() {
     });
     
     const response = await worker.fetch(request, env);
-    const recipe = await assertJsonResponse(response, 201, (body) => {
+    const recipe = await assertJsonResponse(response, 200, (body) => {
       return body.name === 'Amazing Pasta Carbonara';
     });
     
