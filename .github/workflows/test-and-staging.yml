@@ -38,6 +38,15 @@ jobs:
           npm test
         fi
     
+    - name: Test Recipe Save Worker
+      if: contains(github.event.head_commit.message, 'recipe-save') || github.event_name == 'pull_request'
+      run: |
+        cd recipe-save-worker
+        if [ -f "package.json" ]; then
+          npm ci
+          npm test
+        fi
+    
     - name: Run Linting
       run: |
         # Run linting for frontend
