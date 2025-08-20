@@ -9,8 +9,9 @@
     "deploy": "wrangler deploy",
     "deploy:preview": "wrangler deploy --env preview",
     "deploy:production": "wrangler deploy --env production",
-    "test": "node tests/run-tests.js",
-    "test:coverage": "c8 npm test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "tail": "wrangler tail",
     "tail:preview": "wrangler tail --env preview",
     "tail:production": "wrangler tail --env production"
@@ -25,8 +26,9 @@
   "license": "MIT",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240821.1",
-    "wrangler": "^3.72.0",
-    "c8": "^10.1.2"
+    "@vitest/coverage-v8": "^3.2.4",
+    "vitest": "^3.2.4",
+    "wrangler": "^3.72.0"
   },
   "dependencies": {
     "pako": "^2.1.0"

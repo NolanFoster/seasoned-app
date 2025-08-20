@@ -1,23 +1,5 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RecipeSaver, parseIngredientsForNutrition } from '../src/index.js';
-
-// Test utilities
-const describe = (name, fn) => {
-  console.log(`\n${name}`);
-  fn();
-};
-
-const it = (name, fn) => {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-  } catch (error) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${error.message}`);
-    process.exit(1);
-  }
-};
-
-const beforeEach = (fn) => fn();
 
 describe('Nutrition Integration', () => {
   let saver;
@@ -57,7 +39,7 @@ describe('Nutrition Integration', () => {
     };
 
     // Mock fetch for images
-    global.fetch = async (url) => {
+    global.fetch = vi.fn(async (url) => {
       if (url.includes('search.test.com')) {
         return new Response('OK', { status: 200 });
       }
@@ -84,7 +66,7 @@ describe('Nutrition Integration', () => {
         status: 200,
         headers: { 'content-type': 'image/jpeg' }
       });
-    };
+    });
 
     saver = new RecipeSaver(state, env);
   });

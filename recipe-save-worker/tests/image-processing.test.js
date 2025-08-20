@@ -1,60 +1,11 @@
 // Image Processing Tests for Recipe Save Worker
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RecipeSaver } from '../src/index.js';
-
-// Test utilities
-const describe = (name, fn) => {
-  console.log(`\n${name}`);
-  fn();
-};
-
-const it = (name, fn) => {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-  } catch (error) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${error.message}`);
-    process.exit(1);
-  }
-};
-
-const expect = (actual) => ({
-  toBe: (expected) => {
-    if (actual !== expected) {
-      throw new Error(`Expected ${expected} but got ${actual}`);
-    }
-  },
-  toEqual: (expected) => {
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`);
-    }
-  },
-  toBeDefined: () => {
-    if (actual === undefined) {
-      throw new Error(`Expected value to be defined but got undefined`);
-    }
-  },
-  toContain: (expected) => {
-    if (!actual.includes(expected)) {
-      throw new Error(`Expected "${actual}" to contain "${expected}"`);
-    }
-  },
-  toBeTruthy: () => {
-    if (!actual) {
-      throw new Error(`Expected value to be truthy but got ${actual}`);
-    }
-  },
-  toBeFalsy: () => {
-    if (actual) {
-      throw new Error(`Expected value to be falsy but got ${actual}`);
-    }
-  }
-});
 
 // Mock fetch for image downloads
 const mockFetch = (response) => {
-  global.fetch = async (url) => {
+  global.fetch = vi.fn(async (url) => {
     if (response[url]) {
       return response[url];
     }
@@ -69,7 +20,7 @@ const mockFetch = (response) => {
       },
       arrayBuffer: async () => new ArrayBuffer(1024)
     };
-  };
+  });
 };
 
 // Mock R2 bucket
@@ -121,18 +72,22 @@ const createMockState = () => ({
 });
 
 describe('Image Processing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('URL Detection', () => {
     it('should identify external URLs correctly', async () => {
       const env = createMockEnv();
       const state = createMockState();
       const recipeSaver = new RecipeSaver(state, env);
 
-      expect(recipeSaver.isExternalUrl('https://example.com/image.jpg')).toBeTruthy();
-      expect(recipeSaver.isExternalUrl('http://example.com/image.jpg')).toBeTruthy();
-      expect(recipeSaver.isExternalUrl('https://images.test.com/image.jpg')).toBeFalsy();
-      expect(recipeSaver.isExternalUrl('/relative/path.jpg')).toBeFalsy();
-      expect(recipeSaver.isExternalUrl(null)).toBeFalsy();
-      expect(recipeSaver.isExternalUrl('')).toBeFalsy();
+      expect(recipeSaver.isExternalUrl('https://example.com/image.jpg')).toBe(true);
+      expect(recipeSaver.isExternalUrl('http://example.com/image.jpg')).toBe(true);
+      expect(recipeSaver.isExternalUrl('https://images.test.com/image.jpg')).toBe(false);
+      expect(recipeSaver.isExternalUrl('/relative/path.jpg')).toBe(false);
+      expect(recipeSaver.isExternalUrl(null)).toBe(false);
+      expect(recipeSaver.isExternalUrl('')).toBe(false);
     });
 
     it('should extract R2 key from URL correctly', async () => {
@@ -444,10 +399,8 @@ describe('Image Processing', () => {
       const response = await recipeSaver.fetch(request);
       const result = await response.json();
 
-      expect(result.success).toBeTruthy();
+      expect(result.success).toBe(true);
       expect(result.recipe.imageUrl).toContain('https://images.test.com/');
     });
   });
 });
-
-console.log('\n✅ Image processing tests completed!');
