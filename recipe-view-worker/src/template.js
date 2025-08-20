@@ -130,6 +130,200 @@ export function generateRecipeHTML(recipe) {
       </div>
     </div>
   </div>
+  
+  <script>
+    // Timer state management
+    window.activeTimers = new Map();
+    
+    // Handle timer button clicks
+    window.handleTimerClick = function(button) {
+      const timerId = button.getAttribute('data-timer-id');
+      const duration = parseInt(button.getAttribute('data-duration'));
+      const timeText = button.getAttribute('data-time-text');
+      
+      if (window.activeTimers.has(timerId)) {
+        // Timer is active, toggle play/pause
+        const timer = window.activeTimers.get(timerId);
+        if (timer.isPaused) {
+          resumeTimer(timerId);
+        } else {
+          pauseTimer(timerId);
+        }
+      } else {
+        // Start new timer
+        startTimer(button, timerId, duration, timeText);
+      }
+    };
+    
+    // Toggle timer play/pause
+    window.toggleTimer = function(timerId) {
+      const timer = window.activeTimers.get(timerId);
+      if (timer) {
+        if (timer.isPaused) {
+          resumeTimer(timerId);
+        } else {
+          pauseTimer(timerId);
+        }
+      }
+    };
+    
+    function startTimer(button, timerId, duration, timeText) {
+      // Transform button into timer display
+      const timerContainer = document.createElement('div');
+      timerContainer.className = 'timer-active-container';
+      timerContainer.innerHTML = \\\`
+        <div class="timer-display">
+          <span class="timer-time">\\\${formatTime(duration)}</span>
+          <span class="timer-label">\\\${timeText}</span>
+        </div>
+        <button class="timer-control-btn play-pause-btn" data-timer-id="\\\${timerId}" onclick="window.toggleTimer('\\\${timerId}')">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+        </button>
+        <button class="timer-control-btn stop-btn" onclick="window.stopTimer('\\\${timerId}')">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h12v12H6z"/>
+          </svg>
+        </button>
+      \\\`;
+      
+      // Store reference to original button in container
+      const hiddenButton = button.cloneNode(true);
+      hiddenButton.style.display = 'none';
+      timerContainer.appendChild(hiddenButton);
+      
+      button.parentNode.replaceChild(timerContainer, button);
+      
+      // Create timer object
+      const timer = {
+        id: timerId,
+        duration: duration,
+        remaining: duration,
+        isPaused: false,
+        container: timerContainer,
+        originalButton: hiddenButton,
+        interval: undefined
+      };
+      
+      window.activeTimers.set(timerId, timer);
+      
+      // Start countdown
+      timer.interval = setInterval(() => updateTimer(timerId), 1000);
+    }
+    
+    function updateTimer(timerId) {
+      const timer = window.activeTimers.get(timerId);
+      if (!timer || timer.isPaused) return;
+      
+      timer.remaining--;
+      
+      // Update display
+      const timeDisplay = timer.container.querySelector('.timer-time');
+      timeDisplay.textContent = formatTime(timer.remaining);
+      
+      if (timer.remaining <= 0) {
+        // Timer finished
+        clearInterval(timer.interval);
+        playTimerSound();
+        showTimerComplete(timerId);
+      }
+    }
+    
+    function pauseTimer(timerId) {
+      const timer = window.activeTimers.get(timerId);
+      if (!timer) return;
+      
+      timer.isPaused = true;
+      clearInterval(timer.interval);
+      
+      // Update button icon to play
+      const playPauseBtn = timer.container.querySelector('.play-pause-btn');
+      playPauseBtn.innerHTML = \\\`
+        <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      \\\`;
+    }
+    
+    function resumeTimer(timerId) {
+      const timer = window.activeTimers.get(timerId);
+      if (!timer) return;
+      
+      timer.isPaused = false;
+      timer.interval = setInterval(() => updateTimer(timerId), 1000);
+      
+      // Update button icon to pause
+      const playPauseBtn = timer.container.querySelector('.play-pause-btn');
+      playPauseBtn.innerHTML = \\\`
+        <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      \\\`;
+    }
+    
+    window.stopTimer = function(timerId) {
+      const timer = window.activeTimers.get(timerId);
+      if (!timer) return;
+      
+      clearInterval(timer.interval);
+      
+      // Restore original button
+      timer.container.parentNode.replaceChild(timer.originalButton, timer.container);
+      timer.originalButton.style.display = '';
+      
+      window.activeTimers.delete(timerId);
+    }
+    
+    function showTimerComplete(timerId) {
+      const timer = window.activeTimers.get(timerId);
+      if (!timer) return;
+      
+      // Flash completion state
+      timer.container.classList.add('timer-complete');
+      const timeDisplay = timer.container.querySelector('.timer-time');
+      timeDisplay.textContent = 'Done!';
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => window.stopTimer(timerId), 3000);
+    }
+    
+    function formatTime(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      if (hours > 0) {
+        return \\\`\\\${hours}:\\\${minutes.toString().padStart(2, '0')}:\\\${secs.toString().padStart(2, '0')}\\\`;
+      } else {
+        return \\\`\\\${minutes}:\\\${secs.toString().padStart(2, '0')}\\\`;
+      }
+    }
+    
+    function playTimerSound() {
+      // Create a simple beep sound using Web Audio API
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (e) {
+        // Fallback if Web Audio API is not supported
+        console.log('Timer complete!');
+      }
+    }
+  </script>
 </body>
 </html>`;
 }
@@ -147,8 +341,57 @@ function escapeHtml(text) {
 
 // Render instruction text with timer buttons
 function renderInstructionWithTimers(text) {
-  // For now, just return the text. Timer functionality can be added later if needed
-  return text;
+  if (!text) return '';
+  
+  // Pattern to match time expressions (e.g., "5 minutes", "1 hour", "30 seconds", "1-2 minutes")
+  const timePattern = /(\d+(?:-\d+)?)\s*(hours?|minutes?|mins?|seconds?|secs?)/gi;
+  let lastIndex = 0;
+  let result = '';
+  let match;
+  let timerCount = 0;
+  
+  while ((match = timePattern.exec(text)) !== null) {
+    // Add text before the match
+    result += text.slice(lastIndex, match.index);
+    
+    // Extract time value and unit
+    const timeValue = match[1];
+    const timeUnit = match[2].toLowerCase();
+    
+    // Normalize unit
+    let normalizedUnit = timeUnit;
+    if (timeUnit.startsWith('hour')) normalizedUnit = 'hour';
+    else if (timeUnit.startsWith('min')) normalizedUnit = 'min';
+    else if (timeUnit.startsWith('sec')) normalizedUnit = 'sec';
+    
+    // Calculate duration in seconds (use max value for ranges)
+    const maxValue = timeValue.includes('-') ? 
+      parseInt(timeValue.split('-')[1]) : 
+      parseInt(timeValue);
+    
+    let durationInSeconds = maxValue;
+    if (normalizedUnit === 'hour') durationInSeconds *= 3600;
+    else if (normalizedUnit === 'min') durationInSeconds *= 60;
+    
+    // Add the time text with a timer button
+    timerCount++;
+    result += match[0] + ` <button class="timer-button-inline" 
+              data-duration="${durationInSeconds}" 
+              data-timer-id="timer-${Date.now()}-${timerCount}"
+              data-time-text="${match[0]}"
+              onclick="window.handleTimerClick(this)">
+        <svg class="timer-icon-inline" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/>
+        </svg>
+      </button>`;
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  result += text.slice(lastIndex);
+  
+  return result;
 }
 
 // Generate the complete CSS styles
@@ -531,6 +774,183 @@ function generateStyles() {
       
       .instructions-list {
         padding-left: 15px;
+      }
+    }
+
+    /* Timer Button Styles */
+
+    .timer-button-inline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      vertical-align: middle;
+      color: white;
+      margin-left: 4px;
+    }
+
+    .timer-button-inline:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .timer-button-inline:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .timer-icon-inline {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+
+    /* Active Timer Styles */
+    .timer-active-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 6px 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      animation: timer-pulse 2s ease-in-out infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes timer-pulse {
+      0%, 100% {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+      50% {
+        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .timer-display {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    .timer-time {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: white;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-label {
+      font-size: 0.75em;
+      color: rgba(255, 255, 255, 0.8);
+      white-space: nowrap;
+    }
+
+    .timer-control-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+    }
+
+    .timer-control-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    .timer-control-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+
+    .play-pause-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .stop-btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* Timer Complete State */
+    .timer-active-container.timer-complete {
+      background: rgba(76, 175, 80, 0.3);
+      border-color: rgba(76, 175, 80, 0.5);
+      animation: timer-complete 0.5s ease;
+    }
+
+    @keyframes timer-complete {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .timer-complete .timer-time {
+      color: #4CAF50;
+      text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+
+    /* Mobile Timer Styles */
+    @media (max-width: 480px) {
+      .timer-button-inline {
+        padding: 3px 6px;
+        font-size: 12px;
+      }
+      
+      .timer-icon-inline {
+        width: 14px;
+        height: 14px;
+      }
+      
+      .timer-active-container {
+        padding: 4px 8px;
+        gap: 6px;
+      }
+      
+      .timer-time {
+        font-size: 0.9em;
+      }
+      
+      .timer-label {
+        font-size: 0.7em;
+      }
+      
+      .timer-control-btn {
+        width: 24px;
+        height: 24px;
+      }
+      
+      .timer-control-btn svg {
+        width: 14px;
+        height: 14px;
       }
     }
 
