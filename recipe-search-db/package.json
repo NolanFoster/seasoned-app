@@ -8,7 +8,9 @@
     "db:create": "wrangler d1 create recipe-search-db",
     "db:migrate": "wrangler d1 execute recipe-search-db --file=./schema.sql",
     "db:info": "wrangler d1 execute recipe-search-db --command=\"PRAGMA table_info(nodes);\"",
-    "test": "node test-search-db.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:example": "node test-example.js",
     "test:migration": "node test-migration.js",
     "dev": "wrangler dev",
@@ -29,6 +31,8 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "vitest": "^3.2.4",
     "wrangler": "^4.30.0"
   },
   "engines": {

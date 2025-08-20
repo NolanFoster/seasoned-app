@@ -10,9 +10,9 @@
     "tail": "wrangler tail",
     "setup-kv": "node setup-kv.js",
     "test-kv": "node test-kv.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:image": "vitest run test-image-integration.js",
     "test:image:watch": "vitest test-image-integration.js"
   },
