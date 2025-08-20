@@ -171,22 +171,22 @@ export function generateRecipeHTML(recipe) {
       // Transform button into timer display
       const timerContainer = document.createElement('div');
       timerContainer.className = 'timer-active-container';
-      timerContainer.innerHTML = \`
+      timerContainer.innerHTML = \\\`
         <div class="timer-display">
-          <span class="timer-time">\\${formatTime(duration)}</span>
-          <span class="timer-label">\\${timeText}</span>
+          <span class="timer-time">\\\${formatTime(duration)}</span>
+          <span class="timer-label">\\\${timeText}</span>
         </div>
-        <button class="timer-control-btn play-pause-btn" data-timer-id="\\${timerId}" onclick="window.toggleTimer('\\${timerId}')">
+        <button class="timer-control-btn play-pause-btn" data-timer-id="\\\${timerId}" onclick="window.toggleTimer('\\\${timerId}')">
           <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
             <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
           </svg>
         </button>
-        <button class="timer-control-btn stop-btn" onclick="window.stopTimer('\\${timerId}')">
+        <button class="timer-control-btn stop-btn" onclick="window.stopTimer('\\\${timerId}')">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M6 6h12v12H6z"/>
           </svg>
         </button>
-      \`;
+      \\\`;
       
       // Store reference to original button in container
       const hiddenButton = button.cloneNode(true);
@@ -203,7 +203,7 @@ export function generateRecipeHTML(recipe) {
         isPaused: false,
         container: timerContainer,
         originalButton: hiddenButton,
-        interval: null
+        interval: undefined
       };
       
       window.activeTimers.set(timerId, timer);
@@ -239,11 +239,11 @@ export function generateRecipeHTML(recipe) {
       
       // Update button icon to play
       const playPauseBtn = timer.container.querySelector('.play-pause-btn');
-      playPauseBtn.innerHTML = \`
+      playPauseBtn.innerHTML = \\\`
         <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon">
           <path d="M8 5v14l11-7z"/>
         </svg>
-      \`;
+      \\\`;
     }
     
     function resumeTimer(timerId) {
@@ -255,11 +255,11 @@ export function generateRecipeHTML(recipe) {
       
       // Update button icon to pause
       const playPauseBtn = timer.container.querySelector('.play-pause-btn');
-      playPauseBtn.innerHTML = \`
+      playPauseBtn.innerHTML = \\\`
         <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
           <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
         </svg>
-      \`;
+      \\\`;
     }
     
     window.stopTimer = function(timerId) {
@@ -294,9 +294,9 @@ export function generateRecipeHTML(recipe) {
       const secs = seconds % 60;
       
       if (hours > 0) {
-        return \`\\${hours}:\\${minutes.toString().padStart(2, '0')}:\\${secs.toString().padStart(2, '0')}\`;
+        return \\\`\\\${hours}:\\\${minutes.toString().padStart(2, '0')}:\\\${secs.toString().padStart(2, '0')}\\\`;
       } else {
-        return \`\\${minutes}:\\${secs.toString().padStart(2, '0')}\`;
+        return \\\`\\\${minutes}:\\\${secs.toString().padStart(2, '0')}\\\`;
       }
     }
     
@@ -375,9 +375,7 @@ function renderInstructionWithTimers(text) {
     
     // Add the time text with a timer button
     timerCount++;
-    result += `<span class="time-with-timer">
-      ${match[0]}
-      <button class="timer-button-inline" 
+    result += match[0] + ` <button class="timer-button-inline" 
               data-duration="${durationInSeconds}" 
               data-timer-id="timer-${Date.now()}-${timerCount}"
               data-time-text="${match[0]}"
@@ -385,8 +383,7 @@ function renderInstructionWithTimers(text) {
         <svg class="timer-icon-inline" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/>
         </svg>
-      </button>
-    </span>`;
+      </button>`;
     
     lastIndex = match.index + match[0].length;
   }
@@ -781,12 +778,6 @@ function generateStyles() {
     }
 
     /* Timer Button Styles */
-    .time-with-timer {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin: 0 2px;
-    }
 
     .timer-button-inline {
       display: inline-flex;
