@@ -49,7 +49,22 @@ export function parseIngredientsForNutrition(ingredients) {
     // Handle string ingredients
     if (typeof ingredient === 'string') {
       // Try to parse quantity, unit, and name from string
-      // Common patterns: "2 cups flour", "1 tablespoon olive oil", "3 large eggs"
+      // Common patterns: "2 cups flour", "1 tablespoon olive oil", "3 large eggs", "1 1/2 cups sugar"
+      
+      // First try to match mixed numbers like "1 1/2"
+      const mixedMatch = ingredient.match(/^(\d+)\s+(\d+\/\d+)\s*(\w+)?\s+(.+)$/);
+      if (mixedMatch) {
+        const [, whole, fraction, unit, name] = mixedMatch;
+        const [num, denom] = fraction.split('/').map(n => parseFloat(n));
+        const quantityValue = parseFloat(whole) + (num / denom);
+        return {
+          name: name.trim(),
+          quantity: quantityValue,
+          unit: unit || 'unit'
+        };
+      }
+      
+      // Then try regular patterns
       const match = ingredient.match(/^(\d+(?:\.\d+)?|\d+\/\d+)\s*(\w+)?\s+(.+)$/);
       
       if (match) {
@@ -66,6 +81,17 @@ export function parseIngredientsForNutrition(ingredients) {
           name: name.trim(),
           quantity: quantityValue,
           unit: unit || 'unit'
+        };
+      }
+      
+      // Try to match patterns like "pinch of salt", "dash of pepper"
+      const measureMatch = ingredient.match(/^(\w+)\s+of\s+(.+)$/i);
+      if (measureMatch) {
+        const [, measure, name] = measureMatch;
+        return {
+          name: name.trim(),
+          quantity: 1,
+          unit: measure.toLowerCase()
         };
       }
       
