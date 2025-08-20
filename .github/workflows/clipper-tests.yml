@@ -1,5 +1,8 @@
 name: Clipper Tests
 
+# This workflow has been updated to use Vitest for testing
+# Coverage is collected using Vitest's built-in v8 coverage provider
+
 on:
   push:
     branches: [ main, staging ]
@@ -220,9 +223,8 @@ jobs:
     - name: Lint Worker
       working-directory: ./clipper
       run: |
-        npm ci
         if npm run | grep -q "lint"; then
           npm run lint
         else
-          echo "No lint script found"
+          echo "No lint script found, skipping linting"
         fi

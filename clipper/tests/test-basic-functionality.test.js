@@ -12,6 +12,44 @@ import {
 describe('Recipe Clipper Basic Tests', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // Mock global Response and Request if not available
+    if (!global.Response) {
+      global.Response = class Response {
+        constructor(body, init = {}) {
+          this.body = body;
+          this.status = init.status || 200;
+          this.statusText = init.statusText || 'OK';
+          this.headers = new Map(Object.entries(init.headers || {}));
+        }
+        
+        async text() {
+          return String(this.body);
+        }
+        
+        async json() {
+          return JSON.parse(this.body);
+        }
+      };
+    }
+    
+    if (!global.Request) {
+      global.Request = class Request {
+        constructor(url, init = {}) {
+          this.url = url;
+          this.method = init.method || 'GET';
+          this.headers = new Map(Object.entries(init.headers || {}));
+          this.body = init.body;
+        }
+        
+        async text() {
+          return String(this.body);
+        }
+        
+        async json() {
+          return JSON.parse(this.body);
+        }
+      };
+    }
   });
 
   describe('Worker fetch handler', () => {

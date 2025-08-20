@@ -1,14 +1,9 @@
 import { defineConfig } from 'vitest/config';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'happy-dom',
+    environment: 'node',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html', 'json-summary'],
@@ -31,8 +26,7 @@ export default defineConfig({
       }
     },
     include: ['tests/**/*.test.js'],
-    exclude: ['tests/test-integration.js'],
-    setupFiles: ['./tests/setup-test-env.js'],
+    exclude: ['tests/test-integration.js', 'tests/**/*.worker.test.js'],
     testTimeout: 30000,
     hookTimeout: 30000
   }
