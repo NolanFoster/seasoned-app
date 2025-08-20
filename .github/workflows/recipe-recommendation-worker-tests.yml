@@ -63,31 +63,36 @@ jobs:
       run: |
         echo "### Recipe Recommendation Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
         
-        # Extract coverage percentages from Vitest
-        if [ -f coverage/coverage-summary.json ]; then
-          COVERAGE_OUTPUT=$(cat coverage/coverage-summary.json)
-          echo "Coverage summary found"
-        else
-          echo "No coverage summary found, using lcov"
-          COVERAGE_OUTPUT=""
-        fi
+        # Debug: Show coverage directory contents
+        echo "Coverage directory contents:"
+        ls -la coverage/ 2>/dev/null || echo "No coverage directory found"
         
-        # Parse coverage percentages from Vitest JSON or lcov
+        # Try to parse coverage from multiple sources
         if [ -f coverage/coverage-summary.json ]; then
-          # Parse from Vitest JSON output
+          echo "Found coverage-summary.json, parsing JSON data..."
+          # Parse from Vitest JSON summary output
           STATEMENTS=$(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)
           BRANCHES=$(jq -r '.total.branches.pct // 0' coverage/coverage-summary.json)
           FUNCTIONS=$(jq -r '.total.functions.pct // 0' coverage/coverage-summary.json)
           LINES=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
+          echo "Extracted coverage from JSON - Lines: $LINES%, Functions: $FUNCTIONS%, Branches: $BRANCHES%"
         elif [ -f coverage/lcov.info ]; then
-          # Fall back to parsing lcov.info
+          echo "Found lcov.info, parsing LCOV data..."
+          # Use lcov to extract summary
           LCOV_SUMMARY=$(lcov --summary coverage/lcov.info 2>&1)
-          STATEMENTS=$(echo "$LCOV_SUMMARY" | grep -oP 'lines\.*:\s*\K[\d.]+' || echo "0")
-          BRANCHES=$(echo "$LCOV_SUMMARY" | grep -oP 'branches\.*:\s*\K[\d.]+' || echo "0")
+          echo "LCOV Summary: $LCOV_SUMMARY"
+          
+          # Extract percentages
+          LINES=$(echo "$LCOV_SUMMARY" | grep -oP 'lines\.*:\s*\K[\d.]+' || echo "0")
           FUNCTIONS=$(echo "$LCOV_SUMMARY" | grep -oP 'functions\.*:\s*\K[\d.]+' || echo "0")
-          LINES=$STATEMENTS
+          BRANCHES=$(echo "$LCOV_SUMMARY" | grep -oP 'branches\.*:\s*\K[\d.]+' || echo "0")
+          STATEMENTS=$LINES  # lcov reports lines as statements
+          echo "Extracted coverage from LCOV - Lines: $LINES%, Functions: $FUNCTIONS%, Branches: $BRANCHES%"
         else
-          echo "No coverage data found"
+          echo "⚠️ No coverage data found"
+          echo "Contents of working directory:"
+          ls -la
+          echo "Checking if tests ran successfully..."
           STATEMENTS=0
           BRANCHES=0
           FUNCTIONS=0
