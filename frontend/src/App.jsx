@@ -701,6 +701,41 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Handle browser back button for recipe view
+  useEffect(() => {
+    const handlePopState = (event) => {
+      // If we're currently showing a recipe and the back button is pressed
+      if (selectedRecipe && !event.state?.recipeView) {
+        setSelectedRecipe(null);
+        setShowSharePanel(false);
+        setShowNutrition(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedRecipe]);
+
+  // Handle escape key to close recipe view
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && selectedRecipe) {
+        setSelectedRecipe(null);
+        setShowSharePanel(false);
+        setShowNutrition(false);
+        // Go back in history if we pushed a state
+        if (window.history.state?.recipeView) {
+          window.history.back();
+        }
+      }
+    };
+
+    if (selectedRecipe) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [selectedRecipe]);
+
 
   // Function to get just the category names first for loading display
   async function getRecipeCategories() {
@@ -1351,6 +1386,8 @@ function App() {
 
   function openRecipeView(recipe) {
     setSelectedRecipe(recipe);
+    // Push state to browser history when opening a recipe
+    window.history.pushState({ recipeView: true }, '', window.location.href);
   }
 
   function openVideoPopup(videoUrl) {
@@ -2603,6 +2640,10 @@ function App() {
               setSelectedRecipe(null);
               setShowSharePanel(false); // Reset share panel when closing recipe view
               setShowNutrition(false); // Reset nutrition view when closing
+              // Go back in history if we pushed a state
+              if (window.history.state?.recipeView) {
+                window.history.back();
+              }
             }}>
               <span className="back-arrow">←</span>
             </button>
