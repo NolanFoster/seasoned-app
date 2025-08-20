@@ -60,7 +60,12 @@ jobs:
         
         # Run tests with coverage collection
         echo "🔍 Running npm run test:coverage"
-        npm run test:coverage || true
+        
+        # Capture the exit code
+        set +e
+        npm run test:coverage
+        TEST_EXIT_CODE=$?
+        set -e
         
         # Check if coverage was generated
         if [ -d coverage ]; then
@@ -69,6 +74,9 @@ jobs:
         else
           echo "⚠️ Coverage directory not found"
         fi
+        
+        # Exit with the test exit code
+        exit $TEST_EXIT_CODE
     
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
