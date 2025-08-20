@@ -327,8 +327,8 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
 
     // Track recommendation request metrics
     metrics.increment('recommendations_requested', 1, {
-      hasLocation: hasLocation.toString(),
-      dateProvided: (!!date).toString()
+      hasLocation: String(hasLocation),
+      dateProvided: String(!!date)
     });
 
     // Get recommendations from the recommendation service
@@ -944,11 +944,11 @@ function getMockRecommendations(location, date, requestId) {
 
   const duration = Date.now() - startTime;
   metrics.timing('mock_generation_duration', duration);
-  metrics.increment('mock_recommendations_generated', 1, {
-    hasLocation: hasLocation.toString(),
-    season,
-    isPNW: isPNW.toString()
-  });
+      metrics.increment('mock_recommendations_generated', 1, {
+      hasLocation: String(hasLocation),
+      season,
+      isPNW: String(isPNW)
+    });
 
   log('info', 'Mock recommendations generated', {
     requestId,

@@ -73,11 +73,11 @@ jobs:
         FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s*:\s*\K[\d.]+' || echo "0")
         LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s*:\s*\K[\d.]+' || echo "0")
         
-        # Set coverage thresholds (starting at 0% as tests are currently mocks)
-        THRESHOLD_STATEMENTS=0
-        THRESHOLD_BRANCHES=0
-        THRESHOLD_FUNCTIONS=0
-        THRESHOLD_LINES=0
+        # Set coverage thresholds
+        THRESHOLD_STATEMENTS=40
+        THRESHOLD_BRANCHES=40
+        THRESHOLD_FUNCTIONS=40
+        THRESHOLD_LINES=40
         
         # Check if coverage meets thresholds
         COVERAGE_FAILED=false
@@ -203,7 +203,7 @@ jobs:
             }
             
             comment += '---\n';
-            comment += '_Coverage thresholds are currently set to 0% as tests are being developed._';
+            comment += '_Coverage thresholds are set to 40% for all metrics._';
             
             // Find and update or create comment
             const { data: comments } = await github.rest.issues.listComments({
