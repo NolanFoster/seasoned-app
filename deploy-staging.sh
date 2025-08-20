@@ -33,6 +33,12 @@ cd recipe-recommendation-worker
 wrangler deploy --env staging
 cd ..
 
+# Deploy recipe-view-worker to staging
+echo "👁️ Deploying recipe-view-worker to staging..."
+cd recipe-view-worker
+wrangler deploy --env staging
+cd ..
+
 # Deploy frontend to staging
 echo "🌐 Deploying frontend to staging..."
 cd frontend
@@ -48,3 +54,4 @@ echo "- Search DB: https://staging-recipe-search-db.nolanfoster.workers.dev"
 echo "- Save Worker: https://staging-recipe-save-worker.nolanfoster.workers.dev"
 echo "- Clipper: https://staging-clipper.nolanfoster.workers.dev"
 echo "- Recommendations: https://staging-recipe-recommendation-worker.nolanfoster.workers.dev"
+echo "- Recipe View: https://recipe-view-worker-staging.recipesage2.workers.dev"

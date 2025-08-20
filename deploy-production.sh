@@ -33,6 +33,12 @@ cd recipe-recommendation-worker
 wrangler deploy --env production
 cd ..
 
+# Deploy recipe-view-worker to production
+echo "👁️ Deploying recipe-view-worker to production..."
+cd recipe-view-worker
+wrangler deploy --env production
+cd ..
+
 # Deploy frontend to production
 echo "🌐 Deploying frontend to production..."
 cd frontend
@@ -48,3 +54,4 @@ echo "- Search DB: https://recipe-search-db.nolanfoster.workers.dev"
 echo "- Save Worker: https://recipe-save-worker.nolanfoster.workers.dev"
 echo "- Clipper: https://recipe-clipper-worker.nolanfoster.workers.dev"
 echo "- Recommendations: https://recipe-recommendation-worker.nolanfoster.workers.dev"
+echo "- Recipe View: https://recipe-view-worker.recipesage2.workers.dev"

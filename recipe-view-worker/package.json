@@ -1,0 +1,19 @@
+{
+  "name": "recipe-view-worker",
+  "version": "1.0.0",
+  "description": "Worker to serve shareable recipe pages",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler publish",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "vitest": "^1.2.1",
+    "wrangler": "^3.24.0"
+  }
+}

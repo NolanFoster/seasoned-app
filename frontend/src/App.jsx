@@ -8,6 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV stor
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL; // Search database worker
 const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL; // Recipe save worker
+const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL; // Recipe view worker for shareable pages
 
 
 
@@ -2701,19 +2702,23 @@ function App() {
             <button 
               className="share-panel-item share-action"
               onClick={() => {
-                // Share functionality - could be expanded later
-                if (navigator.share && selectedRecipe.source_url) {
+                // Generate shareable link using the recipe view worker
+                const shareableUrl = RECIPE_VIEW_URL ? 
+                  `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}` : 
+                  selectedRecipe.source_url;
+                
+                if (navigator.share && shareableUrl) {
                   navigator.share({
                     title: selectedRecipe.name,
                     text: `Check out this recipe: ${selectedRecipe.name}`,
-                    url: selectedRecipe.source_url
+                    url: shareableUrl
                   }).catch(() => {
                     // Fallback to copy link
-                    navigator.clipboard.writeText(selectedRecipe.source_url);
+                    navigator.clipboard.writeText(shareableUrl);
                     alert('Recipe link copied to clipboard!');
                   });
-                } else if (selectedRecipe.source_url) {
-                  navigator.clipboard.writeText(selectedRecipe.source_url);
+                } else if (shareableUrl) {
+                  navigator.clipboard.writeText(shareableUrl);
                   alert('Recipe link copied to clipboard!');
                 }
                 setShowSharePanel(false);

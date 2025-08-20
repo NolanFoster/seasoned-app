@@ -24,6 +24,15 @@ A modern recipe management application with SQLite backend and image upload supp
 - **Shared Libraries**: Common utilities shared across workers
 - **Deployment**: Cloudflare Workers
 
+### Workers:
+- **recipe-scraper**: Scrapes and stores recipe data from URLs
+- **clipper**: Browser extension backend for recipe clipping
+- **clipped-recipe-db-worker**: Main database worker for recipe management
+- **recipe-search-db**: Search functionality for recipes
+- **recipe-save-worker**: Handles recipe saving operations
+- **recipe-recommendation-worker**: Provides recipe recommendations
+- **recipe-view-worker**: Serves shareable recipe pages
+
 ## Development Workflow
 
 ### Testing and Staging Deployment
@@ -120,6 +129,9 @@ Update the API URLs in your environment file (`frontend/.env.local`):
 ```bash
 VITE_API_URL=https://your-worker.your-subdomain.workers.dev
 VITE_CLIPPER_API_URL=https://your-clipper-worker.your-subdomain.workers.dev
+VITE_SEARCH_DB_URL=https://your-search-db.your-subdomain.workers.dev
+VITE_SAVE_WORKER_URL=https://your-save-worker.your-subdomain.workers.dev
+VITE_RECIPE_VIEW_URL=https://your-recipe-view-worker.your-subdomain.workers.dev
 ```
 
 Start development server:
