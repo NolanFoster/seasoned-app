@@ -30,6 +30,78 @@ function App() {
     }
   };
   
+  // Decode HTML entities for proper display
+  const decodeHtmlEntities = (text) => {
+    if (!text) return text;
+    
+    const entities = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&apos;': "'",
+      '&nbsp;': ' ',
+      '&copy;': '©',
+      '&reg;': '®',
+      '&trade;': '™',
+      '&mdash;': '—',
+      '&ndash;': '–',
+      '&bull;': '•',
+      '&hellip;': '…',
+      '&prime;': '′',
+      '&Prime;': '″',
+      '&lsquo;': ''',
+      '&rsquo;': ''',
+      '&ldquo;': '"',
+      '&rdquo;': '"',
+      '&deg;': '°',
+      '&frac12;': '½',
+      '&frac14;': '¼',
+      '&frac34;': '¾',
+      '&times;': '×',
+      '&divide;': '÷',
+      '&plusmn;': '±',
+      '&eacute;': 'é',
+      '&egrave;': 'è',
+      '&ecirc;': 'ê',
+      '&euml;': 'ë',
+      '&agrave;': 'à',
+      '&aacute;': 'á',
+      '&acirc;': 'â',
+      '&auml;': 'ä',
+      '&oacute;': 'ó',
+      '&ograve;': 'ò',
+      '&ocirc;': 'ô',
+      '&ouml;': 'ö',
+      '&uacute;': 'ú',
+      '&ugrave;': 'ù',
+      '&ucirc;': 'û',
+      '&uuml;': 'ü',
+      '&ntilde;': 'ñ',
+      '&ccedil;': 'ç'
+    };
+    
+    let decodedText = String(text);
+    
+    // Replace known entities
+    Object.entries(entities).forEach(([entity, char]) => {
+      decodedText = decodedText.replace(new RegExp(entity, 'g'), char);
+    });
+    
+    // Handle numeric entities (e.g., &#8217; for apostrophe)
+    decodedText = decodedText.replace(/&#(\d+);/g, (match, dec) => {
+      return String.fromCharCode(dec);
+    });
+    
+    // Handle hex entities (e.g., &#x2019; for apostrophe)  
+    decodedText = decodedText.replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => {
+      return String.fromCharCode(parseInt(hex, 16));
+    });
+    
+    return decodedText;
+  };
+  
   // Function to parse time mentions in text and render with timer buttons at the end
   const renderInstructionWithTimers = (text) => {
     // Regex to match various time formats:
@@ -855,17 +927,31 @@ function App() {
                         const recipeData = recipe.data || recipe;
                         const transformed = {
                           id: recipe.id || recipeData.id,
-                          name: recipeData.name || recipeData.title || '',
-                          description: recipeData.description || '',
+                          name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
+                          description: decodeHtmlEntities(recipeData.description || ''),
                           image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
                           image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                          ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
-                          instructions: recipeData.instructions || recipeData.recipeInstructions || [],
-                          recipeIngredient: recipeData.ingredients || recipeData.recipeIngredient || [],
-                          recipeInstructions: recipeData.instructions || recipeData.recipeInstructions || [],
+                          ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                          ),
+                          instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                            return inst;
+                          }),
+                          recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                          ),
+                          recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                            return inst;
+                          }),
                           prep_time: recipeData.prepTime || recipeData.prep_time || null,
                           cook_time: recipeData.cookTime || recipeData.cook_time || null,
-                          recipe_yield: recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+                          recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
                           source_url: recipeData.source_url || recipeData.url || '',
                           video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
                           video: recipeData.video || null,
@@ -1256,7 +1342,33 @@ function App() {
       
       if (res.ok) {
         const result = await res.json();
-        setClippedRecipePreview(result);
+        // Decode HTML entities in clipped recipe data
+        const decodedResult = {
+          ...result,
+          name: decodeHtmlEntities(result.name || result.title || ''),
+          title: decodeHtmlEntities(result.name || result.title || ''),
+          description: decodeHtmlEntities(result.description || ''),
+          ingredients: (result.ingredients || result.recipeIngredient || []).map(ing => 
+            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+          ),
+          recipeIngredient: (result.ingredients || result.recipeIngredient || []).map(ing => 
+            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+          ),
+          instructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+            return inst;
+          }),
+          recipeInstructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+            return inst;
+          }),
+          yield: decodeHtmlEntities(result.yield || result.recipeYield || result.recipe_yield || null)
+        };
+        setClippedRecipePreview(decodedResult);
         setSearchInput(''); // Clear search input on success
         setIsSearchBarClipping(false);
         setSearchBarClipError(false);
@@ -1588,32 +1700,46 @@ function App() {
           const recipeData = recipe.data || recipe;
           return {
             id: recipe.id || recipeData.id,
-            name: recipeData.name || recipeData.title || 'Untitled Recipe',
-            description: recipeData.description || '',
+            name: decodeHtmlEntities(recipeData.name || recipeData.title || 'Untitled Recipe'),
+            description: decodeHtmlEntities(recipeData.description || ''),
             image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
             image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
             prep_time: recipeData.prepTime || recipeData.prep_time || null,
             cook_time: recipeData.cookTime || recipeData.cook_time || null,
-            recipe_yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+            recipe_yield: decodeHtmlEntities(recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
             source_url: recipeData.url || recipeData.source_url || '',
             // Include full recipe data for when user selects a result
-            ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
-            instructions: recipeData.instructions || recipeData.recipeInstructions || [],
-            recipeIngredient: recipeData.ingredients || recipeData.recipeIngredient || [],
-            recipeInstructions: recipeData.instructions || recipeData.recipeInstructions || [],
+            ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+            ),
+            instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+              return inst;
+            }),
+            recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+            ),
+            recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+              return inst;
+            }),
             // Additional fields that might be available
             prepTime: recipeData.prepTime || recipeData.prep_time || null,
             cookTime: recipeData.cookTime || recipeData.cook_time || null,
-            recipeYield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
-            yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+            recipeYield: decodeHtmlEntities(recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
+            yield: decodeHtmlEntities(recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
             video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
             video: recipeData.video || null,
             nutrition: recipeData.nutrition || {},
-            author: recipeData.author || '',
+            author: decodeHtmlEntities(recipeData.author || ''),
             datePublished: recipeData.datePublished || '',
-            recipeCategory: recipeData.recipeCategory || '',
-            recipeCuisine: recipeData.recipeCuisine || '',
-            keywords: recipeData.keywords || '',
+            recipeCategory: decodeHtmlEntities(recipeData.recipeCategory || ''),
+            recipeCuisine: decodeHtmlEntities(recipeData.recipeCuisine || ''),
+            keywords: decodeHtmlEntities(recipeData.keywords || ''),
             aggregateRating: recipeData.aggregateRating || {}
           };
         });
@@ -2605,7 +2731,33 @@ function App() {
                             return;
                           }
                           const result = await res.json();
-                          setClippedRecipePreview(result);
+                          // Decode HTML entities in clipped recipe data
+                          const decodedResult = {
+                            ...result,
+                            name: decodeHtmlEntities(result.name || result.title || ''),
+                            title: decodeHtmlEntities(result.name || result.title || ''),
+                            description: decodeHtmlEntities(result.description || ''),
+                            ingredients: (result.ingredients || result.recipeIngredient || []).map(ing => 
+                              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                            ),
+                            recipeIngredient: (result.ingredients || result.recipeIngredient || []).map(ing => 
+                              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                            ),
+                            instructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+                              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                              return inst;
+                            }),
+                            recipeInstructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+                              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                              return inst;
+                            }),
+                            yield: decodeHtmlEntities(result.yield || result.recipeYield || result.recipe_yield || null)
+                          };
+                          setClippedRecipePreview(decodedResult);
                           setClipError('');
                         } catch (e) {
                           setClipError('Failed to clip recipe. Please try again.');
