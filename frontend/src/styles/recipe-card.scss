@@ -85,12 +85,11 @@
   
   &:hover {
     background: rgba(255, 255, 255, 1);
-    transform: translateY(-50%) scale(1.1);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
   
   &:active {
-    transform: translateY(-50%) scale(0.95);
+    // Remove scale effect on touch
   }
   
   svg {
@@ -255,7 +254,7 @@
   }
   
   &:hover {
-    transform: perspective(1000px) rotateY(var(--card-rotation)) translateY(-8px) translateZ(20px) scale(1.02);
+    // Remove expand effect - keep only subtle visual changes
     background: rgba(255, 255, 255, calc(0.06 + 0.03 * var(--glass-intensity)));
     box-shadow: 
       0 20px 50px rgba(0, 0, 0, 0.1),
@@ -358,14 +357,14 @@
 .recipe-card-actions .edit-btn:hover {
   background: rgba(52, 152, 219, 0.9);
   color: white;
-  transform: translateY(-1px);
+  // Remove transform effect on touch
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .recipe-card-actions .delete-btn:hover {
   background: rgba(231, 76, 60, 0.9);
   color: white;
-  transform: translateY(-1px);
+  // Remove transform effect on touch
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
@@ -474,7 +473,7 @@
 .recipe-source-link:hover {
   background: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  transform: translateY(-1px);
+  // Remove transform effect on touch
   border-color: rgba(255, 255, 255, 0.6);
 }
 
@@ -506,7 +505,7 @@
 .recipe-video-link:hover {
   background: rgba(231, 76, 60, 0.2);
   text-decoration: none;
-  transform: translateY(-1px);
+  // Remove transform effect on touch
   border-color: rgba(231, 76, 60, 0.4);
 }
 
