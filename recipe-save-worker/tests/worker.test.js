@@ -2,6 +2,7 @@
 // Mock environment for testing
 
 import worker, { RecipeSaver } from '../src/index.js';
+import { createMockWorkerEnv, resetMockWorkerEnv } from '../../shared/test-env-setup.js';
 
 // Test utilities
 const describe = (name, fn) => {

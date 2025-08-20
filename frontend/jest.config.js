@@ -32,11 +32,5 @@ module.exports = {
   ],
   transformIgnorePatterns: [
     'node_modules/(?!(starback)/)'
-  ],
-  globals: {
-    'import.meta.env': {
-      VITE_API_URL: 'https://test-api.example.com',
-      VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com'
-    }
-  }
+  ]
 };

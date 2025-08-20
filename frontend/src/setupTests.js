@@ -50,7 +50,23 @@ beforeEach(() => {
   }
 });
 
-// Mock import.meta.env -> process.env for tests
-process.env.VITE_API_URL = 'https://test-api.example.com';
-process.env.VITE_CLIPPER_API_URL = 'https://test-clipper-api.example.com';
-process.env.VITE_SEARCH_DB_URL = 'https://test-search-db.example.com';
+// Setup test environment variables
+import { setupTestEnvironment } from '../../shared/test-env-setup.js';
+
+// Load environment variables from .env.test
+const testEnv = setupTestEnvironment();
+
+// Mock import.meta.env for Vite
+global.import = {
+  meta: {
+    env: {
+      MODE: 'test',
+      ...Object.keys(testEnv).reduce((acc, key) => {
+        if (key.startsWith('VITE_')) {
+          acc[key] = testEnv[key];
+        }
+        return acc;
+      }, {})
+    }
+  }
+};
