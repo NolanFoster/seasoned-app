@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
@@ -29,6 +29,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [externalRecipes, setExternalRecipes] = useState({});
+  const [recipeCache, setRecipeCache] = useState(new Map()); // Cache for recipe searches
+  const [loadedCategories, setLoadedCategories] = useState(new Set()); // Track which categories have been loaded
+  const [visibleCategories, setVisibleCategories] = useState(new Set()); // Track which categories are visible
 
   useEffect(() => {
     // If recipesByCategory is provided, skip fetching recommendations
@@ -97,17 +100,35 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     if (recommendations && recommendations.recommendations) {
       const fetchExternalRecipes = async () => {
         const externalData = {};
-        for (const [categoryName, tags] of Object.entries(recommendations.recommendations)) {
+        
+        // Create all promises at once to run in parallel
+        const categoryPromises = Object.entries(recommendations.recommendations).map(async ([categoryName, tags]) => {
           if (Array.isArray(tags)) {
             try {
-              const externalRecipes = await searchRecipesByTags(tags, 10);
-              externalData[categoryName] = externalRecipes;
+              debugLogEmoji('🚀', `Starting parallel fetch for category: ${categoryName}`);
+              const externalRecipes = await searchRecipesByTags(tags, 3);
+              return { categoryName, recipes: externalRecipes };
             } catch (error) {
               console.error(`Error fetching external recipes for ${categoryName}:`, error);
-              externalData[categoryName] = [];
+              return { categoryName, recipes: [] };
             }
           }
-        }
+          return { categoryName, recipes: [] };
+        });
+        
+        // Wait for all categories to complete in parallel
+        const results = await Promise.all(categoryPromises);
+        
+        // Build the externalData object from results
+        results.forEach(({ categoryName, recipes }) => {
+          externalData[categoryName] = recipes;
+        });
+        
+        debugLogEmoji('✅', 'All categories fetched in parallel', {
+          categoryCount: results.length,
+          totalRecipes: results.reduce((sum, { recipes }) => sum + recipes.length, 0)
+        });
+        
         setExternalRecipes(externalData);
       };
       fetchExternalRecipes();
@@ -252,6 +273,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     try {
       // Combine all tags into one search query for the category
       const categoryQuery = tags.join(' ');
+      const cacheKey = `${categoryQuery}:${limit}`;
+      
+      // Check cache first
+      if (recipeCache.has(cacheKey)) {
+        debugLogEmoji('💾', `Cache hit for category: "${categoryQuery}"`);
+        return recipeCache.get(cacheKey);
+      }
+      
       debugLogEmoji('🔍', `Searching for category with combined query: "${categoryQuery}"`);
       
       // Use smart search endpoint with the combined category query
@@ -279,6 +308,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
             isExternal: true
           };
         });
+        
+        // Cache the results
+        setRecipeCache(prev => new Map(prev).set(cacheKey, transformedResults));
         
         debugLogEmoji('✅', `Category "${categoryQuery}" found ${transformedResults.length} recipes`);
         return transformedResults;
