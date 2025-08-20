@@ -55,9 +55,9 @@ function App() {
     
     // Return the full text followed by timer buttons
     return (
-      <span className="instruction-with-timers">
-        <span className="instruction-text">{text}</span>
-        <span className="timer-buttons-container">
+      <div className="instruction-with-timers">
+        <div className="instruction-text">{text}</div>
+        <div className="timer-buttons-container">
           {timers.map((timer, index) => (
             <button 
               key={`timer-${timer.index}`}
@@ -77,8 +77,8 @@ function App() {
               <span className="timer-text">Set timer for {timer.text}</span>
             </button>
           ))}
-        </span>
-      </span>
+        </div>
+      </div>
     );
   };
   
