@@ -54,7 +54,7 @@
     
     /* Add padding to first and last cards for better edge alignment */
     &:first-child {
-      margin-left: $spacing-md !important;
+      margin-left: $spacing-lg !important; /* Increased padding from 20px to 30px */
     }
     
     &:last-child {
@@ -120,7 +120,7 @@
       
       /* Add padding to first and last cards on mobile */
       &:first-child {
-        margin-left: 10px !important; /* Small margin for visual padding */
+        margin-left: $spacing-md !important; /* Increased padding from 10px to 20px for better spacing */
       }
       
       &:last-child {
@@ -170,7 +170,7 @@
     
     /* Add padding to first and last cards */
     &:first-child {
-      margin-left: $spacing-sm !important;
+      margin-left: $spacing-md !important; /* Increased padding from 10px to 20px */
     }
     
     &:last-child {
@@ -663,7 +663,7 @@
     
     /* Add padding to first and last cards */
     &:first-child {
-      margin-left: $spacing-sm !important;
+      margin-left: $spacing-md !important; /* Increased padding from 10px to 20px */
     }
     
     &:last-child {
