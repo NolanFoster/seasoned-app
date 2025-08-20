@@ -56,7 +56,7 @@ export default {
 
         const recipe = await recipeResponse.json();
         
-        if (!recipe || !recipe.name) {
+        if (!recipe) {
           return new Response(generateErrorPage('Invalid recipe', 'The recipe data is invalid or incomplete.'), {
             status: 404,
             headers: {

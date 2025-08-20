@@ -134,13 +134,6 @@ export function generateRecipeHTML(recipe) {
 </html>`;
 }
 
-// Helper function to escape HTML
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 // Server-side HTML escaping
 function escapeHtml(text) {
   if (!text) return '';

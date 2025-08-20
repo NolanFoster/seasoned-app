@@ -8,11 +8,13 @@
     "dev": "wrangler dev",
     "deploy": "wrangler publish",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {},
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",
+    "@vitest/coverage-v8": "^1.2.1",
     "vitest": "^1.2.1",
     "wrangler": "^3.24.0"
   }
