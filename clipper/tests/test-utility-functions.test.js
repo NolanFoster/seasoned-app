@@ -1,8 +1,8 @@
-#!/usr/bin/env node
 
 // Simple utility function tests to improve coverage
 // These test basic HTML extraction and time conversion functions
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -13,30 +13,14 @@ const __dirname = dirname(__filename);
 const clipperPath = join(__dirname, '..', 'src', 'recipe-clipper.js');
 
 // Simple test framework
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
 
-async function test(name, fn) {
-  try {
-    await fn();
-    console.log(`✅ ${name}`);
-  } catch (error) {
-    console.log(`❌ ${name}`);
-    console.log(`   Error: ${error.message}`);
-    if (error.stack) {
-      console.log(`   Stack: ${error.stack}`);
-    }
-  }
-}
 
-console.log('🧪 Running Utility Function Tests');
-console.log('──────────────────────────────────────────────────');
+
+
+describe('Utility Function Tests', () => {
 
 // Test time conversion function
-await test('convertTimeToISO8601 - converts various time formats', async () => {
+it('convertTimeToISO8601 - converts various time formats', async () => {
   // We'll test this by importing and calling the function directly
   // Since it's not exported, we'll create a simple HTML test that triggers it
   
@@ -87,7 +71,7 @@ await test('convertTimeToISO8601 - converts various time formats', async () => {
   `;
 
   // Mock fetch to return our test HTML
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url === 'https://example.com/test-recipe') {
       return {
         ok: true,
@@ -110,11 +94,11 @@ await test('convertTimeToISO8601 - converts various time formats', async () => {
   const response = await clipper.fetch(request, mockEnv);
   
   // The function should execute and trigger the time conversion functions
-  assert(response !== null, 'Response should not be null');
+  expect(response).not.toBe(null);
 });
 
 // Test HTML extraction functions
-await test('HTML extraction functions - extract metadata from HTML', async () => {
+it('HTML extraction functions - extract metadata from HTML', async () => {
   const mockEnv = {
     AI: {
       run: async () => ({
@@ -166,7 +150,7 @@ await test('HTML extraction functions - extract metadata from HTML', async () =>
     </html>
   `;
 
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url === 'https://example.com/meta-recipe') {
       return {
         ok: true,
@@ -188,11 +172,11 @@ await test('HTML extraction functions - extract metadata from HTML', async () =>
   const response = await clipper.fetch(request, mockEnv);
   
   // This should trigger various HTML extraction functions
-  assert(response !== null, 'Response should not be null');
+  expect(response).not.toBe(null);
 });
 
 // Test JSON-LD processing functions
-await test('JSON-LD processing - handles structured data', async () => {
+it('JSON-LD processing - handles structured data', async () => {
   const mockEnv = {
     AI: {
       run: async () => ({
@@ -252,7 +236,7 @@ await test('JSON-LD processing - handles structured data', async () => {
     </html>
   `;
 
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url === 'https://example.com/jsonld-recipe') {
       return {
         ok: true,
@@ -274,11 +258,11 @@ await test('JSON-LD processing - handles structured data', async () => {
   const response = await clipper.fetch(request, mockEnv);
   
   // This should trigger JSON-LD processing functions
-  assert(response !== null, 'Response should not be null');
+  expect(response).not.toBe(null);
 });
 
 // Test additional utility functions to ensure maximum coverage
-await test('Additional utility function coverage', async () => {
+it('Additional utility function coverage', async () => {
   // This test ensures we hit even more functions for coverage
   const mockEnv = {
     AI: {
@@ -311,7 +295,7 @@ await test('Additional utility function coverage', async () => {
     }
   };
 
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url === 'https://example.com/coverage-test') {
       return {
         ok: true,
@@ -332,10 +316,6 @@ await test('Additional utility function coverage', async () => {
 
   const response = await clipper.fetch(request, mockEnv);
   
-  assert(response !== null, 'Response should not be null');
+  expect(response).not.toBe(null);
 });
-
-console.log('\n📊 Utility Function Tests Summary');
-console.log('These tests exercise previously untested utility functions');
-console.log('to improve overall function coverage.');
-console.log(`✅ Current local function coverage should be >90%`);
+});

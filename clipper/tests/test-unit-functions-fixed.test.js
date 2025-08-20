@@ -1,4 +1,5 @@
 // Import all testable functions from recipe-clipper.js
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
 console.log('🧪 Running Fixed Unit Tests for Recipe Clipper Functions\n');
@@ -18,11 +19,7 @@ function test(name, fn) {
   }
 }
 
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
+
 
 // Test extractRecipeFromAIResponse with various scenarios
 test('extractRecipeFromAIResponse - handles valid recipe response', () => {
@@ -43,9 +40,9 @@ test('extractRecipeFromAIResponse - handles valid recipe response', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.name === 'Test Recipe', 'Should extract recipe name');
-  assert(result.ingredients.length === 2, 'Should extract ingredients');
-  assert(result.instructions.length === 2, 'Should extract instructions');
+  expect(result.name).toBe('Test Recipe');
+  expect(result.ingredients.length).toBe(2);
+  expect(result.instructions.length).toBe(2);
 });
 
 test('extractRecipeFromAIResponse - handles null response', () => {
@@ -60,7 +57,7 @@ test('extractRecipeFromAIResponse - handles null response', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result === null, 'Should return null for null response');
+  expect(result).toBe(null);
 });
 
 test('extractRecipeFromAIResponse - handles recipe with time fields', () => {
@@ -83,9 +80,9 @@ test('extractRecipeFromAIResponse - handles recipe with time fields', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.prepTime === 'PT15M', 'Should preserve prep time');
-  assert(result.cookTime === 'PT30M', 'Should preserve cook time');
-  assert(result.totalTime === 'PT45M', 'Should preserve total time');
+  expect(result.prepTime).toBe('PT15M');
+  expect(result.cookTime).toBe('PT30M');
+  expect(result.totalTime).toBe('PT45M');
 });
 
 test('extractRecipeFromAIResponse - handles nutrition data', () => {
@@ -110,8 +107,8 @@ test('extractRecipeFromAIResponse - handles nutrition data', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.nutrition.calories === '250', 'Should extract calories');
-  assert(result.nutrition.proteinContent === '10g', 'Should map protein to proteinContent');
+  expect(result.nutrition.calories).toBe('250');
+  expect(result.nutrition.proteinContent).toBe('10g');
 });
 
 test('extractRecipeFromAIResponse - handles rating data', () => {
@@ -135,8 +132,8 @@ test('extractRecipeFromAIResponse - handles rating data', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.aggregateRating.ratingValue === 4.5, 'Should extract rating value');
-  assert(result.aggregateRating.reviewCount === 100, 'Should extract review count');
+  expect(result.aggregateRating.ratingValue).toBe(4.5);
+  expect(result.aggregateRating.reviewCount).toBe(100);
 });
 
 test('extractRecipeFromAIResponse - handles video data', () => {
@@ -160,7 +157,7 @@ test('extractRecipeFromAIResponse - handles video data', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.video.contentUrl === 'https://example.com/video.mp4', 'Should extract video URL');
+  expect(result.video.contentUrl).toBe('https://example.com/video.mp4');
 });
 
 test('extractRecipeFromAIResponse - handles array image', () => {
@@ -180,7 +177,7 @@ test('extractRecipeFromAIResponse - handles array image', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.image === 'https://example.com/1.jpg', 'Should use first image from array');
+  expect(result.image).toBe('https://example.com/1.jpg');
 });
 
 test('extractRecipeFromAIResponse - handles string instructions', () => {
@@ -200,8 +197,8 @@ test('extractRecipeFromAIResponse - handles string instructions', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(Array.isArray(result.instructions), 'Should convert string to array');
-  assert(result.instructions.length === 2, 'Should split by newlines');
+  expect(Array.isArray(result.instructions)).toBeTruthy();
+  expect(result.instructions.length).toBe(2);
 });
 
 test('extractRecipeFromAIResponse - handles object author', () => {
@@ -222,7 +219,7 @@ test('extractRecipeFromAIResponse - handles object author', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.author === 'Chef John', 'Should extract name from author object');
+  expect(result.author).toBe('Chef John');
 });
 
 test('extractRecipeFromAIResponse - handles missing optional fields', () => {
@@ -242,10 +239,10 @@ test('extractRecipeFromAIResponse - handles missing optional fields', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.name === 'Minimal Recipe', 'Should have name');
-  assert(result.description === '', 'Should have empty description');
-  assert(result.author === '', 'Should have empty author');
-  assert(result.prepTime === '', 'Should have empty prep time');
+  expect(result.name).toBe('Minimal Recipe');
+  expect(result.description).toBe('');
+  expect(result.author).toBe('');
+  expect(result.prepTime).toBe('');
 });
 
 test('extractRecipeFromAIResponse - handles complex instructions', () => {
@@ -269,9 +266,9 @@ test('extractRecipeFromAIResponse - handles complex instructions', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.instructions.length === 3, 'Should handle mixed instruction formats');
-  assert(result.recipeInstructions.length === 3, 'Should format as HowToStep objects');
-  assert(result.recipeInstructions[0]['@type'] === 'HowToStep', 'Should have HowToStep type');
+  expect(result.instructions.length).toBe(3);
+  expect(result.recipeInstructions.length).toBe(3);
+  expect(result.recipeInstructions[0]['@type']).toBe('HowToStep');
 });
 
 test('extractRecipeFromAIResponse - handles error gracefully', () => {
@@ -286,14 +283,14 @@ test('extractRecipeFromAIResponse - handles error gracefully', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result === null, 'Should return null for invalid JSON');
+  expect(result).toBe(null);
 });
 
 test('extractRecipeFromAIResponse - handles empty response', () => {
   const response = {};
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result === null, 'Should return null for empty response');
+  expect(result).toBe(null);
 });
 
 test('extractRecipeFromAIResponse - handles missing content', () => {
@@ -304,7 +301,7 @@ test('extractRecipeFromAIResponse - handles missing content', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result === null, 'Should return null for missing content');
+  expect(result).toBe(null);
 });
 
 test('extractRecipeFromAIResponse - handles alternative field names', () => {
@@ -324,10 +321,10 @@ test('extractRecipeFromAIResponse - handles alternative field names', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.name === 'Alternative Recipe', 'Should map title to name');
-  assert(result.image === 'https://example.com/image.jpg', 'Should map image_url to image');
-  assert(result.ingredients.length === 2, 'Should map ingredients array');
-  assert(result.instructions.length === 2, 'Should map instructions array');
+  expect(result.name).toBe('Alternative Recipe');
+  expect(result.image).toBe('https://example.com/image.jpg');
+  expect(result.ingredients.length).toBe(2);
+  expect(result.instructions.length).toBe(2);
 });
 
 test('extractRecipeFromAIResponse - validates required fields', () => {
@@ -346,7 +343,7 @@ test('extractRecipeFromAIResponse - validates required fields', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result === null, 'Should return null when missing required fields');
+  expect(result).toBe(null);
 });
 
 test('extractRecipeFromAIResponse - handles yield variations', () => {
@@ -368,7 +365,7 @@ test('extractRecipeFromAIResponse - handles yield variations', () => {
   };
   
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
-  assert(result.recipeYield === '4 servings', 'Should use first yield from array');
+  expect(result.recipeYield).toBe('4 servings');
 });
 
 test('extractRecipeFromAIResponse - handles keywords variations', () => {
@@ -395,15 +392,3 @@ test('extractRecipeFromAIResponse - handles keywords variations', () => {
 
 // Summary
 console.log('\n' + '='.repeat(50));
-console.log('📊 Fixed Unit Test Summary:');
-console.log(`   ✅ Passed: ${passedTests}`);
-console.log(`   ❌ Failed: ${failedTests}`);
-console.log(`   📁 Total: ${passedTests + failedTests}`);
-
-if (failedTests === 0) {
-  console.log('\n🎉 All fixed unit tests passed!');
-  process.exit(0);
-} else {
-  console.log('\n⚠️  Some fixed unit tests failed.');
-  process.exit(1);
-}

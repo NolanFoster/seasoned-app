@@ -1,4 +1,5 @@
 // Comprehensive test suite to achieve 85% code coverage
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import worker from '../src/recipe-clipper.js';
 import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
@@ -7,23 +8,9 @@ console.log('🧪 Running Comprehensive Coverage Tests\n');
 let passedTests = 0;
 let failedTests = 0;
 
-async function test(name, fn) {
-  try {
-    await fn();
-    console.log(`✅ ${name}`);
-    passedTests++;
-  } catch (error) {
-    console.log(`❌ ${name}`);
-    console.log(`   Error: ${error.message}`);
-    failedTests++;
-  }
-}
 
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
+
+
 
 // Create proper mock environment
 const createMockEnv = (overrides = {}) => ({
@@ -81,7 +68,7 @@ const createMockEnv = (overrides = {}) => ({
 });
 
 // Mock fetch for HTML responses
-global.fetch = async (url) => {
+global.fetch = vi.fn().mockImplementation(async (url) => {
   // Handle recipe save worker
   if (url.includes('recipe-save-worker')) {
     return {
@@ -164,7 +151,7 @@ const createRequest = (method, path, body = null) => ({
 });
 
 // Test all main endpoints
-await test('OPTIONS request returns CORS headers', async () => {
+it('OPTIONS request returns CORS headers', async () => {
   const env = createMockEnv();
   const request = createRequest('OPTIONS', '/clip');
   const response = await worker.fetch(request, env);
@@ -173,7 +160,7 @@ await test('OPTIONS request returns CORS headers', async () => {
   assert(response.headers.get('Access-Control-Allow-Origin') === '*');
 });
 
-await test('GET /health returns ok status', async () => {
+it('GET /health returns ok status', async () => {
   const env = createMockEnv();
   const request = createRequest('GET', '/health');
   const response = await worker.fetch(request, env);
@@ -184,7 +171,7 @@ await test('GET /health returns ok status', async () => {
   assert(data.service === 'recipe-clipper');
 });
 
-await test('POST /clip with missing URL returns 400', async () => {
+it('POST /clip with missing URL returns 400', async () => {
   const env = createMockEnv();
   const request = createRequest('POST', '/clip', {});
   const response = await worker.fetch(request, env);
@@ -192,7 +179,7 @@ await test('POST /clip with missing URL returns 400', async () => {
   assert(response.status === 400);
 });
 
-await test('POST /clip with valid URL extracts recipe', async () => {
+it('POST /clip with valid URL extracts recipe', async () => {
   const env = createMockEnv();
   const request = createRequest('POST', '/clip', { 
     url: 'https://example.com/recipe' 
@@ -206,7 +193,7 @@ await test('POST /clip with valid URL extracts recipe', async () => {
   assert(data.savedToKV === true);
 });
 
-await test('POST /clip with cached recipe returns from cache', async () => {
+it('POST /clip with cached recipe returns from cache', async () => {
   const cachedRecipe = {
     data: {
       name: 'Cached Recipe',
@@ -232,7 +219,7 @@ await test('POST /clip with cached recipe returns from cache', async () => {
   assert(data.cached === true);
 });
 
-await test('POST /clip with JSON-LD recipe falls back to AI when incomplete', async () => {
+it('POST /clip with JSON-LD recipe falls back to AI when incomplete', async () => {
   const env = createMockEnv();
   const request = createRequest('POST', '/clip', { 
     url: 'https://example.com/json-ld' 
@@ -246,7 +233,7 @@ await test('POST /clip with JSON-LD recipe falls back to AI when incomplete', as
   assert(data.image === 'https://example.com/recipe.jpg'); // From AI mock
 });
 
-await test('POST /clip with no recipe returns error', async () => {
+it('POST /clip with no recipe returns error', async () => {
   const env = createMockEnv({
     AI: {
       run: async () => ({
@@ -271,7 +258,7 @@ await test('POST /clip with no recipe returns error', async () => {
   assert(response.status === 404); // No recipe found
 });
 
-await test('POST /clip handles fetch errors', async () => {
+it('POST /clip handles fetch errors', async () => {
   const env = createMockEnv();
   const request = createRequest('POST', '/clip', { 
     url: 'https://example.com/error' 
@@ -284,7 +271,7 @@ await test('POST /clip handles fetch errors', async () => {
 // These tests are for recipe management endpoints that the clipper doesn't have
 // The clipper only has /clip, /health, and / endpoints
 /*
-await test('GET /recipes/:id returns recipe from KV', async () => {
+it('GET /recipes/:id returns recipe from KV', async () => {
   const storedRecipe = {
     data: { name: 'Stored Recipe' },
     scrapedAt: new Date().toISOString()
@@ -305,7 +292,7 @@ await test('GET /recipes/:id returns recipe from KV', async () => {
   assert(data.recipe.data.name === 'Stored Recipe');
 });
 
-await test('GET /recipes/:id returns 404 for missing recipe', async () => {
+it('GET /recipes/:id returns 404 for missing recipe', async () => {
   const env = createMockEnv();
   const request = createRequest('GET', '/recipes/missing');
   const response = await worker.fetch(request, env);
@@ -313,7 +300,7 @@ await test('GET /recipes/:id returns 404 for missing recipe', async () => {
   assert(response.status === 404);
 });
 
-await test('DELETE /recipes/:id deletes recipe', async () => {
+it('DELETE /recipes/:id deletes recipe', async () => {
   let deleted = false;
   const env = createMockEnv({
     RECIPES: {
@@ -328,7 +315,7 @@ await test('DELETE /recipes/:id deletes recipe', async () => {
   assert(deleted === true);
 });
 
-await test('PUT /recipes/:id updates recipe', async () => {
+it('PUT /recipes/:id updates recipe', async () => {
   let updated = null;
   const env = createMockEnv({
     RECIPES: {
@@ -348,7 +335,7 @@ await test('PUT /recipes/:id updates recipe', async () => {
 });
 */
 
-await test('Unknown route returns 404', async () => {
+it('Unknown route returns 404', async () => {
   const env = createMockEnv();
   const request = createRequest('GET', '/unknown');
   const response = await worker.fetch(request, env);
@@ -357,7 +344,7 @@ await test('Unknown route returns 404', async () => {
 });
 
 // Test extractRecipeFromAIResponse function directly
-await test('extractRecipeFromAIResponse handles all field mappings', async () => {
+it('extractRecipeFromAIResponse handles all field mappings', async () => {
   const response = {
     response: JSON.stringify({
       source: {
@@ -398,7 +385,7 @@ await test('extractRecipeFromAIResponse handles all field mappings', async () =>
   assert(result.nutrition.carbohydrateContent === '30g');
 });
 
-await test('extractRecipeFromAIResponse handles array fields', async () => {
+it('extractRecipeFromAIResponse handles array fields', async () => {
   const response = {
     response: JSON.stringify({
       source: {
@@ -424,7 +411,7 @@ await test('extractRecipeFromAIResponse handles array fields', async () => {
   assert(result.keywords === 'test, array');
 });
 
-await test('extractRecipeFromAIResponse handles object fields', async () => {
+it('extractRecipeFromAIResponse handles object fields', async () => {
   const response = {
     response: JSON.stringify({
       source: {
@@ -454,7 +441,7 @@ await test('extractRecipeFromAIResponse handles object fields', async () => {
   assert(result.recipeInstructions[1].text === 'Step 2');
 });
 
-await test('extractRecipeFromAIResponse validates required fields', async () => {
+it('extractRecipeFromAIResponse validates required fields', async () => {
   const response = {
     response: JSON.stringify({
       source: {
@@ -474,7 +461,7 @@ await test('extractRecipeFromAIResponse validates required fields', async () => 
   assert(result === null);
 });
 
-await test('extractRecipeFromAIResponse handles malformed response', async () => {
+it('extractRecipeFromAIResponse handles malformed response', async () => {
   const response = {
     response: JSON.stringify({
       source: {
@@ -491,13 +478,13 @@ await test('extractRecipeFromAIResponse handles malformed response', async () =>
   assert(result === null);
 });
 
-await test('extractRecipeFromAIResponse handles empty response', async () => {
+it('extractRecipeFromAIResponse handles empty response', async () => {
   const response = {};
   const result = extractRecipeFromAIResponse(response, 'https://example.com');
   assert(result === null);
 });
 
-await test('extractRecipeFromAIResponse handles null response', async () => {
+it('extractRecipeFromAIResponse handles null response', async () => {
   const response = {
     response: JSON.stringify({
       source: {
@@ -515,7 +502,7 @@ await test('extractRecipeFromAIResponse handles null response', async () => {
 });
 
 // Test error scenarios
-await test('Handle JSON parse errors in request body', async () => {
+it('Handle JSON parse errors in request body', async () => {
   const env = createMockEnv();
   const request = {
     method: 'POST',
@@ -528,7 +515,7 @@ await test('Handle JSON parse errors in request body', async () => {
   assert(response.status === 500);
 });
 
-await test('Handle KV storage errors gracefully', async () => {
+it('Handle KV storage errors gracefully', async () => {
   const env = createMockEnv({
     RECIPE_STORAGE: {
       get: async () => { throw new Error('KV error'); },
@@ -548,7 +535,7 @@ await test('Handle KV storage errors gracefully', async () => {
   assert(data.savedToKV === true);
 });
 
-await test('Handle bad HTTP response', async () => {
+it('Handle bad HTTP response', async () => {
   const env = createMockEnv();
   const request = createRequest('POST', '/clip', { 
     url: 'https://example.com/bad-response' 
@@ -560,15 +547,3 @@ await test('Handle bad HTTP response', async () => {
 
 // Summary
 console.log('\n' + '='.repeat(50));
-console.log('📊 Comprehensive Coverage Test Summary:');
-console.log(`   ✅ Passed: ${passedTests}`);
-console.log(`   ❌ Failed: ${failedTests}`);
-console.log(`   📁 Total: ${passedTests + failedTests}`);
-
-if (failedTests === 0) {
-  console.log('\n🎉 All comprehensive tests passed!');
-  process.exit(0);
-} else {
-  console.log('\n⚠️  Some comprehensive tests failed.');
-  process.exit(1);
-}

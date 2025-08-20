@@ -16,11 +16,7 @@ function test(name, fn) {
   }
 }
 
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
+
 
 // Mock environment and request objects
 const createMockEnv = () => ({
@@ -57,6 +53,7 @@ const createMockRequest = (method, url, body = null) => ({
 });
 
 // Import the worker module
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import worker from '../src/recipe-clipper.js';
 
 // Test CORS preflight
@@ -65,8 +62,8 @@ test('handles OPTIONS request', async () => {
   const env = createMockEnv();
   
   const response = await worker.fetch(request, env);
-  assert(response.status === 200, 'Should return 200 for OPTIONS');
-  assert(response.headers.get('Access-Control-Allow-Origin') === '*', 'Should have CORS headers');
+  expect(response.status).toBe(200);
+  expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
 });
 
 // Test health endpoint
@@ -75,9 +72,9 @@ test('handles health check', async () => {
   const env = createMockEnv();
   
   const response = await worker.fetch(request, env);
-  assert(response.status === 200, 'Should return 200 for health check');
+  expect(response.status).toBe(200);
   const data = await response.json();
-  assert(data.status === 'ok', 'Should return ok status');
+  expect(data.status).toBe('ok');
 });
 
 // Test 404 for unknown routes
@@ -86,7 +83,7 @@ test('returns 404 for unknown routes', async () => {
   const env = createMockEnv();
   
   const response = await worker.fetch(request, env);
-  assert(response.status === 404, 'Should return 404 for unknown routes');
+  expect(response.status).toBe(404);
 });
 
 // Test missing URL in clip request
@@ -95,7 +92,7 @@ test('returns 400 for missing URL', async () => {
   const env = createMockEnv();
   
   const response = await worker.fetch(request, env);
-  assert(response.status === 400, 'Should return 400 for missing URL');
+  expect(response.status).toBe(400);
 });
 
 // Test successful clip with cached recipe
@@ -116,10 +113,10 @@ test('returns cached recipe when available', async () => {
   const request = createMockRequest('POST', '/clip', { url: 'https://example.com/recipe' });
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for cached recipe');
+  expect(response.status).toBe(200);
   const data = await response.json();
-  assert(data.name === 'Cached Recipe', 'Should return cached recipe data');
-  assert(data.cached === true, 'Should indicate recipe was cached');
+  expect(data.name).toBe('Cached Recipe');
+  expect(data.cached).toBe(true);
 });
 
 // Test recipe management endpoints
@@ -135,10 +132,10 @@ test('handles GET /recipes/:id', async () => {
   const request = createMockRequest('GET', '/recipes/test-id');
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for existing recipe');
+  expect(response.status).toBe(200);
   const data = await response.json();
-  assert(data.success === true, 'Should indicate success');
-  assert(data.recipe.data.name === 'Test Recipe', 'Should return recipe data');
+  expect(data.success).toBe(true);
+  expect(data.recipe.data.name).toBe('Test Recipe');
 });
 
 test('returns 404 for non-existent recipe', async () => {
@@ -148,7 +145,7 @@ test('returns 404 for non-existent recipe', async () => {
   const request = createMockRequest('GET', '/recipes/non-existent');
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 404, 'Should return 404 for non-existent recipe');
+  expect(response.status).toBe(404);
 });
 
 test('handles DELETE /recipes/:id', async () => {
@@ -159,8 +156,8 @@ test('handles DELETE /recipes/:id', async () => {
   const request = createMockRequest('DELETE', '/recipes/test-id');
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for delete');
-  assert(deleted === true, 'Should call delete on KV store');
+  expect(response.status).toBe(200);
+  expect(deleted).toBe(true);
 });
 
 test('handles PUT /recipes/:id', async () => {
@@ -172,8 +169,8 @@ test('handles PUT /recipes/:id', async () => {
   const request = createMockRequest('PUT', '/recipes/test-id', recipeData);
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for update');
-  assert(savedData.data.name === 'Updated Recipe', 'Should save updated data');
+  expect(response.status).toBe(200);
+  expect(savedData.data.name).toBe('Updated Recipe');
 });
 
 // Test error handling
@@ -184,7 +181,7 @@ test('handles fetch errors gracefully', async () => {
   const request = createMockRequest('POST', '/clip', { url: 'https://example.com/recipe' });
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 500, 'Should return 500 for fetch errors');
+  expect(response.status).toBe(500);
 });
 
 // Test with real-world HTML patterns
@@ -205,7 +202,7 @@ test('extracts recipe from HTML response', async () => {
   `;
   
   const env = createMockEnv();
-  global.fetch = async (url) => ({
+  global.fetch = vi.fn().mockImplementation(async (url) => ({
     ok: true,
     text: async () => mockHtml
   });
@@ -218,15 +215,3 @@ test('extracts recipe from HTML response', async () => {
 
 // Summary
 console.log('\n' + '='.repeat(50));
-console.log('📊 Fetch Handler Test Summary:');
-console.log(`   ✅ Passed: ${passedTests}`);
-console.log(`   ❌ Failed: ${failedTests}`);
-console.log(`   📁 Total: ${passedTests + failedTests}`);
-
-if (failedTests === 0) {
-  console.log('\n🎉 All fetch handler tests passed!');
-  process.exit(0);
-} else {
-  console.log('\n⚠️  Some fetch handler tests failed.');
-  process.exit(1);
-}

@@ -16,13 +16,10 @@ function test(name, fn) {
   }
 }
 
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
+
 
 // Import the shared KV storage functions and worker
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { saveRecipeToKV, getRecipeFromKV, generateRecipeId } from '../../shared/kv-storage.js';
 import worker from '../src/recipe-clipper.js';
 
@@ -77,7 +74,7 @@ test('Recipe clipping saves only to KV store', async () => {
   });
 
   // Mock fetch to return valid HTML
-  global.fetch = async (url) => ({
+  global.fetch = vi.fn().mockImplementation(async (url) => ({
     ok: true,
     text: async () => '<html><body>Simple recipe content</body></html>'
   });
@@ -85,14 +82,14 @@ test('Recipe clipping saves only to KV store', async () => {
   const request = createMockRequest('POST', '/clip', { url: 'https://example.com/recipe' });
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for successful clip');
-  assert(kvSaved, 'Should save to KV store');
-  assert(kvSavedKey, 'Should save with a key');
-  assert(kvSavedValue, 'Should save with recipe data');
+  expect(response.status).toBe(200);
+  expect(kvSaved).toBeTruthy();
+  expect(kvSavedKey).toBeTruthy();
+  expect(kvSavedValue).toBeTruthy();
   
   // Verify the saved data is compressed (base64 string)
-  assert(typeof kvSavedValue === 'string', 'KV value should be a string (compressed)');
-  assert(kvSavedValue.length > 0, 'KV value should not be empty');
+  expect(typeof kvSavedValue).toBe('string');
+  expect(kvSavedValue.length).toBeGreaterThan(0);
 });
 
 // Test 2: Verify that cached recipes are retrieved only from KV store
@@ -121,12 +118,12 @@ test('Cached recipes retrieved only from KV store', async () => {
   const request = createMockRequest('POST', '/clip', { url: 'https://example.com/cached-recipe' });
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for cached recipe');
-  assert(kvAccessed, 'Should access KV store to check for cached recipe');
+  expect(response.status).toBe(200);
+  expect(kvAccessed).toBeTruthy();
   
   const data = await response.json();
-  assert(data.cached === true, 'Should indicate recipe was cached');
-  assert(data.name === 'Cached Recipe', 'Should return cached recipe data');
+  expect(data.cached).toBe(true);
+  expect(data.name).toBe('Cached Recipe');
 });
 
 // Test 3: Verify that recipe deletion only affects KV store
@@ -144,9 +141,9 @@ test('Recipe deletion only affects KV store', async () => {
   const request = createMockRequest('DELETE', '/cached?url=https://example.com/recipe-to-delete');
   const response = await worker.fetch(request, env);
   
-  assert(response.status === 200, 'Should return 200 for successful delete');
-  assert(kvDeleted, 'Should delete from KV store');
-  assert(kvDeletedKey, 'Should delete with correct key');
+  expect(response.status).toBe(200);
+  expect(kvDeleted).toBeTruthy();
+  expect(kvDeletedKey).toBeTruthy();
 });
 
 // Test 4: Verify that clipper worker has no database endpoints
@@ -156,15 +153,15 @@ test('Clipper worker has no database endpoints', async () => {
   // Test that /recipes endpoints return 404
   const getRecipeRequest = createMockRequest('GET', '/recipes/test-id');
   const getResponse = await worker.fetch(getRecipeRequest, env);
-  assert(getResponse.status === 404, 'GET /recipes/:id should return 404');
+  expect(getResponse.status).toBe(404);
   
   const putRecipeRequest = createMockRequest('PUT', '/recipes/test-id', { name: 'Test' });
   const putResponse = await worker.fetch(putRecipeRequest, env);
-  assert(putResponse.status === 404, 'PUT /recipes/:id should return 404');
+  expect(putResponse.status).toBe(404);
   
   const postRecipeRequest = createMockRequest('POST', '/recipes', { name: 'Test' });
   const postResponse = await worker.fetch(postRecipeRequest, env);
-  assert(postResponse.status === 404, 'POST /recipes should return 404');
+  expect(postResponse.status).toBe(404);
 });
 
 // Test 5: Verify that clipper worker only has KV-related endpoints
@@ -174,20 +171,20 @@ test('Clipper worker only has KV-related endpoints', async () => {
   // Health check should work
   const healthRequest = createMockRequest('GET', '/health');
   const healthResponse = await worker.fetch(healthRequest, env);
-  assert(healthResponse.status === 200, 'GET /health should return 200');
+  expect(healthResponse.status).toBe(200);
   
   const healthData = await healthResponse.json();
-  assert(healthData.service === 'recipe-clipper', 'Should identify as recipe-clipper');
-  assert(healthData.features.includes('kv-storage'), 'Should list kv-storage as a feature');
-  assert(!healthData.features.includes('database'), 'Should not list database as a feature');
+  expect(healthData.service).toBe('recipe-clipper');
+  expect(healthData.features.includes('kv-storage')).toBeTruthy();
+  expect(!healthData.features.includes('database')).toBeTruthy();
   
   // Verify endpoints listed in health check are KV-related only
   const endpoints = healthData.endpoints;
-  assert(endpoints['POST /clip'], 'Should have clip endpoint');
-  assert(endpoints['GET /cached?url=<recipe-url>'], 'Should have cached get endpoint');
-  assert(endpoints['DELETE /cached?url=<recipe-url>'], 'Should have cached delete endpoint');
-  assert(!endpoints['GET /recipes/:id'], 'Should not have database recipe endpoints');
-  assert(!endpoints['POST /recipes'], 'Should not have database recipe creation endpoints');
+  expect(endpoints['POST /clip']).toBeTruthy();
+  expect(endpoints['GET /cached?url=<recipe-url>']).toBeTruthy();
+  expect(endpoints['DELETE /cached?url=<recipe-url>']).toBeTruthy();
+  expect(!endpoints['GET /recipes/:id']).toBeTruthy();
+  expect(!endpoints['POST /recipes']).toBeTruthy();
 });
 
 // Test 6: Verify KV storage functions work correctly
@@ -224,16 +221,16 @@ test('KV storage functions work correctly', async () => {
   const recipeId = await generateRecipeId(testUrl);
   const saveResult = await saveRecipeToKV(mockEnv, recipeId, testRecipe);
   
-  assert(saveResult.success, 'Should successfully save to KV');
-  assert(storedKey === recipeId, 'Should store with correct key');
-  assert(storedData, 'Should store compressed data');
+  expect(saveResult.success).toBeTruthy();
+  expect(storedKey).toBe(recipeId);
+  expect(storedData).toBeTruthy();
   
   // Test retrieving from KV
   const getResult = await getRecipeFromKV(mockEnv, recipeId);
   
-  assert(getResult.success, 'Should successfully retrieve from KV');
-  assert(getResult.recipe.url === testUrl, 'Should retrieve correct recipe data');
-  assert(getResult.recipe.data.name === 'Test Recipe', 'Should decompress data correctly');
+  expect(getResult.success).toBeTruthy();
+  expect(getResult.recipe.url).toBe(testUrl);
+  expect(getResult.recipe.data.name).toBe('Test Recipe');
 });
 
 // Test 7: Verify no HTTP calls to external databases
@@ -242,7 +239,7 @@ test('No HTTP calls to external databases during recipe clipping', async () => {
   const fetchCalls = [];
   
   // Mock fetch to track all HTTP calls
-  global.fetch = async (url, options) => {
+  global.fetch = vi.fn().mockImplementation(async (url, options) => {
     fetchCalls.push({ url, options });
     
     // Only allow calls to recipe URLs (for scraping)
@@ -262,8 +259,8 @@ test('No HTTP calls to external databases during recipe clipping', async () => {
     await worker.fetch(request, env);
     
     // Verify only the recipe URL was fetched (no database calls)
-    assert(fetchCalls.length === 1, 'Should make only one HTTP call');
-    assert(fetchCalls[0].url === 'https://example.com/recipe', 'Should only call the recipe URL');
+    expect(fetchCalls.length).toBe(1);
+    expect(fetchCalls[0].url).toBe('https://example.com/recipe');
     
     // Verify no calls to database workers
     const dbCalls = fetchCalls.filter(call => 
@@ -271,7 +268,7 @@ test('No HTTP calls to external databases during recipe clipping', async () => {
       call.url.includes('clipped-recipe-db') ||
       call.url.includes('/recipe') && call.url !== 'https://example.com/recipe'
     );
-    assert(dbCalls.length === 0, 'Should make no calls to database workers');
+    expect(dbCalls.length).toBe(0);
     
   } finally {
     global.fetch = originalFetch;
@@ -280,16 +277,3 @@ test('No HTTP calls to external databases during recipe clipping', async () => {
 
 // Summary
 console.log('\n' + '='.repeat(50));
-console.log('📊 KV Store-Only Test Summary:');
-console.log(`   ✅ Passed: ${passedTests}`);
-console.log(`   ❌ Failed: ${failedTests}`);
-console.log(`   📁 Total: ${passedTests + failedTests}`);
-
-if (failedTests === 0) {
-  console.log('\n🎉 All KV store-only tests passed!');
-  console.log('✅ Verified: Clipped recipes only save to KV store');
-  process.exit(0);
-} else {
-  console.log('\n⚠️  Some KV store-only tests failed.');
-  process.exit(1);
-}

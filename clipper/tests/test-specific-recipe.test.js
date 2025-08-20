@@ -1,6 +1,7 @@
 // Test script for the specific AllRecipes URL
 // Tests the recipe extraction logic with the actual URL structure
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
 // Mock AI response based on the actual AllRecipes page structure
@@ -220,4 +221,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   runSpecificRecipeTests();
 }
 
-export { testChefJohnsRecipe, testAlternativeFieldNames, validateRecipe, runSpecificRecipeTests }; 
+export { testChefJohnsRecipe, testAlternativeFieldNames, validateRecipe, runSpecificRecipeTests };

@@ -1,3 +1,5 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 // Test helper functions for HTML extraction and processing
 console.log('🧪 Running Helper Function Tests\n');
 
@@ -114,11 +116,7 @@ function test(name, fn) {
   }
 }
 
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
+
 
 // Test extractDescriptionFromHTML variations
 test('extractDescriptionFromHTML - handles various meta formats', () => {
@@ -268,15 +266,3 @@ test('handles case sensitivity in patterns', () => {
 
 // Summary
 console.log('\n' + '='.repeat(50));
-console.log('📊 Helper Function Test Summary:');
-console.log(`   ✅ Passed: ${passedTests}`);
-console.log(`   ❌ Failed: ${failedTests}`);
-console.log(`   📁 Total: ${passedTests + failedTests}`);
-
-if (failedTests === 0) {
-  console.log('\n🎉 All helper function tests passed!');
-  process.exit(0);
-} else {
-  console.log('\n⚠️  Some helper function tests failed.');
-  process.exit(1);
-}

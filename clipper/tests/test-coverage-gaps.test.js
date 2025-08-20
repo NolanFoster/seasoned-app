@@ -1,4 +1,5 @@
 // Test to cover specific gaps in coverage
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import './setup-crypto-polyfill.js';
 import worker from '../src/recipe-clipper.js';
 
@@ -7,26 +8,12 @@ console.log('🧪 Running Coverage Gap Tests\n');
 let passedTests = 0;
 let failedTests = 0;
 
-async function test(name, fn) {
-  try {
-    await fn();
-    console.log(`✅ ${name}`);
-    passedTests++;
-  } catch (error) {
-    console.log(`❌ ${name}`);
-    console.log(`   Error: ${error.message}`);
-    failedTests++;
-  }
-}
 
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
+
+
 
 // Mock the fetch function before any tests
-global.fetch = async (url) => {
+global.fetch = vi.fn().mockImplementation(async (url) => {
   // Mock HTML responses
   if (url.includes('example.com')) {
     return {
@@ -75,7 +62,7 @@ const env = {
 };
 
 // Test 1: Health check endpoint
-await test('GET /health returns ok', async () => {
+it('GET /health returns ok', async () => {
   const request = new Request('https://worker.test/health', {
     method: 'GET'
   });
@@ -88,7 +75,7 @@ await test('GET /health returns ok', async () => {
 });
 
 // Test 2: OPTIONS request for CORS
-await test('OPTIONS request returns CORS headers', async () => {
+it('OPTIONS request returns CORS headers', async () => {
   const request = new Request('https://worker.test/clip', {
     method: 'OPTIONS'
   });
@@ -100,10 +87,10 @@ await test('OPTIONS request returns CORS headers', async () => {
 });
 
 // Test 3: JSON-LD with array keywords
-await test('JSON-LD with array keywords', async () => {
+it('JSON-LD with array keywords', async () => {
   // Override fetch for this specific test
   const originalFetch = global.fetch;
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url.includes('example.com')) {
       return {
         ok: true,
@@ -142,9 +129,9 @@ await test('JSON-LD with array keywords', async () => {
 });
 
 // Test 4: JSON-LD with string ingredients
-await test('JSON-LD with string ingredients', async () => {
+it('JSON-LD with string ingredients', async () => {
   const originalFetch = global.fetch;
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url.includes('example.com')) {
       return {
         ok: true,
@@ -179,9 +166,9 @@ await test('JSON-LD with string ingredients', async () => {
 });
 
 // Test 5: JSON-LD with object instructions  
-await test('JSON-LD with object instructions', async () => {
+it('JSON-LD with object instructions', async () => {
   const originalFetch = global.fetch;
-  global.fetch = async (url) => {
+  global.fetch = vi.fn().mockImplementation(async (url) => {
     if (url.includes('example.com')) {
       return {
         ok: true,
@@ -222,7 +209,7 @@ await test('JSON-LD with object instructions', async () => {
 });
 
 // Test 6: Invalid request method
-await test('Invalid method returns 404', async () => {
+it('Invalid method returns 404', async () => {
   const request = new Request('https://worker.test/clip', {
     method: 'DELETE'
   });
@@ -233,7 +220,7 @@ await test('Invalid method returns 404', async () => {
 });
 
 // Test 7: Missing URL in POST request
-await test('Missing URL returns error', async () => {
+it('Missing URL returns error', async () => {
   const request = new Request('https://worker.test/clip', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -248,7 +235,7 @@ await test('Missing URL returns error', async () => {
 });
 
 // Test 8: Recipe from cache
-await test('Cached recipe is returned from KV store', async () => {
+it('Cached recipe is returned from KV store', async () => {
   const cachedRecipe = {
     name: 'Cached Recipe',
     image: 'https://example.com/cached.jpg',
@@ -286,15 +273,3 @@ await test('Cached recipe is returned from KV store', async () => {
   assert(result.recipe.name === 'Cached Recipe');
   assert(result.fromCache === true);
 });
-
-console.log('\n📊 Coverage Gap Test Summary:');
-console.log(`   ✅ Passed: ${passedTests}`);
-console.log(`   ❌ Failed: ${failedTests}`);
-console.log(`   📁 Total: ${passedTests + failedTests}`);
-
-if (failedTests === 0) {
-  console.log('\n🎉 All coverage gap tests passed!');
-} else {
-  console.log('\n⚠️ Some tests failed.');
-  process.exit(1);
-}

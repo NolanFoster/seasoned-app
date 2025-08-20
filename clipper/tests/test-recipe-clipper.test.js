@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
 
 // Mock Cloudflare AI response structure for null case
@@ -259,4 +260,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   runTests();
 }
 
-export { runTests, testCases }; 
+export { runTests, testCases };
