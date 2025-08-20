@@ -11,17 +11,18 @@
 .instruction-text {
   display: block;
   width: 100%;
-  margin-bottom: 12px;
 }
 
 .timer-buttons-container {
   position: absolute;
   bottom: 0;
   left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  padding-top: 8px;
 }
 
 .timer-text {

@@ -489,31 +489,8 @@
   border-bottom: none;
 }
 
-/* Timer Button Inline Styles */
-.instruction-with-timers {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.instruction-text {
-  flex: 1;
-}
-
-.timer-buttons-container {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.timer-text {
-  font-size: 12px;
-  margin-left: 4px;
-  white-space: nowrap;
-  color: white;
-}
+/* Timer Button Inline Styles - Moved to timer-button-update.scss */
+/* The timer button styles are now handled in a separate file for better organization */
 
 .timer-button-inline {
   display: inline-flex;
@@ -938,11 +915,7 @@
     font-size: 11px;
   }
   
-  .timer-text {
-    font-size: 11px;
-    margin-left: 2px;
-    color: white;
-  }
+  /* Timer text styles moved to timer-button-update.scss */
   
   .timer-icon-inline {
     width: 12px;
@@ -1034,9 +1007,7 @@
     height: 14px;
   }
   
-  .timer-buttons-container {
-    gap: 4px;
-  }
+  /* Timer buttons container styles moved to timer-button-update.scss */
   
   .recipe-full-background {
     position: fixed;
