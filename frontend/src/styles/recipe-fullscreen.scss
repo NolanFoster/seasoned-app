@@ -512,6 +512,7 @@
   font-size: 12px;
   margin-left: 4px;
   white-space: nowrap;
+  color: white;
 }
 
 .timer-button-inline {
@@ -529,6 +530,7 @@
   transition: all 0.3s ease;
   vertical-align: middle;
   white-space: nowrap;
+  color: white;
 }
 
 .timer-button-inline:hover {
@@ -939,6 +941,7 @@
   .timer-text {
     font-size: 11px;
     margin-left: 2px;
+    color: white;
   }
   
   .timer-icon-inline {
