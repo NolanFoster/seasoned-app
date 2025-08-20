@@ -74,7 +74,7 @@ function App() {
                 alt="Timer" 
                 className="timer-icon-inline"
               />
-              <span className="timer-text">{timer.text}</span>
+              <span className="timer-text">Set timer for {timer.text}</span>
             </button>
           ))}
         </span>
