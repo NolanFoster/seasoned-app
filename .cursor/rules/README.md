@@ -34,6 +34,12 @@ Each rule is stored as an individual MDC (Markdown with metadata) file containin
 - **Purpose**: Ensures proper release process from staging to production
 - Covers: Rebasing, merging, conflict resolution, rollback procedures
 
+### 5. Cloudflare Worker Setup (`cloudflare-worker-setup.mdc`)
+- **Type**: `agent-requested` - AI decides when to apply
+- **Priority**: 2
+- **Purpose**: Guidelines for setting up new Cloudflare Workers with proper structure
+- Covers: Project structure, Vitest testing, Wrangler config, GitHub workflows, observability
+
 ## Rule Types
 
 - **`always`**: Included in every operation
