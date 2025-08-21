@@ -31,8 +31,51 @@ export async function runTests() {
   let mf;
   
   try {
+    // Create a temporary worker file that imports mocked utilities
+    const fs = await import('fs');
+    const workerContent = await fs.promises.readFile(path.join(__dirname, '../src/index.js'), 'utf-8');
+    const modifiedWorkerContent = workerContent.replace(
+      "import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';",
+      `// Mock utilities for testing
+const baseLog = function(level, message, data = {}, context = {}) {
+  const timestamp = new Date().toISOString();
+  const logEntry = {
+    timestamp,
+    level,
+    message,
+    ...data,
+    ...context
+  };
+  
+  switch (level.toLowerCase()) {
+    case 'error':
+      console.error(JSON.stringify(logEntry));
+      break;
+    case 'warn':
+      console.warn(JSON.stringify(logEntry));
+      break;
+    case 'info':
+      console.log(JSON.stringify(logEntry));
+      break;
+    case 'debug':
+      console.log(JSON.stringify(logEntry));
+      break;
+    default:
+      console.log(JSON.stringify(logEntry));
+  }
+};
+
+const generateRequestId = function() {
+  return \`req_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
+};`
+    );
+    
+    // Write the modified worker to a temporary file
+    const tempWorkerPath = path.join(__dirname, '../src/index.test.js');
+    await fs.promises.writeFile(tempWorkerPath, modifiedWorkerContent);
+    
     mf = new Miniflare({
-      scriptPath: path.join(__dirname, '../src/index.js'),
+      scriptPath: tempWorkerPath,
       modules: true,
       bindings: {
         AI: null // Testing without AI binding
@@ -222,6 +265,15 @@ export async function runTests() {
   // Cleanup
   if (mf) {
     await mf.dispose();
+  }
+  
+  // Clean up temporary test file
+  try {
+    const fs = await import('fs');
+    const tempWorkerPath = path.join(__dirname, '../src/index.test.js');
+    await fs.promises.unlink(tempWorkerPath);
+  } catch (error) {
+    // Ignore if file doesn't exist
   }
 
   return {
