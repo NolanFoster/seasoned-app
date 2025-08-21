@@ -3,40 +3,11 @@
  * Provides recipe recommendations based on location and date using OpenAI models
  */
 
-// Utility function for structured logging
-function log(level, message, data = {}, context = {}) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level,
-    message,
-    worker: 'recipe-recommendation-worker',
-    ...data,
-    ...context
-  };
-  
-  // Use appropriate console method based on level
-  switch (level.toLowerCase()) {
-    case 'error':
-      console.error(JSON.stringify(logEntry));
-      break;
-    case 'warn':
-      console.warn(JSON.stringify(logEntry));
-      break;
-    case 'info':
-      console.log(JSON.stringify(logEntry));
-      break;
-    case 'debug':
-      console.log(JSON.stringify(logEntry));
-      break;
-    default:
-      console.log(JSON.stringify(logEntry));
-  }
-}
+import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
 
-// Generate unique request ID for tracking
-function generateRequestId() {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Wrapper to automatically add worker context
+function log(level, message, data = {}, context = {}) {
+  return baseLog(level, message, data, { worker: 'recipe-recommendation-worker', ...context });
 }
 
 // Metrics collection utility

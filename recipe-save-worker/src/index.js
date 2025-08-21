@@ -3,41 +3,14 @@
 
 import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
 import { calculateNutritionalFacts } from '../../shared/nutrition-calculator.js';
+import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
 
-// Utility function for structured logging
+// Wrapper to automatically add worker context
 function log(level, message, data = {}, context = {}) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level,
-    message,
-    ...data,
-    ...context
-  };
-  
-  // Use appropriate console method based on level
-  switch (level.toLowerCase()) {
-    case 'error':
-      console.error(JSON.stringify(logEntry));
-      break;
-    case 'warn':
-      console.warn(JSON.stringify(logEntry));
-      break;
-    case 'info':
-      console.log(JSON.stringify(logEntry));
-      break;
-    case 'debug':
-      console.log(JSON.stringify(logEntry));
-      break;
-    default:
-      console.log(JSON.stringify(logEntry));
-  }
+  return baseLog(level, message, data, { worker: 'recipe-save-worker', ...context });
 }
 
-// Generate unique request ID for tracking
-function generateRequestId() {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+
 
 // Parse recipe ingredients for nutrition calculation
 export function parseIngredientsForNutrition(ingredients) {
