@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
@@ -24,5 +25,12 @@ export default defineConfig({
     },
     include: ['tests/**/*.test.js', 'src/**/*.test.js'],
     setupFiles: ['./tests/setup.js']
+  },
+  resolve: {
+    alias: {
+      '../../shared/kv-storage.js': path.resolve(__dirname, '../shared/kv-storage.js'),
+      '../../shared/nutrition-calculator.js': path.resolve(__dirname, '../shared/nutrition-calculator.js'),
+      '../../shared/utility-functions.js': path.resolve(__dirname, '../shared/utility-functions.js')
+    }
   }
 });

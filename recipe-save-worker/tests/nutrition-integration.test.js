@@ -1,26 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RecipeSaver, parseIngredientsForNutrition } from '../src/index.js';
 
-// Mock the shared modules
-vi.mock('../../shared/kv-storage.js', () => ({
-  compressData: vi.fn().mockImplementation(async (data) => JSON.stringify(data)),
-  decompressData: vi.fn().mockImplementation(async (data) => JSON.parse(data)),
-  generateRecipeId: vi.fn().mockImplementation(async (url) => 'test-recipe-id')
-}));
+// Mock the shared modules with proper module factory functions
+vi.mock('../../shared/kv-storage.js', () => {
+  return {
+    compressData: vi.fn().mockImplementation(async (data) => JSON.stringify(data)),
+    decompressData: vi.fn().mockImplementation(async (data) => JSON.parse(data)),
+    generateRecipeId: vi.fn().mockImplementation(async (url) => 'test-recipe-id')
+  };
+});
 
-vi.mock('../../shared/nutrition-calculator.js', () => ({
-  calculateNutritionalFacts: vi.fn().mockImplementation(async (ingredients) => ({
-    calories: 200,
-    protein: 10,
-    carbohydrates: 30,
-    fat: 5
-  }))
-}));
+vi.mock('../../shared/nutrition-calculator.js', () => {
+  return {
+    calculateNutritionalFacts: vi.fn().mockImplementation(async (ingredients) => ({
+      calories: 200,
+      protein: 10,
+      carbohydrates: 30,
+      fat: 5
+    }))
+  };
+});
 
-// TODO: Fix these tests - they are failing in CI due to shared module dependencies
-// The tests work locally but fail in GitHub Actions because the shared modules
-// are not properly installed in the CI environment
-describe.skip('Nutrition Integration', () => {
+describe('Nutrition Integration', () => {
   let saver;
   let env;
   let state;
