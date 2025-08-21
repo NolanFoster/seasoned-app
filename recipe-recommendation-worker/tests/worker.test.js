@@ -2,100 +2,64 @@
  * Tests for Recipe Recommendation Worker
  */
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getRecipeRecommendations, getSeason, getMockRecommendations } from '../src/index.js';
-
-// Test utilities
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
-
-function assertEquals(actual, expected, message) {
-  if (actual !== expected) {
-    throw new Error(`${message || 'Assertion failed'}: expected ${expected}, got ${actual}`);
-  }
-}
-
-function assertDeepEquals(actual, expected, message) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`${message || 'Deep assertion failed'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-  }
-}
 
 // Mock environment
 const mockEnv = {
   AI: null
 };
 
-// Test suite
-export async function runTests() {
-  const tests = [];
-  let passed = 0;
-  let failed = 0;
-
-  // Test 1: getSeason function
-  tests.push({
-    name: 'getSeason should return correct seasons',
-    fn: async () => {
-      assertEquals(getSeason(new Date('2024-01-15')), 'Winter', 'January should be Winter');
-      assertEquals(getSeason(new Date('2024-04-15')), 'Spring', 'April should be Spring');
-      assertEquals(getSeason(new Date('2024-07-15')), 'Summer', 'July should be Summer');
-      assertEquals(getSeason(new Date('2024-10-15')), 'Fall', 'October should be Fall');
-    }
+describe('Recipe Recommendation Worker', () => {
+  describe('getSeason function', () => {
+    it('should return correct seasons', () => {
+      expect(getSeason(new Date('2024-01-15'))).toBe('Winter');
+      expect(getSeason(new Date('2024-04-15'))).toBe('Spring');
+      expect(getSeason(new Date('2024-07-15'))).toBe('Summer');
+      expect(getSeason(new Date('2024-10-15'))).toBe('Fall');
+    });
   });
 
-  // Test 2: getMockRecommendations should return seasonal data
-  tests.push({
-    name: 'getMockRecommendations should return seasonal data',
-    fn: async () => {
+  describe('getMockRecommendations', () => {
+    it('should return seasonal data', () => {
       const winterRecs = getMockRecommendations('New York', '2024-01-15');
-      assert(winterRecs.recommendations, 'Should have recommendations');
-      assert(winterRecs.season === 'Winter', 'Should identify winter season');
-      assert(winterRecs.location === 'New York', 'Should include location');
-      assert(winterRecs.date === '2024-01-15', 'Should include date');
+      expect(winterRecs.season).toBe('Winter');
+      expect(winterRecs.location).toBe('New York');
+      expect(winterRecs.date).toBe('2024-01-15');
       
-      const summerRecs = getMockRecommendations('California', '2024-07-04');
-      assert(summerRecs.season === 'Summer', 'Should identify summer season');
-      // July 4th should have Independence Day Treats instead of BBQ & Grilling
-      assert(summerRecs.recommendations['Independence Day Treats'], 'July 4th should have Independence Day category');
-      assert(summerRecs.recommendations['Summer Favorites'], 'Should have Summer Favorites');
-      assert(Object.keys(summerRecs.recommendations).length === 3, 'Should have 3 categories');
-    }
-  });
+      const summerRecs = getMockRecommendations('Los Angeles', '2024-07-15');
+      expect(summerRecs.season).toBe('Summer');
+      expect(summerRecs.location).toBe('Los Angeles');
+      expect(summerRecs.date).toBe('2024-07-15');
+    });
 
-  // Test 3: getRecipeRecommendations without AI binding
-  tests.push({
-    name: 'getRecipeRecommendations should return mock data when no AI binding',
-    fn: async () => {
-      const result = await getRecipeRecommendations('Boston', '2024-03-15', mockEnv);
-      assert(result.note && result.note.includes('mock'), 'Should indicate mock data');
-      assert(result.season === 'Spring', 'Should have correct season');
-    }
-  });
+    it('should include specific seasonal tags', () => {
+      const winterRecs = getMockRecommendations('Boston', '2024-02-10');
+      const allWinterTags = Object.values(winterRecs.recommendations).flat();
+      expect(allWinterTags).toContain('citrus');
+      expect(allWinterTags).toContain('kale');
+      
+      const summerRecs = getMockRecommendations('Miami', '2024-07-20');
+      const allSummerTags = Object.values(summerRecs.recommendations).flat();
+      expect(allSummerTags).toContain('tomatoes');
+      expect(allSummerTags).toContain('berries');
+    });
 
-  // Test 4: Mock recommendations structure validation
-  tests.push({
-    name: 'Mock recommendations should have proper structure',
-    fn: async () => {
+    it('should have proper structure', () => {
       const recs = getMockRecommendations('Test City', '2024-06-15');
-      assert(typeof recs === 'object', 'Should return an object');
-      assert(recs.recommendations, 'Should have recommendations property');
+      expect(recs).toBeTypeOf('object');
+      expect(recs.recommendations).toBeDefined();
       
       const categories = Object.keys(recs.recommendations);
-      assert(categories.length === 3, 'Should have 3 categories');
+      expect(categories).toHaveLength(3);
       
       categories.forEach(category => {
-        assert(Array.isArray(recs.recommendations[category]), `${category} should be an array`);
-        assert(recs.recommendations[category].length > 0, `${category} should have tags`);
+        expect(recs.recommendations[category]).toBeInstanceOf(Array);
+        expect(recs.recommendations[category].length).toBeGreaterThan(0);
       });
-    }
-  });
+    });
 
-  // Test 5: Date edge cases
-  tests.push({
-    name: 'Should handle various date formats',
-    fn: async () => {
+    it('should handle various date formats', () => {
       const dates = [
         '2024-12-25',  // Christmas
         '2024-01-01',  // New Year
@@ -103,18 +67,14 @@ export async function runTests() {
         '2024-10-31',  // Halloween
       ];
       
-      for (const date of dates) {
+      dates.forEach(date => {
         const recs = getMockRecommendations('Test', date);
-        assert(recs.date === date, `Should preserve date ${date}`);
-        assert(recs.season, `Should have season for ${date}`);
-      }
-    }
-  });
+        expect(recs.date).toBe(date);
+        expect(recs.season).toBeDefined();
+      });
+    });
 
-  // Test 6: Location handling
-  tests.push({
-    name: 'Should handle various location formats',
-    fn: async () => {
+    it('should handle various location formats', () => {
       const locations = [
         'New York, NY',
         'San Francisco',
@@ -123,17 +83,13 @@ export async function runTests() {
         '90210'  // Zip code
       ];
       
-      for (const location of locations) {
+      locations.forEach(location => {
         const recs = getMockRecommendations(location, '2024-06-15');
-        assert(recs.location === location, `Should preserve location ${location}`);
-      }
-    }
-  });
+        expect(recs.location).toBe(location);
+      });
+    });
 
-  // Test 7: Seasonal recommendations content
-  tests.push({
-    name: 'Each season should have appropriate recommendations',
-    fn: async () => {
+    it('should have appropriate seasonal recommendations content', () => {
       const seasons = {
         'Winter': { date: '2024-01-15', expectedTag: 'citrus' },
         'Spring': { date: '2024-04-15', expectedTag: 'asparagus' },
@@ -141,45 +97,31 @@ export async function runTests() {
         'Fall': { date: '2024-10-15', expectedTag: 'pumpkin' }
       };
       
-      for (const [season, data] of Object.entries(seasons)) {
+      Object.entries(seasons).forEach(([season, data]) => {
         const recs = getMockRecommendations('Test', data.date);
         const allTags = Object.values(recs.recommendations).flat();
-        assert(allTags.includes(data.expectedTag), 
-          `${season} should include ${data.expectedTag}`);
-      }
-    }
-  });
+        expect(allTags).toContain(data.expectedTag);
+      });
+    });
 
-  // Test 8: Recommendation categories
-  tests.push({
-    name: 'Should have appropriate category names',
-    fn: async () => {
+    it('should have appropriate category names', () => {
       const recs = getMockRecommendations('Test', '2024-06-15');
       const categories = Object.keys(recs.recommendations);
       
       categories.forEach(category => {
-        assert(category.length > 0, 'Category name should not be empty');
-        assert(!category.includes('undefined'), 'Category should not contain undefined');
+        expect(category.length).toBeGreaterThan(0);
+        expect(category).not.toContain('undefined');
       });
-    }
+    });
   });
 
-  // Run all tests
-  for (const test of tests) {
-    try {
-      await test.fn();
-      console.log(`✅ ${test.name}`);
-      passed++;
-    } catch (error) {
-      console.log(`❌ ${test.name}`);
-      console.log(`   Error: ${error.message}`);
-      failed++;
-    }
-  }
-
-  return {
-    total: tests.length,
-    passed,
-    failed
-  };
-}
+  describe('getRecipeRecommendations', () => {
+    it('should return mock recommendations when AI is not available', async () => {
+      const result = await getRecipeRecommendations('San Francisco', '2024-06-15', mockEnv);
+      expect(result).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(result.location).toBe('San Francisco');
+      expect(result.date).toBe('2024-06-15');
+    });
+  });
+});

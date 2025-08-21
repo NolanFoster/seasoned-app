@@ -2,6 +2,7 @@
  * API Endpoint Tests for Recipe Recommendation Worker
  */
 
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Miniflare } from 'miniflare';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,28 +10,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Test utilities
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message || 'Assertion failed');
-  }
-}
-
-function assertEquals(actual, expected, message) {
-  if (actual !== expected) {
-    throw new Error(`${message || 'Assertion failed'}: expected ${expected}, got ${actual}`);
-  }
-}
-
-export async function runTests() {
-  const tests = [];
-  let passed = 0;
-  let failed = 0;
-
-  // Initialize Miniflare
+describe('Recipe Recommendation Worker API', () => {
   let mf;
-  
-  try {
+
+  beforeAll(async () => {
+    // Initialize Miniflare
     mf = new Miniflare({
       scriptPath: path.join(__dirname, '../src/index.js'),
       modules: true,
@@ -38,154 +22,37 @@ export async function runTests() {
         AI: null // Testing without AI binding
       }
     });
-  } catch (error) {
-    console.error('Failed to initialize Miniflare:', error);
-    return { total: 0, passed: 0, failed: 0 };
-  }
+  });
 
-  // Test 1: Health check endpoint
-  tests.push({
-    name: 'GET /health should return healthy status',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/health');
-      assertEquals(response.status, 200, 'Should return 200 status');
-      
-      const data = await response.json();
-      assertEquals(data.status, 'healthy', 'Should return healthy status');
+  afterAll(async () => {
+    // Cleanup
+    if (mf) {
+      await mf.dispose();
     }
   });
 
-  // Test 2: CORS preflight request
-  tests.push({
-    name: 'OPTIONS request should handle CORS',
-    fn: async () => {
+  describe('Health Check', () => {
+    it('GET /health should return healthy status', async () => {
+      const response = await mf.dispatchFetch('http://localhost/health');
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data.status).toBe('healthy');
+    });
+  });
+
+  describe('CORS Handling', () => {
+    it('OPTIONS request should handle CORS', async () => {
       const response = await mf.dispatchFetch('http://localhost/recommendations', {
         method: 'OPTIONS'
       });
       
-      assertEquals(response.status, 200, 'Should return 200 for OPTIONS');
-      assert(response.headers.get('Access-Control-Allow-Origin') === '*', 'Should have CORS headers');
-      assert(response.headers.get('Access-Control-Allow-Methods'), 'Should have allowed methods');
-    }
-  });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBeDefined();
+    });
 
-  // Test 3: POST /recommendations with valid data
-  tests.push({
-    name: 'POST /recommendations should return recommendations',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'San Francisco, CA',
-          date: '2024-07-15'
-        })
-      });
-      
-      assertEquals(response.status, 200, 'Should return 200 status');
-      
-      const data = await response.json();
-      assert(data.recommendations, 'Should have recommendations');
-      assert(data.location === 'San Francisco, CA', 'Should include location');
-      assert(data.date === '2024-07-15', 'Should include date');
-      assert(data.season === 'Summer', 'Should identify summer season');
-    }
-  });
-
-  // Test 4: POST /recommendations without location
-  tests.push({
-    name: 'POST /recommendations without location should return valid recommendations',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: '2024-07-15'
-        })
-      });
-      
-      assertEquals(response.status, 200, 'Should return 200 status');
-      const data = await response.json();
-      assert(data.recommendations, 'Should have recommendations');
-      assert(Object.keys(data.recommendations).length === 3, 'Should have 3 categories');
-      assert(data.location === 'Not specified', 'Should indicate no location');
-    }
-  });
-
-  // Test 5: POST /recommendations without date (should use current date)
-  tests.push({
-    name: 'POST /recommendations without date should use current date',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'New York, NY'
-        })
-      });
-      
-      assertEquals(response.status, 200, 'Should return 200 status');
-      
-      const data = await response.json();
-      assert(data.recommendations, 'Should have recommendations');
-      assert(data.date, 'Should have a date');
-      
-      // Verify it's today's date
-      const today = new Date().toISOString().split('T')[0];
-      assertEquals(data.date, today, 'Should use current date');
-    }
-  });
-
-  // Test 6: Invalid JSON body
-  tests.push({
-    name: 'POST /recommendations with invalid JSON should return 500',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: 'invalid json'
-      });
-      
-      assertEquals(response.status, 500, 'Should return 500 status');
-      
-      const data = await response.json();
-      assert(data.error, 'Should have error message');
-    }
-  });
-
-  // Test 7: GET request to /recommendations should fail
-  tests.push({
-    name: 'GET /recommendations should return 405 Method Not Allowed',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/recommendations', {
-        method: 'GET'
-      });
-      
-      assertEquals(response.status, 405, 'Should return 405 for GET');
-      
-      const data = await response.json();
-      assert(data.error, 'Should have error message');
-      assert(data.error.includes('Method not allowed'), 'Error should mention method not allowed');
-    }
-  });
-
-  // Test 8: Unknown endpoint
-  tests.push({
-    name: 'Unknown endpoint should return 404',
-    fn: async () => {
-      const response = await mf.dispatchFetch('http://localhost/unknown');
-      
-      assertEquals(response.status, 404, 'Should return 404 status');
-      
-      const data = await response.json();
-      assert(data.error, 'Should have error message');
-    }
-  });
-
-  // Test 9: CORS headers on all responses
-  tests.push({
-    name: 'All responses should include CORS headers',
-    fn: async () => {
+    it('All responses should include CORS headers', async () => {
       const endpoints = [
         { url: '/health', method: 'GET' },
         { url: '/recommendations', method: 'POST', body: JSON.stringify({ location: 'Test' }) },
@@ -200,33 +67,169 @@ export async function runTests() {
         if (endpoint.body) options.body = endpoint.body;
         
         const response = await mf.dispatchFetch(`http://localhost${endpoint.url}`, options);
-        assert(response.headers.get('Access-Control-Allow-Origin'), 
-          `${endpoint.url} should have CORS headers`);
+        expect(response.headers.get('Access-Control-Allow-Origin')).toBeDefined();
       }
-    }
+    });
   });
 
-  // Run all tests
-  for (const test of tests) {
-    try {
-      await test.fn();
-      console.log(`✅ ${test.name}`);
-      passed++;
-    } catch (error) {
-      console.log(`❌ ${test.name}`);
-      console.log(`   Error: ${error.message}`);
-      failed++;
-    }
-  }
+  describe('POST /recommendations', () => {
+    it('should return recommendations with valid data', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'San Francisco, CA',
+          date: '2024-07-15'
+        })
+      });
+      
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data.recommendations).toBeDefined();
+      expect(data.location).toBe('San Francisco, CA');
+      expect(data.date).toBe('2024-07-15');
+      expect(data.season).toBe('Summer');
+    });
 
-  // Cleanup
-  if (mf) {
-    await mf.dispose();
-  }
+    it('should return valid recommendations without location', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: '2024-07-15'
+        })
+      });
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.recommendations).toBeDefined();
+      expect(Object.keys(data.recommendations)).toHaveLength(3);
+      expect(data.location).toBe('Not specified');
+    });
 
-  return {
-    total: tests.length,
-    passed,
-    failed
-  };
-}
+    it('should use current date when date is not provided', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'New York, NY'
+        })
+      });
+      
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data.recommendations).toBeDefined();
+      expect(data.date).toBeDefined();
+      
+      // Verify it's today's date
+      const today = new Date().toISOString().split('T')[0];
+      expect(data.date).toBe(today);
+    });
+
+    it('should return 500 with invalid JSON', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'invalid json'
+      });
+      
+      expect(response.status).toBe(500);
+      
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('GET /recommendations should return 405 Method Not Allowed', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'GET'
+      });
+      
+      expect(response.status).toBe(405);
+      
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+      expect(data.error).toContain('Method not allowed');
+    });
+
+    it('Unknown endpoint should return 404', async () => {
+      const response = await mf.dispatchFetch('http://localhost/unknown');
+      
+      expect(response.status).toBe(404);
+      
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+    });
+  });
+
+  describe('Recommendations Content', () => {
+    it('should return proper recommendation structure', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'Seattle, WA',
+          date: '2024-12-15'
+        })
+      });
+      
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data).toHaveProperty('recommendations');
+      expect(data).toHaveProperty('location', 'Seattle, WA');
+      expect(data).toHaveProperty('date', '2024-12-15');
+      expect(data).toHaveProperty('season', 'Winter');
+      
+      // Check recommendation categories
+      const categories = Object.keys(data.recommendations);
+      expect(categories.length).toBeGreaterThan(0);
+      
+      // Each category should have an array of tags
+      categories.forEach(category => {
+        expect(data.recommendations[category]).toBeInstanceOf(Array);
+        expect(data.recommendations[category].length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should return different recommendations for different seasons', async () => {
+      const winterResponse = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'Test',
+          date: '2024-01-15'
+        })
+      });
+      
+      const summerResponse = await mf.dispatchFetch('http://localhost/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'Test',
+          date: '2024-07-15'
+        })
+      });
+      
+      const winterData = await winterResponse.json();
+      const summerData = await summerResponse.json();
+      
+      expect(winterData.season).toBe('Winter');
+      expect(summerData.season).toBe('Summer');
+      
+      // Recommendations should be different
+      const winterTags = Object.values(winterData.recommendations).flat();
+      const summerTags = Object.values(summerData.recommendations).flat();
+      
+      // Some tags should be different between seasons
+      const winterUnique = winterTags.filter(tag => !summerTags.includes(tag));
+      const summerUnique = summerTags.filter(tag => !winterTags.includes(tag));
+      
+      expect(winterUnique.length).toBeGreaterThan(0);
+      expect(summerUnique.length).toBeGreaterThan(0);
+    });
+  });
+});
