@@ -48,6 +48,8 @@ jobs:
         npm test
     
     - name: Run tests with coverage
+      id: test-coverage
+      continue-on-error: true
       run: |
         cd recipe-save-worker
         npm run test:coverage
@@ -68,6 +70,133 @@ jobs:
         flags: recipe-save-worker
         name: recipe-save-worker-coverage
         fail_ci_if_error: false
+    
+    - name: Extract Coverage Information
+      id: coverage
+      if: matrix.node-version == '20.x' && always()
+      run: |
+        cd recipe-save-worker
+        
+        # Check if coverage directory exists
+        if [ -d "coverage" ] && [ -f "coverage/coverage-final.json" ]; then
+          echo "coverage_available=true" >> $GITHUB_OUTPUT
+          
+          # Extract coverage percentages from vitest output
+          coverage_output=$(npm run test:coverage 2>&1 || true)
+          
+          # Extract coverage values
+          lines=$(echo "$coverage_output" | grep -oP 'lines[^|]*\|\s*\K[0-9.]+(?=%)' | head -1 || echo "0")
+          functions=$(echo "$coverage_output" | grep -oP 'functions[^|]*\|\s*\K[0-9.]+(?=%)' | head -1 || echo "0")
+          branches=$(echo "$coverage_output" | grep -oP 'branches[^|]*\|\s*\K[0-9.]+(?=%)' | head -1 || echo "0")
+          statements=$(echo "$coverage_output" | grep -oP 'statements[^|]*\|\s*\K[0-9.]+(?=%)' | head -1 || echo "0")
+          
+          # Store coverage values
+          echo "coverage_lines=$lines" >> $GITHUB_OUTPUT
+          echo "coverage_functions=$functions" >> $GITHUB_OUTPUT
+          echo "coverage_branches=$branches" >> $GITHUB_OUTPUT
+          echo "coverage_statements=$statements" >> $GITHUB_OUTPUT
+          
+          # Check if coverage meets thresholds (80% for all)
+          if (( $(echo "$lines < 80" | bc -l) )) || \
+             (( $(echo "$functions < 80" | bc -l) )) || \
+             (( $(echo "$branches < 80" | bc -l) )) || \
+             (( $(echo "$statements < 80" | bc -l) )); then
+            echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
+          else
+            echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "coverage_available=false" >> $GITHUB_OUTPUT
+          echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Post PR Comment with Coverage
+      if: github.event_name == 'pull_request' && matrix.node-version == '20.x' && always()
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const coverageAvailable = '${{ steps.coverage.outputs.coverage_available }}' === 'true';
+          const coverageBelowThreshold = '${{ steps.coverage.outputs.coverage_below_threshold }}' === 'true';
+          
+          let comment = '## 📊 Recipe Save Worker Coverage Report\n\n';
+          
+          try {
+            if (coverageAvailable) {
+              comment += '### Coverage Metrics\n';
+              comment += '| Metric | Coverage | Threshold | Status |\n';
+              comment += '|--------|----------|-----------|--------|\n';
+              
+              const lines = '${{ steps.coverage.outputs.coverage_lines }}' || '0';
+              const functions = '${{ steps.coverage.outputs.coverage_functions }}' || '0';
+              const branches = '${{ steps.coverage.outputs.coverage_branches }}' || '0';
+              const statements = '${{ steps.coverage.outputs.coverage_statements }}' || '0';
+              
+              const formatStatus = (value) => parseFloat(value) >= 80 ? '✅' : '❌';
+              
+              comment += `| Lines | ${lines}% | 80% | ${formatStatus(lines)} |\n`;
+              comment += `| Functions | ${functions}% | 80% | ${formatStatus(functions)} |\n`;
+              comment += `| Branches | ${branches}% | 80% | ${formatStatus(branches)} |\n`;
+              comment += `| Statements | ${statements}% | 80% | ${formatStatus(statements)} |\n\n`;
+              
+              if (coverageBelowThreshold) {
+                comment += '❌ **Coverage is below the required thresholds**\n\n';
+                comment += '💡 _Please add more tests to improve coverage. The workflow will continue to post coverage reports even if thresholds are not met._\n\n';
+              } else {
+                comment += '✅ **Coverage meets all required thresholds**\n\n';
+              }
+            } else {
+              comment += '⚠️ **No coverage data available**\n\n';
+              comment += '_This may indicate that tests failed or coverage collection is not working properly._\n\n';
+            }
+            
+            comment += '---\n';
+            comment += '_Coverage thresholds are set to 80% for all metrics._\n';
+            comment += '_Coverage reports are posted on all PRs regardless of whether thresholds are met._';
+            
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user?.type === 'Bot' && comment.body?.includes('📊 Recipe Save Worker Coverage Report')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+              console.log('Updated existing coverage comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+              console.log('Created new coverage comment');
+            }
+            
+            console.log('Recipe Save Worker coverage comment posted successfully');
+          } catch (error) {
+            console.error('Failed to post coverage comment:', error);
+            console.log('This may be due to permissions. The coverage report is still available in the workflow summary.');
+          }
+    
+    - name: Check Test Results
+      if: matrix.node-version == '20.x'
+      run: |
+        # Fail the job if tests failed (not just coverage threshold)
+        if [ "${{ steps.test-coverage.outcome }}" = "failure" ]; then
+          echo "Tests failed"
+          exit 1
+        fi
 
   lint:
     runs-on: ubuntu-latest
