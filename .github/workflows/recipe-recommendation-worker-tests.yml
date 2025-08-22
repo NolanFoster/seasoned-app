@@ -71,14 +71,26 @@ jobs:
         # Look for lines like "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
         COVERAGE_LINE=$(echo "$COVERAGE_OUTPUT" | grep "All files" | head -1)
         
+        # Debug output
+        echo "Coverage line found: '$COVERAGE_LINE'"
+        
         if [ -n "$COVERAGE_LINE" ]; then
-          # Extract percentages using awk (more reliable than grep -P)
-          STATEMENTS=$(echo "$COVERAGE_LINE" | awk '{print $4}' | tr -d '|')
-          BRANCHES=$(echo "$COVERAGE_LINE" | awk '{print $5}' | tr -d '|')
-          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk '{print $6}' | tr -d '|')
-          LINES=$(echo "$COVERAGE_LINE" | awk '{print $7}' | tr -d '|')
+          # Extract percentages using awk, handling the pipe-separated format
+          # Format: "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
+          STATEMENTS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $3); print $3}')
+          BRANCHES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $4); print $4}')
+          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $5); print $5}')
+          LINES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $6); print $6}')
+          
+          # Debug output
+          echo "Parsed coverage values:"
+          echo "  Statements: $STATEMENTS%"
+          echo "  Branches: $BRANCHES%"
+          echo "  Functions: $FUNCTIONS%"
+          echo "  Lines: $LINES%"
         else
           # Fallback values if parsing fails
+          echo "Warning: Could not find coverage line in output"
           STATEMENTS="0"
           BRANCHES="0"
           FUNCTIONS="0"
