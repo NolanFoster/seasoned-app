@@ -66,8 +66,12 @@ export default {
           });
         }
 
+        // Extract the actual recipe data from the response
+        // The save worker returns data nested in a 'data' property
+        const recipeData = recipe.data || recipe;
+
         // Generate HTML page
-        const html = generateRecipeHTML(recipe);
+        const html = generateRecipeHTML(recipeData);
         
         return new Response(html, {
           headers: {

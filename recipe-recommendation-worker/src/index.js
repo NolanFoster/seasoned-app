@@ -519,47 +519,41 @@ async function getRecipeRecommendations(location, date, env, requestId) {
   const month = dateObj.toLocaleString('default', { month: 'long' });
   const season = getSeason(dateObj);
   
-  // Determine categories dynamically
+  // Determine context dynamically
   const hasLocation = location && location.trim() !== '';
-  const isPNW = hasLocation && (location.includes('Pacific') || location.includes('PNW') || 
-                location.includes('Seattle') || location.includes('Portland') || 
-                location.includes('Washington') || location.includes('Oregon'));
-  
   const upcomingHoliday = getUpcomingHoliday(date);
   
-  // Build category names
-  const category1 = `${season} Favorites`;
-  const category2 = hasLocation ? 
-    (isPNW ? 'PNW Specialties' : 'Local Specialties') : 
-    getContextualCategory(season, date, false);
-  const category3 = upcomingHoliday ? 
-    `${upcomingHoliday} Treats` : 
-    getContextualCategory(season, date, hasLocation);
-
   // Create enhanced prompt with more context
   const locationContext = hasLocation ? `Location: ${location}` : 'Location: Not specified';
   const promptContext = hasLocation ? 
-    'Consider local cuisine and regional ingredients.' : 
+    'Consider local cuisine, regional ingredients, and specialties specific to this area.' : 
     'Focus on practical, accessible recipes that work anywhere.';
   
   const holidayContext = upcomingHoliday ? 
-    `There's ${upcomingHoliday} coming up within a week.` : 
+    `There's ${upcomingHoliday} coming up within a week. Consider festive and celebratory dishes.` : 
     `The weather is typical for ${season.toLowerCase()}.`;
 
   const prompt = `${locationContext}, Date: ${date} (${month}, ${season})
 ${holidayContext} ${promptContext}
 
-Generate 3 recipe categories with 4 food/dish tags each:
-1. "${category1}" - seasonal ingredients and dishes perfect for ${season.toLowerCase()}
-2. "${category2}" - ${hasLocation ? 'regional specialties and local favorites' : 'practical everyday recipes'}
-3. "${category3}" - ${upcomingHoliday ? 'festive treats and celebration foods' : 'recipes that match the mood and weather'}
+Based on the context above, generate 3 creative and contextually appropriate recipe category names with 4 specific food/dish recommendations for each category. 
 
-Return ONLY this JSON format with actual food/dish names (not "tag1", "tag2"):
+Guidelines for category names:
+- Category 1: Should focus on seasonal ingredients and dishes perfect for ${season.toLowerCase()}
+- Category 2: Should be ${hasLocation ? 'related to local/regional specialties or cuisine styles' : 'focused on practical everyday recipes (e.g., quick meals, meal prep, budget-friendly)'}
+- Category 3: Should be ${upcomingHoliday ? 'themed around ' + upcomingHoliday + ' celebrations' : 'weather/mood appropriate for the current time'}
+
+Make the category names creative, descriptive, and appetizing. For example:
+- Instead of "Summer Favorites", try "Sun-Kissed Summer Delights" 
+- Instead of "Local Specialties", try specific regional names like "California Coastal Cuisine" or "Southern Comfort Classics"
+- Instead of "Holiday Treats", try festive names like "Thanksgiving Harvest Table" or "Easter Brunch Bliss"
+
+Return ONLY this JSON format with creative category names and actual food/dish names:
 {
   "recommendations": {
-    "${category1}": ["dish1", "dish2", "dish3", "dish4"],
-    "${category2}": ["dish1", "dish2", "dish3", "dish4"],
-    "${category3}": ["dish1", "dish2", "dish3", "dish4"]
+    "Creative Category Name 1": ["specific dish 1", "specific dish 2", "specific dish 3", "specific dish 4"],
+    "Creative Category Name 2": ["specific dish 1", "specific dish 2", "specific dish 3", "specific dish 4"],
+    "Creative Category Name 3": ["specific dish 1", "specific dish 2", "specific dish 3", "specific dish 4"]
   }
 }`;
 
@@ -584,7 +578,7 @@ Return ONLY this JSON format with actual food/dish names (not "tag1", "tag2"):
     // Use faster Llama 3.1 8B model instead of GPT-OSS-20B
     const response = await env.AI.run(modelName, {
       prompt: prompt,
-      max_tokens: 256  // Limit tokens for faster response
+      max_tokens: 512  // Increased to accommodate creative category names and detailed responses
     });
 
     const aiDuration = Date.now() - aiStartTime;
@@ -784,32 +778,33 @@ function getMockRecommendations(location, date, requestId) {
 
   const seasonalRecommendations = {
     'Spring': {
-      'Spring Favorites': ['asparagus', 'strawberries', 'peas', 'spring onions', 'fresh herbs'],
-      'Light & Fresh': ['salads', 'grilled vegetables', 'citrus', 'mint', 'basil'],
-      'Easter Specials': ['lamb', 'eggs', 'hot cross buns', 'carrot cake']
+      'Garden-Fresh Spring Delights': ['asparagus risotto', 'strawberry spinach salad', 'pea soup', 'spring onion tart'],
+      'Bright & Breezy Brunch': ['lemon ricotta pancakes', 'herb frittata', 'citrus salad', 'basil pesto pasta'],
+      'Easter Celebration Feast': ['honey glazed lamb', 'deviled eggs', 'hot cross buns', 'carrot cake']
     },
     'Summer': {
-      'Summer Favorites': ['tomatoes', 'corn', 'zucchini', 'berries', 'stone fruits'],
-      'BBQ & Grilling': ['burgers', 'kebabs', 'grilled fish', 'corn on the cob'],
-      'Refreshing Dishes': ['gazpacho', 'ice cream', 'cold salads', 'smoothies']
+      'Sun-Kissed Summer Harvest': ['heirloom tomato salad', 'grilled corn salad', 'zucchini fritters', 'berry cobbler'],
+      'Backyard BBQ Classics': ['smoky beef burgers', 'chicken kebabs', 'grilled salmon', 'elote corn'],
+      'Cool & Refreshing Treats': ['watermelon gazpacho', 'homemade ice cream', 'cucumber salad', 'fruit smoothies']
     },
     'Fall': {
-      'Fall Favorites': ['pumpkin', 'apples', 'squash', 'mushrooms', 'root vegetables'],
-      'Comfort Foods': ['soups', 'stews', 'casseroles', 'roasts', 'warm spices'],
-      'Halloween & Thanksgiving Treats': ['apple pie', 'pumpkin bread', 'cider', 'nuts']
+      'Autumn Harvest Bounty': ['pumpkin risotto', 'apple cider chicken', 'butternut squash soup', 'mushroom wellington'],
+      'Cozy Fireside Comfort': ['beef stew', 'chicken pot pie', 'shepherd\'s pie', 'spiced apple cider'],
+      'Halloween & Harvest Festival': ['pumpkin pie', 'apple crisp', 'spiced nuts', 'caramel apples']
     },
     'Winter': {
-      'Winter Favorites': ['citrus', 'kale', 'brussels sprouts', 'pomegranate', 'cranberries'],
-      'Warming Dishes': ['chili', 'hot chocolate', 'mulled wine', 'hearty soups'],
-      'Christmas & New Year Favorites': ['turkey', 'ham', 'cookies', 'gingerbread', 'eggnog']
+      'Winter Citrus Celebration': ['orange glazed duck', 'kale caesar salad', 'roasted brussels sprouts', 'pomegranate salad'],
+      'Hearth & Home Warmers': ['beef chili', 'hot chocolate', 'mulled wine', 'French onion soup'],
+      'Holiday Magic Menu': ['roast turkey', 'honey glazed ham', 'gingerbread cookies', 'eggnog cheesecake']
     }
   };
 
   // Build recommendations object dynamically
   let recommendations = {};
   
-  // First category: Seasonal Favorites
-  recommendations[`${season} Favorites`] = seasonalRecommendations[season][`${season} Favorites`];
+  // First category: Seasonal - use the first category from seasonalRecommendations
+  const seasonalCategoryName = Object.keys(seasonalRecommendations[season])[0];
+  recommendations[seasonalCategoryName] = seasonalRecommendations[season][seasonalCategoryName];
   
   // Second category: Location-based or practical
   if (!hasLocation) {
@@ -825,10 +820,11 @@ function getMockRecommendations(location, date, requestId) {
     recommendations[practicalCategory] = practicalRecipes[practicalCategory] || 
       ['simple pasta', 'rice bowls', 'sandwiches', 'salads'];
   } else if (isPNW) {
-    recommendations['PNW Specialties'] = ['salmon', 'dungeness crab', 'oysters', 'chanterelle mushrooms', 'blackberries'];
+    recommendations['Pacific Northwest Coastal Cuisine'] = ['cedar plank salmon', 'dungeness crab cakes', 'grilled oysters', 'chanterelle risotto'];
   } else {
-    // Generic local specialties
-    recommendations['Local Specialties'] = ['farmers market finds', 'regional bread', 'local cheese', 'seasonal produce'];
+    // Generic local specialties with creative name based on location
+    const locationName = location.split(',')[0].trim(); // Get first part of location
+    recommendations[`${locationName} Local Favorites`] = ['farmers market salad', 'artisan bread', 'local cheese plate', 'seasonal vegetable tart'];
   }
   
   // Third category: Holiday or contextual
@@ -842,7 +838,17 @@ function getMockRecommendations(location, date, requestId) {
       "Valentine's Day": ['chocolate fondue', 'red velvet cake', 'strawberry desserts', 'romantic dinner'],
       "New Year's Day": ['black-eyed peas', 'champagne cocktails', 'appetizers', 'brunch dishes']
     };
-    const holidayName = `${upcomingHoliday} Treats`;
+    // Create more creative holiday category names
+    const holidayNames = {
+      "Christmas": "Christmas Magic Menu",
+      "Thanksgiving": "Thanksgiving Harvest Table",
+      "Halloween": "Spooky Halloween Delights",
+      "Independence Day": "Fourth of July Celebration",
+      "Easter": "Easter Brunch Bliss",
+      "Valentine's Day": "Romantic Valentine Feast",
+      "New Year's Day": "New Year Fresh Start"
+    };
+    const holidayName = holidayNames[upcomingHoliday] || `${upcomingHoliday} Celebration`;
     recommendations[holidayName] = holidayRecipes[upcomingHoliday.replace("'s Day", "")] || 
       ['festive cookies', 'celebration cake', 'party appetizers', 'special drinks'];
   } else {

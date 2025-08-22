@@ -92,6 +92,43 @@ describe('Recipe View Worker', () => {
       expect(html).toContain('Recipe not found');
     });
 
+    it('should handle nested recipe data structure from save worker', async () => {
+      // Mock the fetch call with nested data structure (as returned by save worker)
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 'test123',
+          url: 'https://example.com/recipe',
+          data: {
+            name: 'Nested Recipe',
+            description: 'Recipe with nested data structure',
+            prepTime: 'PT20M',
+            cookTime: 'PT40M',
+            recipeYield: '6 servings',
+            ingredients: ['2 cups water', '1 tsp salt'],
+            instructions: ['Boil water', 'Add salt'],
+            image: 'https://example.com/nested-image.jpg',
+            url: 'https://example.com/recipe'
+          },
+          scrapedAt: '2025-08-22T00:00:00Z',
+          version: '1.1'
+        })
+      });
+
+      const request = new Request('https://test.com/recipe/test123');
+      const response = await worker.fetch(request, mockEnv);
+      
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/html');
+      
+      const html = await response.text();
+      expect(html).toContain('Nested Recipe');
+      expect(html).toContain('Recipe with nested data structure');
+      expect(html).toContain('2 cups water');
+      expect(html).toContain('Boil water');
+    });
+
     it('should handle API errors gracefully', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
