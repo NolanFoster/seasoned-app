@@ -22,19 +22,25 @@ Each rule is stored as an individual MDC (Markdown with metadata) file containin
 - **Purpose**: Maintains consistent code quality
 - Covers: Error handling, documentation, commit standards
 
-### 3. Automated Workflows (`automated-workflows.mdc`)
+### 3. Pull Request Guidelines (`pull-request-guidelines.mdc`)
+- **Type**: `always` - Applied to all operations
+- **Priority**: 1
+- **Purpose**: Keeps PRs focused on production code only
+- Covers: Excludes .md files, temporary scripts, one-time operations
+
+### 4. Automated Workflows (`automated-workflows.mdc`)
 - **Type**: `agent-requested` - AI decides when to apply
 - **Priority**: 3
 - **Purpose**: Suggests CI/CD and testing improvements
 - Covers: GitHub Actions, testing strategies
 
-### 4. Release Workflow (`release-workflow.mdc`)
+### 5. Release Workflow (`release-workflow.mdc`)
 - **Type**: `always` - Applied to all operations
 - **Priority**: 1
 - **Purpose**: Ensures proper release process from staging to production
 - Covers: Rebasing, merging, conflict resolution, rollback procedures
 
-### 5. Cloudflare Worker Setup (`cloudflare-worker-setup.mdc`)
+### 6. Cloudflare Worker Setup (`cloudflare-worker-setup.mdc`)
 - **Type**: `agent-requested` - AI decides when to apply
 - **Priority**: 2
 - **Purpose**: Guidelines for setting up new Cloudflare Workers with proper structure
