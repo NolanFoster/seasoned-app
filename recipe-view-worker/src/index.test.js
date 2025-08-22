@@ -42,7 +42,7 @@ describe('Recipe View Worker', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
     });
   });
 
@@ -207,6 +207,110 @@ describe('Recipe View Worker', () => {
         expect.stringContaining(`/recipe/get?id=${mockRecipeId}`),
         expect.any(Object)
       );
+    });
+  });
+
+  describe('POST /recipe/preview', () => {
+    it('should preview recipe without saving', async () => {
+      const recipeData = {
+        name: 'Preview Recipe',
+        description: 'A test recipe for preview',
+        ingredients: ['1 cup flour', '2 eggs'],
+        instructions: ['Mix ingredients', 'Bake at 350°F'],
+        prep_time: 'PT10M',
+        cook_time: 'PT20M',
+        total_time: 'PT30M'
+      };
+
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(recipeData)
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('text/html;charset=UTF-8');
+      
+      const html = await response.text();
+      expect(html).toContain('Preview Recipe');
+      expect(html).toContain('A test recipe for preview');
+      expect(html).toContain('1 cup flour');
+      expect(html).toContain('Mix ingredients');
+    });
+
+    it('should handle recipe data wrapped in data property', async () => {
+      const wrappedData = {
+        data: {
+          name: 'Wrapped Recipe',
+          ingredients: ['Sugar', 'Spice']
+        }
+      };
+
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(wrappedData)
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('Wrapped Recipe');
+    });
+
+    it('should return 400 for invalid content type', async () => {
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: 'not json'
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.error).toContain('Content-Type must be application/json');
+    });
+
+    it('should return 400 for invalid recipe data', async () => {
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(null)
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.error).toContain('Invalid recipe data');
+    });
+
+    it('should return 500 for JSON parse errors', async () => {
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: 'invalid json{'
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(500);
+      const error = await response.json();
+      expect(error.error).toContain('Failed to process recipe data');
     });
   });
 
