@@ -756,6 +756,7 @@ Return ONLY this JSON format with actual food/dish names (not "tag1", "tag2"):
   } catch (error) {
     const totalDuration = Date.now() - startTime;
     const { category, severity } = categorizeError(error);
+    const modelName = '@cf/meta/llama-3.1-8b-instruct'; // Define modelName for error handling
     
     metrics.increment('ai_fallback_to_mock', 1, { 
       reason: category,
