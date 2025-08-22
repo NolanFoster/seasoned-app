@@ -1,0 +1,16 @@
+﻿2025-08-22T02:12:05.1671579Z ##[group]Run npm ci
+2025-08-22T02:12:05.1671909Z [36;1mnpm ci[0m
+2025-08-22T02:12:05.1713259Z shell: /usr/bin/bash -e {0}
+2025-08-22T02:12:05.1713591Z ##[endgroup]
+2025-08-22T02:12:06.4573387Z npm warn EBADENGINE Unsupported engine {
+2025-08-22T02:12:06.4574151Z npm warn EBADENGINE   package: 'undici@7.14.0',
+2025-08-22T02:12:06.4574843Z npm warn EBADENGINE   required: { node: '>=20.18.1' },
+2025-08-22T02:12:06.4575634Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-08-22T02:12:06.4576229Z npm warn EBADENGINE }
+2025-08-22T02:12:09.1783017Z 
+2025-08-22T02:12:09.1783918Z added 130 packages, and audited 131 packages in 4s
+2025-08-22T02:12:09.1784405Z 
+2025-08-22T02:12:09.1784674Z 29 packages are looking for funding
+2025-08-22T02:12:09.1785179Z   run `npm fund` for details
+2025-08-22T02:12:09.1793862Z 
+2025-08-22T02:12:09.1794248Z found 0 vulnerabilities

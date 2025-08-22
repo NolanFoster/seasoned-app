@@ -1,3 +1,6 @@
+// Load crypto polyfill for Node.js test environment
+import './setup-crypto-polyfill.js';
+
 // Comprehensive test suite to achieve 85% code coverage
 import worker from '../src/recipe-clipper.js';
 import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
