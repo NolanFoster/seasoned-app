@@ -63,21 +63,64 @@ jobs:
       run: |
         echo "### Recipe Recommendation Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
         
-        # Extract coverage percentages
-        COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)
+        # Run coverage again to get the output for parsing
+        COVERAGE_OUTPUT=$(npm run coverage 2>&1)
         echo "$COVERAGE_OUTPUT"
         
-        # Parse coverage percentages (statements, branches, functions, lines)
-        STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s*:\s*\K[\d.]+' || echo "0")
-        BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s*:\s*\K[\d.]+' || echo "0")
-        FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s*:\s*\K[\d.]+' || echo "0")
-        LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s*:\s*\K[\d.]+' || echo "0")
+        # Parse coverage percentages from Vitest output
+        # Look for lines like "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
+        COVERAGE_LINE=$(echo "$COVERAGE_OUTPUT" | grep "All files" | head -1)
         
-        # Set coverage thresholds
-        THRESHOLD_STATEMENTS=40
-        THRESHOLD_BRANCHES=40
-        THRESHOLD_FUNCTIONS=40
-        THRESHOLD_LINES=40
+        # Debug output
+        echo "Coverage line found: '$COVERAGE_LINE'"
+        
+        if [ -n "$COVERAGE_LINE" ]; then
+          # Extract percentages using awk, handling the pipe-separated format
+          # Format: "All files |   88.06 |    81.11 |   94.11 |   88.06 | [uncovered lines]"
+          # Field positions: 1=filename, 2=statements, 3=branches, 4=functions, 5=lines, 6=uncovered
+          STATEMENTS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $2); print $2}')
+          BRANCHES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $3); print $3}')
+          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $4); print $4}')
+          LINES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $5); print $5}')
+          
+          # Debug output
+          echo "Parsed coverage values:"
+          echo "  Statements: $STATEMENTS%"
+          echo "  Branches: $BRANCHES%"
+          echo "  Functions: $FUNCTIONS%"
+          echo "  Lines: $LINES%"
+          
+          # Validate that we got numeric values
+          if ! [[ "$STATEMENTS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid statements value: '$STATEMENTS'"
+            STATEMENTS="0"
+          fi
+          if ! [[ "$BRANCHES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid branches value: '$BRANCHES'"
+            BRANCHES="0"
+          fi
+          if ! [[ "$FUNCTIONS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid functions value: '$FUNCTIONS'"
+            FUNCTIONS="0"
+          fi
+          if ! [[ "$LINES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid lines value: '$LINES'"
+            LINES="0"
+          fi
+        else
+          # Fallback values if parsing fails
+          echo "Warning: Could not find coverage line in output"
+          STATEMENTS="0"
+          BRANCHES="0"
+          FUNCTIONS="0"
+          LINES="0"
+        fi
+        
+        # Set coverage thresholds (updated to match our improved coverage)
+        THRESHOLD_STATEMENTS=80
+        THRESHOLD_BRANCHES=80
+        THRESHOLD_FUNCTIONS=80
+        THRESHOLD_LINES=80
         
         # Check if coverage meets thresholds
         COVERAGE_FAILED=false
@@ -186,11 +229,11 @@ jobs:
               const functions = parseFloat('${{ needs.test-worker.outputs.coverage_functions }}');
               const branches = parseFloat('${{ needs.test-worker.outputs.coverage_branches }}');
               
-              // Currently thresholds are 0% as tests are mocks
-              comment += `| Lines | ${lines}% | 0% | ${lines >= 0 ? '✅' : '❌'} |\n`;
-              comment += `| Statements | ${statements}% | 0% | ${statements >= 0 ? '✅' : '❌'} |\n`;
-              comment += `| Functions | ${functions}% | 0% | ${functions >= 0 ? '✅' : '❌'} |\n`;
-              comment += `| Branches | ${branches}% | 0% | ${branches >= 0 ? '✅' : '❌'} |\n`;
+              // Updated thresholds to match improved coverage
+              comment += `| Lines | ${lines}% | 80% | ${lines >= 80 ? '✅' : '❌'} |\n`;
+              comment += `| Statements | ${statements}% | 80% | ${statements >= 80 ? '✅' : '❌'} |\n`;
+              comment += `| Functions | ${functions}% | 80% | ${functions >= 80 ? '✅' : '❌'} |\n`;
+              comment += `| Branches | ${branches}% | 80% | ${branches >= 80 ? '✅' : '❌'} |\n`;
               comment += '\n';
               
               if (coverageBelowThreshold) {
@@ -203,7 +246,7 @@ jobs:
             }
             
             comment += '---\n';
-            comment += '_Coverage thresholds are set to 40% for all metrics._';
+            comment += '_Coverage thresholds are set to 80% for all metrics._';
             
             // Find and update or create comment
             const { data: comments } = await github.rest.issues.listComments({
