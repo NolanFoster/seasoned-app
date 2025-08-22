@@ -63,21 +63,33 @@ jobs:
       run: |
         echo "### Recipe Recommendation Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
         
-        # Extract coverage percentages
-        COVERAGE_OUTPUT=$(npx c8 report --reporter=text-summary)
+        # Run coverage again to get the output for parsing
+        COVERAGE_OUTPUT=$(npm run coverage 2>&1)
         echo "$COVERAGE_OUTPUT"
         
-        # Parse coverage percentages (statements, branches, functions, lines)
-        STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s*:\s*\K[\d.]+' || echo "0")
-        BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s*:\s*\K[\d.]+' || echo "0")
-        FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s*:\s*\K[\d.]+' || echo "0")
-        LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s*:\s*\K[\d.]+' || echo "0")
+        # Parse coverage percentages from Vitest output
+        # Look for lines like "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
+        COVERAGE_LINE=$(echo "$COVERAGE_OUTPUT" | grep "All files" | head -1)
         
-        # Set coverage thresholds
-        THRESHOLD_STATEMENTS=40
-        THRESHOLD_BRANCHES=40
-        THRESHOLD_FUNCTIONS=40
-        THRESHOLD_LINES=40
+        if [ -n "$COVERAGE_LINE" ]; then
+          # Extract percentages using awk (more reliable than grep -P)
+          STATEMENTS=$(echo "$COVERAGE_LINE" | awk '{print $4}' | tr -d '|')
+          BRANCHES=$(echo "$COVERAGE_LINE" | awk '{print $5}' | tr -d '|')
+          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk '{print $6}' | tr -d '|')
+          LINES=$(echo "$COVERAGE_LINE" | awk '{print $7}' | tr -d '|')
+        else
+          # Fallback values if parsing fails
+          STATEMENTS="0"
+          BRANCHES="0"
+          FUNCTIONS="0"
+          LINES="0"
+        fi
+        
+        # Set coverage thresholds (updated to match our improved coverage)
+        THRESHOLD_STATEMENTS=80
+        THRESHOLD_BRANCHES=80
+        THRESHOLD_FUNCTIONS=80
+        THRESHOLD_LINES=80
         
         # Check if coverage meets thresholds
         COVERAGE_FAILED=false
@@ -186,11 +198,11 @@ jobs:
               const functions = parseFloat('${{ needs.test-worker.outputs.coverage_functions }}');
               const branches = parseFloat('${{ needs.test-worker.outputs.coverage_branches }}');
               
-              // Currently thresholds are 0% as tests are mocks
-              comment += `| Lines | ${lines}% | 0% | ${lines >= 0 ? '✅' : '❌'} |\n`;
-              comment += `| Statements | ${statements}% | 0% | ${statements >= 0 ? '✅' : '❌'} |\n`;
-              comment += `| Functions | ${functions}% | 0% | ${functions >= 0 ? '✅' : '❌'} |\n`;
-              comment += `| Branches | ${branches}% | 0% | ${branches >= 0 ? '✅' : '❌'} |\n`;
+              // Updated thresholds to match improved coverage
+              comment += `| Lines | ${lines}% | 80% | ${lines >= 80 ? '✅' : '❌'} |\n`;
+              comment += `| Statements | ${statements}% | 80% | ${statements >= 80 ? '✅' : '❌'} |\n`;
+              comment += `| Functions | ${functions}% | 80% | ${functions >= 80 ? '✅' : '❌'} |\n`;
+              comment += `| Branches | ${branches}% | 80% | ${branches >= 80 ? '✅' : '❌'} |\n`;
               comment += '\n';
               
               if (coverageBelowThreshold) {
@@ -203,7 +215,7 @@ jobs:
             }
             
             comment += '---\n';
-            comment += '_Coverage thresholds are set to 40% for all metrics._';
+            comment += '_Coverage thresholds are set to 80% for all metrics._';
             
             // Find and update or create comment
             const { data: comments } = await github.rest.issues.listComments({
