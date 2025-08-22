@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
-// Simple utility function tests to improve coverage
-// These test basic HTML extraction and time conversion functions
+// Load crypto polyfill for Node.js test environment
+import './setup-crypto-polyfill.js';
+
+/**
+ * Test suite for utility functions used in recipe extraction
+ * Improves code coverage by testing previously untested functions
+ */
 
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
