@@ -164,10 +164,3 @@ jobs:
         echo "   Lines: $LINES% (threshold: $THRESHOLD_LINES%)"
         echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
     
-    - name: Upload Coverage Reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: auth-worker-coverage
-        path: auth-worker/coverage/
-        retention-days: 30
