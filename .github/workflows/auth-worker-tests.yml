@@ -57,19 +57,117 @@ jobs:
         cd auth-worker
         npm run test:coverage
     
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./auth-worker/coverage/lcov.info
-        flags: unittests
-        name: auth-worker-coverage
-        fail_ci_if_error: true
-    
-    - name: Check coverage thresholds
+    - name: Check Coverage Thresholds
+      id: coverage-check
+      working-directory: ./auth-worker
       run: |
-        cd auth-worker
-        coverage=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
-        if (( $(echo "$coverage < 80" | bc -l) )); then
-          echo "Coverage is below 80%"
+        echo "### Auth Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
+        
+        # Run coverage again to get the output for parsing
+        COVERAGE_OUTPUT=$(npm run coverage 2>&1)
+        echo "$COVERAGE_OUTPUT"
+        
+        # Parse coverage percentages from Vitest output
+        # Look for lines like "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
+        COVERAGE_LINE=$(echo "$COVERAGE_OUTPUT" | grep "All files" | head -1)
+        
+        # Debug output
+        echo "Coverage line found: '$COVERAGE_LINE'"
+        
+        if [ -n "$COVERAGE_LINE" ]; then
+          # Extract percentages using awk, handling the pipe-separated format
+          # Format: "All files |   88.06 |    81.11 |   94.11 |   88.06 | [uncovered lines]"
+          # Field positions: 1=filename, 2=statements, 3=branches, 4=functions, 5=lines, 6=uncovered
+          STATEMENTS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $2); print $2}')
+          BRANCHES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $3); print $3}')
+          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $4); print $4}')
+          LINES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $5); print $5}')
+          
+          # Debug output
+          echo "Parsed coverage values:"
+          echo "  Statements: $STATEMENTS%"
+          echo "  Branches: $BRANCHES%"
+          echo "  Functions: $FUNCTIONS%"
+          echo "  Lines: $LINES%"
+          
+          # Validate that we got numeric values
+          if ! [[ "$STATEMENTS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid statements value: '$STATEMENTS'"
+            STATEMENTS="0"
+          fi
+          if ! [[ "$BRANCHES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid branches value: '$BRANCHES'"
+            BRANCHES="0"
+          fi
+          if ! [[ "$FUNCTIONS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid functions value: '$FUNCTIONS'"
+            FUNCTIONS="0"
+          fi
+          if ! [[ "$LINES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid lines value: '$LINES'"
+            LINES="0"
+          fi
+        else
+          # Fallback values if parsing fails
+          echo "Warning: Could not find coverage line in output"
+          STATEMENTS="0"
+          BRANCHES="0"
+          FUNCTIONS="0"
+          LINES="0"
+        fi
+        
+        # Set coverage thresholds (updated to match our improved coverage)
+        THRESHOLD_STATEMENTS=80
+        THRESHOLD_BRANCHES=80
+        THRESHOLD_FUNCTIONS=80
+        THRESHOLD_LINES=80
+        
+        # Check if coverage meets thresholds
+        COVERAGE_FAILED=false
+        
+        if (( $(echo "$STATEMENTS < $THRESHOLD_STATEMENTS" | bc -l) )); then
+          echo "❌ Statement coverage ($STATEMENTS%) is below threshold ($THRESHOLD_STATEMENTS%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        if (( $(echo "$BRANCHES < $THRESHOLD_BRANCHES" | bc -l) )); then
+          echo "❌ Branch coverage ($BRANCHES%) is below threshold ($THRESHOLD_BRANCHES%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        if (( $(echo "$FUNCTIONS < $THRESHOLD_FUNCTIONS" | bc -l) )); then
+          echo "❌ Function coverage ($FUNCTIONS%) is below threshold ($THRESHOLD_FUNCTIONS%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        if (( $(echo "$LINES < $THRESHOLD_LINES" | bc -l) )); then
+          echo "❌ Line coverage ($LINES%) is below threshold ($THRESHOLD_LINES%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        # Set outputs before potential exit
+        echo "coverage_available=true" >> $GITHUB_OUTPUT
+        echo "coverage_lines=$LINES" >> $GITHUB_OUTPUT
+        echo "coverage_statements=$STATEMENTS" >> $GITHUB_OUTPUT
+        echo "coverage_functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+        echo "coverage_branches=$BRANCHES" >> $GITHUB_OUTPUT
+        
+        if [ "$COVERAGE_FAILED" = true ]; then
+          echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
           exit 1
         fi
+        
+        echo "✅ All coverage thresholds met!"
+        echo "   Statements: $STATEMENTS% (threshold: $THRESHOLD_STATEMENTS%)"
+        echo "   Branches: $BRANCHES% (threshold: $THRESHOLD_BRANCHES%)"
+        echo "   Functions: $FUNCTIONS% (threshold: $THRESHOLD_FUNCTIONS%)"
+        echo "   Lines: $LINES% (threshold: $THRESHOLD_LINES%)"
+        echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
+    
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: auth-worker-coverage
+        path: auth-worker/coverage/
+        retention-days: 30

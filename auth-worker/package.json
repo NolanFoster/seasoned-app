@@ -10,6 +10,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "coverage": "vitest run --coverage",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "tail": "wrangler tail",
