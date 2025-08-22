@@ -373,7 +373,7 @@
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .recipe-card-title {
@@ -395,21 +395,21 @@
 }
 
 .recipe-card-description {
-  color: #34495e;
+  color: rgba(52, 73, 94, 0.85);
   font-size: 0.9em;
   line-height: 1.4;
   margin: 0 0 15px 0;
   text-align: center;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
+  max-height: 3.6em;
+  overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .recipe-card-time {
-  color: #34495e;
+  color: rgba(52, 73, 94, 0.9);
   font-size: 0.9em;
   line-height: 1.4;
   margin: 0;
@@ -727,7 +727,7 @@
 
   .recipe-card-content {
     background: rgba(255, 255, 255, 0.01);
-    border-top: 1px solid rgba(255, 255, 255, 0.025);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .recipe-card-description {
