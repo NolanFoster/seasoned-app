@@ -18,9 +18,10 @@ describe('Recipe Recommendation Worker API', () => {
     // Create a temporary worker file that imports mocked utilities
     const fs = await import('fs');
     const workerContent = await fs.promises.readFile(path.join(__dirname, '../src/index.js'), 'utf-8');
-    const modifiedWorkerContent = workerContent.replace(
-      "import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';",
-      `// Mock utilities for testing
+    let modifiedWorkerContent = workerContent
+      .replace(
+        "import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';",
+        `// Mock utilities for testing
 const baseLog = function(level, message, data = {}, context = {}) {
   const timestamp = new Date().toISOString();
   const logEntry = {
@@ -52,7 +53,52 @@ const baseLog = function(level, message, data = {}, context = {}) {
 const generateRequestId = function() {
   return \`req_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
 };`
-    );
+      )
+      .replace(
+        "import { MetricsCollector } from '../../shared/metrics-collector.js';",
+        `// Mock MetricsCollector for testing
+class MetricsCollector {
+  constructor() {
+    this.metrics = new Map();
+  }
+
+  increment(metric, value = 1, tags = {}) {
+    const key = \`\${metric}:\${JSON.stringify(tags)}\`;
+    const current = this.metrics.get(key) || { count: 0, tags };
+    current.count += value;
+    this.metrics.set(key, current);
+  }
+
+  timing(metric, duration, tags = {}) {
+    const key = \`\${metric}_duration:\${JSON.stringify(tags)}\`;
+    const current = this.metrics.get(key) || { 
+      count: 0, 
+      total: 0, 
+      min: Infinity, 
+      max: -Infinity, 
+      tags 
+    };
+    current.count += 1;
+    current.total += duration;
+    current.min = Math.min(current.min, duration);
+    current.max = Math.max(current.max, duration);
+    current.avg = current.total / current.count;
+    this.metrics.set(key, current);
+  }
+
+  getMetrics() {
+    const result = {};
+    for (const [key, value] of this.metrics.entries()) {
+      result[key] = value;
+    }
+    return result;
+  }
+
+  reset() {
+    this.metrics.clear();
+  }
+}`
+      );
     
     // Write the modified worker to a temporary file
     tempWorkerPath = path.join(__dirname, '../src/index.test.js');
