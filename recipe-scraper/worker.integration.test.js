@@ -30,7 +30,8 @@ describe('Worker Integration Tests', () => {
     
     // Mock environment with KV namespace
     env = {
-      RECIPES_DB: {}
+      RECIPES_DB: {},
+      SAVE_WORKER_URL: 'http://save-worker.test'
     };
 
     // Mock context
@@ -45,6 +46,40 @@ describe('Worker Integration Tests', () => {
         text: jest.fn().mockResolvedValue('')
       }))
     }));
+
+    // Mock fetch for external API calls
+    global.fetch = jest.fn().mockImplementation((url) => {
+      // Mock responses for save-worker endpoints
+      if (url.includes('/recipes?limit=')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            recipes: [],
+            total: 0,
+            cursor: null
+          })
+        });
+      }
+      if (url.includes('/recipes?id=')) {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          json: () => Promise.resolve({ error: 'Recipe not found' })
+        });
+      }
+      if (url.includes('/recipe/delete')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true })
+        });
+      }
+      // Default response
+      return Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve(''),
+        json: () => Promise.resolve({})
+      });
+    });
   });
 
   const createRequest = (method, url, body = null) => {
@@ -156,9 +191,6 @@ describe('Worker Integration Tests', () => {
     });
 
     test('should handle recipe not found', async () => {
-      const { getRecipeFromKV } = await import('../shared/kv-storage.js');
-      getRecipeFromKV.mockResolvedValueOnce({ success: false });
-      
       const request = createRequest('GET', 'https://example.com/recipes?id=notfound');
       const response = await worker.fetch(request, env, ctx);
       const data = await response.json();

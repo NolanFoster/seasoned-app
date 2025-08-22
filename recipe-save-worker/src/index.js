@@ -2,40 +2,110 @@
 // This worker handles saving recipes to KV storage and synchronizing with the search database
 
 import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
+import { calculateNutritionalFacts } from '../../shared/nutrition-calculator.js';
+import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
 
-// Utility function for structured logging
+// Wrapper to automatically add worker context
 function log(level, message, data = {}, context = {}) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level,
-    message,
-    ...data,
-    ...context
-  };
-  
-  // Use appropriate console method based on level
-  switch (level.toLowerCase()) {
-    case 'error':
-      console.error(JSON.stringify(logEntry));
-      break;
-    case 'warn':
-      console.warn(JSON.stringify(logEntry));
-      break;
-    case 'info':
-      console.log(JSON.stringify(logEntry));
-      break;
-    case 'debug':
-      console.log(JSON.stringify(logEntry));
-      break;
-    default:
-      console.log(JSON.stringify(logEntry));
-  }
+  return baseLog(level, message, data, { worker: 'recipe-save-worker', ...context });
 }
 
-// Generate unique request ID for tracking
-function generateRequestId() {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+
+// Parse recipe ingredients for nutrition calculation
+export function parseIngredientsForNutrition(ingredients) {
+  if (!Array.isArray(ingredients)) {
+    return [];
+  }
+
+  return ingredients.map(ingredient => {
+    // Handle string ingredients
+    if (typeof ingredient === 'string') {
+      // Try to parse quantity, unit, and name from string
+      // Common patterns: "2 cups flour", "1 tablespoon olive oil", "3 large eggs", "1 1/2 cups sugar"
+      
+      // First try to match mixed numbers like "1 1/2"
+      const mixedMatch = ingredient.match(/^(\d+)\s+(\d+\/\d+)\s*(\w+)?\s+(.+)$/);
+      if (mixedMatch) {
+        const [, whole, fraction, unit, name] = mixedMatch;
+        const [num, denom] = fraction.split('/').map(n => parseFloat(n));
+        const quantityValue = parseFloat(whole) + (num / denom);
+        return {
+          name: name.trim(),
+          quantity: quantityValue,
+          unit: unit || 'unit'
+        };
+      }
+      
+      // Then try regular patterns
+      const match = ingredient.match(/^(\d+(?:\.\d+)?|\d+\/\d+)\s*(\w+)?\s+(.+)$/);
+      
+      if (match) {
+        const [, quantity, unit, name] = match;
+        // Handle fractions like "1/2"
+        let quantityValue;
+        if (quantity.includes('/')) {
+          const [num, denom] = quantity.split('/').map(n => parseFloat(n));
+          quantityValue = num / denom;
+        } else {
+          quantityValue = parseFloat(quantity);
+        }
+        return {
+          name: name.trim(),
+          quantity: quantityValue,
+          unit: unit || 'unit'
+        };
+      }
+      
+      // Try to match patterns like "pinch of salt", "dash of pepper"
+      const measureMatch = ingredient.match(/^(\w+)\s+of\s+(.+)$/i);
+      if (measureMatch) {
+        const [, measure, name] = measureMatch;
+        return {
+          name: name.trim(),
+          quantity: 1,
+          unit: measure.toLowerCase()
+        };
+      }
+      
+      // If no pattern matches, assume whole string is ingredient name with quantity 1
+      return {
+        name: ingredient.trim(),
+        quantity: 1,
+        unit: 'unit'
+      };
+    }
+    
+    // Handle object ingredients
+    if (typeof ingredient === 'object' && ingredient !== null) {
+      // If it already has the required structure
+      if (ingredient.name && ingredient.quantity) {
+        return {
+          name: ingredient.name,
+          quantity: parseFloat(ingredient.quantity) || 1,
+          unit: ingredient.unit || 'unit'
+        };
+      }
+      
+      // If it has a different structure, try to extract what we can
+      const name = ingredient.name || ingredient.ingredient || ingredient.item || JSON.stringify(ingredient);
+      const quantity = parseFloat(ingredient.quantity || ingredient.amount || ingredient.value || 1);
+      const unit = ingredient.unit || ingredient.measure || 'unit';
+      
+      return {
+        name: name,
+        quantity: quantity,
+        unit: unit
+      };
+    }
+    
+    // Fallback for any other type
+    return {
+      name: String(ingredient),
+      quantity: 1,
+      unit: 'unit'
+    };
+  }).filter(ing => ing.name && ing.quantity > 0); // Filter out invalid ingredients
 }
 
 // Durable Object class for handling atomic recipe saves
@@ -44,7 +114,7 @@ export class RecipeSaver {
     this.state = state;
     this.env = env;
     log('info', 'RecipeSaver Durable Object initialized', { 
-      objectId: this.state.id.toString(),
+      objectId: this.state.id ? this.state.id.toString() : 'test',
       env: Object.keys(env)
     });
   }
@@ -173,9 +243,13 @@ export class RecipeSaver {
           log('info', 'Processing recipe images', { requestId, recipeId });
           const processedRecipe = await this.processRecipeImages(recipe, recipeId, requestId);
 
+          // Calculate nutrition if missing
+          log('info', 'Checking for nutrition information', { requestId, recipeId });
+          const recipeWithNutrition = await this.calculateAndAddNutrition(processedRecipe, requestId);
+
           // Create recipe record with metadata
           const recipeRecord = {
-            ...processedRecipe,
+            ...recipeWithNutrition,
             id: recipeId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -328,13 +402,20 @@ export class RecipeSaver {
           const processedUpdates = await this.processRecipeImages(updates, recipeId, existingRecipe, requestId);
 
           // Apply updates
-          const updatedRecipe = {
+          let updatedRecipe = {
             ...existingRecipe,
             ...processedUpdates,
             id: recipeId, // Ensure ID doesn't change
             updatedAt: new Date().toISOString(),
             version: (existingRecipe.version || 1) + 1
           };
+
+          // Calculate nutrition if missing or ingredients changed
+          if (!updatedRecipe.nutrition || 
+              (updates.ingredients && JSON.stringify(updates.ingredients) !== JSON.stringify(existingRecipe.ingredients))) {
+            log('info', 'Recalculating nutrition due to missing data or ingredient changes', { requestId, recipeId });
+            updatedRecipe = await this.calculateAndAddNutrition(updatedRecipe, requestId);
+          }
 
           log('debug', 'Recipe updated with new data', { 
             requestId, 
@@ -979,6 +1060,118 @@ export class RecipeSaver {
       return null;
     } catch {
       return null;
+    }
+  }
+
+  async calculateAndAddNutrition(recipe, requestId = null) {
+    log('info', 'Starting nutrition calculation', { 
+      requestId, 
+      recipeId: recipe.id,
+      hasIngredients: !!recipe.ingredients,
+      ingredientCount: recipe.ingredients?.length || 0
+    });
+    const startTime = Date.now();
+
+    try {
+      // Check if nutrition info already exists
+      if (recipe.nutrition && Object.keys(recipe.nutrition).length > 0) {
+        log('info', 'Recipe already has nutrition information', { 
+          requestId, 
+          recipeId: recipe.id 
+        });
+        return recipe;
+      }
+
+      // Check if we have ingredients to calculate from
+      if (!recipe.ingredients || recipe.ingredients.length === 0) {
+        log('warn', 'No ingredients found for nutrition calculation', { 
+          requestId, 
+          recipeId: recipe.id 
+        });
+        return recipe;
+      }
+
+      // Check if API key is available
+      if (!this.env.FDC_API_KEY) {
+        log('warn', 'USDA API key not configured, skipping nutrition calculation', { 
+          requestId, 
+          recipeId: recipe.id 
+        });
+        return recipe;
+      }
+
+      // Parse ingredients for nutrition calculation
+      log('debug', 'Parsing ingredients for nutrition', { 
+        requestId, 
+        recipeId: recipe.id 
+      });
+      const parsedIngredients = parseIngredientsForNutrition(recipe.ingredients);
+      
+      if (parsedIngredients.length === 0) {
+        log('warn', 'No valid ingredients parsed for nutrition calculation', { 
+          requestId, 
+          recipeId: recipe.id 
+        });
+        return recipe;
+      }
+
+      log('info', 'Parsed ingredients for nutrition', { 
+        requestId, 
+        recipeId: recipe.id,
+        parsedCount: parsedIngredients.length,
+        totalIngredients: recipe.ingredients.length
+      });
+
+      // Get servings count (default to 1 if not specified)
+      const servings = parseInt(recipe.servings) || parseInt(recipe.yield) || 1;
+
+      // Calculate nutrition
+      log('info', 'Calling nutrition calculator', { 
+        requestId, 
+        recipeId: recipe.id,
+        servings,
+        ingredientCount: parsedIngredients.length
+      });
+      
+      const nutritionResult = await calculateNutritionalFacts(
+        parsedIngredients,
+        this.env.FDC_API_KEY,
+        servings
+      );
+
+      if (nutritionResult.success && nutritionResult.nutrition) {
+        // Add nutrition to recipe
+        recipe.nutrition = nutritionResult.nutrition;
+        
+        const duration = Date.now() - startTime;
+        log('info', 'Nutrition calculation completed successfully', {
+          requestId,
+          recipeId: recipe.id,
+          duration: `${duration}ms`,
+          processedIngredients: nutritionResult.processedIngredients,
+          totalIngredients: nutritionResult.totalIngredients
+        });
+      } else {
+        log('warn', 'Nutrition calculation returned no data', { 
+          requestId, 
+          recipeId: recipe.id,
+          error: nutritionResult.error
+        });
+      }
+
+      return recipe;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      log('error', 'Nutrition calculation failed', {
+        requestId,
+        recipeId: recipe.id,
+        error: error.message,
+        stack: error.stack,
+        duration: `${duration}ms`
+      });
+      
+      // Return recipe without nutrition on error
+      return recipe;
     }
   }
 

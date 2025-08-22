@@ -28,13 +28,7 @@ const CONFIG = {
       database: 'D1',
       features: ['Graph Search', 'FTS', 'Node/Edge Management']
     },
-    {
-      name: 'Clipped Recipe DB',
-      path: '../clipped-recipe-db-worker/src/index.js',
-      type: 'worker',
-      database: 'D1',
-      features: ['Recipe CRUD', 'Image Uploads', 'Health Monitoring']
-    },
+
     {
       name: 'Recipe Scraper',
       path: '../recipe-scraper/worker.js',

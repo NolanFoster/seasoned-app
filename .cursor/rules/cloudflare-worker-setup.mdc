@@ -1,0 +1,259 @@
+---
+name: Cloudflare Worker Setup
+glob: "**/*"
+priority: 2
+type: agent-requested
+description: Guidelines for setting up a new Cloudflare Worker with proper structure, testing, and CI/CD
+---
+
+# Cloudflare Worker Setup
+
+## Project Structure
+When creating a new Cloudflare Worker, follow this structure:
+
+```
+worker-name/
+├── src/
+│   ├── index.ts          # Main worker entry point
+│   ├── handlers/         # Request handlers
+│   ├── utils/            # Utility functions
+│   └── types/            # TypeScript type definitions
+├── tests/
+│   ├── unit/             # Unit tests
+│   ├── integration/      # Integration tests
+│   └── fixtures/         # Test fixtures and mocks
+├── wrangler.toml         # Worker configuration
+├── package.json
+├── tsconfig.json
+├── vitest.config.ts
+└── .github/
+    └── workflows/
+        └── test.yml      # Test and coverage workflow
+```
+
+## Wrangler Configuration (wrangler.toml)
+
+```toml
+name = "worker-name"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Observability settings
+[observability]
+enabled = true
+
+# Preview environment (development)
+[env.preview]
+name = "worker-name-preview"
+vars = { ENVIRONMENT = "preview" }
+
+[env.preview.observability]
+enabled = true
+
+# Production environment
+[env.production]
+name = "worker-name-production"
+vars = { ENVIRONMENT = "production" }
+
+[env.production.observability]
+enabled = true
+
+# Optional: Staging environment
+[env.staging]
+name = "worker-name-staging"
+vars = { ENVIRONMENT = "staging" }
+
+[env.staging.observability]
+enabled = true
+```
+
+## Vitest Configuration
+
+Create `vitest.config.ts`:
+
+```typescript
+import { defineConfig } from 'vitest/config'
+import path from 'path'
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'miniflare',
+    environmentOptions: {
+      wranglerConfigPath: './wrangler.toml',
+      packagePath: true,
+      wranglerConfigEnv: 'preview'
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
+      exclude: [
+        'node_modules/',
+        'tests/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/mockData.ts'
+      ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80
+      }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  }
+})
+```
+
+## Package.json Scripts
+
+Include these scripts in `package.json`:
+
+```json
+{
+  "scripts": {
+    "dev": "wrangler dev --env preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit",
+    "tail": "wrangler tail",
+    "tail:preview": "wrangler tail --env preview",
+    "tail:staging": "wrangler tail --env staging",
+    "tail:production": "wrangler tail --env production"
+  }
+}
+```
+
+## GitHub Workflow - Tests and Coverage
+
+Cloudflare handles deployments automatically through their GitHub integration. This workflow focuses on testing and code quality.
+
+Create `.github/workflows/test.yml`:
+
+```yaml
+name: Tests and Coverage
+
+on:
+  push:
+    branches: [ main, staging, develop ]
+  pull_request:
+    branches: [ main, staging ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run type checking
+      run: npm run type-check
+    
+    - name: Run tests with coverage
+      run: npm run test:coverage
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
+    
+    - name: Check coverage thresholds
+      run: |
+        coverage=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+        if (( $(echo "$coverage < 80" | bc -l) )); then
+          echo "Coverage is below 80%"
+          exit 1
+        fi
+```
+
+## Initial Setup Instructions
+
+1. **Create the worker project:**
+   ```bash
+   npm create cloudflare@latest worker-name -- --type=hello-world --ts --git
+   cd worker-name
+   ```
+
+2. **Install testing and development dependencies:**
+   ```bash
+   npm install -D vitest @vitest/ui @vitest/coverage-v8 miniflare @cloudflare/workers-types
+   npm install -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+   npm install -D typescript
+   ```
+
+3. **Set up Cloudflare GitHub Integration:**
+   - Go to your Cloudflare dashboard
+   - Navigate to Workers & Pages > Overview
+   - Connect your GitHub repository
+   - Configure branch deployments:
+     - `main` → production
+     - `staging` → staging
+     - `develop` → preview
+
+4. **Initialize local development:**
+   ```bash
+   # Start local development
+   npm run dev
+   
+   # Run tests
+   npm run test
+   
+   # Check coverage
+   npm run test:coverage
+   ```
+
+## Best Practices
+
+1. **Environment Variables:**
+   - Use `wrangler secret put` for sensitive data
+   - Keep environment-specific configs in wrangler.toml
+   - Never commit secrets to the repository
+
+2. **Testing:**
+   - Write unit tests for all utility functions
+   - Test request handlers with different scenarios
+   - Mock external dependencies properly
+   - Aim for >80% test coverage
+
+3. **Observability:**
+   - Use `console.log` for debugging (visible in `wrangler tail`)
+   - Implement structured logging
+   - Monitor worker analytics in Cloudflare dashboard
+   - Set up alerts for errors and performance issues
+
+4. **Development Workflow:**
+   - Create feature branches from `develop`
+   - Test locally with `npm run dev`
+   - Push to GitHub for automatic preview deployment
+   - Merge to staging branch for automatic staging deployment
+   - Only merge to main for automatic production deployment
+   - Cloudflare handles all deployments via GitHub integration
+
+5. **Security:**
+   - Validate all input data
+   - Use CORS headers appropriately
+   - Implement rate limiting if needed
+   - Regular dependency updates

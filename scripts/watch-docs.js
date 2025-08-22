@@ -20,7 +20,6 @@ const __dirname = dirname(__filename);
 // Configuration for files to watch
 const WATCH_PATHS = [
   '../recipe-search-db/src',
-  '../clipped-recipe-db-worker/src',
   '../recipe-scraper',
   '../clipper/src',
   '../shared',

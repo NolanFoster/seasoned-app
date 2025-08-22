@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Recipe Crawler
-A Python script that can pass a list of URLs to the recipe scraper
+A Python script that can pass a list of URLs to the recipe clipper
 """
 
 import requests
@@ -9,7 +9,7 @@ import json
 import time
 import argparse
 import sys
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, urljoin
 import logging
 import re
@@ -27,14 +27,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class RecipeCrawler:
-    def __init__(self, scraper_url: str = "https://recipe-scraper.nolanfoster.workers.dev"):
+    def __init__(self, clipper_url: str = "https://clipper.nolanfoster.workers.dev"):
         """
         Initialize the recipe crawler
         
         Args:
-            scraper_url: URL of the recipe scraper worker
+            clipper_url: URL of the recipe clipper worker
         """
-        self.scraper_url = scraper_url.rstrip('/')
+        self.clipper_url = clipper_url.rstrip('/')
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'RecipeCrawler/1.0',
@@ -47,18 +47,87 @@ class RecipeCrawler:
         self.failed_urls = []
         self.skipped_urls = []
     
+    def extract_jsonld_from_url(self, url: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Extract JSON-LD data from a URL
+        
+        Args:
+            url: URL to fetch and parse
+            
+        Returns:
+            List of JSON-LD objects if found, None otherwise
+        """
+        try:
+            response = self.session.get(url, timeout=10)
+            if response.status_code != 200:
+                logger.warning(f"Failed to fetch {url}: HTTP {response.status_code}")
+                return None
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            jsonld_scripts = soup.find_all('script', type='application/ld+json')
+            
+            if not jsonld_scripts:
+                return None
+            
+            jsonld_data = []
+            for script in jsonld_scripts:
+                try:
+                    data = json.loads(script.string)
+                    jsonld_data.append(data)
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse JSON-LD from {url}")
+                    continue
+            
+            return jsonld_data if jsonld_data else None
+            
+        except Exception as e:
+            logger.error(f"Error extracting JSON-LD from {url}: {e}")
+            return None
+    
+    def has_recipe_jsonld(self, jsonld_data: List[Dict[str, Any]]) -> bool:
+        """
+        Check if JSON-LD data contains Recipe schema
+        
+        Args:
+            jsonld_data: List of JSON-LD objects
+            
+        Returns:
+            bool: True if Recipe schema found
+        """
+        if not jsonld_data:
+            return False
+        
+        for item in jsonld_data:
+            # Check direct Recipe type
+            if isinstance(item, dict):
+                if item.get('@type') == 'Recipe':
+                    return True
+                
+                # Check for Recipe in @graph
+                if '@graph' in item:
+                    for graph_item in item['@graph']:
+                        if isinstance(graph_item, dict) and graph_item.get('@type') == 'Recipe':
+                            return True
+                
+                # Check for array of types
+                types = item.get('@type', [])
+                if isinstance(types, list) and 'Recipe' in types:
+                    return True
+        
+        return False
+    
     def health_check(self) -> bool:
         """
-        Check if the scraper is healthy
+        Check if the clipper is healthy
         
         Returns:
             bool: True if healthy, False otherwise
         """
         try:
-            response = self.session.get(f"{self.scraper_url}/health", timeout=10)
+            response = self.session.get(f"{self.clipper_url}/health", timeout=10)
             if response.status_code == 200:
                 health_data = response.json()
-                logger.info(f"Scraper health: {health_data.get('status', 'unknown')}")
+                logger.info(f"Clipper health: {health_data.get('status', 'unknown')}")
                 return health_data.get('status') == 'healthy'
             else:
                 logger.error(f"Health check failed with status {response.status_code}")
@@ -67,48 +136,71 @@ class RecipeCrawler:
             logger.error(f"Health check error: {e}")
             return False
     
-    def scrape_single_recipe(self, url: str, save: bool = True, avoid_overwrite: bool = False) -> Dict[str, Any]:
+    def scrape_single_recipe(self, url: str, save: bool = True, avoid_overwrite: bool = False, check_jsonld: bool = True) -> Dict[str, Any]:
         """
-        Scrape a single recipe
+        Clip a single recipe using the clipper service
         
         Args:
-            url: Recipe URL to scrape
+            url: Recipe URL to clip
             save: Whether to save to KV storage
             avoid_overwrite: Whether to avoid overwriting existing recipes
+            check_jsonld: Whether to check for JSON-LD before sending to clipper
             
         Returns:
-            Dict containing the scrape result
+            Dict containing the clip result
         """
         try:
-            params = {
-                'url': url,
-                'save': 'true' if save else 'false'
+            # Check for JSON-LD if requested
+            if check_jsonld:
+                logger.info(f"Checking for JSON-LD at {url}")
+                jsonld_data = self.extract_jsonld_from_url(url)
+                
+                if not self.has_recipe_jsonld(jsonld_data):
+                    logger.warning(f"No Recipe JSON-LD found at {url}, skipping")
+                    self.record_url_attempt(
+                        url=url,
+                        success=False,
+                        error="No Recipe JSON-LD found",
+                        skipped=True
+                    )
+                    return {
+                        'success': False,
+                        'error': 'No Recipe JSON-LD found',
+                        'url': url,
+                        'skipped': True
+                    }
+                
+                logger.info(f"Recipe JSON-LD found at {url}, sending to clipper")
+            # The clipper uses POST /clip endpoint
+            payload = {
+                'url': url
             }
             
-            if avoid_overwrite:
-                params['avoidOverwrite'] = 'true'
+            # Note: The clipper automatically saves to KV storage
+            # and the avoid_overwrite logic may need to be handled differently
             
-            response = self.session.get(f"{self.scraper_url}/scrape", params=params, timeout=30)
+            response = self.session.post(f"{self.clipper_url}/clip", json=payload, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
                 
                 # Record the attempt
-                if result.get('results') and len(result['results']) > 0:
-                    scrape_result = result['results'][0]
+                # The clipper returns the recipe data directly, not in a 'results' array
+                if 'name' in result:  # Check if we got valid recipe data
                     self.record_url_attempt(
                         url=url,
-                        success=scrape_result.get('success', False),
-                        error=scrape_result.get('error'),
-                        already_exists=scrape_result.get('alreadyExists', False)
+                        success=True,
+                        error=None,
+                        already_exists=False
                     )
                 else:
-                    self.record_url_attempt(url=url, success=False, error="No results returned")
+                    error_msg = result.get('error', 'No recipe data returned')
+                    self.record_url_attempt(url=url, success=False, error=error_msg)
                 
                 return result
             else:
                 error_msg = f"HTTP {response.status_code}"
-                logger.error(f"Failed to scrape {url}: {error_msg} - {response.text}")
+                logger.error(f"Failed to clip {url}: {error_msg} - {response.text}")
                 self.record_url_attempt(url=url, success=False, error=error_msg)
                 return {
                     'success': False,
@@ -118,7 +210,7 @@ class RecipeCrawler:
                 
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Error scraping {url}: {error_msg}")
+            logger.error(f"Error clipping {url}: {error_msg}")
             self.record_url_attempt(url=url, success=False, error=error_msg)
             return {
                 'success': False,
@@ -127,25 +219,26 @@ class RecipeCrawler:
             }
     
     def scrape_multiple_recipes(self, urls: List[str], save: bool = True, 
-                              avoid_overwrite: bool = False, delay: float = 1.0) -> List[Dict[str, Any]]:
+                              avoid_overwrite: bool = False, delay: float = 1.0, check_jsonld: bool = True) -> List[Dict[str, Any]]:
         """
-        Scrape multiple recipes with optional delay between requests
+        Clip multiple recipes with optional delay between requests
         
         Args:
-            urls: List of recipe URLs to scrape
+            urls: List of recipe URLs to clip
             save: Whether to save to KV storage
             avoid_overwrite: Whether to avoid overwriting existing recipes
             delay: Delay between requests in seconds
+            check_jsonld: Whether to check for JSON-LD before sending to clipper
             
         Returns:
-            List of scrape results
+            List of clip results
         """
         results = []
         
         for i, url in enumerate(urls, 1):
-            logger.info(f"Scraping recipe {i}/{len(urls)}: {url}")
+            logger.info(f"Processing recipe {i}/{len(urls)}: {url}")
             
-            result = self.scrape_single_recipe(url, save, avoid_overwrite)
+            result = self.scrape_single_recipe(url, save, avoid_overwrite, check_jsonld)
             results.append(result)
             
             # Add delay between requests (except for the last one)
@@ -156,74 +249,62 @@ class RecipeCrawler:
         return results
     
     def scrape_batch(self, urls: List[str], save: bool = True, 
-                    avoid_overwrite: bool = False) -> Dict[str, Any]:
+                    avoid_overwrite: bool = False, check_jsonld: bool = True) -> Dict[str, Any]]:
         """
-        Scrape multiple recipes in a single batch request
+        Clip multiple recipes in a single batch request
+        
+        Note: The clipper doesn't support batch processing natively,
+        so this method processes URLs sequentially.
         
         Args:
-            urls: List of recipe URLs to scrape
+            urls: List of recipe URLs to clip
             save: Whether to save to KV storage
             avoid_overwrite: Whether to avoid overwriting existing recipes
+            check_jsonld: Whether to check for JSON-LD before sending to clipper
             
         Returns:
             Dict containing batch results
         """
         try:
-            payload = {
-                'urls': urls,
-                'save': save,
-                'avoidOverwrite': avoid_overwrite
+            # The clipper doesn't support batch processing,
+            # so we'll process URLs one by one and collect results
+            results = []
+            
+            for url in urls:
+                logger.info(f"Batch processing: {url}")
+                result = self.scrape_single_recipe(url, save, avoid_overwrite, check_jsonld)
+                results.append({
+                    'url': url,
+                    'success': result.get('name') is not None,
+                    'error': result.get('error'),
+                    'data': result if 'name' in result else None
+                })
+            
+            # Return results in the expected format
+            return {
+                'success': True,
+                'results': results
             }
-            
-            response = self.session.post(f"{self.scraper_url}/scrape", 
-                                       json=payload, timeout=60)
-            
-            if response.status_code == 200:
-                result = response.json()
-                
-                # Record attempts for each URL in the batch
-                if result.get('results'):
-                    for scrape_result in result['results']:
-                        url = scrape_result.get('url', 'unknown')
-                        self.record_url_attempt(
-                            url=url,
-                            success=scrape_result.get('success', False),
-                            error=scrape_result.get('error'),
-                            already_exists=scrape_result.get('alreadyExists', False)
-                        )
-                
-                return result
-            else:
-                error_msg = f"HTTP {response.status_code}"
-                logger.error(f"Batch scrape failed: {error_msg} - {response.text}")
-                
-                # Record failed attempts for all URLs
-                for url in urls:
-                    self.record_url_attempt(url=url, success=False, error=error_msg)
-                
-                return {
-                    'success': False,
-                    'error': error_msg,
-                    'results': []
-                }
                 
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Batch scrape error: {error_msg}")
+            logger.error(f"Batch clip error: {error_msg}")
             
-            # Record failed attempts for all URLs
-            for url in urls:
-                self.record_url_attempt(url=url, success=False, error=error_msg)
+            # Record failed attempts for all URLs that weren't processed
+            # (some may have been processed before the error)
             
             return {
                 'success': False,
                 'error': error_msg,
-                'results': []
+                'results': results if 'results' in locals() else []
             }
     
     def get_recipe(self, recipe_id: str) -> Dict[str, Any]:
         """
         Get a specific recipe by ID
+        
+        Note: The clipper doesn't have a direct recipe retrieval endpoint.
+        This method is kept for compatibility but may not function with the clipper.
         
         Args:
             recipe_id: Recipe ID to retrieve
@@ -232,15 +313,11 @@ class RecipeCrawler:
             Dict containing the recipe data
         """
         try:
-            response = self.session.get(f"{self.scraper_url}/recipes", 
-                                      params={'id': recipe_id}, timeout=10)
+            # The clipper doesn't have a /recipes endpoint
+            # This would need to be handled by a different service
+            logger.warning("Recipe retrieval by ID is not supported by the clipper")
+            return {'error': 'Recipe retrieval by ID is not supported by the clipper'}
             
-            if response.status_code == 200:
-                return response.json()
-            else:
-                logger.error(f"Failed to get recipe {recipe_id}: {response.status_code}")
-                return {'error': f"HTTP {response.status_code}"}
-                
         except Exception as e:
             logger.error(f"Error getting recipe {recipe_id}: {e}")
             return {'error': str(e)}
@@ -249,6 +326,9 @@ class RecipeCrawler:
         """
         List all stored recipes
         
+        Note: The clipper doesn't have a recipe listing endpoint.
+        This method is kept for compatibility but may not function with the clipper.
+        
         Args:
             limit: Maximum number of recipes to return
             
@@ -256,15 +336,10 @@ class RecipeCrawler:
             Dict containing the list of recipes
         """
         try:
-            response = self.session.get(f"{self.scraper_url}/recipes", 
-                                      params={'limit': limit}, timeout=10)
+            # The clipper doesn't have a /recipes endpoint
+            logger.warning("Recipe listing is not supported by the clipper")
+            return {'error': 'Recipe listing is not supported by the clipper'}
             
-            if response.status_code == 200:
-                return response.json()
-            else:
-                logger.error(f"Failed to list recipes: {response.status_code}")
-                return {'error': f"HTTP {response.status_code}"}
-                
         except Exception as e:
             logger.error(f"Error listing recipes: {e}")
             return {'error': str(e)}
@@ -273,6 +348,9 @@ class RecipeCrawler:
         """
         Delete a recipe by ID
         
+        Note: The clipper doesn't have a recipe deletion endpoint.
+        This method is kept for compatibility but may not function with the clipper.
+        
         Args:
             recipe_id: Recipe ID to delete
             
@@ -280,16 +358,10 @@ class RecipeCrawler:
             bool: True if successful, False otherwise
         """
         try:
-            response = self.session.delete(f"{self.scraper_url}/recipes", 
-                                         params={'id': recipe_id}, timeout=10)
+            # The clipper doesn't have a delete endpoint
+            logger.warning("Recipe deletion is not supported by the clipper")
+            return False
             
-            if response.status_code == 200:
-                logger.info(f"Successfully deleted recipe {recipe_id}")
-                return True
-            else:
-                logger.error(f"Failed to delete recipe {recipe_id}: {response.status_code}")
-                return False
-                
         except Exception as e:
             logger.error(f"Error deleting recipe {recipe_id}: {e}")
             return False
@@ -599,7 +671,7 @@ class RecipeCrawler:
         
         history = {
             'metadata': {
-                'scraper_url': self.scraper_url,
+                'clipper_url': self.clipper_url,
                 'exported_at': time.strftime('%Y-%m-%d %H:%M:%S'),
                 'total_records': len(self.attempted_urls)
             },
@@ -655,17 +727,17 @@ def save_results_to_file(results: List[Dict[str, Any]], filename: str):
         logger.error(f"Error saving results to {filename}: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Recipe Crawler - Scrape recipes from URLs')
-    parser.add_argument('--scraper-url', default='https://recipe-scraper.nolanfoster.workers.dev',
-                       help='URL of the recipe scraper worker')
-    parser.add_argument('--urls', nargs='+', help='List of URLs to scrape')
+    parser = argparse.ArgumentParser(description='Recipe Crawler - Clip recipes from URLs using AI')
+    parser.add_argument('--clipper-url', default='https://clipper.nolanfoster.workers.dev',
+                       help='URL of the recipe clipper worker')
+    parser.add_argument('--urls', nargs='+', help='List of URLs to clip')
     parser.add_argument('--url-file', help='File containing URLs (one per line)')
     parser.add_argument('--output', default='crawl_results.json',
                        help='Output file for results (default: crawl_results.json)')
     parser.add_argument('--batch', action='store_true',
-                       help='Use batch mode (single request for all URLs)')
+                       help='Use batch mode (processes URLs sequentially)')
     parser.add_argument('--no-save', action='store_true',
-                       help='Don\'t save recipes to KV storage')
+                       help='Don\'t save recipes to KV storage (Note: clipper auto-saves)')
     parser.add_argument('--avoid-overwrite', action='store_true',
                        help='Avoid overwriting existing recipes')
     parser.add_argument('--delay', type=float, default=1.0,
@@ -673,7 +745,7 @@ def main():
     parser.add_argument('--health-check', action='store_true',
                        help='Perform health check before crawling')
     parser.add_argument('--list-recipes', action='store_true',
-                       help='List all stored recipes')
+                       help='List all stored recipes (Note: not supported by clipper)')
     parser.add_argument('--limit', type=int, default=50,
                        help='Limit for listing recipes (default: 50)')
     parser.add_argument('--base-url', help='Base URL to crawl for recipe discovery')
@@ -690,13 +762,13 @@ def main():
     args = parser.parse_args()
     
     # Initialize crawler
-    crawler = RecipeCrawler(args.scraper_url)
+    crawler = RecipeCrawler(args.clipper_url)
     
     # Health check
     if args.health_check:
         logger.info("Performing health check...")
         if not crawler.health_check():
-            logger.error("Scraper is not healthy. Exiting.")
+            logger.error("Clipper is not healthy. Exiting.")
             sys.exit(1)
         logger.info("Health check passed!")
     
@@ -738,13 +810,13 @@ def main():
     
     # Perform crawling
     if args.batch:
-        logger.info("Using batch mode...")
+        logger.info("Using batch mode (sequential processing)...")
         batch_result = crawler.scrape_batch(urls, not args.no_save, args.avoid_overwrite)
         if 'results' in batch_result:
             results = batch_result['results']
             save_results_to_file(results, args.output)
         else:
-            logger.error(f"Batch crawl failed: {batch_result.get('error', 'Unknown error')}")
+            logger.error(f"Batch clip failed: {batch_result.get('error', 'Unknown error')}")
             results = []
     else:
         logger.info("Using individual request mode...")

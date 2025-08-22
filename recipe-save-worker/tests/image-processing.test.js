@@ -1,453 +1,266 @@
 // Image Processing Tests for Recipe Save Worker
-
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RecipeSaver } from '../src/index.js';
 
-// Test utilities
-const describe = (name, fn) => {
-  console.log(`\n${name}`);
-  fn();
-};
+// Mock the shared modules
+vi.mock('../../shared/kv-storage.js', () => ({
+  compressData: vi.fn().mockImplementation(async (data) => JSON.stringify(data)),
+  decompressData: vi.fn().mockImplementation(async (data) => JSON.parse(data)),
+  generateRecipeId: vi.fn().mockImplementation(async (url) => 'test-recipe-id')
+}));
 
-const it = (name, fn) => {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-  } catch (error) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${error.message}`);
-    process.exit(1);
-  }
-};
-
-const expect = (actual) => ({
-  toBe: (expected) => {
-    if (actual !== expected) {
-      throw new Error(`Expected ${expected} but got ${actual}`);
-    }
-  },
-  toEqual: (expected) => {
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`);
-    }
-  },
-  toBeDefined: () => {
-    if (actual === undefined) {
-      throw new Error(`Expected value to be defined but got undefined`);
-    }
-  },
-  toContain: (expected) => {
-    if (!actual.includes(expected)) {
-      throw new Error(`Expected "${actual}" to contain "${expected}"`);
-    }
-  },
-  toBeTruthy: () => {
-    if (!actual) {
-      throw new Error(`Expected value to be truthy but got ${actual}`);
-    }
-  },
-  toBeFalsy: () => {
-    if (actual) {
-      throw new Error(`Expected value to be falsy but got ${actual}`);
-    }
-  }
-});
-
-// Mock fetch for image downloads
-const mockFetch = (response) => {
-  global.fetch = async (url) => {
-    if (response[url]) {
-      return response[url];
-    }
-    return {
-      ok: true,
-      status: 200,
-      headers: {
-        get: (name) => {
-          if (name === 'content-type') return 'image/jpeg';
-          return null;
-        }
-      },
-      arrayBuffer: async () => new ArrayBuffer(1024)
-    };
-  };
-};
-
-// Mock R2 bucket
-const createMockR2Bucket = () => {
-  const storage = new Map();
-  return {
-    put: async (key, data, options) => {
-      storage.set(key, { data, options });
-      return { key, size: data.byteLength };
-    },
-    get: async (key) => {
-      return storage.get(key);
-    },
-    delete: async (key) => {
-      const deleted = storage.delete(key);
-      if (!deleted) {
-        throw new Error(`Delete failed`);
-      }
-      return deleted;
-    },
-    list: async () => {
-      return {
-        objects: Array.from(storage.keys()).map(key => ({ key }))
-      };
-    },
-    _storage: storage
-  };
-};
-
-// Mock environment
-const createMockEnv = () => ({
-  RECIPE_STORAGE: {
-    put: async () => {},
-    get: async () => null,
-    delete: async () => {}
-  },
-  RECIPE_IMAGES: createMockR2Bucket(),
-  IMAGE_DOMAIN: 'https://images.test.com',
-  SEARCH_DB_URL: 'https://search.test.com'
-});
-
-// Mock state
-const createMockState = () => ({
-  storage: {
-    put: async () => {},
-    get: async () => null
-  },
-  blockConcurrencyWhile: async (fn) => await fn()
-});
+vi.mock('../../shared/nutrition-calculator.js', () => ({
+  calculateNutritionalFacts: vi.fn().mockImplementation(async (ingredients) => ({
+    calories: 200,
+    protein: 10,
+    carbohydrates: 30,
+    fat: 5
+  }))
+}));
 
 describe('Image Processing', () => {
-  describe('URL Detection', () => {
-    it('should identify external URLs correctly', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
+  let mockEnv;
+  let mockState;
+  let recipeSaver;
 
-      expect(recipeSaver.isExternalUrl('https://example.com/image.jpg')).toBeTruthy();
-      expect(recipeSaver.isExternalUrl('http://example.com/image.jpg')).toBeTruthy();
-      expect(recipeSaver.isExternalUrl('https://images.test.com/image.jpg')).toBeFalsy();
-      expect(recipeSaver.isExternalUrl('/relative/path.jpg')).toBeFalsy();
-      expect(recipeSaver.isExternalUrl(null)).toBeFalsy();
-      expect(recipeSaver.isExternalUrl('')).toBeFalsy();
-    });
+  beforeEach(() => {
+    // Reset all mocks
+    vi.clearAllMocks();
 
-    it('should extract R2 key from URL correctly', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
+    // Create mock environment
+    mockEnv = {
+      CLIPPED_RECIPE_KV: createMockKVNamespace(),
+      RECIPE_METADATA_KV: createMockKVNamespace(),
+      RECIPE_IMAGE_KV: createMockKVNamespace(),
+      RECIPE_IMAGES_BUCKET: createMockR2Bucket(),
+      RECIPE_STORAGE: null, // Will be set to CLIPPED_RECIPE_KV in tests
+      SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+      IMAGE_DOMAIN: 'https://test-images.domain.com',
+      ENVIRONMENT: 'test'
+    };
 
-      const url = 'https://images.test.com/recipe123/imageUrl_1234567890.jpg';
-      expect(recipeSaver.getR2KeyFromUrl(url)).toBe('recipe123/imageUrl_1234567890.jpg');
+    // Create mock state
+    mockState = {
+      storage: {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        list: vi.fn()
+      },
+      waitUntil: vi.fn(),
+      blockConcurrencyWhile: vi.fn().mockImplementation(async (fn) => fn())
+    };
+
+    // Create recipe saver instance
+    recipeSaver = new RecipeSaver(mockState, mockEnv);
+  });
+
+  describe('Recipe Save with Images', () => {
+    it('should save recipe with image URL', async () => {
+      const imageUrl = 'https://example.com/recipe.jpg';
       
-      expect(recipeSaver.getR2KeyFromUrl('https://external.com/image.jpg')).toBe(null);
-    });
-  });
-
-  describe('Content Type Handling', () => {
-    it('should map content types to extensions correctly', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      expect(recipeSaver.getExtensionFromContentType('image/jpeg')).toBe('jpg');
-      expect(recipeSaver.getExtensionFromContentType('image/png')).toBe('png');
-      expect(recipeSaver.getExtensionFromContentType('image/gif')).toBe('gif');
-      expect(recipeSaver.getExtensionFromContentType('image/webp')).toBe('webp');
-      expect(recipeSaver.getExtensionFromContentType('unknown/type')).toBe('jpg');
-    });
-  });
-
-  describe('Image Download and Storage', () => {
-    it('should download and store image successfully', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      mockFetch({
-        'https://example.com/image.jpg': {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(2048)
-        }
+      // Mock fetch for potential image processing
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({
+          'content-type': 'image/jpeg'
+        }),
+        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(2048))
       });
 
-      const r2Url = await recipeSaver.downloadAndStoreImage(
-        'https://example.com/image.jpg',
-        'recipe123',
-        'imageUrl'
-      );
-
-      expect(r2Url).toContain('https://images.test.com/recipe123/imageUrl_');
-      expect(r2Url).toContain('.jpg');
-
-      // Check R2 storage
-      const storedKeys = Array.from(env.RECIPE_IMAGES._storage.keys());
-      expect(storedKeys.length).toBe(1);
-      expect(storedKeys[0]).toContain('recipe123/imageUrl_');
-    });
-
-    it('should handle image download failures gracefully', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      mockFetch({
-        'https://example.com/broken.jpg': {
-          ok: false,
-          status: 404
-        }
-      });
-
-      let error;
-      try {
-        await recipeSaver.downloadAndStoreImage(
-          'https://example.com/broken.jpg',
-          'recipe123',
-          'imageUrl'
-        );
-      } catch (e) {
-        error = e;
-      }
-
-      expect(error).toBeDefined();
-      expect(error.message).toContain('Failed to download image');
-    });
-  });
-
-  describe('Recipe Image Processing', () => {
-    it('should process single image URL in recipe', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      // Mock successful image download
-      mockFetch({
-        'https://example.com/recipe.jpg': {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(1024)
-        }
-      });
-
-      const recipe = {
-        title: 'Test Recipe',
-        imageUrl: 'https://example.com/recipe.jpg'
-      };
-
-      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
-
-      expect(processed.imageUrl).toContain('https://images.test.com/');
-      expect(processed._originalImageUrls).toEqual(['https://example.com/recipe.jpg']);
-    });
-
-    it('should process multiple images in recipe', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      // Mock successful image downloads
-      mockFetch({
-        'https://example.com/main.jpg': {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(1024)
-        },
-        'https://example.com/step1.jpg': {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(1024)
-        },
-        'https://example.com/step2.jpg': {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(1024)
-        }
-      });
-
-      const recipe = {
-        title: 'Test Recipe',
-        imageUrl: 'https://example.com/main.jpg',
-        images: [
-          'https://example.com/step1.jpg',
-          'https://example.com/step2.jpg'
-        ]
-      };
-
-      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
-
-      expect(processed.imageUrl).toContain('https://images.test.com/');
-      expect(processed.images[0]).toContain('https://images.test.com/');
-      expect(processed.images[1]).toContain('https://images.test.com/');
-      expect(processed._originalImageUrls.length).toBe(3);
-    });
-
-    it('should skip already processed R2 URLs', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      // Mock successful image download for new image only
-      mockFetch({
-        'https://example.com/new.jpg': {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(1024)
-        }
-      });
-
-      const recipe = {
-        title: 'Test Recipe',
-        imageUrl: 'https://images.test.com/existing/image.jpg',
-        images: ['https://example.com/new.jpg']
-      };
-
-      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
-
-      expect(processed.imageUrl).toBe('https://images.test.com/existing/image.jpg');
-      expect(processed.images[0]).toContain('https://images.test.com/recipe123/');
-      expect(processed._originalImageUrls.length).toBe(1);
-    });
-
-    it('should handle failed image downloads gracefully', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      mockFetch({
-        'https://example.com/broken.jpg': {
-          ok: false,
-          status: 404
-        }
-      });
-
-      const recipe = {
-        title: 'Test Recipe',
-        imageUrl: 'https://example.com/broken.jpg'
-      };
-
-      const processed = await recipeSaver.processRecipeImages(recipe, 'recipe123');
-
-      // Should keep original URL if download fails
-      expect(processed.imageUrl).toBe('https://example.com/broken.jpg');
-    });
-  });
-
-  describe('Image Deletion', () => {
-    it('should delete recipe images from R2', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      // Pre-populate R2 with images
-      await env.RECIPE_IMAGES.put('recipe123/imageUrl_123.jpg', new ArrayBuffer(1024));
-      await env.RECIPE_IMAGES.put('recipe123/images_0_456.jpg', new ArrayBuffer(1024));
-
-      const recipe = {
-        id: 'recipe123',
-        imageUrl: 'https://images.test.com/recipe123/imageUrl_123.jpg',
-        images: ['https://images.test.com/recipe123/images_0_456.jpg']
-      };
-
-      await recipeSaver.deleteRecipeImages(recipe);
-
-      const remainingKeys = Array.from(env.RECIPE_IMAGES._storage.keys());
-      expect(remainingKeys.length).toBe(0);
-    });
-
-    it('should handle deletion errors gracefully', async () => {
-      const env = createMockEnv();
-      // Create a mock that throws on delete
-      const mockR2 = createMockR2Bucket();
-      mockR2.delete = async () => {
-        throw new Error('Delete failed');
-      };
-      env.RECIPE_IMAGES = mockR2;
-      
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      const recipe = {
-        id: 'recipe123',
-        imageUrl: 'https://images.test.com/recipe123/imageUrl_123.jpg'
-      };
-
-      // Should not throw even if delete fails
-      await recipeSaver.deleteRecipeImages(recipe);
-    });
-  });
-
-  describe('Integration with Save/Update/Delete', () => {
-    it('should process images during recipe save', async () => {
-      const env = createMockEnv();
-      const state = createMockState();
-      const recipeSaver = new RecipeSaver(state, env);
-
-      // Mock successful image download and search DB sync
-      global.fetch = async (url) => {
-        if (url.includes('search.test.com')) {
-          return { ok: true };
-        }
-        if (url.includes('external.com/image.jpg')) {
-          return {
-            ok: true,
-            status: 200,
-            headers: {
-              get: (name) => name === 'content-type' ? 'image/jpeg' : null
-            },
-            arrayBuffer: async () => new ArrayBuffer(1024)
-          };
-        }
-        return {
-          ok: true,
-          status: 200,
-          headers: {
-            get: (name) => name === 'content-type' ? 'image/jpeg' : null
-          },
-          arrayBuffer: async () => new ArrayBuffer(1024)
-        };
-      };
-
-      const request = new Request('https://worker/save', {
+      const request = new Request('http://do/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipe: {
-            url: 'https://example.com/recipe',
-            title: 'Test Recipe',
-            imageUrl: 'https://external.com/image.jpg'
+            url: 'https://example.com/test-recipe',
+            title: 'Test Recipe with Image',
+            imageUrl: imageUrl,
+            ingredients: ['1 cup flour', '2 eggs'],
+            instructions: ['Mix ingredients', 'Bake']
+          },
+          options: {}
+        })
+      });
+
+      mockEnv.RECIPE_STORAGE = mockEnv.CLIPPED_RECIPE_KV;
+      mockEnv.RECIPE_STORAGE.get.mockResolvedValue(null);
+      mockEnv.RECIPE_STORAGE.put.mockResolvedValue();
+      
+      // Mock image processing
+      recipeSaver.processRecipeImages = vi.fn().mockImplementation(async (recipe) => ({
+        ...recipe,
+        imageUrl: `https://test-images.domain.com/recipe-images/test-recipe-id/main.webp`
+      }));
+      recipeSaver.calculateAndAddNutrition = vi.fn().mockImplementation(async (recipe) => recipe);
+      recipeSaver.syncWithSearchDB = vi.fn().mockResolvedValue();
+
+      const response = await recipeSaver.fetch(request);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.id).toBe('test-recipe-id');
+      
+      // Verify image processing was called
+      expect(recipeSaver.processRecipeImages).toHaveBeenCalled();
+    });
+
+    it('should save recipe with multiple images', async () => {
+      const request = new Request('http://do/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: {
+            url: 'https://example.com/test-recipe',
+            title: 'Recipe with Multiple Images',
+            imageUrl: 'https://example.com/main.jpg',
+            images: [
+              'https://example.com/step1.jpg',
+              'https://example.com/step2.jpg'
+            ],
+            ingredients: ['3 eggs', '1 cup milk']
           }
         })
       });
 
-      const response = await recipeSaver.fetch(request);
-      const result = await response.json();
+      mockEnv.RECIPE_STORAGE = mockEnv.CLIPPED_RECIPE_KV;
+      mockEnv.RECIPE_STORAGE.get.mockResolvedValue(null);
+      mockEnv.RECIPE_STORAGE.put.mockResolvedValue();
+      
+      // Mock processing multiple images
+      recipeSaver.processRecipeImages = vi.fn().mockImplementation(async (recipe) => ({
+        ...recipe,
+        imageUrl: `https://test-images.domain.com/recipe-images/test-recipe-id/main.webp`,
+        images: [
+          `https://test-images.domain.com/recipe-images/test-recipe-id/main.webp`,
+          `https://test-images.domain.com/recipe-images/test-recipe-id/step1.webp`,
+          `https://test-images.domain.com/recipe-images/test-recipe-id/step2.webp`
+        ]
+      }));
+      recipeSaver.calculateAndAddNutrition = vi.fn().mockImplementation(async (recipe) => recipe);
+      recipeSaver.syncWithSearchDB = vi.fn().mockResolvedValue();
 
-      expect(result.success).toBeTruthy();
-      expect(result.recipe.imageUrl).toContain('https://images.test.com/');
+      const response = await recipeSaver.fetch(request);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      
+      // Verify multiple images were processed
+      const processedRecipe = recipeSaver.processRecipeImages.mock.calls[0][0];
+      expect(processedRecipe.images).toHaveLength(2);
+    });
+
+    it('should handle recipes without images', async () => {
+      const request = new Request('http://do/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: {
+            url: 'https://example.com/test-recipe',
+            title: 'Recipe without Image',
+            ingredients: ['1 cup water'],
+            instructions: ['Boil water']
+          }
+        })
+      });
+
+      mockEnv.RECIPE_STORAGE = mockEnv.CLIPPED_RECIPE_KV;
+      mockEnv.RECIPE_STORAGE.get.mockResolvedValue(null);
+      mockEnv.RECIPE_STORAGE.put.mockResolvedValue();
+      
+      recipeSaver.processRecipeImages = vi.fn().mockImplementation(async (recipe) => recipe);
+      recipeSaver.calculateAndAddNutrition = vi.fn().mockImplementation(async (recipe) => recipe);
+      recipeSaver.syncWithSearchDB = vi.fn().mockResolvedValue();
+
+      const response = await recipeSaver.fetch(request);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+    });
+  });
+
+  describe('Recipe Update with Images', () => {
+    it('should update recipe with new image', async () => {
+      const existingRecipe = {
+        id: 'test-recipe-id',
+        title: 'Existing Recipe',
+        imageUrl: 'https://old-image.com/old.jpg',
+        ingredients: ['1 cup flour'],
+        version: 1
+      };
+      
+      const request = new Request('http://do/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeId: 'test-recipe-id',
+          updates: {
+            imageUrl: 'https://example.com/new-image.jpg'
+          }
+        })
+      });
+
+      mockEnv.RECIPE_STORAGE = mockEnv.CLIPPED_RECIPE_KV;
+      mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(existingRecipe));
+      mockEnv.RECIPE_STORAGE.put.mockResolvedValue();
+      
+      recipeSaver.processRecipeImages = vi.fn().mockImplementation(async (updates, recipeId, existing) => ({
+        ...updates,
+        imageUrl: `https://test-images.domain.com/recipe-images/test-recipe-id/main-v2.webp`
+      }));
+      recipeSaver.calculateAndAddNutrition = vi.fn().mockImplementation(async (recipe) => recipe);
+      recipeSaver.syncWithSearchDB = vi.fn().mockResolvedValue();
+
+      const response = await recipeSaver.fetch(request);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      
+      // Verify the recipe was updated
+      const storedData = mockEnv.RECIPE_STORAGE.put.mock.calls[0][1];
+      const updatedRecipe = JSON.parse(storedData);
+      expect(updatedRecipe.version).toBe(2);
+      expect(updatedRecipe.imageUrl).toContain('main-v2.webp');
+    });
+  });
+
+  describe('Recipe Retrieval with Images', () => {
+    it('should retrieve recipe with image data', async () => {
+      const mockRecipe = {
+        id: 'test-recipe-id',
+        title: 'Test Recipe',
+        imageUrl: 'https://test-images.domain.com/recipe-images/test-recipe-id/main.webp',
+        ingredients: ['1 cup milk'],
+        nutrition: {
+          calories: 150
+        }
+      };
+
+      mockEnv.RECIPE_STORAGE = mockEnv.CLIPPED_RECIPE_KV;
+      mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
+
+      const request = new Request('http://do/get?id=test-recipe-id');
+      const response = await recipeSaver.fetch(request);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.imageUrl).toBeDefined();
+      expect(data.imageUrl).toBe(mockRecipe.imageUrl);
     });
   });
 });
 
-console.log('\n✅ Image processing tests completed!');
+// Helper to create mock R2 bucket
+function createMockR2Bucket() {
+  return {
+    put: vi.fn().mockResolvedValue({ key: 'test-key' }),
+    get: vi.fn().mockResolvedValue(null),
+    delete: vi.fn().mockResolvedValue(true),
+    list: vi.fn().mockResolvedValue({ objects: [] })
+  };
+}

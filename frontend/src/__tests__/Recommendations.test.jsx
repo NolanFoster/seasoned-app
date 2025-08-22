@@ -381,4 +381,155 @@ describe('Recommendations Component', () => {
     // Only valid categories should be rendered
     expect(screen.queryByText('Invalid Category')).not.toBeInTheDocument();
   });
+
+  describe('Carousel Integration', () => {
+    it('uses SwipeableRecipeGrid for recipe display', async () => {
+      const mockRecommendations = {
+        categories: {
+          'Test Category': {
+            tags: ['test'],
+            description: 'Test recipes'
+          }
+        }
+      };
+
+      const mockRecipes = Array(5).fill(null).map((_, i) => ({
+        id: `recipe-${i}`,
+        name: `Recipe ${i}`,
+        description: `Description ${i}`,
+        tags: ['test'],
+        cookTime: 'PT30M',
+        prepTime: 'PT15M',
+        image: `https://example.com/recipe-${i}.jpg`,
+      }));
+
+      fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockRecommendations,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ results: mockRecipes }),
+        });
+
+      render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
+
+      await waitFor(() => {
+        // Check that SwipeableRecipeGrid is used (we mocked it in the test setup)
+        const categoryContainer = screen.getByText('Test Category').closest('.recommendation-category');
+        expect(categoryContainer).toBeInTheDocument();
+        
+        // The grid should contain recipe cards
+        const recipeCards = screen.getAllByTestId('recipe-item');
+        expect(recipeCards.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('displays up to 10 recipes in carousel format', async () => {
+      const mockRecommendations = {
+        categories: {
+          'Large Category': {
+            tags: ['large'],
+            description: 'Many recipes'
+          }
+        }
+      };
+
+      // Create 15 recipes to test the 10 recipe limit
+      const mockRecipes = Array(15).fill(null).map((_, i) => ({
+        id: `recipe-${i}`,
+        name: `Recipe ${i}`,
+        description: `Description ${i}`,
+        tags: ['large'],
+        cookTime: 'PT30M',
+        prepTime: 'PT15M',
+        image: `https://example.com/recipe-${i}.jpg`,
+      }));
+
+      fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockRecommendations,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ results: mockRecipes }),
+        });
+
+      render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
+
+      await waitFor(() => {
+        const recipeCards = screen.getAllByTestId('recipe-item');
+        // Should only display 10 recipes maximum
+        expect(recipeCards).toHaveLength(10);
+        
+        // Verify first 10 recipes are displayed
+        for (let i = 0; i < 10; i++) {
+          expect(screen.getByText(`Recipe ${i}`)).toBeInTheDocument();
+        }
+        
+        // Verify recipes 11-14 are not displayed
+        for (let i = 10; i < 15; i++) {
+          expect(screen.queryByText(`Recipe ${i}`)).not.toBeInTheDocument();
+        }
+      });
+    });
+
+    it('maintains carousel functionality across category updates', async () => {
+      const mockRecommendations = {
+        categories: {
+          'Dynamic Category': {
+            tags: ['dynamic'],
+            description: 'Dynamic recipes'
+          }
+        }
+      };
+
+      const createMockRecipes = (prefix) => Array(8).fill(null).map((_, i) => ({
+        id: `${prefix}-recipe-${i}`,
+        name: `${prefix} Recipe ${i}`,
+        description: `Description ${i}`,
+        tags: ['dynamic'],
+        cookTime: 'PT30M',
+        prepTime: 'PT15M',
+        image: `https://example.com/${prefix}-recipe-${i}.jpg`,
+      }));
+
+      // Initial render
+      fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockRecommendations,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ results: createMockRecipes('Initial') }),
+        });
+
+      const { rerender } = render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Initial Recipe 0')).toBeInTheDocument();
+      });
+
+      // Update with new recipes
+      fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockRecommendations,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ results: createMockRecipes('Updated') }),
+        });
+
+      rerender(<Recommendations onRecipeSelect={mockOnRecipeSelect} key="update" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Updated Recipe 0')).toBeInTheDocument();
+        expect(screen.queryByText('Initial Recipe 0')).not.toBeInTheDocument();
+      });
+    });
+  });
 });

@@ -10,11 +10,11 @@ This document verifies that clipped recipes in the Recipe Clipper Worker **only 
 
 **Current Storage Architecture:**
 - **KV Store** (Cloudflare KV) - Used by clipper worker for caching clipped recipes
-- **D1 Database** (SQLite) - Used by clipped-recipe-db-worker for storing user's saved recipes
+- **D1 Database** (SQLite) - Used by recipe-save-worker for storing user's saved recipes
 
 **Separation Confirmed:**
 - The clipper worker (`clipper/src/recipe-clipper.js`) only interacts with KV storage
-- The database worker (`clipped-recipe-db-worker/src/index.js`) only interacts with D1 database
+- The database worker (`recipe-save-worker/src/index.js`) only interacts with D1 database
 - No cross-communication between the two storage systems
 
 ### 2. Code Analysis

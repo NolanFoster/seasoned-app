@@ -1,3 +1,6 @@
+// Load crypto polyfill for Node.js test environment
+import './setup-crypto-polyfill.js';
+
 // Comprehensive test suite to achieve 85% code coverage
 import worker from '../src/recipe-clipper.js';
 import { extractRecipeFromAIResponse } from '../src/recipe-clipper.js';
@@ -33,6 +36,7 @@ const createMockEnv = (overrides = {}) => ({
     delete: async (key) => { return { success: true }; },
     ...(overrides.RECIPE_STORAGE || overrides.RECIPES || {})
   },
+  SAVE_WORKER_URL: 'https://recipe-save-worker.example.com',
   AI: {
     run: async (model, options) => {
       // Return properly formatted AI response
@@ -207,15 +211,17 @@ await test('POST /clip with valid URL extracts recipe', async () => {
 
 await test('POST /clip with cached recipe returns from cache', async () => {
   const cachedRecipe = {
-    data: {
-      name: 'Cached Recipe',
-      ingredients: ['cached ingredient']
-    },
-    scrapedAt: new Date().toISOString()
+    name: 'Cached Recipe',
+    ingredients: ['cached ingredient'],
+    instructions: ['cached instruction'],
+    recipeIngredient: ['cached ingredient'],
+    recipeInstructions: [{ "@type": "HowToStep", text: 'cached instruction' }],
+    image: 'https://example.com/cached.jpg',
+    source_url: 'https://example.com/cached'
   };
   
   const env = createMockEnv({
-    RECIPES: {
+    RECIPE_STORAGE: {
       get: async () => JSON.stringify(cachedRecipe)
     }
   });
@@ -228,7 +234,7 @@ await test('POST /clip with cached recipe returns from cache', async () => {
   assert(response.status === 200);
   const data = await response.json();
   assert(data.name === 'Cached Recipe');
-  assert(data.cached === true);
+  assert(data.fromCache === true);
 });
 
 await test('POST /clip with JSON-LD recipe falls back to AI when incomplete', async () => {

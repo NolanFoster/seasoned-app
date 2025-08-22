@@ -489,6 +489,45 @@
   border-bottom: none;
 }
 
+/* Timer Button Inline Styles - Moved to timer-button-update.scss */
+/* The timer button styles are now handled in a separate file for better organization */
+
+.timer-button-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: white;
+}
+
+.timer-button-inline:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.timer-button-inline:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timer-icon-inline {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1); /* Make the icon white */
+  display: block;
+}
+
 /* Full Background Image */
 .recipe-full-background {
   position: fixed;
@@ -570,6 +609,15 @@
   .recipe-fullscreen .instructions-list li {
     color: #ffffff;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .timer-button-inline {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
+  }
+  
+  .timer-button-inline:hover {
+    background: rgba(0, 0, 0, 0.4) !important;
   }
   
   .back-btn {
@@ -690,6 +738,15 @@
   .recipe-fullscreen .instructions-list li {
     color: white;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .timer-button-inline {
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+  }
+  
+  .timer-button-inline:hover {
+    background: rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -853,6 +910,18 @@
     font-size: 0.8em;
   }
   
+  .timer-button-inline {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  /* Timer text styles moved to timer-button-update.scss */
+  
+  .timer-icon-inline {
+    width: 12px;
+    height: 12px;
+  }
+  
   .fab-share-trigger {
     width: 44px;
     height: 44px;
@@ -927,6 +996,18 @@
   .instructions-list {
     padding-left: 15px; // Reduce left padding for numbered list
   }
+  
+  .timer-button-inline {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  
+  .timer-icon-inline {
+    width: 14px;
+    height: 14px;
+  }
+  
+  /* Timer buttons container styles moved to timer-button-update.scss */
   
   .recipe-full-background {
     position: fixed;

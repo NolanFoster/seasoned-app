@@ -1,0 +1,240 @@
+name: Recipe View Worker Tests
+
+on:
+  push:
+    branches: [ main, staging ]
+    paths:
+      - 'recipe-view-worker/**'
+      - '.github/workflows/recipe-view-worker-tests.yml'
+      - 'shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [ main, staging ]
+    paths:
+      - 'recipe-view-worker/**'
+      - '.github/workflows/recipe-view-worker-tests.yml'
+      - 'shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  test-worker:
+    name: Recipe View Worker Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: recipe-view-worker/package-lock.json
+    
+    - name: Install Worker Dependencies
+      working-directory: ./recipe-view-worker
+      run: npm ci
+    
+    - name: Run Worker Tests with Coverage
+      working-directory: ./recipe-view-worker
+      run: |
+        echo "Running tests with coverage..."
+        npm run test:coverage
+        echo "✅ Tests passed successfully!"
+    
+    - name: Check Coverage Thresholds
+      id: coverage-check
+      working-directory: ./recipe-view-worker
+      run: |
+        echo "### Recipe View Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
+        
+        # Extract coverage data from lcov.info
+        if [ -f "coverage/lcov.info" ]; then
+          # Parse lcov.info for coverage percentages
+          TOTAL_LINES=$(grep -E "^LF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          COVERED_LINES=$(grep -E "^LH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          
+          TOTAL_FUNCTIONS=$(grep -E "^FNF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          COVERED_FUNCTIONS=$(grep -E "^FNH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          
+          TOTAL_BRANCHES=$(grep -E "^BRF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          COVERED_BRANCHES=$(grep -E "^BRH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          
+          # Calculate percentages
+          if [ "$TOTAL_LINES" -gt 0 ]; then
+            LINES=$(awk "BEGIN {printf \"%.2f\", ($COVERED_LINES / $TOTAL_LINES) * 100}")
+          else
+            LINES=0
+          fi
+          
+          if [ "$TOTAL_FUNCTIONS" -gt 0 ]; then
+            FUNCTIONS=$(awk "BEGIN {printf \"%.2f\", ($COVERED_FUNCTIONS / $TOTAL_FUNCTIONS) * 100}")
+          else
+            FUNCTIONS=0
+          fi
+          
+          if [ "$TOTAL_BRANCHES" -gt 0 ]; then
+            BRANCHES=$(awk "BEGIN {printf \"%.2f\", ($COVERED_BRANCHES / $TOTAL_BRANCHES) * 100}")
+          else
+            BRANCHES=0
+          fi
+          
+          # Statements coverage is usually similar to lines
+          STATEMENTS=$LINES
+        else
+          echo "❌ Coverage file not found!"
+          exit 1
+        fi
+        
+        # Set coverage thresholds (85% as defined in vitest config)
+        THRESHOLD_STATEMENTS=85
+        THRESHOLD_BRANCHES=85
+        THRESHOLD_FUNCTIONS=85
+        THRESHOLD_LINES=85
+        
+        # Check if coverage meets thresholds
+        COVERAGE_FAILED=false
+        
+        if (( $(echo "$STATEMENTS < $THRESHOLD_STATEMENTS" | bc -l) )); then
+          echo "❌ Statement coverage ($STATEMENTS%) is below threshold ($THRESHOLD_STATEMENTS%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        if (( $(echo "$BRANCHES < $THRESHOLD_BRANCHES" | bc -l) )); then
+          echo "❌ Branch coverage ($BRANCHES%) is below threshold ($THRESHOLD_BRANCHES%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        if (( $(echo "$FUNCTIONS < $THRESHOLD_FUNCTIONS" | bc -l) )); then
+          echo "❌ Function coverage ($FUNCTIONS%) is below threshold ($THRESHOLD_FUNCTIONS%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        if (( $(echo "$LINES < $THRESHOLD_LINES" | bc -l) )); then
+          echo "❌ Line coverage ($LINES%) is below threshold ($THRESHOLD_LINES%)"
+          COVERAGE_FAILED=true
+        fi
+        
+        # Set outputs before potential exit
+        echo "coverage_available=true" >> $GITHUB_OUTPUT
+        echo "coverage_lines=$LINES" >> $GITHUB_OUTPUT
+        echo "coverage_statements=$STATEMENTS" >> $GITHUB_OUTPUT
+        echo "coverage_functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+        echo "coverage_branches=$BRANCHES" >> $GITHUB_OUTPUT
+        
+        if [ "$COVERAGE_FAILED" = true ]; then
+          echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
+          # Don't fail the job, just report
+          echo "⚠️ Coverage is below thresholds but not failing the build"
+        fi
+        
+        echo "✅ Coverage report generated!"
+        echo "   Statements: $STATEMENTS% (threshold: $THRESHOLD_STATEMENTS%)"
+        echo "   Branches: $BRANCHES% (threshold: $THRESHOLD_BRANCHES%)"
+        echo "   Functions: $FUNCTIONS% (threshold: $THRESHOLD_FUNCTIONS%)"
+        echo "   Lines: $LINES% (threshold: $THRESHOLD_LINES%)"
+        
+        # Add to GitHub summary
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Coverage | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|----------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Lines | $LINES% | $THRESHOLD_LINES% | $([ $(echo "$LINES >= $THRESHOLD_LINES" | bc -l) -eq 1 ] && echo '✅' || echo '❌') |" >> $GITHUB_STEP_SUMMARY
+        echo "| Statements | $STATEMENTS% | $THRESHOLD_STATEMENTS% | $([ $(echo "$STATEMENTS >= $THRESHOLD_STATEMENTS" | bc -l) -eq 1 ] && echo '✅' || echo '❌') |" >> $GITHUB_STEP_SUMMARY
+        echo "| Functions | $FUNCTIONS% | $THRESHOLD_FUNCTIONS% | $([ $(echo "$FUNCTIONS >= $THRESHOLD_FUNCTIONS" | bc -l) -eq 1 ] && echo '✅' || echo '❌') |" >> $GITHUB_STEP_SUMMARY
+        echo "| Branches | $BRANCHES% | $THRESHOLD_BRANCHES% | $([ $(echo "$BRANCHES >= $THRESHOLD_BRANCHES" | bc -l) -eq 1 ] && echo '✅' || echo '❌') |" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload Coverage Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: recipe-view-worker-coverage
+        path: recipe-view-worker/coverage/
+        retention-days: 30
+
+    - name: Comment PR with Coverage
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const coverage = {
+            lines: '${{ steps.coverage-check.outputs.coverage_lines }}' || '0',
+            statements: '${{ steps.coverage-check.outputs.coverage_statements }}' || '0',
+            functions: '${{ steps.coverage-check.outputs.coverage_functions }}' || '0',
+            branches: '${{ steps.coverage-check.outputs.coverage_branches }}' || '0'
+          };
+          
+          const belowThreshold = '${{ steps.coverage-check.outputs.coverage_below_threshold }}' === 'true';
+          
+          const icon = belowThreshold ? '⚠️' : '✅';
+          const status = belowThreshold ? 'Below Threshold' : 'Passing';
+          
+          const body = `## ${icon} Recipe View Worker Coverage Report
+          
+          **Status:** ${status}
+          
+          | Metric | Coverage | Threshold | Status |
+          |--------|----------|-----------|--------|
+          | Lines | ${coverage.lines}% | 85% | ${parseFloat(coverage.lines) >= 85 ? '✅' : '❌'} |
+          | Statements | ${coverage.statements}% | 85% | ${parseFloat(coverage.statements) >= 85 ? '✅' : '❌'} |
+          | Functions | ${coverage.functions}% | 85% | ${parseFloat(coverage.functions) >= 85 ? '✅' : '❌'} |
+          | Branches | ${coverage.branches}% | 85% | ${parseFloat(coverage.branches) >= 85 ? '✅' : '❌'} |
+          
+          ${belowThreshold ? '⚠️ Coverage is below the required thresholds. Please add more tests.' : '✅ All coverage thresholds met!'}`;
+          
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Recipe View Worker Coverage Report')
+          );
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+          }
+
+  lint-worker:
+    name: Recipe View Worker Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Lint Worker
+      working-directory: ./recipe-view-worker
+      run: |
+        npm ci
+        if npm run | grep -q "lint"; then
+          npm run lint || echo "Linting completed with warnings"
+        else
+          echo "No lint script found"
+        fi

@@ -35,6 +35,11 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Fetch full history for diff coverage
+        
+    - name: Fetch base branch for diff coverage
+      if: github.event_name == 'pull_request'
+      run: |
+        git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -114,12 +119,31 @@ jobs:
         echo "### Differential Coverage Report" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
+        # Debug information
+        echo "Current branch: $(git branch --show-current)"
+        echo "Base ref: ${{ github.base_ref }}"
+        echo "Head ref: ${{ github.head_ref }}"
+        echo "Git log of last 5 commits:"
+        git log --oneline -5
+        echo "Available branches:"
+        git branch -a
+        
+        # Show the diff that will be analyzed
+        echo "Git diff summary:"
+        git diff --name-status origin/${{ github.base_ref }}...HEAD
+        
+        # Show coverage report structure for debugging
+        echo "Coverage report first few lines:"
+        head -20 coverage/lcov.info || echo "No coverage report found"
+        
         # Run diff-cover with lcov format and capture output
         echo "Running differential coverage analysis..."
+        # Note: diff-cover needs to be run from the same directory where tests were run
+        # to ensure paths match between git diff and coverage report
         diff-cover coverage/lcov.info \
           --compare-branch=origin/${{ github.base_ref }} \
           --fail-under=85 \
-          --diff-range-notation=.. 2>&1 | tee diff-coverage-output.txt || {
+          --diff-range-notation=... 2>&1 | tee diff-coverage-output.txt || {
           echo "::warning::New code changes have less than 85% coverage"
           echo "❌ **New code coverage is below the required 85% threshold**" >> $GITHUB_STEP_SUMMARY
           echo "diff_coverage_below_threshold=true" >> $GITHUB_OUTPUT

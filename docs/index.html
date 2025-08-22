@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="generated" content="2025-08-19T01:35:06.206Z">
+    <meta name="generated" content="2025-08-22T02:54:54.203Z">
 </head>
 <body>
     <div class="container">
@@ -16,7 +16,7 @@
             <div class="header-content">
                 <h1 class="title">🍳 Seasoned Recipe App</h1>
                 <p class="subtitle">Developer Documentation & API Reference</p>
-                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-19T01:35:06.206Z</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-22T02:54:54.203Z</p>
             </div>
         </header>
 
@@ -34,7 +34,7 @@
                 <div class="nav-section">
                     <h3>Workers</h3>
                     <ul>
-                        <li><a href="#recipe-search-db">Recipe Search DB</a></li><li><a href="#clipped-recipe-db">Clipped Recipe DB</a></li><li><a href="#recipe-scraper">Recipe Scraper</a></li><li><a href="#recipe-clipper">Recipe Clipper</a></li><li><a href="#recipe-crawler">Recipe Crawler</a></li>
+                        <li><a href="#recipe-search-db">Recipe Search DB</a></li><li><a href="#recipe-scraper">Recipe Scraper</a></li><li><a href="#recipe-clipper">Recipe Clipper</a></li><li><a href="#recipe-crawler">Recipe Crawler</a></li>
                     </ul>
                 </div>
 
@@ -65,7 +65,7 @@
                     <h3>🔄 Auto-Update Information</h3>
                     <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
                     <pre><code>npm run docs:generate</code></pre>
-                    <p><strong>Last Generated:</strong> 2025-08-19T01:35:06.206Z</p>
+                    <p><strong>Last Generated:</strong> 2025-08-22T02:54:54.203Z</p>
                 </div>
                 
                 <div class="feature-grid">
@@ -98,7 +98,7 @@
                     <div class="arch-layer">
                         <h4>API Gateway & Workers</h4>
                         <ul>
-                            <li><strong>Recipe Search DB:</strong> Graph Search, FTS, Node/Edge Management</li><li><strong>Clipped Recipe DB:</strong> Recipe CRUD, Image Uploads, Health Monitoring</li><li><strong>Recipe Scraper:</strong> JSON-LD Extraction, Batch Processing, KV Storage</li><li><strong>Recipe Clipper:</strong> AI Extraction, GPT-4o-mini, Smart Caching</li><li><strong>Recipe Crawler:</strong> Batch Processing, Health Monitoring, Progress Tracking</li>
+                            <li><strong>Recipe Search DB:</strong> Graph Search, FTS, Node/Edge Management</li><li><strong>Recipe Scraper:</strong> JSON-LD Extraction, Batch Processing, KV Storage</li><li><strong>Recipe Clipper:</strong> AI Extraction, GPT-4o-mini, Smart Caching</li><li><strong>Recipe Crawler:</strong> Batch Processing, Health Monitoring, Progress Tracking</li>
                         </ul>
                     </div>
                     <div class="arch-layer">
@@ -323,129 +323,6 @@ export default {
         return await getNodes(request, env, corsHeaders);
       } else if (path.startsWith('/api/nodes/') && method === 'GET') {
         const nodeId = path.split(...</code></pre>
-                </div>
-            </section>
-            <section id="clipped-recipe-db" class="section">
-                <h2>Clipped Recipe DB Worker</h2>
-                <p>Recipe CRUD, Image Uploads, Health Monitoring</p>
-                
-                <div class="worker-info">
-                    <div class="info-card">
-                        <h4>📍 Location</h4>
-                        <p><code>clipped-recipe-db-worker/</code></p>
-                    </div>
-                    <div class="info-card">
-                        <h4>🗄️ Database</h4>
-                        <p>D1</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>🔧 Main Features</h4>
-                        <p>Recipe CRUD, Image Uploads, Health Monitoring</p>
-                    </div>
-                </div>
-
-                
-                <h3>API Endpoints</h3>
-                <div class="endpoint-grid">
-                    
-                    <div class="endpoint">
-                        <h4>GET /health</h4>
-                        <p>Health check endpoint</p>
-                    </div>
-                    
-                    <div class="endpoint">
-                        <h4>GET /recipes</h4>
-                        <p>Get all recipes</p>
-                    </div>
-                    
-                    <div class="endpoint">
-                        <h4>POST /recipe</h4>
-                        <p>Get all recipes</p>
-                    </div>
-                    
-                    <div class="endpoint">
-                        <h4>POST /upload-image</h4>
-                        <p>Upload image</p>
-                    </div>
-                    
-                    <div class="endpoint">
-                        <h4>POST /clip</h4>
-                        <p>Clip recipe from URL</p>
-                    </div>
-                    
-                </div>
-                
-
-                
-                <h3>Key Functions</h3>
-                <div class="function-grid">
-                    
-                    <div class="function">
-                        <h4><code>getRecipes()</code></h4>
-                        <p>Database functions</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>getRecipeById()</code></h4>
-                        <p>Function getRecipeById</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>uploadImage()</code></h4>
-                        <p>Image upload function</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>extractRecipeFromUrl()</code></h4>
-                        <p>Recipe extraction from URL</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>decodeHtmlEntities()</code></h4>
-                        <p>Helper function to decode HTML entities</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>checkSystemHealth()</code></h4>
-                        <p>Health check function</p>
-                    </div>
-                    
-                </div>
-                
-
-                <div class="source-code-preview">
-                    <h3>Source Code Preview</h3>
-                    <pre><code>// Recipe API with SQLite (D1) and image upload support
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const pathname = url.pathname;
-
-    // CORS headers
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
-
-    // Handle preflight requests
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
-    }
-
-    try {
-      // Health check endpoint
-      if (pathname === '/health' && request.method === 'GET') {
-        try {
-          // Perform health checks
-          const healthStatus = await checkSystemHealth(env);
-          
-          return new Response(JSON.stringify(healthStatus), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        } catch (error) {
-          console...</code></pre>
                 </div>
             </section>
             <section id="recipe-scraper" class="section">
@@ -820,7 +697,7 @@ export default {
                     <pre><code>#!/usr/bin/env python3
 """
 Recipe Crawler
-A Python script that can pass a list of URLs to the recipe scraper
+A Python script that can pass a list of URLs to the recipe clipper
 """
 
 import requests
@@ -828,7 +705,7 @@ import json
 import time
 import argparse
 import sys
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, urljoin
 import logging
 import re
@@ -846,17 +723,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class RecipeCrawler:
-    def __init__(self, scraper_url: str = "https://recipe-scraper.nolanfoster.workers.dev"):
+    def __init__(self, clipper_url: str = "https://clipper.nolanfoster.workers.dev"):
         """
         Initialize the recipe crawler
         
         Args:
-            scraper_url: URL of the recipe scraper worker
+            clipper_url: URL of the recipe clipper worker
         """
-        self.scraper_url = scraper_url.rstrip('/')
+        self.clipper_url = clipper_url.rstrip('/')
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Re...</code></pre>
+            'User-Agent': ...</code></pre>
                 </div>
             </section>
             
@@ -1004,10 +881,6 @@ export async function compressData(data) {
                     
                     <h4>Recipe Search DB</h4>
                     <pre><code>cd recipe-search-db
-npm test</code></pre>
-                    
-                    <h4>Clipped Recipe DB</h4>
-                    <pre><code>cd clipped-recipe-db-worker
 npm test</code></pre>
                     
                     <h4>Recipe Scraper</h4>

@@ -5,7 +5,8 @@ on:
     branches: [ main, staging ]
     paths:
       - 'src/**'
-      - 'clipped-recipe-db-worker/src/**'
+      - 'recipe-save-worker/src/**'
+      - 'recipe-search-db/src/**'
       - 'recipe-scraper/**'
       - 'clipper/src/**'
       - 'shared/**'
@@ -14,7 +15,8 @@ on:
     branches: [ main, staging ]
     paths:
       - 'src/**'
-      - 'clipped-recipe-db-worker/src/**'
+      - 'recipe-save-worker/src/**'
+      - 'recipe-search-db/src/**'
       - 'recipe-scraper/**'
       - 'clipper/src/**'
       - 'shared/**'

@@ -1,0 +1,22 @@
+name = "recipe-view-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-10"
+
+# Production environment variables
+[vars]
+RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
+
+# Development settings
+[env.preview]
+name = "preview-recipe-view-worker"
+[env.preview.vars]
+RECIPE_SAVE_WORKER_URL = "https://preview-recipe-save-worker.nolanfoster.workers.dev"
+
+# Staging settings
+[env.staging]
+name = "staging-recipe-view-worker"
+[env.staging.vars]
+RECIPE_SAVE_WORKER_URL = "https://staging-recipe-save-worker.nolanfoster.workers.dev"
+
+[observability]
+enabled = true

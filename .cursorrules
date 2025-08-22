@@ -8,6 +8,7 @@ This project uses modular rules stored in `.cursor/rules/`. The following rules 
 2. **Code Quality Standards** - Maintains consistent code quality  
 3. **Release Workflow** - Guides the release process from staging to production
 4. **Automated Workflows** (on-demand) - Suggests CI/CD and testing improvements
+5. **Cloudflare Worker Setup** (on-demand) - Guidelines for setting up new Cloudflare Workers
 
 ## Key Guidelines
 

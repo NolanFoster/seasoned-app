@@ -182,14 +182,171 @@ To add new functions to the shared library:
 3. Import it in the workers that need it
 4. Update this README with documentation
 
+## Nutrition Calculator
+
+The `nutrition-calculator.js` module provides functionality to calculate nutritional facts for recipes using the USDA FoodData Central API.
+
+### Functions
+
+#### `calculateNutritionalFacts(ingredients, apiKey, servings)`
+Calculates nutritional information for a list of ingredients.
+
+**Parameters:**
+- `ingredients` (Array): Array of ingredient objects with `name`, `quantity`, and `unit` properties
+- `apiKey` (string): USDA FoodData Central API key
+- `servings` (number, optional): Number of servings the recipe makes (default: 1)
+
+**Returns:** Promise resolving to an object with nutrition information in recipe schema format
+
+**Examples:**
+```javascript
+import { calculateNutritionalFacts } from '../shared/nutrition-calculator.js';
+
+const ingredients = [
+  { name: 'apple', quantity: 1, unit: 'medium' },
+  { name: 'banana', quantity: 1, unit: 'large' },
+  { name: 'oats', quantity: 0.5, unit: 'cup' },
+  { name: 'milk', quantity: 1, unit: 'cup' }
+];
+
+// Calculate nutrition for the recipe (serves 2)
+const result = await calculateNutritionalFacts(ingredients, env.FDC_API_KEY, 2);
+
+if (result.success) {
+  console.log('Nutrition per serving:', result.nutrition);
+  // Result includes: calories, proteinContent, fatContent, carbohydrateContent, etc.
+} else {
+  console.error('Error:', result.error);
+}
+```
+
+#### `validateIngredients(ingredients)`
+Validates the format of an ingredients array.
+
+**Parameters:**
+- `ingredients` (Array): Array of ingredients to validate
+
+**Returns:** Object with `valid` boolean and `errors` array
+
+**Examples:**
+```javascript
+import { validateIngredients } from '../shared/nutrition-calculator.js';
+
+const validation = validateIngredients(ingredients);
+if (!validation.valid) {
+  console.error('Validation errors:', validation.errors);
+}
+```
+
+#### `getSupportedUnits()`
+Returns lists of supported measurement units.
+
+**Returns:** Object containing arrays of supported units by type (weight, volume, count)
+
+**Examples:**
+```javascript
+import { getSupportedUnits } from '../shared/nutrition-calculator.js';
+
+const units = getSupportedUnits();
+console.log('Weight units:', units.weight); // ['g', 'kg', 'oz', 'lb', ...]
+console.log('Volume units:', units.volume); // ['ml', 'l', 'cup', 'tbsp', ...]
+console.log('Count units:', units.count);   // ['small', 'medium', 'large', ...]
+```
+
+### Advanced Usage
+
+For more control, you can use the exported classes directly:
+
+```javascript
+import { 
+  USDANutritionClient, 
+  UnitConverter, 
+  NutritionAggregator 
+} from '../shared/nutrition-calculator.js';
+
+// Direct API access
+const client = new USDANutritionClient(apiKey);
+const searchResults = await client.searchFood('apple');
+
+// Unit conversion
+const gramsFromCup = UnitConverter.convertToGrams(1, 'cup', 1.0);
+
+// Nutrition aggregation
+const aggregator = new NutritionAggregator();
+const totals = aggregator.aggregateNutrition([nutrition1, nutrition2]);
+```
+
+### Environment Setup
+
+The nutrition calculator requires a USDA FoodData Central API key. Set this as an environment variable in your Cloudflare Worker:
+
+**Using wrangler.toml:**
+```toml
+[vars]
+FDC_API_KEY = "your-api-key-here"
+```
+
+**Using Cloudflare Dashboard:**
+1. Navigate to Workers & Pages → Your Worker → Settings
+2. Under Variables and Secrets, add `FDC_API_KEY`
+3. Set the value to your USDA API key
+
+### Supported Units
+
+The nutrition calculator supports automatic unit conversion for:
+
+- **Weight units:** grams (g), kilograms (kg), ounces (oz), pounds (lb)
+- **Volume units:** milliliters (ml), liters (l), cups, tablespoons (tbsp), teaspoons (tsp), fluid ounces (fl oz), pints, quarts, gallons
+- **Count units:** small, medium, large, piece, item, serving
+
+### Schema Format
+
+The nutrition data is returned in Recipe schema format compatible with the existing recipe structure:
+
+```json
+{
+  "@type": "NutritionInformation",
+  "calories": "250kcal",
+  "proteinContent": "8.5g",
+  "fatContent": "12.3g",
+  "carbohydrateContent": "28.7g",
+  "fiberContent": "4.2g",
+  "sugarContent": "15.1g",
+  "sodiumContent": "180mg",
+  "cholesterolContent": "25mg",
+  "saturatedFatContent": "3.2g",
+  "transFatContent": "0g",
+  "unsaturatedFatContent": "8.1g",
+  "servingSize": "2"
+}
+```
+
 ## Testing
 
-The shared library functions are tested indirectly through the worker tests. To test the library directly:
+The shared library includes comprehensive tests. Run them with:
+
+```bash
+# Test all shared library functions
+npm run test:all
+
+# Test nutrition calculator specifically
+npm run test:nutrition
+
+# Test with real API (requires FDC_API_KEY environment variable)
+FDC_API_KEY=your-key npm run test:nutrition
+```
+
+Individual function testing:
 
 ```javascript
 import { generateRecipeId } from './kv-storage.js';
+import { calculateNutritionalFacts } from './nutrition-calculator.js';
 
 // Test ID generation
 const id = await generateRecipeId('https://example.com/recipe');
 console.log('Generated ID:', id);
+
+// Test nutrition calculation
+const result = await calculateNutritionalFacts(ingredients, apiKey);
+console.log('Nutrition result:', result);
 ```

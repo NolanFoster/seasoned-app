@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { formatDuration, isValidUrl } from '../../shared/utility-functions.js'
+import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js'
 import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
 import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
@@ -8,6 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV stor
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL; // Search database worker
 const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL; // Recipe save worker
+const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL; // Recipe view worker for shareable pages
 
 
 
@@ -27,6 +28,131 @@ function App() {
     if (DEBUG_MODE) {
       console.log(`${emoji} ${message}`, data);
     }
+  };
+  
+  // Decode HTML entities for proper display
+  const decodeHtmlEntities = (text) => {
+    if (!text) return text;
+    
+    const entities = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&apos;': "'",
+      '&nbsp;': ' ',
+      '&copy;': '©',
+      '&reg;': '®',
+      '&trade;': '™',
+      '&mdash;': '—',
+      '&ndash;': '–',
+      '&bull;': '•',
+      '&hellip;': '…',
+      '&prime;': '′',
+      '&Prime;': '″',
+      '&lsquo;': '\u2018',
+      '&rsquo;': '\u2019',
+      '&ldquo;': '\u201C',
+      '&rdquo;': '\u201D',
+      '&deg;': '°',
+      '&frac12;': '½',
+      '&frac14;': '¼',
+      '&frac34;': '¾',
+      '&times;': '×',
+      '&divide;': '÷',
+      '&plusmn;': '±',
+      '&eacute;': 'é',
+      '&egrave;': 'è',
+      '&ecirc;': 'ê',
+      '&euml;': 'ë',
+      '&agrave;': 'à',
+      '&aacute;': 'á',
+      '&acirc;': 'â',
+      '&auml;': 'ä',
+      '&oacute;': 'ó',
+      '&ograve;': 'ò',
+      '&ocirc;': 'ô',
+      '&ouml;': 'ö',
+      '&uacute;': 'ú',
+      '&ugrave;': 'ù',
+      '&ucirc;': 'û',
+      '&uuml;': 'ü',
+      '&ntilde;': 'ñ',
+      '&ccedil;': 'ç'
+    };
+    
+    let decodedText = String(text);
+    
+    // Replace known entities
+    Object.entries(entities).forEach(([entity, char]) => {
+      decodedText = decodedText.replace(new RegExp(entity, 'g'), char);
+    });
+    
+    // Handle numeric entities (e.g., &#8217; for apostrophe)
+    decodedText = decodedText.replace(/&#(\d+);/g, (match, dec) => {
+      return String.fromCharCode(dec);
+    });
+    
+    // Handle hex entities (e.g., &#x2019; for apostrophe)  
+    decodedText = decodedText.replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => {
+      return String.fromCharCode(parseInt(hex, 16));
+    });
+    
+    return decodedText;
+  };
+  
+  // Function to parse time mentions in text and render with timer buttons at the end
+  const renderInstructionWithTimers = (text) => {
+    // Regex to match various time formats:
+    // - X minute(s), X min(s), X hour(s), X hr(s), X second(s), X sec(s)
+    // - X-Y minutes, X to Y minutes, etc.
+    const timeRegex = /(\d+(?:\s*[-–—]\s*\d+|\s+to\s+\d+)?)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?)\b/gi;
+    
+    const timers = [];
+    let match;
+    
+    // Find all time mentions
+    while ((match = timeRegex.exec(text)) !== null) {
+      const timeText = match[0];
+      timers.push({
+        text: timeText,
+        index: match.index
+      });
+    }
+    
+    // If no timers found, return the original text
+    if (timers.length === 0) {
+      return text;
+    }
+    
+    // Return the full text followed by timer buttons
+    return (
+      <div className="instruction-with-timers">
+        <div className="instruction-text">{text}</div>
+        <div className="timer-buttons-container">
+          {timers.map((timer, index) => (
+            <button 
+              key={`timer-${timer.index}`}
+              className="timer-button-inline"
+              title={`Set timer for ${timer.text}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Timer functionality will be added later
+              }}
+            >
+              <img 
+                src="/timer.svg" 
+                alt="Timer" 
+                className="timer-icon-inline"
+              />
+              <span className="timer-text">Set timer for {timer.text}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
   
   // Recipes are now populated by the recommendations system instead of direct API calls
@@ -100,7 +226,7 @@ function App() {
     try {
       debugLogEmoji('🔍', `Using smart search for tag "${tag}"`);
       const searchRes = await fetchWithTimeout(
-        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=recipe&limit=6`,
+        `${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(tag)}&type=recipe&limit=10`,
         { timeout: 10000 }
       );
       
@@ -642,6 +768,41 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Handle browser back button for recipe view
+  useEffect(() => {
+    const handlePopState = (event) => {
+      // If we're currently showing a recipe and the back button is pressed
+      if (selectedRecipe && !event.state?.recipeView) {
+        setSelectedRecipe(null);
+        setShowSharePanel(false);
+        setShowNutrition(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedRecipe]);
+
+  // Handle escape key to close recipe view
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && selectedRecipe) {
+        setSelectedRecipe(null);
+        setShowSharePanel(false);
+        setShowNutrition(false);
+        // Go back in history if we pushed a state
+        if (window.history.state?.recipeView) {
+          window.history.back();
+        }
+      }
+    };
+
+    if (selectedRecipe) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [selectedRecipe]);
+
 
   // Function to get just the category names first for loading display
   async function getRecipeCategories() {
@@ -766,17 +927,31 @@ function App() {
                         const recipeData = recipe.data || recipe;
                         const transformed = {
                           id: recipe.id || recipeData.id,
-                          name: recipeData.name || recipeData.title || '',
-                          description: recipeData.description || '',
+                          name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
+                          description: decodeHtmlEntities(recipeData.description || ''),
                           image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
                           image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                          ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
-                          instructions: recipeData.instructions || recipeData.recipeInstructions || [],
-                          recipeIngredient: recipeData.ingredients || recipeData.recipeIngredient || [],
-                          recipeInstructions: recipeData.instructions || recipeData.recipeInstructions || [],
+                          ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                          ),
+                          instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                            return inst;
+                          }),
+                          recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                          ),
+                          recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                            return inst;
+                          }),
                           prep_time: recipeData.prepTime || recipeData.prep_time || null,
                           cook_time: recipeData.cookTime || recipeData.cook_time || null,
-                          recipe_yield: recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+                          recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
                           source_url: recipeData.source_url || recipeData.url || '',
                           video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
                           video: recipeData.video || null,
@@ -1167,7 +1342,33 @@ function App() {
       
       if (res.ok) {
         const result = await res.json();
-        setClippedRecipePreview(result);
+        // Decode HTML entities in clipped recipe data
+        const decodedResult = {
+          ...result,
+          name: decodeHtmlEntities(result.name || result.title || ''),
+          title: decodeHtmlEntities(result.name || result.title || ''),
+          description: decodeHtmlEntities(result.description || ''),
+          ingredients: (result.ingredients || result.recipeIngredient || []).map(ing => 
+            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+          ),
+          recipeIngredient: (result.ingredients || result.recipeIngredient || []).map(ing => 
+            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+          ),
+          instructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+            return inst;
+          }),
+          recipeInstructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+            if (typeof inst === 'string') return decodeHtmlEntities(inst);
+            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+            return inst;
+          }),
+          yield: decodeHtmlEntities(result.yield || result.recipeYield || result.recipe_yield || null)
+        };
+        setClippedRecipePreview(decodedResult);
         setSearchInput(''); // Clear search input on success
         setIsSearchBarClipping(false);
         setSearchBarClipError(false);
@@ -1292,6 +1493,8 @@ function App() {
 
   function openRecipeView(recipe) {
     setSelectedRecipe(recipe);
+    // Push state to browser history when opening a recipe
+    window.history.pushState({ recipeView: true }, '', window.location.href);
   }
 
   function openVideoPopup(videoUrl) {
@@ -1497,32 +1700,46 @@ function App() {
           const recipeData = recipe.data || recipe;
           return {
             id: recipe.id || recipeData.id,
-            name: recipeData.name || recipeData.title || 'Untitled Recipe',
-            description: recipeData.description || '',
+            name: decodeHtmlEntities(recipeData.name || recipeData.title || 'Untitled Recipe'),
+            description: decodeHtmlEntities(recipeData.description || ''),
             image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
             image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
             prep_time: recipeData.prepTime || recipeData.prep_time || null,
             cook_time: recipeData.cookTime || recipeData.cook_time || null,
-            recipe_yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+            recipe_yield: decodeHtmlEntities(recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
             source_url: recipeData.url || recipeData.source_url || '',
             // Include full recipe data for when user selects a result
-            ingredients: recipeData.ingredients || recipeData.recipeIngredient || [],
-            instructions: recipeData.instructions || recipeData.recipeInstructions || [],
-            recipeIngredient: recipeData.ingredients || recipeData.recipeIngredient || [],
-            recipeInstructions: recipeData.instructions || recipeData.recipeInstructions || [],
+            ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+            ),
+            instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+              return inst;
+            }),
+            recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+            ),
+            recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+              return inst;
+            }),
             // Additional fields that might be available
             prepTime: recipeData.prepTime || recipeData.prep_time || null,
             cookTime: recipeData.cookTime || recipeData.cook_time || null,
-            recipeYield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
-            yield: recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null,
+            recipeYield: decodeHtmlEntities(recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
+            yield: decodeHtmlEntities(recipeData.servings || recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
             video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
             video: recipeData.video || null,
             nutrition: recipeData.nutrition || {},
-            author: recipeData.author || '',
+            author: decodeHtmlEntities(recipeData.author || ''),
             datePublished: recipeData.datePublished || '',
-            recipeCategory: recipeData.recipeCategory || '',
-            recipeCuisine: recipeData.recipeCuisine || '',
-            keywords: recipeData.keywords || '',
+            recipeCategory: decodeHtmlEntities(recipeData.recipeCategory || ''),
+            recipeCuisine: decodeHtmlEntities(recipeData.recipeCuisine || ''),
+            keywords: decodeHtmlEntities(recipeData.keywords || ''),
             aggregateRating: recipeData.aggregateRating || {}
           };
         });
@@ -2194,7 +2411,7 @@ function App() {
             <div className="overlay-content recipe-preview-overlay">
               <div className="form-panel glass recipe-preview-panel">
                 {/* Save Progress Overlay */}
-                {isSavingRecipe && (
+                {false && isSavingRecipe && (
                   <div className="save-progress-overlay">
                     <div className="save-progress-content">
                       <div className="save-spinner">🔄</div>
@@ -2251,7 +2468,7 @@ function App() {
                             <h4>Ingredients ({(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).length})</h4>
                             <ul className="recipe-preview-ingredients">
                               {(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).map((ingredient, index) => (
-                                <li key={index}>{ingredient}</li>
+                                <li key={index}>{formatIngredientAmount(ingredient)}</li>
                               ))}
                             </ul>
                           </div>
@@ -2514,7 +2731,33 @@ function App() {
                             return;
                           }
                           const result = await res.json();
-                          setClippedRecipePreview(result);
+                          // Decode HTML entities in clipped recipe data
+                          const decodedResult = {
+                            ...result,
+                            name: decodeHtmlEntities(result.name || result.title || ''),
+                            title: decodeHtmlEntities(result.name || result.title || ''),
+                            description: decodeHtmlEntities(result.description || ''),
+                            ingredients: (result.ingredients || result.recipeIngredient || []).map(ing => 
+                              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                            ),
+                            recipeIngredient: (result.ingredients || result.recipeIngredient || []).map(ing => 
+                              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                            ),
+                            instructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+                              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                              return inst;
+                            }),
+                            recipeInstructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+                              if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                              return inst;
+                            }),
+                            yield: decodeHtmlEntities(result.yield || result.recipeYield || result.recipe_yield || null)
+                          };
+                          setClippedRecipePreview(decodedResult);
                           setClipError('');
                         } catch (e) {
                           setClipError('Failed to clip recipe. Please try again.');
@@ -2544,6 +2787,10 @@ function App() {
               setSelectedRecipe(null);
               setShowSharePanel(false); // Reset share panel when closing recipe view
               setShowNutrition(false); // Reset nutrition view when closing
+              // Go back in history if we pushed a state
+              if (window.history.state?.recipeView) {
+                window.history.back();
+              }
             }}>
               <span className="back-arrow">←</span>
             </button>
@@ -2607,19 +2854,23 @@ function App() {
             <button 
               className="share-panel-item share-action"
               onClick={() => {
-                // Share functionality - could be expanded later
-                if (navigator.share && selectedRecipe.source_url) {
+                // Generate shareable link using the recipe view worker
+                const shareableUrl = RECIPE_VIEW_URL ? 
+                  `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}` : 
+                  selectedRecipe.source_url;
+                
+                if (navigator.share && shareableUrl) {
                   navigator.share({
                     title: selectedRecipe.name,
                     text: `Check out this recipe: ${selectedRecipe.name}`,
-                    url: selectedRecipe.source_url
+                    url: shareableUrl
                   }).catch(() => {
                     // Fallback to copy link
-                    navigator.clipboard.writeText(selectedRecipe.source_url);
+                    navigator.clipboard.writeText(shareableUrl);
                     alert('Recipe link copied to clipboard!');
                   });
-                } else if (selectedRecipe.source_url) {
-                  navigator.clipboard.writeText(selectedRecipe.source_url);
+                } else if (shareableUrl) {
+                  navigator.clipboard.writeText(shareableUrl);
                   alert('Recipe link copied to clipboard!');
                 }
                 setShowSharePanel(false);
@@ -2738,7 +2989,7 @@ function App() {
                     <>
                       <div className="calories-section">
                         <span className="calories-label">Calories</span>
-                        <span className="calories-value">{selectedRecipe.nutrition.calories.replace(' kcal', '')}</span>
+                        <span className="calories-value">{selectedRecipe.nutrition.calories}</span>
                       </div>
                       <div className="nutrition-divider medium"></div>
                     </>
@@ -2830,7 +3081,7 @@ function App() {
                   <h2>Ingredients</h2>
                   <ul className="ingredients-list">
                     {(selectedRecipe.recipeIngredient || selectedRecipe.ingredients || []).map((ingredient, index) => (
-                      <li key={index}>{ingredient}</li>
+                      <li key={index}>{formatIngredientAmount(ingredient)}</li>
                     ))}
                   </ul>
                 </div>
@@ -2841,7 +3092,7 @@ function App() {
                   <ol className="instructions-list">
                     {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
                       <li key={index}>
-                        {typeof instruction === 'string' ? instruction : instruction.text || ''}
+                        {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
                       </li>
                     ))}
                   </ol>
