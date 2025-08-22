@@ -56,7 +56,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: California'),
-          max_tokens: 256
+          max_tokens: 512
         })
       );
     });
@@ -153,7 +153,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: Seattle, WA'),
-          max_tokens: 256
+          max_tokens: 512
         })
       );
     });
@@ -177,7 +177,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: Not specified'),
-          max_tokens: 256
+          max_tokens: 512
         })
       );
     });
