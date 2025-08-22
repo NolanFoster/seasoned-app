@@ -2855,21 +2855,33 @@ function App() {
               className="share-panel-item share-action"
               onClick={() => {
                 // Generate shareable link using the recipe view worker
-                const shareableUrl = RECIPE_VIEW_URL ? 
-                  `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}` : 
-                  selectedRecipe.source_url;
+                let shareableUrl;
                 
-                if (navigator.share && shareableUrl) {
+                if (RECIPE_VIEW_URL && selectedRecipe.id) {
+                  // Use the recipe view worker for a proper shareable page
+                  shareableUrl = `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}`;
+                } else if (selectedRecipe.source_url) {
+                  // Fallback to original recipe URL if available
+                  shareableUrl = selectedRecipe.source_url;
+                } else {
+                  // No shareable URL available
+                  alert('This recipe cannot be shared at this time. Please ensure it has been saved.');
+                  setShowSharePanel(false);
+                  return;
+                }
+                
+                if (navigator.share) {
                   navigator.share({
                     title: selectedRecipe.name,
                     text: `Check out this recipe: ${selectedRecipe.name}`,
                     url: shareableUrl
                   }).catch(() => {
-                    // Fallback to copy link
+                    // Fallback to copy link if share fails
                     navigator.clipboard.writeText(shareableUrl);
                     alert('Recipe link copied to clipboard!');
                   });
-                } else if (shareableUrl) {
+                } else {
+                  // Browser doesn't support Web Share API, copy to clipboard
                   navigator.clipboard.writeText(shareableUrl);
                   alert('Recipe link copied to clipboard!');
                 }
