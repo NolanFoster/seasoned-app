@@ -2860,12 +2860,8 @@ function App() {
                 if (RECIPE_VIEW_URL && selectedRecipe.id) {
                   // Use the recipe view worker for a proper shareable page
                   shareableUrl = `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}`;
-                } else if (selectedRecipe.source_url) {
-                  // Fallback to original recipe URL if available
-                  shareableUrl = selectedRecipe.source_url;
                 } else {
-                  // No shareable URL available
-                  alert('This recipe cannot be shared at this time. Please ensure it has been saved.');
+                  // No shareable URL available - silently close the share panel
                   setShowSharePanel(false);
                   return;
                 }
