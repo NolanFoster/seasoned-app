@@ -2861,8 +2861,7 @@ function App() {
                   // Use the recipe view worker for a proper shareable page
                   shareableUrl = `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}`;
                 } else {
-                  // No shareable URL available
-                  alert('This recipe cannot be shared at this time. Please ensure the recipe has been saved and the recipe view service is configured.');
+                  // No shareable URL available - silently close the share panel
                   setShowSharePanel(false);
                   return;
                 }
