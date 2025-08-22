@@ -208,15 +208,17 @@ await test('POST /clip with valid URL extracts recipe', async () => {
 
 await test('POST /clip with cached recipe returns from cache', async () => {
   const cachedRecipe = {
-    data: {
-      name: 'Cached Recipe',
-      ingredients: ['cached ingredient']
-    },
-    scrapedAt: new Date().toISOString()
+    name: 'Cached Recipe',
+    ingredients: ['cached ingredient'],
+    instructions: ['cached instruction'],
+    recipeIngredient: ['cached ingredient'],
+    recipeInstructions: [{ "@type": "HowToStep", text: 'cached instruction' }],
+    image: 'https://example.com/cached.jpg',
+    source_url: 'https://example.com/cached'
   };
   
   const env = createMockEnv({
-    RECIPES: {
+    RECIPE_STORAGE: {
       get: async () => JSON.stringify(cachedRecipe)
     }
   });
@@ -229,7 +231,7 @@ await test('POST /clip with cached recipe returns from cache', async () => {
   assert(response.status === 200);
   const data = await response.json();
   assert(data.name === 'Cached Recipe');
-  assert(data.cached === true);
+  assert(data.fromCache === true);
 });
 
 await test('POST /clip with JSON-LD recipe falls back to AI when incomplete', async () => {

@@ -85,11 +85,11 @@ export default {
           if (existingRecipe.success) {
             console.log('Recipe found in KV store, returning cached version');
             return new Response(JSON.stringify({
-              ...existingRecipe.recipe.data,
+              ...existingRecipe.recipe,
               source_url: pageUrl,
               cached: true,
-              recipeId: recipeId,
-              scrapedAt: existingRecipe.recipe.scrapedAt
+              fromCache: true,
+              recipeId: recipeId
             }), { 
               status: 200, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
