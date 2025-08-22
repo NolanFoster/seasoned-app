@@ -29,23 +29,33 @@ jobs:
           npm test
         fi
     
-    - name: Test Worker
+    - name: Test Workers
       if: contains(github.event.head_commit.message, 'worker') || github.event_name == 'pull_request'
       run: |
-        cd clipped-recipe-db-worker
-        if [ -f "package.json" ]; then
+        # Test recipe-save-worker
+        if [ -d "recipe-save-worker" ] && [ -f "recipe-save-worker/package.json" ]; then
+          cd recipe-save-worker
           npm ci
           npm test
+          cd ..
+        fi
+        
+        # Test recipe-search-db
+        if [ -d "recipe-search-db" ] && [ -f "recipe-search-db/package.json" ]; then
+          cd recipe-search-db
+          npm ci
+          npm test
+          cd ..
+        fi
+        
+        # Test recipe-scraper
+        if [ -d "recipe-scraper" ] && [ -f "recipe-scraper/package.json" ]; then
+          cd recipe-scraper
+          npm ci
+          npm test
+          cd ..
         fi
     
-    - name: Test Recipe Save Worker
-      if: contains(github.event.head_commit.message, 'recipe-save') || github.event_name == 'pull_request'
-      run: |
-        cd recipe-save-worker
-        if [ -f "package.json" ]; then
-          npm ci
-          npm test
-        fi
     
     - name: Run Linting
       run: |
@@ -56,12 +66,14 @@ jobs:
           cd ..
         fi
         
-        # Run linting for worker
-                  if [ -d "clipped-recipe-db-worker" ] && [ -f "clipped-recipe-db-worker/package.json" ]; then
-            cd clipped-recipe-db-worker
-          npm run lint || echo "No lint script found"
-          cd ..
-        fi
+        # Run linting for workers
+        for worker_dir in recipe-save-worker recipe-search-db recipe-scraper; do
+          if [ -d "$worker_dir" ] && [ -f "$worker_dir/package.json" ]; then
+            cd "$worker_dir"
+            npm run lint || echo "No lint script found in $worker_dir"
+            cd ..
+          fi
+        done
 
   deploy-staging:
     name: Deploy to Staging

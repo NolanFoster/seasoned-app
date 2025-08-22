@@ -26,26 +26,28 @@ if git diff --cached --name-only | grep -q "^frontend/"; then
     cd ..
 fi
 
-# Check if we're in the worker directory or have worker changes
-if git diff --cached --name-only | grep -q "^clipped-recipe-db-worker/"; then
-      echo "Worker changes detected. Running worker tests..."
-      cd clipped-recipe-db-worker
-    if [ -f "package.json" ]; then
-        # Check if test script exists
-        if npm run | grep -q " test"; then
-            npm test
-            WORKER_TEST_RESULT=$?
-            if [ $WORKER_TEST_RESULT -ne 0 ]; then
-                echo "❌ Worker tests failed! Commit aborted."
-                exit 1
+# Check if we have worker changes
+for worker_dir in recipe-save-worker recipe-search-db recipe-scraper clipper; do
+    if git diff --cached --name-only | grep -q "^$worker_dir/"; then
+        echo "$worker_dir changes detected. Running tests..."
+        cd "$worker_dir"
+        if [ -f "package.json" ]; then
+            # Check if test script exists
+            if npm run | grep -q " test"; then
+                npm test
+                WORKER_TEST_RESULT=$?
+                if [ $WORKER_TEST_RESULT -ne 0 ]; then
+                    echo "❌ $worker_dir tests failed! Commit aborted."
+                    exit 1
+                fi
+                echo "✅ $worker_dir tests passed!"
+            else
+                echo "⚠️  No test script found in $worker_dir/package.json"
             fi
-            echo "✅ Worker tests passed!"
-        else
-            echo "⚠️  No test script found in clipped-recipe-db-worker/package.json"
         fi
+        cd ..
     fi
-    cd ..
-fi
+done
 
 echo "✅ All tests passed! Proceeding with commit..."
 echo "📝 Remember to push to a feature branch and then merge to staging!"

@@ -27,7 +27,6 @@ A modern recipe management application with SQLite backend and image upload supp
 ### Workers:
 - **recipe-scraper**: Scrapes and stores recipe data from URLs
 - **clipper**: Browser extension backend for recipe clipping
-- **clipped-recipe-db-worker**: Main database worker for recipe management
 - **recipe-search-db**: Search functionality for recipes
 - **recipe-save-worker**: Handles recipe saving operations
 - **recipe-recommendation-worker**: Provides recipe recommendations
@@ -72,43 +71,30 @@ For detailed workflow rules, see `.cursorrules` in the project root.
 
 ### 1. Backend Setup
 
-Navigate to the `clipped-recipe-db-worker` directory:
+The recipe app uses multiple specialized workers. Each worker can be set up independently:
 
+#### Recipe Save Worker (Main Database)
 ```bash
-cd clipped-recipe-db-worker
-```
-
-Install dependencies:
-
-```bash
+cd recipe-save-worker
 npm install
-```
-
-#### Create D1 Database
-
-```bash
-npm run db:create
-```
-
-Copy the `database_id` from the output and update `wrangler.toml`.
-
-#### Create R2 Bucket
-
-```bash
-npm run r2:create
-```
-
-#### Apply Database Schema
-
-```bash
-npm run db:migrate
-```
-
-#### Deploy Worker
-
-```bash
 npm run deploy
 ```
+
+#### Recipe Search Database
+```bash
+cd recipe-search-db
+npm install
+npm run deploy
+```
+
+#### Recipe Scraper
+```bash
+cd recipe-scraper
+npm install
+npm run deploy
+```
+
+For detailed setup instructions for each worker, see their individual README files.
 
 ### 2. Frontend Setup
 
@@ -127,7 +113,6 @@ npm install
 Update the API URLs in your environment file (`frontend/.env.local`):
 
 ```bash
-VITE_API_URL=https://your-worker.your-subdomain.workers.dev
 VITE_CLIPPER_API_URL=https://your-clipper-worker.your-subdomain.workers.dev
 VITE_SEARCH_DB_URL=https://your-search-db.your-subdomain.workers.dev
 VITE_SAVE_WORKER_URL=https://your-save-worker.your-subdomain.workers.dev
@@ -148,9 +133,6 @@ npm run dev
 
 1. **Copy example environment files:**
    ```bash
-   # Worker
-   cp clipped-recipe-db-worker/.dev.vars.example clipped-recipe-db-worker/.dev.vars.local
-   
    # Frontend  
    cp frontend/.env.example frontend/.env.local
    ```
@@ -159,20 +141,9 @@ npm run dev
 
 3. **Never commit these files** - they're already in `.gitignore`
 
-#### Update wrangler.toml
+#### Update wrangler.toml files
 
-Replace the placeholder values in `clipped-recipe-db-worker/wrangler.toml`:
-
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "recipe-db"
-database_id = "your_actual_d1_database_id_here"
-
-[[r2_buckets]]
-binding = "IMAGES"
-bucket_name = "recipe-images"
-```
+Each worker has its own `wrangler.toml` configuration file. Update the placeholder values in each worker's directory as needed. Refer to each worker's README for specific configuration requirements.
 
 #### Configure R2 Public Access (Optional)
 
@@ -180,11 +151,7 @@ If you want direct image URLs:
 
 1. Go to Cloudflare Dashboard > R2 > recipe-images
 2. Enable public access
-3. Update the image URL in `clipped-recipe-db-worker/src/index.js`:
-
-```javascript
-return `https://your-custom-domain.com/${fileName}`;
-```
+3. Update the image URL in your image handling worker configuration
 
 ## API Endpoints
 
@@ -224,8 +191,19 @@ CREATE TABLE recipes (
 
 ### Backend Development
 
+Each worker can be developed independently:
+
 ```bash
-cd clipped-recipe-db-worker
+# For recipe save worker
+cd recipe-save-worker
+npm run dev
+
+# For recipe search database
+cd recipe-search-db
+npm run dev
+
+# For recipe scraper
+cd recipe-scraper
 npm run dev
 ```
 
@@ -250,8 +228,19 @@ wrangler d1 execute recipe-db --file=./schema.sql
 
 ### Backend
 
+Deploy each worker individually:
+
 ```bash
-cd clipped-recipe-db-worker
+# Deploy recipe save worker
+cd recipe-save-worker
+npm run deploy
+
+# Deploy recipe search database
+cd recipe-search-db
+npm run deploy
+
+# Deploy recipe scraper
+cd recipe-scraper
 npm run deploy
 ```
 
