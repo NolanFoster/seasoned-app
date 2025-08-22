@@ -76,11 +76,12 @@ jobs:
         
         if [ -n "$COVERAGE_LINE" ]; then
           # Extract percentages using awk, handling the pipe-separated format
-          # Format: "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
-          STATEMENTS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $3); print $3}')
-          BRANCHES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $4); print $4}')
-          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $5); print $5}')
-          LINES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $6); print $6}')
+          # Format: "All files |   88.06 |    81.11 |   94.11 |   88.06 | [uncovered lines]"
+          # Field positions: 1=filename, 2=statements, 3=branches, 4=functions, 5=lines, 6=uncovered
+          STATEMENTS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $2); print $2}')
+          BRANCHES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $3); print $3}')
+          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $4); print $4}')
+          LINES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $5); print $5}')
           
           # Debug output
           echo "Parsed coverage values:"
@@ -88,6 +89,24 @@ jobs:
           echo "  Branches: $BRANCHES%"
           echo "  Functions: $FUNCTIONS%"
           echo "  Lines: $LINES%"
+          
+          # Validate that we got numeric values
+          if ! [[ "$STATEMENTS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid statements value: '$STATEMENTS'"
+            STATEMENTS="0"
+          fi
+          if ! [[ "$BRANCHES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid branches value: '$BRANCHES'"
+            BRANCHES="0"
+          fi
+          if ! [[ "$FUNCTIONS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid functions value: '$FUNCTIONS'"
+            FUNCTIONS="0"
+          fi
+          if ! [[ "$LINES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "Warning: Invalid lines value: '$LINES'"
+            LINES="0"
+          fi
         else
           # Fallback values if parsing fails
           echo "Warning: Could not find coverage line in output"
