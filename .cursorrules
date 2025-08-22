@@ -7,8 +7,9 @@ This project uses modular rules stored in `.cursor/rules/`. The following rules 
 1. **Testing and Deployment Workflow** - Ensures proper testing and deployment practices
 2. **Code Quality Standards** - Maintains consistent code quality  
 3. **Release Workflow** - Guides the release process from staging to production
-4. **Automated Workflows** (on-demand) - Suggests CI/CD and testing improvements
-5. **Cloudflare Worker Setup** (on-demand) - Guidelines for setting up new Cloudflare Workers
+4. **Pull Request Guidelines** - Keeps PRs focused on production code only
+5. **Automated Workflows** (on-demand) - Suggests CI/CD and testing improvements
+6. **Cloudflare Worker Setup** (on-demand) - Guidelines for setting up new Cloudflare Workers
 
 ## Key Guidelines
 
@@ -23,5 +24,11 @@ This project uses modular rules stored in `.cursor/rules/`. The following rules 
 - Test thoroughly on staging before production release
 - Document significant changes and decisions
 - Follow semantic versioning for releases
+
+### Pull Request Guidelines
+- Never include .md files unless explicitly required
+- Exclude one-time operation scripts and temporary files
+- Keep PRs focused on production code only
+- Use PR descriptions for documentation instead of adding .md files
 
 For detailed rules, see the individual `.mdc` files in `.cursor/rules/`.

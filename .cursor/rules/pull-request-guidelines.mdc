@@ -1,0 +1,63 @@
+## Pull Request Best Practices
+
+When creating pull requests, follow these guidelines to maintain a clean and focused codebase:
+
+### Files to Exclude from Pull Requests
+
+#### 1. Documentation Files
+- **NEVER** include `.md` (Markdown) files in pull requests unless they are:
+  - Critical API documentation that is part of the codebase
+  - README files specifically requested by the project maintainers
+  - Part of the application's functionality (e.g., content served by the app)
+
+#### 2. One-Time Operation Scripts
+- **EXCLUDE** all temporary or one-time scripts such as:
+  - Data migration scripts that have already been run
+  - Database seed scripts for development
+  - Temporary debugging or analysis scripts
+  - Quick fix scripts that won't be reused
+  - Personal utility scripts
+
+### What Should Be in a Pull Request
+
+Focus your pull requests on:
+- Source code changes that implement features or fix bugs
+- Configuration files necessary for the application
+- Test files that validate the changes
+- Dependencies updates in package files
+- CI/CD workflow updates (only if part of the feature)
+
+### Handling Temporary Files
+
+If you need temporary scripts or documentation during development:
+1. Add them to `.gitignore` before creating them
+2. Use a dedicated `temp/` or `scripts/temp/` directory that's gitignored
+3. Document their purpose in PR comments if they're needed for review
+4. Delete them before finalizing the PR
+
+### Documentation Strategy
+
+Instead of adding .md files to PRs:
+1. Use PR description to document changes thoroughly
+2. Add inline code comments for complex logic
+3. Update existing documentation in separate PRs
+4. Use commit messages to explain the "why" behind changes
+
+### Pre-PR Checklist
+
+Before creating a pull request:
+- [ ] Remove all `.md` files unless explicitly required
+- [ ] Delete one-time scripts and temporary files
+- [ ] Ensure `.gitignore` excludes temporary directories
+- [ ] Verify only production code is included
+- [ ] Check that no debug logs or personal notes are committed
+
+### Exception Process
+
+If you absolutely must include documentation or scripts:
+1. Justify in the PR description why it's necessary
+2. Get explicit approval from maintainers
+3. Ensure they're placed in appropriate directories
+4. Consider if they should be in a separate PR
+
+Remember: **Keep PRs focused on the code that will run in production!**
