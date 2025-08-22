@@ -464,5 +464,96 @@ describe('Recipe Deletion Handling', () => {
         expect(noRecipesElements.length).toBeGreaterThan(0);
       });
     });
+
+    it('should skip recipes on server errors (5xx)', async () => {
+      const user = userEvent.setup();
+      
+      // Mock responses
+      fetch.mockImplementation((url) => {
+        if (url.includes('/api/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {}
+            })
+          });
+        }
+        
+        if (url.includes('/api/search')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              results: [
+                { id: 'recipe-1', properties: { name: 'Recipe 1' } },
+                { id: 'recipe-2', properties: { name: 'Recipe 2' } }
+              ]
+            })
+          });
+        }
+        
+        // Mock server errors for KV fetch
+        if (url.includes('/recipe/get')) {
+          const recipeId = new URL(url).searchParams.get('id');
+          if (recipeId === 'recipe-1') {
+            // Return 500 server error
+            return Promise.resolve({
+              ok: false,
+              status: 500,
+              text: async () => 'Internal Server Error'
+            });
+          } else if (recipeId === 'recipe-2') {
+            // Return successful response for recipe-2
+            return Promise.resolve({
+              ok: true,
+              json: async () => ({
+                id: 'recipe-2',
+                data: {
+                  name: 'Recipe 2',
+                  description: 'Test recipe 2',
+                  ingredients: ['ingredient 2'],
+                  image: 'https://example.com/recipe2.jpg'
+                }
+              })
+            });
+          }
+        }
+        
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true })
+        });
+      });
+
+      render(<App />);
+      
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      });
+      
+      // Search for recipes
+      const searchInput = screen.getByPlaceholderText('Search recipes or paste a URL to clip...');
+      await user.clear(searchInput);
+      await user.type(searchInput, 'Recipe');
+      
+      // Wait for search and KV fetches to complete
+      await waitFor(() => {
+        const kvCalls = fetch.mock.calls.filter(call => 
+          call[0].includes('/recipe/get')
+        );
+        expect(kvCalls.length).toBe(2); // Should try to fetch both recipes
+      }, { timeout: 3000 });
+      
+      // Verify that recipe-1 with server error was skipped
+      // The app should still function and not crash on server errors
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('recipe/get?id=recipe-1'),
+        expect.any(Object)
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('recipe/get?id=recipe-2'),
+        expect.any(Object)
+      );
+    });
   });
 });
