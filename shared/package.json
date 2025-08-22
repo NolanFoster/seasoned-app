@@ -10,7 +10,9 @@
     "./utility-functions": "./utility-functions.js",
     "./utils": "./utility-functions.js",
     "./nutrition-calculator": "./nutrition-calculator.js",
-    "./nutrition": "./nutrition-calculator.js"
+    "./nutrition": "./nutrition-calculator.js",
+    "./metrics-collector": "./metrics-collector.js",
+    "./metrics": "./metrics-collector.js"
   },
   "scripts": {
     "test": "node test-simple.js",
@@ -20,6 +22,7 @@
     "test:utility": "node test-utility-functions.js",
     "test:utility:vitest": "vitest run __tests__/utility-functions.test.js",
     "test:nutrition": "node test-nutrition-calculator.js",
+    "test:metrics": "node test-metrics-collector.js",
     "test:all": "node ../test-refactoring-complete.js"
   },
   "keywords": [

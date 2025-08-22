@@ -32,7 +32,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '../../shared/utility-functions.js': path.resolve(__dirname, '../shared/utility-functions.js')
+      '../../shared/utility-functions.js': path.resolve(__dirname, '../shared/utility-functions.js'),
+      '../../shared/metrics-collector.js': path.resolve(__dirname, '../shared/metrics-collector.js')
     }
   }
 });

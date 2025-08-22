@@ -1,0 +1,69 @@
+name = "auth-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth_kv_namespace_id" # Will be replaced with actual ID after creation
+
+# D1 Databases
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth-db"
+database_id = "auth_db_id" # Will be replaced with actual ID after creation
+
+# Observability settings
+[observability]
+enabled = true
+
+# Preview environment (development)
+[env.preview]
+name = "auth-worker-preview"
+vars = { ENVIRONMENT = "preview" }
+
+[[env.preview.kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth_kv_namespace_preview_id" # Will be replaced with actual ID
+
+[[env.preview.d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth-db-preview"
+database_id = "auth_db_preview_id" # Will be replaced with actual ID
+
+[env.preview.observability]
+enabled = true
+
+# Production environment
+[env.production]
+name = "auth-worker-production"
+vars = { ENVIRONMENT = "production" }
+
+[[env.production.kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth_kv_namespace_production_id" # Will be replaced with actual ID
+
+[[env.production.d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth-db-production"
+database_id = "auth_db_production_id" # Will be replaced with actual ID
+
+[env.production.observability]
+enabled = true
+
+# Staging environment
+[env.staging]
+name = "auth-worker-staging"
+vars = { ENVIRONMENT = "staging" }
+
+[[env.staging.kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth_kv_namespace_staging_id" # Will be replaced with actual ID
+
+[[env.staging.d1_databases]]
+binding = "AUTH_DB"
+database_name = "auth-db-staging"
+database_id = "auth_db_staging_id" # Will be replaced with actual ID
+
+[env.staging.observability]
+enabled = true

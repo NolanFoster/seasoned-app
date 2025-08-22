@@ -4,54 +4,14 @@
  */
 
 import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
+import { MetricsCollector } from '../../shared/metrics-collector.js';
 
 // Wrapper to automatically add worker context
 function log(level, message, data = {}, context = {}) {
   return baseLog(level, message, data, { worker: 'recipe-recommendation-worker', ...context });
 }
 
-// Metrics collection utility
-class MetricsCollector {
-  constructor() {
-    this.metrics = new Map();
-  }
 
-  increment(metric, value = 1, tags = {}) {
-    const key = `${metric}:${JSON.stringify(tags)}`;
-    const current = this.metrics.get(key) || { count: 0, tags };
-    current.count += value;
-    this.metrics.set(key, current);
-  }
-
-  timing(metric, duration, tags = {}) {
-    const key = `${metric}_duration:${JSON.stringify(tags)}`;
-    const current = this.metrics.get(key) || { 
-      count: 0, 
-      total: 0, 
-      min: Infinity, 
-      max: -Infinity, 
-      tags 
-    };
-    current.count += 1;
-    current.total += duration;
-    current.min = Math.min(current.min, duration);
-    current.max = Math.max(current.max, duration);
-    current.avg = current.total / current.count;
-    this.metrics.set(key, current);
-  }
-
-  getMetrics() {
-    const result = {};
-    for (const [key, value] of this.metrics.entries()) {
-      result[key] = value;
-    }
-    return result;
-  }
-
-  reset() {
-    this.metrics.clear();
-  }
-}
 
 // Global metrics collector
 const metrics = new MetricsCollector();
