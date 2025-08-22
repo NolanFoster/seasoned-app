@@ -211,15 +211,12 @@ describe('Recipe View Worker', () => {
   });
 
   describe('POST /recipe/preview', () => {
-    it('should preview recipe without saving', async () => {
+    it('should return HTML for valid recipe data', async () => {
       const recipeData = {
-        name: 'Preview Recipe',
-        description: 'A test recipe for preview',
-        ingredients: ['1 cup flour', '2 eggs'],
-        instructions: ['Mix ingredients', 'Bake at 350°F'],
-        prep_time: 'PT10M',
-        cook_time: 'PT20M',
-        total_time: 'PT30M'
+        name: 'Test Recipe',
+        description: 'A test recipe',
+        ingredients: ['ingredient 1', 'ingredient 2'],
+        instructions: ['step 1', 'step 2']
       };
 
       const request = new Request('https://test.com/recipe/preview', {
@@ -231,22 +228,23 @@ describe('Recipe View Worker', () => {
       });
 
       const response = await worker.fetch(request, mockEnv);
-
+      
       expect(response.status).toBe(200);
-      expect(response.headers.get('content-type')).toBe('text/html;charset=UTF-8');
+      expect(response.headers.get('Content-Type')).toBe('text/html;charset=UTF-8');
       
       const html = await response.text();
-      expect(html).toContain('Preview Recipe');
-      expect(html).toContain('A test recipe for preview');
-      expect(html).toContain('1 cup flour');
-      expect(html).toContain('Mix ingredients');
+      expect(html).toContain('Test Recipe');
+      expect(html).toContain('A test recipe');
+      expect(html).toContain('ingredient 1');
+      expect(html).toContain('step 1');
     });
 
     it('should handle recipe data wrapped in data property', async () => {
-      const wrappedData = {
+      const recipeData = {
         data: {
           name: 'Wrapped Recipe',
-          ingredients: ['Sugar', 'Spice']
+          description: 'A wrapped recipe',
+          ingredients: ['ingredient A']
         }
       };
 
@@ -255,17 +253,18 @@ describe('Recipe View Worker', () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(wrappedData)
+        body: JSON.stringify(recipeData)
       });
 
       const response = await worker.fetch(request, mockEnv);
-
+      
       expect(response.status).toBe(200);
       const html = await response.text();
       expect(html).toContain('Wrapped Recipe');
+      expect(html).toContain('ingredient A');
     });
 
-    it('should return 400 for invalid content type', async () => {
+    it('should return 400 for non-JSON content type', async () => {
       const request = new Request('https://test.com/recipe/preview', {
         method: 'POST',
         headers: {
@@ -275,10 +274,10 @@ describe('Recipe View Worker', () => {
       });
 
       const response = await worker.fetch(request, mockEnv);
-
+      
       expect(response.status).toBe(400);
-      const error = await response.json();
-      expect(error.error).toContain('Content-Type must be application/json');
+      const data = await response.json();
+      expect(data.error).toBe('Content-Type must be application/json');
     });
 
     it('should return 400 for invalid recipe data', async () => {
@@ -291,26 +290,62 @@ describe('Recipe View Worker', () => {
       });
 
       const response = await worker.fetch(request, mockEnv);
-
+      
       expect(response.status).toBe(400);
-      const error = await response.json();
-      expect(error.error).toContain('Invalid recipe data');
+      const data = await response.json();
+      expect(data.error).toBe('Invalid recipe data');
     });
 
-    it('should return 500 for JSON parse errors', async () => {
+    it('should return 400 for non-object recipe data', async () => {
       const request = new Request('https://test.com/recipe/preview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: 'invalid json{'
+        body: JSON.stringify("string data")
       });
 
       const response = await worker.fetch(request, mockEnv);
+      
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid recipe data');
+    });
 
+    it('should handle malformed JSON gracefully', async () => {
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: '{invalid json'
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+      
       expect(response.status).toBe(500);
-      const error = await response.json();
-      expect(error.error).toContain('Failed to process recipe data');
+      const data = await response.json();
+      expect(data.error).toBe('Failed to process recipe data');
+      expect(data.details).toBeDefined();
+    });
+
+    it('should include CORS headers in preview response', async () => {
+      const recipeData = {
+        name: 'CORS Test Recipe'
+      };
+
+      const request = new Request('https://test.com/recipe/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(recipeData)
+      });
+
+      const response = await worker.fetch(request, mockEnv);
+      
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toContain('POST');
     });
   });
 

@@ -914,9 +914,9 @@ function App() {
                           completeRecipes.push(completeRecipe);
                           debugLogEmoji('✅', `[${i + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
                         } else {
-                          // Fallback to search result if KV fetch fails
-                          console.warn(`⚠️ [${i + 1}/${recipes.length}] KV fetch failed for recipe ${recipe.id}, using search result`);
-                          completeRecipes.push(recipe);
+                          // Recipe not found in KV - it might have been deleted
+                          // Don't include it in the results instead of using incomplete search data
+                          console.warn(`⚠️ [${i + 1}/${recipes.length}] Recipe ${recipe.id} not found in KV storage - skipping (might be deleted)`);
                         }
                       }
                       debugLogEmoji('🎯', `Completed KV fetching: ${completeRecipes.length}/${recipes.length} recipes retrieved`);
@@ -1687,9 +1687,9 @@ function App() {
             completeResults.push(completeRecipe);
             debugLogEmoji('✅', `[${i + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
           } else {
-            // Fallback to search result if KV fetch fails
-            console.warn(`⚠️ [${i + 1}/${result.results.length}] KV fetch failed for recipe ${node.id}, using search result`);
-            completeResults.push({ id: node.id, data: node.properties });
+            // Recipe not found in KV - it might have been deleted
+            // Don't include it in the results instead of using incomplete search data
+            console.warn(`⚠️ [${i + 1}/${result.results.length}] Recipe ${node.id} not found in KV storage - skipping (might be deleted)`);
           }
         }
         debugLogEmoji('🎯', `Completed KV fetching: ${completeResults.length}/${result.results.length} recipes retrieved`);

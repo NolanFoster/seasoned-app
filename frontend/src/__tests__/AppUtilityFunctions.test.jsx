@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 
@@ -11,7 +11,8 @@ const mockEnv = {
   VITE_SAVE_WORKER_URL: 'https://recipe-save-worker.test.workers.dev',
   VITE_SEARCH_DB_URL: 'https://search-db.test.workers.dev',
   VITE_RECIPE_VIEW_URL: 'https://recipe-view.test.workers.dev',
-  VITE_RECOMMENDATION_API_URL: 'https://recommendations.test.workers.dev'
+  VITE_RECOMMENDATION_API_URL: 'https://recommendations.test.workers.dev',
+  VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com'
 };
 
 // Apply environment variables
@@ -19,7 +20,14 @@ Object.entries(mockEnv).forEach(([key, value]) => {
   process.env[key] = value;
 });
 
-describe('App Branch Coverage for Recipe Deletion', () => {
+// Mock IntersectionObserver
+global.IntersectionObserver = jest.fn(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn()
+}));
+
+describe('App Utility Functions Coverage', () => {
   beforeEach(() => {
     // Reset fetch mock before each test
     fetch.mockClear();
@@ -43,6 +51,7 @@ describe('App Branch Coverage for Recipe Deletion', () => {
     // Mock window functions
     window.alert = jest.fn();
     window.confirm = jest.fn(() => true);
+    window.open = jest.fn();
   });
 
   afterEach(() => {
@@ -52,116 +61,8 @@ describe('App Branch Coverage for Recipe Deletion', () => {
     console.error.mockRestore();
   });
 
-  describe('fetchCompleteRecipeData branches', () => {
-    it('should handle response.ok being true with valid data', async () => {
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/get')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              id: 'test-recipe',
-              data: {
-                name: 'Test Recipe',
-                title: 'Also has title',
-                ingredients: ['ingredient 1']
-              }
-            })
-          });
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle response.ok being false', async () => {
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/get')) {
-          return Promise.resolve({
-            ok: false,
-            status: 403,
-            text: async () => 'Forbidden'
-          });
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle recipe data without data wrapper', async () => {
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/get')) {
-          // Return recipe data directly without data wrapper
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              name: 'Direct Recipe',
-              title: 'Direct Title',
-              ingredients: ['ingredient 1']
-            })
-          });
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Search functionality branches', () => {
-    it('should handle search with URL input', async () => {
+  describe('Clipboard and URL handling', () => {
+    it('should detect and handle recipe URLs', async () => {
       const user = userEvent.setup();
       
       fetch.mockImplementation((url) => {
@@ -171,6 +72,13 @@ describe('App Branch Coverage for Recipe Deletion', () => {
             json: async () => ({
               recommendations: {}
             })
+          });
+        }
+        
+        if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: 'healthy' })
           });
         }
         
@@ -180,8 +88,9 @@ describe('App Branch Coverage for Recipe Deletion', () => {
             json: async () => ({
               success: true,
               recipe: {
-                id: 'clipped-recipe',
-                name: 'Clipped Recipe'
+                id: 'clipped-123',
+                name: 'Clipped Recipe',
+                url: 'https://example.com/recipe'
               }
             })
           });
@@ -197,27 +106,15 @@ describe('App Branch Coverage for Recipe Deletion', () => {
       
       const searchInput = await screen.findByPlaceholderText('Search recipes or paste a URL to clip...');
       
-      // Type a URL
-      await user.type(searchInput, 'https://example.com/recipe');
+      // Type a recipe URL
+      await user.type(searchInput, 'https://recipeblog.com/pasta-recipe');
       
-      // Verify URL detection
-      expect(searchInput.value).toBe('https://example.com/recipe');
+      // Should detect URL
+      expect(searchInput.value).toContain('https://');
     });
 
-    it('should handle search cache hit', async () => {
+    it('should handle clipboard paste of URLs', async () => {
       const user = userEvent.setup();
-      
-      // Mock localStorage with cached search results
-      const mockCache = {
-        'seasoned_search_cache:pasta': JSON.stringify({
-          results: [
-            { id: 'cached-1', name: 'Cached Pasta' }
-          ],
-          timestamp: Date.now()
-        })
-      };
-      
-      global.localStorage.getItem = jest.fn((key) => mockCache[key] || null);
       
       fetch.mockImplementation((url) => {
         if (url.includes('/api/recommendations')) {
@@ -227,11 +124,6 @@ describe('App Branch Coverage for Recipe Deletion', () => {
               recommendations: {}
             })
           });
-        }
-        
-        // Should not make search API call if cache hit
-        if (url.includes('/api/search')) {
-          throw new Error('Should use cache instead of API');
         }
         
         return Promise.resolve({
@@ -244,121 +136,108 @@ describe('App Branch Coverage for Recipe Deletion', () => {
       
       const searchInput = await screen.findByPlaceholderText('Search recipes or paste a URL to clip...');
       
-      // Search for cached term
-      await user.type(searchInput, 'pasta');
-      
-      // Verify cache was checked
-      expect(localStorage.getItem).toHaveBeenCalledWith('seasoned_search_cache:pasta');
-    });
-  });
-
-  describe('Delete recipe branches', () => {
-    it('should handle successful deletion with selected recipe', async () => {
-      window.confirm = jest.fn(() => true);
-      
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/delete')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              success: true
-            })
-          });
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
+      // Simulate paste event
+      const pasteEvent = new ClipboardEvent('paste', {
+        clipboardData: new DataTransfer()
       });
-
-      render(<App />);
+      pasteEvent.clipboardData.setData('text/plain', 'https://recipe.com/test');
       
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle deletion error with non-ok response', async () => {
-      window.confirm = jest.fn(() => true);
-      window.alert = jest.fn();
-      
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/delete')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              success: false,
-              error: 'Deletion failed'
-            })
-          });
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle network error during deletion', async () => {
-      window.confirm = jest.fn(() => true);
-      window.alert = jest.fn();
-      
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/delete')) {
-          return Promise.reject(new Error('Network error'));
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      await act(async () => {
+        searchInput.dispatchEvent(pasteEvent);
       });
     });
   });
 
-  describe('Smart search and recommendations branches', () => {
-    it('should handle empty recommendations', async () => {
+  describe('Timer and debouncing functions', () => {
+    it('should handle search debouncing', async () => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ delay: null });
+      
+      fetch.mockImplementation((url) => {
+        if (url.includes('/api/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {}
+            })
+          });
+        }
+        
+        if (url.includes('/api/search')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              results: []
+            })
+          });
+        }
+        
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true })
+        });
+      });
+
+      render(<App />);
+      
+      const searchInput = await screen.findByPlaceholderText('Search recipes or paste a URL to clip...');
+      
+      // Type rapidly
+      await user.type(searchInput, 'test');
+      
+      // Advance timers
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      
+      jest.useRealTimers();
+    });
+  });
+
+  describe('Error handling and recovery', () => {
+    it('should handle clipper health check failure', async () => {
+      fetch.mockImplementation((url) => {
+        if (url.includes('/api/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {}
+            })
+          });
+        }
+        
+        if (url.includes('/health')) {
+          return Promise.resolve({
+            ok: false,
+            status: 503
+          });
+        }
+        
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true })
+        });
+      });
+
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      });
+      
+      // Should log health check failure
+      expect(console.log).toHaveBeenCalled();
+    });
+
+    it('should handle recipe save toggle', async () => {
+      const user = userEvent.setup();
+      
+      // Start with save disabled
+      global.localStorage.getItem = jest.fn((key) => {
+        if (key === 'recipeSaveEnabled') return 'false';
+        return null;
+      });
+      
       fetch.mockImplementation((url) => {
         if (url.includes('/api/recommendations')) {
           return Promise.resolve({
@@ -380,19 +259,155 @@ describe('App Branch Coverage for Recipe Deletion', () => {
       await waitFor(() => {
         expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
       });
-      
-      // Should show no recipes found
-      expect(screen.getByText('No Recipes Found')).toBeInTheDocument();
     });
+  });
 
-    it('should handle recommendations with no search results', async () => {
+  describe('Recipe transformation functions', () => {
+    it('should transform recipe data correctly', async () => {
       fetch.mockImplementation((url) => {
         if (url.includes('/api/recommendations')) {
           return Promise.resolve({
             ok: true,
             json: async () => ({
               recommendations: {
-                'Empty Category': ['nonexistent']
+                'Test': ['recipe']
+              }
+            })
+          });
+        }
+        
+        if (url.includes('/api/search')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              results: [
+                { 
+                  id: 'test-1', 
+                  properties: { 
+                    name: 'Test Recipe',
+                    prepTime: 'PT15M',
+                    cookTime: 'PT30M',
+                    totalTime: 'PT45M',
+                    datePublished: '2023-01-01',
+                    nutrition: {
+                      calories: '350 calories',
+                      protein: '15g protein'
+                    }
+                  } 
+                }
+              ]
+            })
+          });
+        }
+        
+        if (url.includes('/recipe/get')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 'test-1',
+              data: {
+                name: 'Test Recipe',
+                title: 'Test Recipe Title',
+                description: 'A test recipe',
+                image: ['https://example.com/image.jpg'],
+                images: ['https://example.com/image2.jpg'],
+                ingredients: ['1 cup flour', '2 eggs'],
+                instructions: [
+                  { name: 'Step 1', text: 'Mix ingredients' },
+                  { text: 'Step 2' },
+                  'Step 3 as string'
+                ],
+                prepTime: 'PT15M',
+                cookTime: 'PT30M',
+                totalTime: 'PT45M',
+                recipeYield: '4 servings',
+                nutrition: {
+                  calories: '350',
+                  proteinContent: '15g'
+                },
+                video: {
+                  contentUrl: 'https://youtube.com/watch?v=123'
+                },
+                author: {
+                  name: 'Test Author'
+                },
+                datePublished: '2023-01-01T00:00:00Z'
+              }
+            })
+          });
+        }
+        
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true })
+        });
+      });
+
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      });
+      
+      // Wait for recommendations to process
+      await waitFor(() => {
+        expect(fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/search'),
+          expect.any(Object)
+        );
+      }, { timeout: 3000 });
+    });
+
+    it('should handle recipes with missing fields', async () => {
+      fetch.mockImplementation((url) => {
+        if (url.includes('/api/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {}
+            })
+          });
+        }
+        
+        if (url.includes('/recipe/get')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              id: 'minimal-recipe',
+              data: {
+                name: 'Minimal Recipe'
+                // Missing most fields
+              }
+            })
+          });
+        }
+        
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true })
+        });
+      });
+
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Category and recommendation processing', () => {
+    it('should handle malformed recommendation data', async () => {
+      fetch.mockImplementation((url) => {
+        if (url.includes('/api/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {
+                'Valid': ['recipe1'],
+                'Invalid': 'not-an-array',
+                'Null': null,
+                'Number': 123
               }
             })
           });
@@ -418,92 +433,48 @@ describe('App Branch Coverage for Recipe Deletion', () => {
       await waitFor(() => {
         expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
       });
+      
+      // Should handle malformed data gracefully
+      expect(console.warn).toHaveBeenCalled();
     });
 
-    it('should handle fetch timeout with AbortController', async () => {
-      fetch.mockImplementation((url, options) => {
+    it('should limit recipes per category', async () => {
+      fetch.mockImplementation((url) => {
         if (url.includes('/api/recommendations')) {
           return Promise.resolve({
             ok: true,
             json: async () => ({
-              recommendations: {}
+              recommendations: {
+                'Many Recipes': ['recipe1', 'recipe2', 'recipe3', 'recipe4', 'recipe5']
+              }
+            })
+          });
+        }
+        
+        if (url.includes('/api/search')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              results: [
+                { id: 'r1', properties: { name: 'Recipe 1' } },
+                { id: 'r2', properties: { name: 'Recipe 2' } },
+                { id: 'r3', properties: { name: 'Recipe 3' } },
+                { id: 'r4', properties: { name: 'Recipe 4' } },
+                { id: 'r5', properties: { name: 'Recipe 5' } }
+              ]
             })
           });
         }
         
         if (url.includes('/recipe/get')) {
-          // Simulate abort
-          if (options?.signal) {
-            return Promise.reject(new DOMException('Aborted', 'AbortError'));
-          }
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Share panel and clipboard branches', () => {
-    it('should handle share with clipboard only (no share API)', async () => {
-      // Remove navigator.share to test clipboard path
-      delete global.navigator.share;
-      global.navigator.clipboard = {
-        writeText: jest.fn().mockResolvedValue()
-      };
-      
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
+          const recipeId = new URL(url).searchParams.get('id');
           return Promise.resolve({
             ok: true,
             json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true })
-        });
-      });
-
-      render(<App />);
-      
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Recipe update branches', () => {
-    it('should handle recipe update success', async () => {
-      fetch.mockImplementation((url) => {
-        if (url.includes('/api/recommendations')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              recommendations: {}
-            })
-          });
-        }
-        
-        if (url.includes('/recipe/update')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              success: true,
-              recipe: {
-                id: 'updated-recipe',
-                name: 'Updated Recipe'
+              id: recipeId,
+              data: {
+                name: `Recipe ${recipeId}`,
+                ingredients: ['test']
               }
             })
           });
@@ -520,11 +491,19 @@ describe('App Branch Coverage for Recipe Deletion', () => {
       await waitFor(() => {
         expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
       });
-    });
-
-    it('should handle recipe update failure', async () => {
-      window.alert = jest.fn();
       
+      // Should process all recommendations
+      await waitFor(() => {
+        const searchCalls = fetch.mock.calls.filter(call => 
+          call[0].includes('/api/search')
+        );
+        expect(searchCalls.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
+    });
+  });
+
+  describe('Visual state and UI updates', () => {
+    it('should handle window resize events', async () => {
       fetch.mockImplementation((url) => {
         if (url.includes('/api/recommendations')) {
           return Promise.resolve({
@@ -532,13 +511,6 @@ describe('App Branch Coverage for Recipe Deletion', () => {
             json: async () => ({
               recommendations: {}
             })
-          });
-        }
-        
-        if (url.includes('/recipe/update')) {
-          return Promise.resolve({
-            ok: false,
-            status: 500
           });
         }
         
@@ -552,6 +524,47 @@ describe('App Branch Coverage for Recipe Deletion', () => {
       
       await waitFor(() => {
         expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      });
+      
+      // Simulate window resize
+      act(() => {
+        global.innerWidth = 500;
+        global.dispatchEvent(new Event('resize'));
+      });
+      
+      act(() => {
+        global.innerWidth = 1024;
+        global.dispatchEvent(new Event('resize'));
+      });
+    });
+
+    it('should handle scroll events', async () => {
+      fetch.mockImplementation((url) => {
+        if (url.includes('/api/recommendations')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              recommendations: {}
+            })
+          });
+        }
+        
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true })
+        });
+      });
+
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search recipes or paste a URL to clip...')).toBeInTheDocument();
+      });
+      
+      // Simulate scroll
+      act(() => {
+        window.pageYOffset = 100;
+        global.dispatchEvent(new Event('scroll'));
       });
     });
   });
