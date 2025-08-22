@@ -199,6 +199,32 @@ describe('Error Handling in API Endpoints', () => {
 });
 
 describe('Health Check Error Scenarios', () => {
+  it('should handle successful AI health check', async () => {
+    const mockEnvWithHealthyAI = {
+      AI: {
+        run: vi.fn().mockResolvedValue({ response: 'OK' })
+      }
+    };
+
+    const request = new Request('http://localhost/health');
+    const response = await workerModule.fetch(request, mockEnvWithHealthyAI);
+    
+    expect(response.status).toBe(200);
+    
+    const data = await response.json();
+    expect(data.status).toBe('healthy');
+    expect(data.services.ai).toBe('healthy');
+    
+    // Verify AI was called for health check
+    expect(mockEnvWithHealthyAI.AI.run).toHaveBeenCalledWith(
+      '@cf/meta/llama-3.1-8b-instruct',
+      expect.objectContaining({
+        prompt: 'Say "OK"',
+        max_tokens: 5
+      })
+    );
+  });
+
   it('should handle AI health check failure gracefully', async () => {
     const mockEnvWithFailingAI = {
       AI: {
@@ -217,26 +243,36 @@ describe('Health Check Error Scenarios', () => {
   });
 
   it('should handle health check internal errors', async () => {
-    // Create a mock environment that will cause an error in health check
-    const mockEnvWithError = {
-      AI: {
-        run: () => {
-          throw new Error('Unexpected error in AI binding');
-        }
-      }
-    };
-
-    const request = new Request('http://localhost/health');
-    const response = await workerModule.fetch(request, mockEnvWithError);
+    // Force an error in the health check by causing JSON.stringify to fail
+    const originalStringify = JSON.stringify;
+    let callCount = 0;
     
-    // Should return error status if health check itself fails
-    const data = await response.json();
-    if (response.status === 500) {
+    JSON.stringify = vi.fn().mockImplementation((value) => {
+      callCount++;
+      // Fail when trying to stringify the health response
+      if (callCount > 3 && value && value.status && value.services) {
+        throw new Error('Health check serialization error');
+      }
+      return originalStringify(value);
+    });
+
+    try {
+      const request = new Request('http://localhost/health');
+      const response = await workerModule.fetch(request, { AI: null });
+      
+      // Restore JSON.stringify before checking response
+      JSON.stringify = originalStringify;
+      
+      // Should return 500 status due to serialization error
+      expect(response.status).toBe(500);
+      
+      const data = await response.json();
       expect(data.status).toBe('unhealthy');
-      expect(data.error).toBeDefined();
-    } else {
-      // Or handle gracefully
-      expect(data.services.ai).toBe('error');
+      expect(data.error).toBe('Health check serialization error');
+      expect(data.requestId).toBeDefined();
+    } finally {
+      // Ensure JSON.stringify is always restored
+      JSON.stringify = originalStringify;
     }
   });
 });
@@ -253,5 +289,36 @@ describe('Metrics Endpoint Error Handling', () => {
     expect(data.metrics).toBeDefined();
     expect(data.timestamp).toBeDefined();
     expect(data.requestId).toBeDefined();
+  });
+
+  it('should handle metrics endpoint errors and return 500', async () => {
+    // Test the error path by mocking JSON.stringify to fail
+    const request = new Request('http://localhost/metrics');
+    const originalStringify = JSON.stringify;
+    
+    // Create a mock that fails on certain conditions
+    JSON.stringify = vi.fn().mockImplementation((value, replacer, space) => {
+      // Fail when trying to stringify the metrics response
+      if (value && value.metrics && value.timestamp) {
+        throw new Error('Serialization error');
+      }
+      // Otherwise use the original implementation
+      return originalStringify(value, replacer, space);
+    });
+    
+    try {
+      const response = await workerModule.fetch(request, { AI: null });
+      
+      // Restore JSON.stringify before trying to parse response
+      JSON.stringify = originalStringify;
+      
+      expect(response.status).toBe(500);
+      const errorData = await response.json();
+      expect(errorData.error).toBe('Failed to retrieve metrics');
+      expect(errorData.requestId).toBeDefined();
+    } finally {
+      // Ensure JSON.stringify is always restored
+      JSON.stringify = originalStringify;
+    }
   });
 });

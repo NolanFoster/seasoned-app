@@ -56,7 +56,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: California'),
-          max_tokens: 256
+          max_tokens: 512
         })
       );
     });
@@ -153,7 +153,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: Seattle, WA'),
-          max_tokens: 256
+          max_tokens: 512
         })
       );
     });
@@ -177,7 +177,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: Not specified'),
-          max_tokens: 256
+          max_tokens: 512
         })
       );
     });
@@ -300,6 +300,49 @@ describe('AI Integration', () => {
           prompt: expect.stringContaining('Christmas')
         })
       );
+    });
+  });
+
+  describe('AI response edge cases for coverage', () => {
+    it('should handle AI response when response is a plain string', async () => {
+      const stringResponse = '{"recommendations": {"Summer Delights": ["grilled corn", "watermelon salad", "ice cream", "cold brew coffee"]}}';
+      
+      mockEnvWithAI.AI.run.mockResolvedValue(stringResponse);
+      
+      const result = await getRecipeRecommendations('Miami', '2024-07-20', mockEnvWithAI, 'test-string-response');
+      
+      expect(result).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(Object.keys(result.recommendations).length).toBeGreaterThan(0);
+    });
+
+    it('should handle AI response with clean JSON (no extraction needed)', async () => {
+      const cleanJsonResponse = {
+        response: '{"recommendations":{"Spring Garden Fresh":["asparagus soup","pea risotto","strawberry salad","herb chicken"]}}'
+      };
+      
+      mockEnvWithAI.AI.run.mockResolvedValue(cleanJsonResponse);
+      
+      const result = await getRecipeRecommendations('Portland', '2024-04-15', mockEnvWithAI, 'test-clean-json');
+      
+      expect(result).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(Object.keys(result.recommendations).length).toBeGreaterThan(0);
+    });
+
+    it('should handle unexpected AI response structure with no recognizable fields', async () => {
+      const unexpectedResponse = {
+        someUnknownField: 'data',
+        anotherField: 123
+      };
+      
+      mockEnvWithAI.AI.run.mockResolvedValue(unexpectedResponse);
+      
+      // This should fall back to mock data due to error
+      const result = await getRecipeRecommendations('Chicago', '2024-10-15', mockEnvWithAI, 'test-unexpected');
+      
+      expect(result).toBeDefined();
+      expect(result.isMockData).toBe(true);
     });
   });
 });

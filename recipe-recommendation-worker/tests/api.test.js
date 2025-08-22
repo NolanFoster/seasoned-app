@@ -137,6 +137,18 @@ class MetricsCollector {
       const data = await response.json();
       expect(data.status).toBe('healthy');
     });
+
+    it('GET /health should check AI service and report its status', async () => {
+      const response = await mf.dispatchFetch('http://localhost/health');
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data.status).toBe('healthy');
+      expect(data.services).toBeDefined();
+      expect(data.services.ai).toBeDefined();
+      // AI status should be either 'healthy' or 'error' depending on the binding
+      expect(['healthy', 'error', 'not_configured']).toContain(data.services.ai);
+    });
   });
 
   describe('CORS Handling', () => {
