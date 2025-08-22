@@ -3,6 +3,51 @@
  */
 
 /**
+ * Structured logging utility for consistent log formatting across workers
+ * @param {string} level - Log level (error, warn, info, debug)
+ * @param {string} message - Main log message
+ * @param {Object} data - Additional data to include in the log
+ * @param {Object} context - Context information (e.g., worker name)
+ * @returns {void}
+ */
+export function log(level, message, data = {}, context = {}) {
+  const timestamp = new Date().toISOString();
+  const logEntry = {
+    timestamp,
+    level,
+    message,
+    ...data,
+    ...context
+  };
+  
+  // Use appropriate console method based on level
+  switch (level.toLowerCase()) {
+    case 'error':
+      console.error(JSON.stringify(logEntry));
+      break;
+    case 'warn':
+      console.warn(JSON.stringify(logEntry));
+      break;
+    case 'info':
+      console.log(JSON.stringify(logEntry));
+      break;
+    case 'debug':
+      console.log(JSON.stringify(logEntry));
+      break;
+    default:
+      console.log(JSON.stringify(logEntry));
+  }
+}
+
+/**
+ * Generate unique request ID for tracking across services
+ * @returns {string} Unique request ID in format req_timestamp_randomstring
+ */
+export function generateRequestId() {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
  * Convert ISO 8601 duration to human readable format
  * @param {string} duration - ISO 8601 duration string (e.g., "PT1H30M")
  * @returns {string} Human readable duration (e.g., "1 h 30 m")

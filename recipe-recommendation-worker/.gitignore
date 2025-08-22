@@ -31,3 +31,6 @@ build/
 # Test coverage
 coverage/
 .nyc_output/
+
+# Temporary test files
+src/index.test.js
