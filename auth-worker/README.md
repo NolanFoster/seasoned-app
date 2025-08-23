@@ -24,16 +24,16 @@ Authentication worker for user management with Cloudflare KV store and D1 databa
    npm install
    ```
 
-2. **Create KV namespaces:**
+2. **Create KV namespace:**
    ```bash
    # Preview environment
-   wrangler kv:namespace create "AUTH_KV" --preview
+   wrangler kv:namespace create "OTP_KV" --preview
    
    # Staging environment
-   wrangler kv:namespace create "AUTH_KV" --env staging
+   wrangler kv:namespace create "OTP_KV" --env staging
    
    # Production environment
-   wrangler kv:namespace create "AUTH_KV" --env production
+   wrangler kv:namespace create "OTP_KV" --env production
    ```
 
 3. **Create D1 databases:**

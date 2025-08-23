@@ -1,6 +1,5 @@
 export interface Env {
-  // KV Namespace bindings
-  AUTH_KV: KVNamespace;
+  // KV Namespace binding
   OTP_KV: KVNamespace;
   
   // D1 Database binding

@@ -18,27 +18,10 @@ app.get('/health', async (c) => {
     timestamp: new Date().toISOString(),
     environment: env.ENVIRONMENT,
     services: {
-      auth_kv: 'unknown',
       otp_kv: 'unknown',
       d1: 'unknown'
     }
   };
-
-  try {
-    // Test AUTH_KV access
-    const testKey = '__health_check_auth__';
-    await env.AUTH_KV.put(testKey, new Date().toISOString(), {
-      expirationTtl: 60 // Expire after 1 minute
-    });
-    const authKvValue = await env.AUTH_KV.get(testKey);
-    if (authKvValue) {
-      health.services.auth_kv = 'healthy';
-    }
-  } catch (error) {
-    health.services.auth_kv = 'unhealthy';
-    health.status = 'degraded';
-    console.error('AUTH_KV health check failed:', error);
-  }
 
   try {
     // Test OTP_KV access

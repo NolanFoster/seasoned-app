@@ -4,7 +4,6 @@ import { Env } from '@/types/env';
 
 describe('Root Endpoint', () => {
   const mockEnv: Env = {
-    AUTH_KV: {} as KVNamespace,
     OTP_KV: {} as KVNamespace,
     AUTH_DB: {} as D1Database,
     ENVIRONMENT: 'preview'
@@ -25,7 +24,6 @@ describe('Root Endpoint', () => {
 
 describe('404 Handler', () => {
   const mockEnv: Env = {
-    AUTH_KV: {} as KVNamespace,
     OTP_KV: {} as KVNamespace,
     AUTH_DB: {} as D1Database,
     ENVIRONMENT: 'preview'

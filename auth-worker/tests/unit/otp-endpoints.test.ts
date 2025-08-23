@@ -20,13 +20,6 @@ describe('OTP Endpoints', () => {
 
   beforeEach(() => {
     mockEnv = {
-      AUTH_KV: {
-        put: vi.fn(),
-        get: vi.fn(),
-        delete: vi.fn(),
-        list: vi.fn(),
-        getWithMetadata: vi.fn()
-      } as unknown as KVNamespace,
       OTP_KV: {
         put: vi.fn(),
         get: vi.fn(),
@@ -72,9 +65,7 @@ describe('OTP Endpoints', () => {
       otpStore.delete(key);
     });
 
-    // Mock AUTH_KV operations
-    vi.mocked(mockEnv.AUTH_KV.put).mockResolvedValue(undefined);
-    vi.mocked(mockEnv.AUTH_KV.get).mockResolvedValue('test-value' as any);
+    // Mock successful D1 operation by default
   });
 
   describe('POST /otp/generate', () => {
