@@ -22,6 +22,7 @@ export interface OTPVerificationResult {
   success: boolean;
   message: string;
   remainingAttempts?: number;
+  user_id?: string; // Email hash for successful verification
 }
 
 const MAX_ATTEMPTS = 3;
@@ -129,7 +130,8 @@ export async function verifyOTPForEmail(
       await otpKV.delete(emailHash);
       return {
         success: true,
-        message: 'OTP verified successfully'
+        message: 'OTP verified successfully',
+        user_id: emailHash
       };
     } else {
       // Increment attempts

@@ -1,0 +1,52 @@
+name = "user-management-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# D1 Databases
+[[d1_databases]]
+binding = "USER_DB"
+database_name = "user-db"
+database_id = "user_db_id" # Will be replaced with actual ID after creation
+
+# Observability settings
+[observability]
+enabled = true
+
+# Preview environment (development)
+[env.preview]
+name = "user-management-worker-preview"
+vars = { ENVIRONMENT = "preview" }
+
+[[env.preview.d1_databases]]
+binding = "USER_DB"
+database_name = "user-db-preview"
+database_id = "user_db_preview_id" # Will be replaced with actual ID after creation
+
+[env.preview.observability]
+enabled = true
+
+# Production environment
+[env.production]
+name = "user-management-worker-production"
+vars = { ENVIRONMENT = "production" }
+
+[[env.production.d1_databases]]
+binding = "USER_DB"
+database_name = "user-db-production"
+database_id = "user_db_production_id" # Will be replaced with actual ID after creation
+
+[env.production.observability]
+enabled = true
+
+# Staging environment
+[env.staging]
+name = "user-management-worker-staging"
+vars = { ENVIRONMENT = "staging" }
+
+[[env.staging.d1_databases]]
+binding = "USER_DB"
+database_name = "user-db-staging"
+database_id = "user_db_staging_id" # Will be replaced with actual ID after creation
+
+[env.staging.observability]
+enabled = true

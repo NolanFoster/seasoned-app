@@ -8,7 +8,7 @@ interface HealthResponse {
   environment: string;
   services: {
     otp_kv: string;
-    d1: string;
+    user_management: string;
   };
 }
 
@@ -21,9 +21,7 @@ describe('Health Endpoint', () => {
         put: vi.fn(),
         get: vi.fn(),
       } as unknown as KVNamespace,
-      AUTH_DB: {
-        prepare: vi.fn(),
-      } as unknown as D1Database,
+      USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
       ENVIRONMENT: 'preview'
     };
   });
@@ -33,10 +31,11 @@ describe('Health Endpoint', () => {
     vi.mocked(mockEnv.OTP_KV.put).mockResolvedValue(undefined);
     vi.mocked(mockEnv.OTP_KV.get).mockResolvedValue('test-value' as any);
 
-    // Mock successful D1 operation
-    vi.mocked(mockEnv.AUTH_DB.prepare).mockReturnValue({
-      first: vi.fn().mockResolvedValue({ test: 1 })
-    } as any);
+    // Mock successful User Management Worker health check
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200
+    } as Response));
 
     const req = new Request('http://localhost/health', { method: 'GET' });
     const response = await app.fetch(req, mockEnv);
@@ -45,7 +44,7 @@ describe('Health Endpoint', () => {
     expect(response.status).toBe(200);
     expect(data.status).toBe('healthy');
     expect(data.services.otp_kv).toBe('healthy');
-    expect(data.services.d1).toBe('healthy');
+    expect(data.services.user_management).toBe('healthy');
     expect(data.environment).toBe('preview');
   });
 
@@ -53,10 +52,11 @@ describe('Health Endpoint', () => {
     // Mock failed OTP_KV operations
     vi.mocked(mockEnv.OTP_KV.put).mockRejectedValue(new Error('OTP_KV Error'));
 
-    // Mock successful D1 operation
-    vi.mocked(mockEnv.AUTH_DB.prepare).mockReturnValue({
-      first: vi.fn().mockResolvedValue({ test: 1 })
-    } as any);
+    // Mock successful User Management Worker health check
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200
+    } as Response));
 
     const req = new Request('http://localhost/health', { method: 'GET' });
     const response = await app.fetch(req, mockEnv);
@@ -65,18 +65,16 @@ describe('Health Endpoint', () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe('degraded');
     expect(data.services.otp_kv).toBe('unhealthy');
-    expect(data.services.d1).toBe('healthy');
+    expect(data.services.user_management).toBe('healthy');
   });
 
-  it('should return degraded when D1 is unhealthy', async () => {
+  it('should return degraded when User Management Worker is unhealthy', async () => {
     // Mock successful OTP_KV operations
     vi.mocked(mockEnv.OTP_KV.put).mockResolvedValue(undefined);
     vi.mocked(mockEnv.OTP_KV.get).mockResolvedValue('test-value' as any);
 
-    // Mock failed D1 operation
-    vi.mocked(mockEnv.AUTH_DB.prepare).mockReturnValue({
-      first: vi.fn().mockRejectedValue(new Error('D1 Error'))
-    } as any);
+    // Mock failed User Management Worker health check
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
 
     const req = new Request('http://localhost/health', { method: 'GET' });
     const response = await app.fetch(req, mockEnv);
@@ -85,17 +83,15 @@ describe('Health Endpoint', () => {
     expect(response.status).toBe(503);
     expect(data.status).toBe('degraded');
     expect(data.services.otp_kv).toBe('healthy');
-    expect(data.services.d1).toBe('unhealthy');
+    expect(data.services.user_management).toBe('unhealthy');
   });
 
   it('should return unhealthy when all services are down', async () => {
     // Mock failed OTP_KV operations
     vi.mocked(mockEnv.OTP_KV.put).mockRejectedValue(new Error('OTP_KV Error'));
 
-    // Mock failed D1 operation
-    vi.mocked(mockEnv.AUTH_DB.prepare).mockReturnValue({
-      first: vi.fn().mockRejectedValue(new Error('D1 Error'))
-    } as any);
+    // Mock failed User Management Worker health check
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network Error')));
 
     const req = new Request('http://localhost/health', { method: 'GET' });
     const response = await app.fetch(req, mockEnv);
@@ -104,6 +100,6 @@ describe('Health Endpoint', () => {
     expect(response.status).toBe(500);
     expect(data.status).toBe('unhealthy');
     expect(data.services.otp_kv).toBe('unhealthy');
-    expect(data.services.d1).toBe('unhealthy');
+    expect(data.services.user_management).toBe('unhealthy');
   });
 });

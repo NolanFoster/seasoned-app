@@ -19,7 +19,7 @@ app.get('/health', async (c) => {
     environment: env.ENVIRONMENT,
     services: {
       otp_kv: 'unknown',
-      d1: 'unknown'
+      user_management: 'unknown'
     }
   };
 
@@ -40,21 +40,18 @@ app.get('/health', async (c) => {
   }
 
   try {
-    // Test D1 access
-    const result = await env.AUTH_DB.prepare('SELECT 1 as test').first();
-    if (result?.test === 1) {
-      health.services.d1 = 'healthy';
+    // Test User Management Worker connectivity
+    const response = await fetch(`${env.USER_MANAGEMENT_WORKER_URL}/health`);
+    if (response.ok) {
+      health.services.user_management = 'healthy';
+    } else {
+      health.services.user_management = 'unhealthy';
+      health.status = 'degraded';
     }
   } catch (error) {
-    // If table doesn't exist, try to check if D1 is accessible
-    try {
-      await env.AUTH_DB.prepare("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1").first();
-      health.services.d1 = 'healthy';
-    } catch (innerError) {
-      health.services.d1 = 'unhealthy';
-      health.status = 'degraded';
-      console.error('D1 health check failed:', error);
-    }
+    health.services.user_management = 'unhealthy';
+    health.status = 'degraded';
+    console.error('User Management Worker health check failed:', error);
   }
 
   // Determine overall health
@@ -138,6 +135,52 @@ app.post('/otp/verify', async (c) => {
     }
 
     const result = await verifyOTPForEmail(c.env.OTP_KV, email, otp);
+    
+    if (result.success) {
+      // Create or update user in User Management Worker
+      try {
+        const emailHash = result.user_id; // This should be the email hash from OTP verification
+        
+        // Check if user exists
+        const userResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users/email/${emailHash}`);
+        
+        if (!userResponse.ok) {
+          // User doesn't exist, create new user
+          const createUserResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email_hash: emailHash,
+              account_type: 'FREE'
+            })
+          });
+          
+          if (!createUserResponse.ok) {
+            console.error('Failed to create user in User Management Worker');
+          }
+        }
+        
+        // Record successful login
+        const loginResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/login-history`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: emailHash,
+            login_method: 'OTP',
+            success: true,
+            ip_address: c.req.header('CF-Connecting-IP'),
+            user_agent: c.req.header('User-Agent')
+          })
+        });
+        
+        if (!loginResponse.ok) {
+          console.error('Failed to record login history');
+        }
+      } catch (userError) {
+        console.error('Error managing user data:', userError);
+        // Don't fail the OTP verification if user management fails
+      }
+    }
     
     const statusCode = result.success ? 200 : 400;
     return c.json(result, statusCode);

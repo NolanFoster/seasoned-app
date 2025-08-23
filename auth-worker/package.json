@@ -1,7 +1,7 @@
 {
   "name": "auth-worker",
   "version": "1.0.0",
-  "description": "Authentication worker for user management with KV store and D1 database",
+  "description": "Authentication worker for OTP-based authentication with KV store",
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
@@ -24,8 +24,8 @@
   "keywords": [
     "cloudflare-workers",
     "authentication",
-    "kv",
-    "d1"
+    "otp",
+    "kv"
   ],
   "author": "",
   "license": "ISC",

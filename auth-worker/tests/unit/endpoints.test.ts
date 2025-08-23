@@ -5,7 +5,7 @@ import { Env } from '@/types/env';
 describe('Root Endpoint', () => {
   const mockEnv: Env = {
     OTP_KV: {} as KVNamespace,
-    AUTH_DB: {} as D1Database,
+    USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
     ENVIRONMENT: 'preview'
   };
 
@@ -25,7 +25,7 @@ describe('Root Endpoint', () => {
 describe('404 Handler', () => {
   const mockEnv: Env = {
     OTP_KV: {} as KVNamespace,
-    AUTH_DB: {} as D1Database,
+    USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
     ENVIRONMENT: 'preview'
   };
 

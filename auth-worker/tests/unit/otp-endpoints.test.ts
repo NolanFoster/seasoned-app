@@ -27,19 +27,16 @@ describe('OTP Endpoints', () => {
         list: vi.fn(),
         getWithMetadata: vi.fn()
       } as unknown as KVNamespace,
-      AUTH_DB: {
-        prepare: vi.fn(),
-        dump: vi.fn(),
-        batch: vi.fn(),
-        exec: vi.fn()
-      } as unknown as D1Database,
+      USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
       ENVIRONMENT: 'preview'
     };
 
-    // Mock successful D1 operation by default
-    vi.mocked(mockEnv.AUTH_DB.prepare).mockReturnValue({
-      first: vi.fn().mockResolvedValue({ test: 1 })
-    } as any);
+    // Mock User Management Worker integration
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true })
+    } as Response));
 
     // Mock OTP_KV operations to simulate actual KV behavior
     const otpStore = new Map<string, { value: string; expiration?: number }>();
