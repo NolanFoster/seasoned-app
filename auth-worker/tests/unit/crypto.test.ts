@@ -11,11 +11,12 @@ import {
 
 // Setup crypto polyfill for testing
 beforeAll(async () => {
+  // @ts-ignore - Node.js crypto import for test environment
   const { webcrypto } = await import('node:crypto');
   
-  if (!globalThis.crypto) {
-    // @ts-ignore - Adding crypto to globalThis for testing
-    globalThis.crypto = webcrypto;
+  if (!(globalThis as any).crypto) {
+    // Adding crypto to globalThis for testing
+    (globalThis as any).crypto = webcrypto;
   }
 });
 

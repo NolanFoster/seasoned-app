@@ -4,11 +4,12 @@ import { Env } from '@/types/env';
 
 // Setup crypto polyfill for testing
 beforeAll(async () => {
+  // @ts-ignore - Node.js crypto import for test environment
   const { webcrypto } = await import('node:crypto');
   
-  if (!globalThis.crypto) {
-    // @ts-ignore - Adding crypto to globalThis for testing
-    globalThis.crypto = webcrypto;
+  if (!(globalThis as any).crypto) {
+    // Adding crypto to globalThis for testing
+    (globalThis as any).crypto = webcrypto;
   }
 });
 
@@ -50,12 +51,12 @@ describe('OTP Endpoints', () => {
     // Mock OTP_KV operations to simulate actual KV behavior
     const otpStore = new Map<string, { value: string; expiration?: number }>();
     
-    vi.mocked(mockEnv.OTP_KV.put).mockImplementation(async (key: string, value: string, options?: { expirationTtl?: number }) => {
+    vi.mocked(mockEnv.OTP_KV.put).mockImplementation(async (key: string, value: any, options?: any) => {
       const expiration = options?.expirationTtl ? Date.now() + (options.expirationTtl * 1000) : undefined;
-      otpStore.set(key, { value, expiration });
+      otpStore.set(key, { value: value as string, expiration });
     });
 
-    vi.mocked(mockEnv.OTP_KV.get).mockImplementation(async (key: string) => {
+    (vi.mocked(mockEnv.OTP_KV.get) as any).mockImplementation(async (key: string) => {
       const item = otpStore.get(key);
       if (!item) return null;
       
@@ -85,7 +86,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response = await app.fetch(request, mockEnv);
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
@@ -102,7 +103,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response = await app.fetch(request, mockEnv);
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(400);
       expect(result.success).toBe(false);
@@ -117,7 +118,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response = await app.fetch(request, mockEnv);
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(400);
       expect(result.success).toBe(false);
@@ -144,7 +145,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response2 = await app.fetch(request2, mockEnv);
-      const result2 = await response2.json();
+      const result2 = await response2.json() as any;
 
       expect(response2.status).toBe(409);
       expect(result2.success).toBe(false);
@@ -161,7 +162,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response = await app.fetch(request, mockEnv);
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
@@ -180,8 +181,8 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email })
       });
       
-      const generateResponse = await app.request(generateRequest, mockEnv);
-      const generateResult = await generateResponse.json();
+      const generateResponse = await app.fetch(generateRequest, mockEnv);
+      const generateResult = await generateResponse.json() as any;
       const otp = generateResult.otp;
 
       // Verify OTP
@@ -191,8 +192,8 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email, otp })
       });
 
-      const verifyResponse = await app.request(verifyRequest, mockEnv);
-      const verifyResult = await verifyResponse.json();
+      const verifyResponse = await app.fetch(verifyRequest, mockEnv);
+      const verifyResult = await verifyResponse.json() as any;
 
       expect(verifyResponse.status).toBe(200);
       expect(verifyResult.success).toBe(true);
@@ -209,7 +210,7 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email })
       });
       
-      await app.request(generateRequest, mockEnv);
+      await app.fetch(generateRequest, mockEnv);
 
       // Verify with wrong OTP
       const verifyRequest = new Request('http://localhost/otp/verify', {
@@ -218,8 +219,8 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email, otp: '000000' })
       });
 
-      const verifyResponse = await app.request(verifyRequest, mockEnv);
-      const verifyResult = await verifyResponse.json();
+      const verifyResponse = await app.fetch(verifyRequest, mockEnv);
+      const verifyResult = await verifyResponse.json() as any;
 
       expect(verifyResponse.status).toBe(400);
       expect(verifyResult.success).toBe(false);
@@ -235,7 +236,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response = await app.fetch(request, mockEnv);
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(400);
       expect(result.success).toBe(false);
@@ -250,7 +251,7 @@ describe('OTP Endpoints', () => {
       });
 
       const response = await app.fetch(request, mockEnv);
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(400);
       expect(result.success).toBe(false);
@@ -269,15 +270,15 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email })
       });
       
-      await app.request(generateRequest, mockEnv);
+      await app.fetch(generateRequest, mockEnv);
 
       // Check status
       const statusRequest = new Request(`http://localhost/otp/status/${encodeURIComponent(email)}`, {
         method: 'GET'
       });
 
-      const statusResponse = await app.request(statusRequest, mockEnv);
-      const statusResult = await statusResponse.json();
+      const statusResponse = await app.fetch(statusRequest, mockEnv);
+      const statusResult = await statusResponse.json() as any;
 
       expect(statusResponse.status).toBe(200);
       expect(statusResult.success).toBe(true);
@@ -293,8 +294,8 @@ describe('OTP Endpoints', () => {
         method: 'GET'
       });
 
-      const statusResponse = await app.request(statusRequest, mockEnv);
-      const statusResult = await statusResponse.json();
+      const statusResponse = await app.fetch(statusRequest, mockEnv);
+      const statusResult = await statusResponse.json() as any;
 
       expect(statusResponse.status).toBe(200);
       expect(statusResult.success).toBe(true);
@@ -315,15 +316,15 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email })
       });
       
-      await app.request(generateRequest, mockEnv);
+      await app.fetch(generateRequest, mockEnv);
 
       // Delete OTP
       const deleteRequest = new Request(`http://localhost/otp/${encodeURIComponent(email)}`, {
         method: 'DELETE'
       });
 
-      const deleteResponse = await app.request(deleteRequest, mockEnv);
-      const deleteResult = await deleteResponse.json();
+      const deleteResponse = await app.fetch(deleteRequest, mockEnv);
+      const deleteResult = await deleteResponse.json() as any;
 
       expect(deleteResponse.status).toBe(200);
       expect(deleteResult.success).toBe(true);
@@ -334,8 +335,8 @@ describe('OTP Endpoints', () => {
         method: 'GET'
       });
 
-      const statusResponse = await app.request(statusRequest, mockEnv);
-      const statusResult = await statusResponse.json();
+      const statusResponse = await app.fetch(statusRequest, mockEnv);
+      const statusResult = await statusResponse.json() as any;
 
       expect(statusResult.exists).toBe(false);
     });
@@ -347,8 +348,8 @@ describe('OTP Endpoints', () => {
         method: 'DELETE'
       });
 
-      const deleteResponse = await app.request(deleteRequest, mockEnv);
-      const deleteResult = await deleteResponse.json();
+      const deleteResponse = await app.fetch(deleteRequest, mockEnv);
+      const deleteResult = await deleteResponse.json() as any;
 
       expect(deleteResponse.status).toBe(200);
       expect(deleteResult.success).toBe(true);
@@ -367,8 +368,8 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email })
       });
 
-      const generateResponse = await app.request(generateRequest, mockEnv);
-      const generateResult = await generateResponse.json();
+      const generateResponse = await app.fetch(generateRequest, mockEnv);
+      const generateResult = await generateResponse.json() as any;
       
       expect(generateResponse.status).toBe(200);
       expect(generateResult.success).toBe(true);
@@ -380,8 +381,8 @@ describe('OTP Endpoints', () => {
         method: 'GET'
       });
 
-      const statusResponse = await app.request(statusRequest, mockEnv);
-      const statusResult = await statusResponse.json();
+      const statusResponse = await app.fetch(statusRequest, mockEnv);
+      const statusResult = await statusResponse.json() as any;
 
       expect(statusResponse.status).toBe(200);
       expect(statusResult.exists).toBe(true);
@@ -394,8 +395,8 @@ describe('OTP Endpoints', () => {
         body: JSON.stringify({ email, otp })
       });
 
-      const verifyResponse = await app.request(verifyRequest, mockEnv);
-      const verifyResult = await verifyResponse.json();
+      const verifyResponse = await app.fetch(verifyRequest, mockEnv);
+      const verifyResult = await verifyResponse.json() as any;
 
       expect(verifyResponse.status).toBe(200);
       expect(verifyResult.success).toBe(true);
@@ -405,8 +406,8 @@ describe('OTP Endpoints', () => {
         method: 'GET'
       });
 
-      const finalStatusResponse = await app.request(finalStatusRequest, mockEnv);
-      const finalStatusResult = await finalStatusResponse.json();
+      const finalStatusResponse = await app.fetch(finalStatusRequest, mockEnv);
+      const finalStatusResult = await finalStatusResponse.json() as any;
 
       expect(finalStatusResult.exists).toBe(false);
     });
