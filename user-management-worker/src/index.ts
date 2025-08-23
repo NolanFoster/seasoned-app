@@ -519,7 +519,7 @@ app.get('/', (c) => {
         path: '/login-history',
         method: 'POST',
         description: 'Create login history record',
-        body: { user_id: 'string', login_method: 'OTP|MAGIC_LINK', success: 'boolean', ... }
+        body: { user_id: 'string', login_method: 'OTP|MAGIC_LINK', success: 'boolean' }
       },
       {
         path: '/login-history/recent',
