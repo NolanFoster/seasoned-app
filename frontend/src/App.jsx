@@ -221,6 +221,34 @@ function App() {
     });
   }
 
+  // Batch processing utility for parallel fetching with rate limiting
+  async function processBatch(items, batchSize, processFunc) {
+    const results = [];
+    
+    // Process items in batches to avoid overwhelming the API
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      const batchPromises = batch.map((item, index) => 
+        processFunc(item, i + index)
+          .catch(error => {
+            console.error(`Error processing item ${i + index}:`, error);
+            return null;
+          })
+      );
+      
+      // Wait for the current batch to complete before starting the next
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // Add a small delay between batches to prevent rate limiting
+      if (i + batchSize < items.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    return results;
+  }
+
   // Smart search function using the search worker
   async function smartSearch(tag) {
     try {
@@ -903,22 +931,48 @@ function App() {
                     if (recipes && recipes.length > 0) {
                       debugLogEmoji('✅', `Tag "${tag}" successfully found ${recipes.length} recipes`);
                       
-                      // Fetch complete recipe data from KV for each recipe
-                      const completeRecipes = [];
+                      // Fetch complete recipe data from KV for each recipe IN PARALLEL
                       debugLogEmoji('🔄', `Fetching complete data for ${recipes.length} recipes from KV...`);
-                      for (let i = 0; i < recipes.length; i++) {
-                        const recipe = recipes[i];
-                        debugLogEmoji('📥', `[${i + 1}/${recipes.length}] Fetching recipe ${recipe.id}...`);
-                        const completeRecipe = await fetchCompleteRecipeData(recipe.id);
-                        if (completeRecipe) {
-                          completeRecipes.push(completeRecipe);
-                          debugLogEmoji('✅', `[${i + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
-                        } else {
-                          // Recipe not found in KV - it might have been deleted
-                          // Don't include it in the results instead of using incomplete search data
-                          console.warn(`⚠️ [${i + 1}/${recipes.length}] Recipe ${recipe.id} not found in KV storage - skipping (might be deleted)`);
-                        }
+                      
+                      let completeRecipes;
+                      
+                      // For large sets of recipes, use batch processing to avoid overwhelming the API
+                      if (recipes.length > 20) {
+                        debugLogEmoji('📦', `Using batch processing for ${recipes.length} recipes (batch size: 10)`);
+                        const fetchResults = await processBatch(recipes, 10, async (recipe, index) => {
+                          const completeRecipe = await fetchCompleteRecipeData(recipe.id);
+                          if (completeRecipe) {
+                            debugLogEmoji('✅', `[${index + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
+                            return completeRecipe;
+                          } else {
+                            console.warn(`⚠️ [${index + 1}/${recipes.length}] Recipe ${recipe.id} not found in KV storage - skipping (might be deleted)`);
+                            return null;
+                          }
+                        });
+                        completeRecipes = fetchResults.filter(recipe => recipe !== null);
+                      } else {
+                        // For smaller sets, fetch all at once
+                        const fetchPromises = recipes.map((recipe, index) => 
+                          fetchCompleteRecipeData(recipe.id)
+                            .then(completeRecipe => {
+                              if (completeRecipe) {
+                                debugLogEmoji('✅', `[${index + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
+                                return completeRecipe;
+                              } else {
+                                console.warn(`⚠️ [${index + 1}/${recipes.length}] Recipe ${recipe.id} not found in KV storage - skipping (might be deleted)`);
+                                return null;
+                              }
+                            })
+                            .catch(error => {
+                              console.error(`❌ [${index + 1}/${recipes.length}] Error fetching recipe ${recipe.id}:`, error);
+                              return null;
+                            })
+                        );
+                        
+                        const fetchResults = await Promise.all(fetchPromises);
+                        completeRecipes = fetchResults.filter(recipe => recipe !== null);
                       }
+                      
                       debugLogEmoji('🎯', `Completed KV fetching: ${completeRecipes.length}/${recipes.length} recipes retrieved`);
                       
                       // Transform complete recipes to frontend format
@@ -1676,22 +1730,48 @@ function App() {
       if (res.ok) {
         const result = await res.json();
         
-        // Fetch complete recipe data from KV for each search result
-        const completeResults = [];
+        // Fetch complete recipe data from KV for each search result IN PARALLEL
         debugLogEmoji('🔄', `Fetching complete data for ${result.results.length} search results from KV...`);
-        for (let i = 0; i < result.results.length; i++) {
-          const node = result.results[i];
-          debugLogEmoji('📥', `[${i + 1}/${result.results.length}] Fetching recipe ${node.id}...`);
-          const completeRecipe = await fetchCompleteRecipeData(node.id);
-          if (completeRecipe) {
-            completeResults.push(completeRecipe);
-            debugLogEmoji('✅', `[${i + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
-          } else {
-            // Recipe not found in KV - it might have been deleted
-            // Don't include it in the results instead of using incomplete search data
-            console.warn(`⚠️ [${i + 1}/${result.results.length}] Recipe ${node.id} not found in KV storage - skipping (might be deleted)`);
-          }
+        
+        let completeResults;
+        
+        // For large result sets, use batch processing to avoid overwhelming the API
+        if (result.results.length > 10) {
+          debugLogEmoji('📦', `Using batch processing for ${result.results.length} search results (batch size: 5)`);
+          const fetchResults = await processBatch(result.results, 5, async (node, index) => {
+            const completeRecipe = await fetchCompleteRecipeData(node.id);
+            if (completeRecipe) {
+              debugLogEmoji('✅', `[${index + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
+              return completeRecipe;
+            } else {
+              console.warn(`⚠️ [${index + 1}/${result.results.length}] Recipe ${node.id} not found in KV storage - skipping (might be deleted)`);
+              return null;
+            }
+          });
+          completeResults = fetchResults.filter(recipe => recipe !== null);
+        } else {
+          // For smaller sets, fetch all at once
+          const fetchPromises = result.results.map((node, index) => 
+            fetchCompleteRecipeData(node.id)
+              .then(completeRecipe => {
+                if (completeRecipe) {
+                  debugLogEmoji('✅', `[${index + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
+                  return completeRecipe;
+                } else {
+                  console.warn(`⚠️ [${index + 1}/${result.results.length}] Recipe ${node.id} not found in KV storage - skipping (might be deleted)`);
+                  return null;
+                }
+              })
+              .catch(error => {
+                console.error(`❌ [${index + 1}/${result.results.length}] Error fetching recipe ${node.id}:`, error);
+                return null;
+              })
+          );
+          
+          const fetchResults = await Promise.all(fetchPromises);
+          completeResults = fetchResults.filter(recipe => recipe !== null);
         }
+        
         debugLogEmoji('🎯', `Completed KV fetching: ${completeResults.length}/${result.results.length} recipes retrieved`);
         
         // Transform complete recipes to match the frontend format
@@ -1759,6 +1839,8 @@ function App() {
       setIsSearching(false);
     }
   }
+
+  // Advanced search cache with better key generation
 
 
 
