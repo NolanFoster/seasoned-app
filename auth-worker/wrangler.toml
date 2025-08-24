@@ -11,6 +11,7 @@ id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after 
 [vars]
 AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 
 # JWT configuration
 # JWT_SECRET must be set as a Cloudflare secret using:
@@ -36,6 +37,11 @@ enabled = true
 [env.production]
 name = "auth-worker-production"
 
+[env.production.vars]
+AWS_REGION = "us-east-2"
+FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+
 [[env.production.kv_namespaces]]
 binding = "OTP_KV"
 id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
@@ -46,6 +52,11 @@ enabled = true
 # Staging environment
 [env.staging]
 name = "auth-worker-staging"
+
+[env.staging.vars]
+AWS_REGION = "us-east-2"
+FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 
 [[env.staging.kv_namespaces]]
 binding = "OTP_KV"

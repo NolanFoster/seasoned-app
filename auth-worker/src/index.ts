@@ -172,107 +172,95 @@ app.post('/otp/verify', async (c) => {
     const result = await verifyOTPForEmail(c.env.OTP_KV, email, otp);
     
     if (result.success) {
-      // Create or update user in User Management Worker
+      // Generate JWT token for successful authentication (always do this first)
+      let jwtToken = null;
+      try {
+        if (result.user_id) {
+          const { JWTService } = await import('./services/jwt-service');
+          const jwtService = new JWTService(c.env);
+          
+          // Create token with 24 hour expiration
+          const tokenResult = await jwtService.createToken(result.user_id, email, 86400);
+          
+          if (tokenResult.success && tokenResult.token) {
+            jwtToken = tokenResult.token;
+          } else {
+            console.error('Failed to generate JWT token:', tokenResult.error);
+          }
+        } else {
+          console.error('No user_id returned from OTP verification');
+        }
+      } catch (jwtError) {
+        console.error('Error generating JWT token:', jwtError);
+      }
+
+      // Try to manage user data (optional, don't block JWT generation)
       try {
         const emailHash = result.user_id; // This should be the email hash from OTP verification
         
         if (!emailHash) {
           console.error('No user_id returned from OTP verification');
-          return c.json({
-            success: false,
-            message: 'OTP verification failed - no user ID returned'
-          }, 400);
-        }
-        
-        // Check if user exists
-        const userResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users/email/${emailHash}`);
-        
-        if (!userResponse.ok) {
-          // User doesn't exist, create new user
-          const createUserResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users`, {
+        } else {
+          // Check if user exists
+          const userResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users/email/${emailHash}`);
+          
+          if (!userResponse.ok) {
+            // User doesn't exist, create new user
+            const createUserResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email_hash: emailHash,
+                account_type: 'FREE'
+              })
+            });
+            
+            if (!createUserResponse.ok) {
+              console.error('Failed to create user in User Management Worker');
+            }
+          }
+          
+          // Record successful login
+          const loginResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/login-history`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              email_hash: emailHash,
-              account_type: 'FREE'
+              user_id: emailHash,
+              login_method: 'OTP',
+              success: true,
+              ip_address: c.req.header('CF-Connecting-IP'),
+              user_agent: c.req.header('User-Agent')
             })
           });
           
-          if (!createUserResponse.ok) {
-            console.error('Failed to create user in User Management Worker');
+          if (!loginResponse.ok) {
+            console.error('Failed to record login history');
           }
-        }
-        
-        // Record successful login
-        const loginResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/login-history`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: emailHash,
-            login_method: 'OTP',
-            success: true,
-            ip_address: c.req.header('CF-Connecting-IP'),
-            user_agent: c.req.header('User-Agent')
-          })
-        });
-        
-        if (!loginResponse.ok) {
-          console.error('Failed to record login history');
-        }
-
-        // Generate JWT token for successful authentication
-        try {
-          const { JWTService } = await import('./services/jwt-service');
-          const jwtService = new JWTService(c.env);
-          
-          // Create token with 24 hour expiration
-          const tokenResult = await jwtService.createToken(emailHash, email, 86400);
-          
-          if (tokenResult.success && tokenResult.token) {
-            // Return success with JWT token
-            return c.json({
-              success: true,
-              message: 'OTP verified successfully',
-              token: tokenResult.token,
-              expiresIn: 86400,
-              user: {
-                id: emailHash,
-                email: email
-              }
-            }, 200);
-          } else {
-            console.error('Failed to generate JWT token:', tokenResult.error);
-            // Fall back to success without token
-            return c.json({
-              success: true,
-              message: 'OTP verified successfully',
-              user: {
-                id: emailHash,
-                email: email
-              }
-            }, 200);
-          }
-        } catch (jwtError) {
-          console.error('Error generating JWT token:', jwtError);
-          // Fall back to success without token
-          return c.json({
-            success: true,
-            message: 'OTP verified successfully',
-            user: {
-              id: emailHash,
-              email: email
-            }
-          }, 200);
         }
       } catch (userError) {
         console.error('Error managing user data:', userError);
         // Don't fail the OTP verification if user management fails
-        // Return success with basic user info
+      }
+
+      // Return success response with JWT token if available
+      if (jwtToken) {
+        return c.json({
+          success: true,
+          message: 'OTP verified successfully',
+          token: jwtToken,
+          expiresIn: 86400,
+          user: {
+            id: result.user_id,
+            email: email
+          }
+        }, 200);
+      } else {
+        // Fall back to success without token
         return c.json({
           success: true,
           message: 'OTP verified successfully',
           user: {
-            id: result.user_id || '',
+            id: result.user_id,
             email: email
           }
         }, 200);
