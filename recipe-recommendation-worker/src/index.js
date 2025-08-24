@@ -1,6 +1,7 @@
 /**
  * Recipe Recommendation Worker
  * Provides recipe recommendations based on location and date using OpenAI models
+ * Now integrated with recipe fetching to return actual recipes instead of just tags
  */
 
 import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
@@ -10,8 +11,6 @@ import { MetricsCollector } from '../../shared/metrics-collector.js';
 function log(level, message, data = {}, context = {}) {
   return baseLog(level, message, data, { worker: 'recipe-recommendation-worker', ...context });
 }
-
-
 
 // Global metrics collector
 const metrics = new MetricsCollector();
@@ -243,27 +242,30 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
     
     // Parse request body
     const body = await request.json();
-    const { location, date } = body;
+    const { location, date, limit = 3 } = body; // Default limit is 3 recipes per category
 
     // Validate and log input parameters
     const hasLocation = location && location.trim() !== '';
     const recommendationDate = date || new Date().toISOString().split('T')[0];
+    const recipesPerCategory = Math.min(Math.max(parseInt(limit) || 3, 1), 10); // Limit between 1-10
     
     log('info', 'Recommendation parameters parsed', {
       requestId,
       hasLocation,
       location: hasLocation ? location : 'not_specified',
-      date: recommendationDate
+      date: recommendationDate,
+      recipesPerCategory
     });
 
     // Track recommendation request metrics
     metrics.increment('recommendations_requested', 1, {
       hasLocation: String(hasLocation),
-      dateProvided: String(!!date)
+      dateProvided: String(!!date),
+      limitProvided: String(!!limit)
     });
 
     // Get recommendations from the recommendation service
-    const recommendations = await getRecipeRecommendations(location, recommendationDate, env, requestId);
+    const recommendations = await getRecipeRecommendations(location, recommendationDate, recipesPerCategory, env, requestId);
 
     const duration = Date.now() - startTime;
     metrics.timing('recommendations_duration', duration);
@@ -271,7 +273,9 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
     log('info', 'Recommendations generated successfully', {
       requestId,
       duration: `${duration}ms`,
-      categoriesCount: recommendations.recommendations ? Object.keys(recommendations.recommendations).length : 0
+      categoriesCount: recommendations.recommendations ? Object.keys(recommendations.recommendations).length : 0,
+      totalRecipes: recommendations.recommendations ? 
+        Object.values(recommendations.recommendations).reduce((sum, recipes) => sum + recipes.length, 0) : 0
     });
 
     // Send recommendation success analytics
@@ -282,6 +286,9 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
       date: recommendationDate,
       duration,
       categoriesCount: recommendations.recommendations ? Object.keys(recommendations.recommendations).length : 0,
+      recipesPerCategory,
+      totalRecipes: recommendations.recommendations ? 
+        Object.values(recommendations.recommendations).reduce((sum, recipes) => sum + recipes.length, 0) : 0,
       isAIGenerated: !recommendations.isMockData,
       season: recommendations.season
     });
@@ -289,7 +296,8 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
     return new Response(JSON.stringify({
       ...recommendations,
       requestId,
-      processingTime: `${duration}ms`
+      processingTime: `${duration}ms`,
+      recipesPerCategory
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -504,14 +512,14 @@ function getContextualCategory(season, date, hasLocation) {
   return seasonCategories[month % seasonCategories.length];
 }
 
-async function getRecipeRecommendations(location, date, env, requestId) {
+async function getRecipeRecommendations(location, date, recipesPerCategory, env, requestId) {
   const startTime = Date.now();
   
   // Check if we have AI binding
   if (!env.AI) {
     log('warn', 'AI binding not configured, falling back to mock data', { requestId });
     metrics.increment('ai_fallback_to_mock', 1, { reason: 'no_binding' });
-    return getMockRecommendations(location, date, requestId);
+    return getMockRecommendations(location, date, recipesPerCategory, requestId);
   }
 
   // Format the date for better context
@@ -536,7 +544,7 @@ async function getRecipeRecommendations(location, date, env, requestId) {
   const prompt = `${locationContext}, Date: ${date} (${month}, ${season})
 ${holidayContext} ${promptContext}
 
-Based on the context above, generate 3 creative and contextually appropriate recipe category names with 4 specific food/dish recommendations for each category. 
+Based on the context above, generate 3 creative and contextually appropriate recipe category names with ${recipesPerCategory} specific food/dish recommendations for each category. 
 
 Guidelines for category names:
 - Category 1: Should focus on seasonal ingredients and dishes perfect for ${season.toLowerCase()}
@@ -679,9 +687,17 @@ Return ONLY this JSON format with creative category names and actual food/dish n
         promptLength: prompt.length
       });
 
+      // Now fetch actual recipes for each category
+      const enhancedRecommendations = await enhanceRecommendationsWithRecipes(
+        parsed.recommendations, 
+        recipesPerCategory, 
+        env, 
+        requestId
+      );
+
       // Add metadata to the response
       return {
-        ...parsed,
+        recommendations: enhancedRecommendations,
         location: location,
         date: date,
         season: season,
@@ -741,7 +757,262 @@ Return ONLY this JSON format with creative category names and actual food/dish n
     });
     
     // Fallback to mock data
-    return getMockRecommendations(location, date, requestId);
+    return getMockRecommendations(location, date, recipesPerCategory, requestId);
+  }
+}
+
+// Enhanced function to fetch actual recipes for each category
+async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipesPerCategory, env, requestId) {
+  const startTime = Date.now();
+  const enhancedRecommendations = {};
+  
+  try {
+    log('info', 'Enhancing recommendations with actual recipes', {
+      requestId,
+      categoriesCount: Object.keys(categoryRecommendations).length,
+      recipesPerCategory
+    });
+
+    // Process each category in parallel for better performance
+    const categoryPromises = Object.entries(categoryRecommendations).map(async ([categoryName, dishNames]) => {
+      try {
+        // Search for recipes based on the category and dish names
+        const recipes = await searchRecipeByCategory(
+          categoryName, 
+          dishNames, 
+          recipesPerCategory, 
+          env, 
+          requestId
+        );
+        
+        enhancedRecommendations[categoryName] = recipes;
+        
+        log('debug', 'Category enhanced with recipes', {
+          requestId,
+          category: categoryName,
+          requestedCount: recipesPerCategory,
+          actualCount: recipes.length
+        });
+        
+        return { categoryName, recipeCount: recipes.length };
+      } catch (error) {
+        log('warn', 'Failed to enhance category with recipes, using dish names', {
+          requestId,
+          category: categoryName,
+          error: error.message
+        });
+        
+        // Fallback to dish names if recipe fetching fails
+        enhancedRecommendations[categoryName] = dishNames.slice(0, recipesPerCategory).map(dish => ({
+          name: dish,
+          type: 'dish_suggestion',
+          fallback: true
+        }));
+        
+        return { categoryName, recipeCount: dishNames.length, fallback: true };
+      }
+    });
+
+    const results = await Promise.all(categoryPromises);
+    const duration = Date.now() - startTime;
+    
+    metrics.timing('recipe_enhancement_duration', duration);
+    metrics.increment('categories_enhanced', results.length);
+    
+    log('info', 'Recommendations enhanced successfully', {
+      requestId,
+      duration: `${duration}ms`,
+      categoriesProcessed: results.length,
+      totalRecipes: Object.values(enhancedRecommendations).reduce((sum, recipes) => sum + recipes.length, 0)
+    });
+
+    return enhancedRecommendations;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'Failed to enhance recommendations with recipes', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`
+    });
+    
+    metrics.increment('recipe_enhancement_errors', 1);
+    
+    // Return original dish names as fallback
+    Object.entries(categoryRecommendations).forEach(([categoryName, dishNames]) => {
+      enhancedRecommendations[categoryName] = dishNames.slice(0, recipesPerCategory).map(dish => ({
+        name: dish,
+        type: 'dish_suggestion',
+        fallback: true
+      }));
+    });
+    
+    return enhancedRecommendations;
+  }
+}
+
+// Function to search for recipes by category and dish names
+async function searchRecipeByCategory(categoryName, dishNames, limit, env, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    // Try to search for recipes using the search database if available
+    if (env.SEARCH_DB_URL) {
+      log('debug', 'Searching for recipes using search database', {
+        requestId,
+        category: categoryName,
+        searchTerms: dishNames.slice(0, 3).join(', '), // Use first 3 dish names for search
+        limit
+      });
+
+      // Search for recipes using the category name and dish names
+      const searchTerms = [categoryName, ...dishNames.slice(0, 3)].join(' ');
+      const searchUrl = `${env.SEARCH_DB_URL}/api/search?q=${encodeURIComponent(searchTerms)}&type=RECIPE&limit=${limit}`;
+      
+      const response = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId
+        }
+      });
+
+      if (response.ok) {
+        const searchResults = await response.json();
+        
+        if (searchResults.nodes && searchResults.nodes.length > 0) {
+          const recipes = searchResults.nodes.slice(0, limit).map(node => ({
+            id: node.id,
+            name: node.properties.name || 'Unknown Recipe',
+            description: node.properties.description || '',
+            ingredients: node.properties.ingredients || [],
+            instructions: node.properties.instructions || [],
+            image_url: node.properties.image_url || null,
+            source_url: node.properties.source_url || null,
+            type: 'recipe',
+            source: 'search_database'
+          }));
+          
+          const duration = Date.now() - startTime;
+          metrics.timing('recipe_search_duration', duration, { source: 'search_database' });
+          metrics.increment('recipes_found_via_search', recipes.length);
+          
+          log('info', 'Recipes found via search database', {
+            requestId,
+            category: categoryName,
+            found: recipes.length,
+            requested: limit,
+            duration: `${duration}ms`
+          });
+          
+          return recipes;
+        }
+      }
+    }
+
+    // Fallback: search for recipes using the recipe save worker if available
+    if (env.RECIPE_SAVE_WORKER_URL) {
+      log('debug', 'Searching for recipes using recipe save worker', {
+        requestId,
+        category: categoryName,
+        limit
+      });
+
+      try {
+        const searchUrl = `${env.RECIPE_SAVE_WORKER_URL}/recipes/search?q=${encodeURIComponent(categoryName)}&limit=${limit}`;
+        const response = await fetch(searchUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId
+          }
+        });
+
+        if (response.ok) {
+          const searchResults = await response.json();
+          
+          if (searchResults.recipes && searchResults.recipes.length > 0) {
+            const recipes = searchResults.recipes.slice(0, limit).map(recipe => ({
+              id: recipe.id,
+              name: recipe.name,
+              description: recipe.description || '',
+              ingredients: recipe.ingredients || [],
+              instructions: recipe.instructions || [],
+              image_url: recipe.image_url || null,
+              source_url: recipe.source_url || null,
+              type: 'recipe',
+              source: 'recipe_save_worker'
+            }));
+            
+            const duration = Date.now() - startTime;
+            metrics.timing('recipe_search_duration', duration, { source: 'recipe_save_worker' });
+            metrics.increment('recipes_found_via_save_worker', recipes.length);
+            
+            log('info', 'Recipes found via recipe save worker', {
+              requestId,
+              category: categoryName,
+              found: recipes.length,
+              requested: limit,
+              duration: `${duration}ms`
+            });
+            
+            return recipes;
+          }
+        }
+      } catch (error) {
+        log('warn', 'Recipe save worker search failed', {
+          requestId,
+          category: categoryName,
+          error: error.message
+        });
+      }
+    }
+
+    // Final fallback: return enhanced dish names with mock recipe structure
+    log('debug', 'No recipes found, returning enhanced dish names', {
+      requestId,
+      category: categoryName
+    });
+    
+    const enhancedDishes = dishNames.slice(0, limit).map((dish, index) => ({
+      id: `dish_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+      name: dish,
+      description: `A delicious ${dish.toLowerCase()} perfect for ${categoryName.toLowerCase()}`,
+      ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
+      instructions: [`Prepare ${dish.toLowerCase()} according to your favorite recipe`],
+      image_url: null,
+      source_url: null,
+      type: 'dish_suggestion',
+      source: 'ai_generated',
+      fallback: true
+    }));
+    
+    const duration = Date.now() - startTime;
+    metrics.timing('recipe_search_duration', duration, { source: 'fallback' });
+    metrics.increment('recipes_fallback_to_dishes', enhancedDishes.length);
+    
+    return enhancedDishes;
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'Recipe search failed completely', {
+      requestId,
+      category: categoryName,
+      error: error.message,
+      duration: `${duration}ms`
+    });
+    
+    metrics.increment('recipe_search_errors', 1);
+    
+    // Return basic dish names as final fallback
+    return dishNames.slice(0, limit).map(dish => ({
+      id: `fallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: dish,
+      type: 'dish_suggestion',
+      source: 'fallback',
+      fallback: true
+    }));
   }
 }
 
@@ -753,28 +1024,56 @@ function getSeason(date) {
   return 'Winter';
 }
 
-function getMockRecommendations(location, date, requestId) {
+function getMockRecommendations(location, date, recipesPerCategory, requestId) {
   const startTime = Date.now();
   
   log('info', 'Generating mock recommendations', { 
     requestId,
     location: location || 'not_specified',
-    date 
+    date,
+    recipesPerCategory
   });
   
+  // Handle edge cases for location
+  const hasLocation = location && location.trim() !== '';
+  const trimmedLocation = hasLocation ? location.trim() : null;
+  
+  // Handle edge cases for recipesPerCategory
+  const actualLimit = Math.max(1, Math.min(recipesPerCategory || 3, 10));
+  
   // Provide sensible mock data based on date
-  const dateObj = new Date(date);
+  let dateObj;
+  try {
+    dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      // Invalid date, use current date
+      dateObj = new Date();
+    }
+  } catch (error) {
+    // Invalid date, use current date
+    dateObj = new Date();
+  }
+  
   const month = dateObj.getMonth();
   const season = getSeason(dateObj);
   
   // Determine if we have location and if it's PNW
-  const hasLocation = location && location.trim() !== '';
-  const isPNW = hasLocation && (location.includes('Seattle') || location.includes('Portland') || 
-                 location.includes('Washington') || location.includes('Oregon') || 
-                 location.includes('PNW') || location.includes('Pacific'));
+  const isPNW = hasLocation && (trimmedLocation.includes('Seattle') || trimmedLocation.includes('Portland') || 
+                 trimmedLocation.includes('Washington') || trimmedLocation.includes('Oregon') || 
+                 trimmedLocation.includes('PNW') || trimmedLocation.includes('Pacific'));
   
   // Check for upcoming holiday
   const upcomingHoliday = getUpcomingHoliday(date);
+  
+  log('debug', 'Mock recommendations context', {
+    requestId,
+    hasLocation,
+    trimmedLocation,
+    isPNW,
+    upcomingHoliday,
+    season,
+    date: dateObj.toISOString()
+  });
 
   const seasonalRecommendations = {
     'Spring': {
@@ -804,7 +1103,19 @@ function getMockRecommendations(location, date, requestId) {
   
   // First category: Seasonal - use the first category from seasonalRecommendations
   const seasonalCategoryName = Object.keys(seasonalRecommendations[season])[0];
-  recommendations[seasonalCategoryName] = seasonalRecommendations[season][seasonalCategoryName];
+  const seasonalDishes = seasonalRecommendations[season][seasonalCategoryName];
+  recommendations[seasonalCategoryName] = seasonalDishes.slice(0, actualLimit).map((dish, index) => ({
+    id: `seasonal_${season.toLowerCase()}_${index}`,
+    name: dish,
+    description: `A delicious ${dish.toLowerCase()} perfect for ${season.toLowerCase()}`,
+    ingredients: [`Fresh seasonal ingredients for ${dish.toLowerCase()}`],
+    instructions: [`Prepare ${dish.toLowerCase()} according to your favorite recipe`],
+    image_url: null,
+    source_url: null,
+    type: 'dish_suggestion',
+    source: 'mock_seasonal',
+    fallback: true
+  }));
   
   // Second category: Location-based or practical
   if (!hasLocation) {
@@ -817,14 +1128,51 @@ function getMockRecommendations(location, date, requestId) {
       "One-Pot Wonders": ['jambalaya', 'risotto', 'chili', 'pasta bake'],
       "Budget-Friendly Eats": ['bean soup', 'egg fried rice', 'lentil curry', 'vegetable pasta']
     };
-    recommendations[practicalCategory] = practicalRecipes[practicalCategory] || 
+    const practicalDishes = practicalRecipes[practicalCategory] || 
       ['simple pasta', 'rice bowls', 'sandwiches', 'salads'];
+    
+    recommendations[practicalCategory] = practicalDishes.slice(0, actualLimit).map((dish, index) => ({
+      id: `practical_${index}`,
+      name: dish,
+      description: `A practical and delicious ${dish.toLowerCase()} for everyday cooking`,
+      ingredients: [`Essential ingredients for ${dish.toLowerCase()}`],
+      instructions: [`Cook ${dish.toLowerCase()} using your preferred method`],
+      image_url: null,
+      source_url: null,
+      type: 'dish_suggestion',
+      source: 'mock_practical',
+      fallback: true
+    }));
   } else if (isPNW) {
-    recommendations['Pacific Northwest Coastal Cuisine'] = ['cedar plank salmon', 'dungeness crab cakes', 'grilled oysters', 'chanterelle risotto'];
+    const pnwDishes = ['cedar plank salmon', 'dungeness crab cakes', 'grilled oysters', 'chanterelle risotto'];
+    recommendations['Pacific Northwest Coastal Cuisine'] = pnwDishes.slice(0, actualLimit).map((dish, index) => ({
+      id: `pnw_${index}`,
+      name: dish,
+      description: `A Pacific Northwest specialty: ${dish.toLowerCase()}`,
+      ingredients: [`Fresh local ingredients for ${dish.toLowerCase()}`],
+      instructions: [`Prepare ${dish.toLowerCase()} using traditional PNW methods`],
+      image_url: null,
+      source_url: null,
+      type: 'dish_suggestion',
+      source: 'mock_pnw',
+      fallback: true
+    }));
   } else {
     // Generic local specialties with creative name based on location
-    const locationName = location.split(',')[0].trim(); // Get first part of location
-    recommendations[`${locationName} Local Favorites`] = ['farmers market salad', 'artisan bread', 'local cheese plate', 'seasonal vegetable tart'];
+    const locationName = trimmedLocation.split(',')[0].trim(); // Get first part of location
+    const localDishes = ['farmers market salad', 'artisan bread', 'local cheese plate', 'seasonal vegetable tart'];
+    recommendations[`${locationName} Local Favorites`] = localDishes.slice(0, actualLimit).map((dish, index) => ({
+      id: `local_${locationName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+      name: dish,
+      description: `A local favorite from ${locationName}: ${dish.toLowerCase()}`,
+      ingredients: [`Fresh local ingredients for ${dish.toLowerCase()}`],
+      instructions: [`Prepare ${dish.toLowerCase()} using local techniques`],
+      image_url: null,
+      source_url: null,
+      type: 'dish_suggestion',
+      source: 'mock_local',
+      fallback: true
+    }));
   }
   
   // Third category: Holiday or contextual
@@ -849,8 +1197,23 @@ function getMockRecommendations(location, date, requestId) {
       "New Year's Day": "New Year Fresh Start"
     };
     const holidayName = holidayNames[upcomingHoliday] || `${upcomingHoliday} Celebration`;
-    recommendations[holidayName] = holidayRecipes[upcomingHoliday.replace("'s Day", "")] || 
+    // Try to get recipes for the exact holiday name first, then try without "'s Day"
+    const holidayDishes = holidayRecipes[upcomingHoliday] || 
+      holidayRecipes[upcomingHoliday.replace("'s Day", "")] ||
       ['festive cookies', 'celebration cake', 'party appetizers', 'special drinks'];
+    
+    recommendations[holidayName] = holidayDishes.slice(0, actualLimit).map((dish, index) => ({
+      id: `holiday_${upcomingHoliday.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+      name: dish,
+      description: `A festive ${dish.toLowerCase()} perfect for ${upcomingHoliday}`,
+      ingredients: [`Celebratory ingredients for ${dish.toLowerCase()}`],
+      instructions: [`Prepare ${dish.toLowerCase()} with holiday spirit`],
+      image_url: null,
+      source_url: null,
+      type: 'dish_suggestion',
+      source: 'mock_holiday',
+      fallback: true
+    }));
   } else {
     // No holiday - use contextual category
     // Make sure we don't duplicate the second category if no location
@@ -875,39 +1238,80 @@ function getMockRecommendations(location, date, requestId) {
     };
     
     // Get appropriate recipes for the context category
-    recommendations[contextCategory] = contextRecipes[contextCategory] || 
+    const contextDishes = contextRecipes[contextCategory] || 
       seasonalRecommendations[season][Object.keys(seasonalRecommendations[season])[2]] ||
       ['seasonal soup', 'comfort dish', 'family favorite', 'easy dinner'];
+    
+    // Ensure contextCategory is defined before using it
+    if (contextCategory) {
+      recommendations[contextCategory] = contextDishes.slice(0, actualLimit).map((dish, index) => ({
+        id: `context_${contextCategory.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+        name: dish,
+        description: `A perfect ${dish.toLowerCase()} for ${contextCategory.toLowerCase()}`,
+        ingredients: [`Quality ingredients for ${dish.toLowerCase()}`],
+        instructions: [`Prepare ${dish.toLowerCase()} with care and attention`],
+        image_url: null,
+        source_url: null,
+        type: 'dish_suggestion',
+        source: 'mock_context',
+        fallback: true
+      }));
+    } else {
+      // Fallback if contextCategory is undefined
+      const fallbackDishes = ['seasonal soup', 'comfort dish', 'family favorite', 'easy dinner'];
+      recommendations['Seasonal Comfort'] = fallbackDishes.slice(0, actualLimit).map((dish, index) => ({
+        id: `fallback_${index}`,
+        name: dish,
+        description: `A delicious ${dish.toLowerCase()} for any season`,
+        ingredients: [`Quality ingredients for ${dish.toLowerCase()}`],
+        instructions: [`Prepare ${dish.toLowerCase()} with care and attention`],
+        image_url: null,
+        source_url: null,
+        type: 'dish_suggestion',
+        source: 'mock_fallback',
+        fallback: true
+      }));
+    }
   }
 
   const duration = Date.now() - startTime;
   metrics.timing('mock_generation_duration', duration);
-      metrics.increment('mock_recommendations_generated', 1, {
-      hasLocation: String(hasLocation),
-      season,
-      isPNW: String(isPNW)
-    });
+  metrics.increment('mock_recommendations_generated', 1, {
+    hasLocation: String(hasLocation),
+    season,
+    isPNW: String(isPNW),
+    recipesPerCategory: actualLimit
+  });
 
   log('info', 'Mock recommendations generated', {
     requestId,
     duration: `${duration}ms`,
     categoriesGenerated: Object.keys(recommendations).length,
     hasLocation,
-    season
+    season,
+    recipesPerCategory: actualLimit,
+    totalRecipes: Object.values(recommendations).reduce((sum, recipes) => sum + recipes.length, 0),
+    categories: Object.keys(recommendations)
   });
 
   return {
     recommendations: recommendations,
-    location: location || 'Not specified',
+    location: hasLocation ? location : 'Not specified',
     date: date,
     season: season,
     isMockData: true,
     processingMetrics: {
       totalDuration: `${duration}ms`
     },
-    note: 'These are mock recommendations. Deploy to Cloudflare Workers for AI-powered suggestions.'
+    note: 'These are mock recommendations. Deploy to Cloudflare Workers for AI-powered suggestions with actual recipe data.'
   };
 }
 
 // Export functions for testing
-export { getRecipeRecommendations, getSeason, getMockRecommendations };
+export { 
+  getRecipeRecommendations, 
+  getSeason, 
+  getMockRecommendations, 
+  enhanceRecommendationsWithRecipes, 
+  searchRecipeByCategory 
+};
