@@ -78,9 +78,9 @@ describe('OTP Endpoints', () => {
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
-      expect(result.message).toBe('OTP generated successfully');
-      expect(result.otp).toBeDefined();
-      expect(result.otp).toHaveLength(6);
+      expect(result.message).toBe('OTP generated successfully. Please check your email for the verification code.');
+      expect(result.otp).toBeUndefined();
+      expect(result.emailSent).toBeDefined();
     });
 
     it('should reject request without email', async () => {
@@ -140,9 +140,7 @@ describe('OTP Endpoints', () => {
       expect(result2.message).toContain('OTP already exists');
     });
 
-    it('should not return OTP in production environment', async () => {
-      mockEnv.ENVIRONMENT = 'production';
-      
+    it('should not return OTP in any environment', async () => {
       const request = new Request('http://localhost/otp/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,29 +153,24 @@ describe('OTP Endpoints', () => {
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
       expect(result.otp).toBeUndefined();
+      expect(result.emailSent).toBeDefined();
     });
   });
 
   describe('POST /otp/verify', () => {
     it('should verify correct OTP', async () => {
       const email = 'test@example.com';
+      const testOTP = '123456';
       
-      // Generate OTP
-      const generateRequest = new Request('http://localhost/otp/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      
-      const generateResponse = await app.fetch(generateRequest, mockEnv);
-      const generateResult = await generateResponse.json() as any;
-      const otp = generateResult.otp;
+      // Store OTP directly using the OTP manager (bypassing the endpoint)
+      const { storeOTP } = await import('../../src/utils/otp-manager');
+      await storeOTP(mockEnv.OTP_KV, email, testOTP, 10);
 
       // Verify OTP
       const verifyRequest = new Request('http://localhost/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
+        body: JSON.stringify({ email, otp: testOTP })
       });
 
       const verifyResponse = await app.fetch(verifyRequest, mockEnv);
@@ -361,8 +354,8 @@ describe('OTP Endpoints', () => {
       
       expect(generateResponse.status).toBe(200);
       expect(generateResult.success).toBe(true);
-      
-      const otp = generateResult.otp;
+      expect(generateResult.otp).toBeUndefined();
+      expect(generateResult.emailSent).toBeDefined();
 
       // 2. Check status
       const statusRequest = new Request(`http://localhost/otp/status/${encodeURIComponent(email)}`, {
@@ -376,11 +369,16 @@ describe('OTP Endpoints', () => {
       expect(statusResult.exists).toBe(true);
       expect(statusResult.attempts).toBe(0);
 
-      // 3. Verify OTP
+      // 3. Store our test OTP directly to ensure verification works
+      const testOTP = '123456';
+      const { storeOTP } = await import('../../src/utils/otp-manager');
+      await storeOTP(mockEnv.OTP_KV, email, testOTP, 10);
+
+      // 4. Verify OTP (use the test OTP we know)
       const verifyRequest = new Request('http://localhost/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
+        body: JSON.stringify({ email, otp: testOTP })
       });
 
       const verifyResponse = await app.fetch(verifyRequest, mockEnv);
@@ -389,7 +387,7 @@ describe('OTP Endpoints', () => {
       expect(verifyResponse.status).toBe(200);
       expect(verifyResult.success).toBe(true);
 
-      // 4. Check status after verification (should be gone)
+      // 5. Check status after verification (should be gone)
       const finalStatusRequest = new Request(`http://localhost/otp/status/${encodeURIComponent(email)}`, {
         method: 'GET'
       });

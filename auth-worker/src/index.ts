@@ -109,13 +109,17 @@ app.post('/otp/generate', async (c) => {
     const result = await storeOTP(c.env.OTP_KV, email);
     
     if (result.success) {
-      // Send verification email if in production
-      if (c.env.ENVIRONMENT === 'production' && result.otp) {
+      // Always send verification email (security best practice)
+      let emailSent = false;
+      if (result.otp) {
         try {
           const sesService = new SESService(c.env);
           const emailResult = await sesService.sendVerificationEmail(email, result.otp, 10);
           
-          if (!emailResult.success) {
+          if (emailResult.success) {
+            emailSent = true;
+            console.log('Verification email sent successfully:', emailResult.messageId);
+          } else {
             console.error('Failed to send verification email:', emailResult.error);
             // Don't fail the OTP generation if email fails, but log it
           }
@@ -127,10 +131,8 @@ app.post('/otp/generate', async (c) => {
 
       return c.json({
         success: true,
-        message: 'OTP generated successfully',
-        // In production, you would send this via email instead of returning it
-        otp: c.env.ENVIRONMENT === 'production' ? undefined : result.otp,
-        emailSent: c.env.ENVIRONMENT === 'production'
+        message: 'OTP generated successfully. Please check your email for the verification code.',
+        emailSent: emailSent
       });
     } else {
       return c.json({
