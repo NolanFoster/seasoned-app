@@ -5,9 +5,12 @@ compatibility_date = "2024-01-01"
 # KV Namespace for OTP storage
 [[kv_namespaces]]
 binding = "OTP_KV"
-id = "otp_kv_namespace_id" # Will be replaced with actual ID after creation
+id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after creation
 
-
+# AWS SES environment variables
+[vars]
+AWS_REGION = "us-east-2"
+FROM_EMAIL = "verify@seasonedapp.com"
 
 # Observability settings
 [observability]
@@ -19,7 +22,7 @@ name = "auth-worker-preview"
 
 [[env.preview.kv_namespaces]]
 binding = "OTP_KV"
-id = "otp_kv_namespace_preview_id" # Will be replaced with actual ID
+id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
 
 [env.preview.observability]
 enabled = true

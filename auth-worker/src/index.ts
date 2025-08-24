@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { Env } from './types/env';
 import { storeOTP, verifyOTPForEmail, hasOTP, deleteOTP, getOTPStats } from './utils/otp-manager';
+import { SESService } from './services/ses-service';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -19,7 +20,8 @@ app.get('/health', async (c) => {
     environment: env.ENVIRONMENT,
     services: {
       otp_kv: 'unknown',
-      user_management: 'unknown'
+      user_management: 'unknown',
+      ses: 'unknown'
     }
   };
 
@@ -52,6 +54,20 @@ app.get('/health', async (c) => {
     health.services.user_management = 'unhealthy';
     health.status = 'degraded';
     console.error('User Management Worker health check failed:', error);
+  }
+
+  try {
+    // Test AWS SES configuration
+    if (env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY) {
+      health.services.ses = 'healthy';
+    } else {
+      health.services.ses = 'unhealthy';
+      health.status = 'degraded';
+    }
+  } catch (error) {
+    health.services.ses = 'unhealthy';
+    health.status = 'degraded';
+    console.error('SES configuration check failed:', error);
   }
 
   // Determine overall health
@@ -93,11 +109,28 @@ app.post('/otp/generate', async (c) => {
     const result = await storeOTP(c.env.OTP_KV, email);
     
     if (result.success) {
+      // Send verification email if in production
+      if (c.env.ENVIRONMENT === 'production' && result.otp) {
+        try {
+          const sesService = new SESService(c.env);
+          const emailResult = await sesService.sendVerificationEmail(email, result.otp, 10);
+          
+          if (!emailResult.success) {
+            console.error('Failed to send verification email:', emailResult.error);
+            // Don't fail the OTP generation if email fails, but log it
+          }
+        } catch (emailError) {
+          console.error('Error sending verification email:', emailError);
+          // Don't fail the OTP generation if email fails
+        }
+      }
+
       return c.json({
         success: true,
         message: 'OTP generated successfully',
         // In production, you would send this via email instead of returning it
-        otp: c.env.ENVIRONMENT === 'production' ? undefined : result.otp
+        otp: c.env.ENVIRONMENT === 'production' ? undefined : result.otp,
+        emailSent: c.env.ENVIRONMENT === 'production'
       });
     } else {
       return c.json({
@@ -249,6 +282,55 @@ app.delete('/otp/:email', async (c) => {
   }
 });
 
+// Send verification email manually
+app.post('/email/send-verification', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { email, otp, expiryMinutes = 10 } = body;
+
+    console.log('📧 Email verification request:', { email, otp, expiryMinutes });
+
+    if (!email || typeof email !== 'string') {
+      return c.json({
+        success: false,
+        message: 'Email is required and must be a string'
+      }, 400);
+    }
+
+    if (!otp || typeof otp !== 'string') {
+      return c.json({
+        success: false,
+        message: 'OTP is required and must be a string'
+      }, 400);
+    }
+
+    console.log('✅ Request validation passed, calling SES service with email:', email);
+
+    const sesService = new SESService(c.env);
+    const result = await sesService.sendVerificationEmail(email, otp, expiryMinutes);
+    
+    if (result.success) {
+      return c.json({
+        success: true,
+        message: 'Verification email sent successfully',
+        messageId: result.messageId
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: 'Failed to send verification email',
+        error: result.error
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    return c.json({
+      success: false,
+      message: 'Internal server error'
+    }, 500);
+  }
+});
+
 // Root endpoint
 app.get('/', (c) => {
   return c.json({
@@ -281,6 +363,12 @@ app.get('/', (c) => {
         path: '/otp/:email',
         method: 'DELETE',
         description: 'Delete OTP for email (admin endpoint)'
+      },
+      {
+        path: '/email/send-verification',
+        method: 'POST',
+        description: 'Send verification email manually',
+        body: { email: 'string', otp: 'string', expiryMinutes: 'number (optional)' }
       }
     ]
   });

@@ -11,15 +11,21 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "coverage": "vitest run --coverage",
+    "test:email": "node test-email.js",
+    "test:deployed": "node run-tests.js",
+    "test:all-envs": "node run-tests.js --all",
+    "deploy:preview": "wrangler deploy --env preview",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "deploy:test:preview": "./deploy-and-test.sh --env preview",
+    "deploy:test:staging": "./deploy-and-test.sh --env staging",
+    "deploy:test:production": "./deploy-and-test.sh --env production",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "tail": "wrangler tail",
     "tail:preview": "wrangler tail --env preview",
     "tail:staging": "wrangler tail --env staging",
-    "tail:production": "wrangler tail --env production",
-    "deploy:preview": "wrangler deploy --env preview",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production"
+    "tail:production": "wrangler tail --env production"
   },
   "keywords": [
     "cloudflare-workers",
@@ -42,6 +48,8 @@
     "wrangler": "^4.32.0"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.873.0",
+    "@aws-sdk/credential-providers": "^3.873.0",
     "hono": "^4.5.0"
   }
 }
