@@ -8,6 +8,83 @@
  */
 
 /**
+ * Extract the number of servings from various recipe yield formats
+ * @param {string|number} yieldValue - Recipe yield value (e.g., "6 large crab cakes", "4 servings", "Makes 8 servings")
+ * @returns {number} Number of servings (defaults to 1 if cannot be determined)
+ */
+export function extractServingsFromYield(yieldValue) {
+  if (!yieldValue) return 1;
+  
+  // If it's already a number, return it
+  if (typeof yieldValue === 'number') return yieldValue;
+  
+  const yieldStr = String(yieldValue).toLowerCase().trim();
+  
+  // Handle empty strings
+  if (yieldStr === '') return 1;
+  
+  // Common patterns for extracting servings
+  const patterns = [
+    // "6 large crab cakes" -> 6
+    /^(\d+)\s+(?:large|medium|small|regular|standard)?\s*(?:crab\s+cakes?|cookies?|muffins?|pancakes?|waffles?|biscuits?|rolls?|slices?|pieces?|items?|portions?|servings?)/i,
+    
+    // "Makes 8 servings" -> 8
+    /makes?\s+(\d+)\s*(?:servings?|portions?|people|cookies?|muffins?|pancakes?|waffles?|biscuits?|rolls?|slices?|pieces?|items?)/i,
+    
+    // "Serves 6 people" -> 6
+    /serves?\s+(\d+)\s*(?:people|persons|guests?|servings?|portions?)/i,
+    
+    // "Serves about 4-6 people" -> 5 (average)
+    /serves?\s+(?:about|approximately|roughly)?\s*(\d+)\s*-\s*(\d+)\s*(?:people|persons|guests?|servings?|portions?)/i,
+    
+    // "4 servings" -> 4
+    /^(\d+)\s*(?:servings?|portions?|people|persons|guests?)/i,
+    
+    // "2-4 servings" -> 3 (average)
+    /^(\d+)\s*-\s*(\d+)\s*(?:servings?|portions?|people|persons|guests?)/i,
+    
+    // "Yields 8-10 servings" -> 9 (average)
+    /yields?\s+(?:about|approximately|roughly)?\s*(\d+)\s*-\s*(\d+)\s*(?:servings?|portions?|people|persons|guests?)/i,
+    
+    // "1 loaf" -> 1
+    /^(\d+)\s*(?:loaf|loaves|cake|cakes|pie|pies|tart|tarts|pizza|pizzas|bread|roll|rolls|bun|buns)/i,
+    
+    // "12 cookies" -> 12
+    /^(\d+)\s*(?:cookie|cookies|muffin|muffins|pancake|pancakes|waffle|waffles|biscuit|biscuits|roll|rolls|slice|slices|piece|pieces|item|items)/i,
+    
+    // Just a number
+    /^(\d+)$/,
+    
+    // Number at the beginning of any string
+    /^(\d+)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = yieldStr.match(pattern);
+    if (match) {
+      if (match[2]) {
+        // Handle ranges like "2-4 servings"
+        const min = parseInt(match[1]);
+        const max = parseInt(match[2]);
+        return Math.round((min + max) / 2);
+      } else {
+        // Single number
+        return parseInt(match[1]);
+      }
+    }
+  }
+  
+  // If no pattern matches, try to find any number in the string
+  const numberMatch = yieldStr.match(/\d+/);
+  if (numberMatch) {
+    return parseInt(numberMatch[0]);
+  }
+  
+  // Default to 1 serving if we can't determine
+  return 1;
+}
+
+/**
  * USDA FoodData Central API client for nutrition data
  */
 class USDANutritionClient {
