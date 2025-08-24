@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { JWTService, JWTPayload } from '../src/services/jwt-service';
+import { JWTService, CustomJWTPayload } from '../src/services/jwt-service';
 
 // Mock environment
 const mockEnv = {
@@ -159,7 +159,7 @@ describe('JWTService', () => {
 
   describe('token expiration utilities', () => {
     it('should correctly identify expired tokens', () => {
-      const payload: JWTPayload = {
+      const payload: CustomJWTPayload = {
         sub: 'test-user',
         email: 'test@example.com',
         iat: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
@@ -173,7 +173,7 @@ describe('JWTService', () => {
     });
 
     it('should correctly identify valid tokens', () => {
-      const payload: JWTPayload = {
+      const payload: CustomJWTPayload = {
         sub: 'test-user',
         email: 'test@example.com',
         iat: Math.floor(Date.now() / 1000),
@@ -188,7 +188,7 @@ describe('JWTService', () => {
 
     it('should calculate correct time until expiration', () => {
       const now = Math.floor(Date.now() / 1000);
-      const payload: JWTPayload = {
+      const payload: CustomJWTPayload = {
         sub: 'test-user',
         email: 'test@example.com',
         iat: now,
@@ -204,7 +204,7 @@ describe('JWTService', () => {
     });
 
     it('should return 0 for expired tokens', () => {
-      const payload: JWTPayload = {
+      const payload: CustomJWTPayload = {
         sub: 'test-user',
         email: 'test@example.com',
         iat: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago

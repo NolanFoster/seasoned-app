@@ -25,7 +25,8 @@ describe('Health Endpoint', () => {
       USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
       ENVIRONMENT: 'preview',
       AWS_ACCESS_KEY_ID: 'test-access-key',
-      AWS_SECRET_ACCESS_KEY: 'test-secret-key'
+      AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+      JWT_SECRET: 'test-jwt-secret'
     };
   });
 

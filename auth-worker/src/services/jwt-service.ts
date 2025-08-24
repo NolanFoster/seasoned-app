@@ -6,7 +6,7 @@
 import { SignJWT, jwtVerify, decodeJwt } from 'jose';
 import { Env } from '../types/env';
 
-export interface JWTPayload {
+export interface CustomJWTPayload {
   sub: string; // Subject (user ID)
   email: string; // User's email
   iat: number; // Issued at
@@ -19,7 +19,7 @@ export interface JWTPayload {
 export interface JWTResult {
   success: boolean;
   token?: string;
-  payload?: JWTPayload;
+  payload?: CustomJWTPayload;
   error?: string;
 }
 
@@ -53,7 +53,7 @@ export class JWTService {
       const now = Math.floor(Date.now() / 1000);
       const exp = now + expiresIn;
 
-      const payload: JWTPayload = {
+      const payload = {
         sub: userId,
         email: email,
         iat: now,
@@ -75,7 +75,7 @@ export class JWTService {
       return {
         success: true,
         token,
-        payload
+        payload: payload as CustomJWTPayload
       };
     } catch (error) {
       console.error('Error creating JWT token:', error);
@@ -99,10 +99,16 @@ export class JWTService {
         algorithms: ['HS256']
       });
 
-      return {
-        success: true,
-        payload: payload as JWTPayload
-      };
+      // Type assertion with validation
+      const customPayload = payload as any;
+      if (customPayload.email && customPayload.sub) {
+        return {
+          success: true,
+          payload: customPayload as CustomJWTPayload
+        };
+      } else {
+        throw new Error('Invalid payload structure');
+      }
     } catch (error) {
       console.error('Error verifying JWT token:', error);
       return {
@@ -119,12 +125,17 @@ export class JWTService {
    */
   decodeToken(token: string): JWTResult {
     try {
-      const payload = decodeJwt(token) as JWTPayload;
+      const payload = decodeJwt(token) as any;
       
-      return {
-        success: true,
-        payload
-      };
+      // Validate payload structure
+      if (payload.email && payload.sub) {
+        return {
+          success: true,
+          payload: payload as CustomJWTPayload
+        };
+      } else {
+        throw new Error('Invalid payload structure');
+      }
     } catch (error) {
       console.error('Error decoding JWT token:', error);
       return {
@@ -149,7 +160,7 @@ export class JWTService {
    * @param payload - The JWT payload
    * @returns boolean
    */
-  isTokenExpired(payload: JWTPayload): boolean {
+  isTokenExpired(payload: CustomJWTPayload): boolean {
     const now = Math.floor(Date.now() / 1000);
     return payload.exp < now;
   }
@@ -159,7 +170,7 @@ export class JWTService {
    * @param payload - The JWT payload
    * @returns number
    */
-  getTimeUntilExpiration(payload: JWTPayload): number {
+  getTimeUntilExpiration(payload: CustomJWTPayload): number {
     const now = Math.floor(Date.now() / 1000);
     return Math.max(0, payload.exp - now);
   }

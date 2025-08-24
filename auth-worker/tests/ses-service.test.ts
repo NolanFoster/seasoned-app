@@ -17,7 +17,8 @@ const mockEnv = {
   FROM_EMAIL: 'test@example.com',
   OTP_KV: {} as any,
   ENVIRONMENT: 'development' as const,
-  USER_MANAGEMENT_WORKER_URL: 'http://localhost:8787'
+  USER_MANAGEMENT_WORKER_URL: 'http://localhost:8787',
+  JWT_SECRET: 'test-jwt-secret'
 };
 
 describe('SESService', () => {
