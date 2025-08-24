@@ -10,20 +10,8 @@ vi.mock('../../shared/kv-storage.js', () => ({
 }));
 
 vi.mock('../../shared/nutrition-calculator.js', () => ({
-  calculateNutritionalFacts: vi.fn().mockImplementation(async (ingredients, apiKey, servings) => ({
-    success: true,
-    nutrition: {
-      calories: 250,
-      protein: 12,
-      carbohydrates: 35,
-      fat: 8,
-      fiber: 4,
-      sugar: 10,
-      sodium: 300
-    },
-    processedIngredients: ingredients.length,
-    totalIngredients: ingredients.length
-  }))
+  calculateNutritionalFacts: vi.fn(),
+  extractServingsFromYield: vi.fn()
 }));
 
 describe('Comprehensive Coverage Tests', () => {
@@ -32,12 +20,34 @@ describe('Comprehensive Coverage Tests', () => {
   let mockState;
   let recipeSaver;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Setup fresh mocks for each test
     mockEnv = createMockEnv();
     mockCtx = createMockContext();
     mockState = createMockState();
     recipeSaver = new RecipeSaver(mockState, mockEnv);
+    
+    // Setup nutrition calculator mocks
+    const { calculateNutritionalFacts, extractServingsFromYield } = await import('../../shared/nutrition-calculator.js');
+    calculateNutritionalFacts.mockImplementation(async (ingredients, apiKey, servings) => ({
+      success: true,
+      nutrition: {
+        calories: 250,
+        protein: 12,
+        carbohydrates: 35,
+        fat: 8,
+        fiber: 4,
+        sugar: 10,
+        sodium: 300
+      },
+      processedIngredients: ingredients.length,
+      totalIngredients: ingredients.length
+    }));
+    extractServingsFromYield.mockImplementation((value) => {
+      if (value === '4') return 4;
+      if (value === '8') return 8;
+      return 1;
+    });
     
     // Reset fetch mock
     global.fetch = vi.fn();

@@ -347,6 +347,6 @@ const id = await generateRecipeId('https://example.com/recipe');
 console.log('Generated ID:', id);
 
 // Test nutrition calculation
-const result = await calculateNutritionalFacts(ingredients, apiKey);
+const result = await calculateNutritionalFacts(ingredients, apiKey, 2);
 console.log('Nutrition result:', result);
 ```
