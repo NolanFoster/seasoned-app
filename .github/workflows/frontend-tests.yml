@@ -66,25 +66,59 @@ jobs:
         
         # Check Jest version
         echo "Jest version:" >> $GITHUB_STEP_SUMMARY
-        npx jest --version >> $GITHUB_STEP_SUMMARY
+        npx jest --version >> $GITHUB_STEP_SUMMARY 2>&1 || echo "Failed to get Jest version" >> $GITHUB_STEP_SUMMARY
         
         # Check if Jest config exists
         if [ -f jest.config.js ]; then
           echo "✅ Jest config found" >> $GITHUB_STEP_SUMMARY
+          echo "Jest config content:" >> $GITHUB_STEP_SUMMARY
           cat jest.config.js >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Jest config not found" >> $GITHUB_STEP_SUMMARY
         fi
         
+        # Check if Babel config exists
+        if [ -f babel.config.js ]; then
+          echo "✅ Babel config found" >> $GITHUB_STEP_SUMMARY
+          echo "Babel config content:" >> $GITHUB_STEP_SUMMARY
+          cat babel.config.js >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Babel config not found" >> $GITHUB_STEP_SUMMARY
+        fi
+        
         # Check if test files exist
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Checking for test files..." >> $GITHUB_STEP_SUMMARY
-        find src -name "*.test.*" -o -name "*.spec.*" | head -10 >> $GITHUB_STEP_SUMMARY
+        if [ -d src ]; then
+          find src -name "*.test.*" -o -name "*.spec.*" | head -10 >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ src directory not found" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if setupTests.js exists
+        if [ -f src/setupTests.js ]; then
+          echo "✅ setupTests.js found" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ setupTests.js not found" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if mocks directory exists
+        if [ -d __mocks__ ]; then
+          echo "✅ __mocks__ directory found" >> $GITHUB_STEP_SUMMARY
+          ls -la __mocks__/ >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ __mocks__ directory not found" >> $GITHUB_STEP_SUMMARY
+        fi
         
         # Check package.json scripts
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Package.json test scripts:" >> $GITHUB_STEP_SUMMARY
         npm run --silent 2>&1 | grep -E "(test|coverage)" >> $GITHUB_STEP_SUMMARY
+        
+        # Try to run Jest with --help to verify it's working
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Testing Jest basic functionality:" >> $GITHUB_STEP_SUMMARY
+        npx jest --help >> $GITHUB_STEP_SUMMARY 2>&1 || echo "Jest --help failed" >> $GITHUB_STEP_SUMMARY
     
     - name: Run Frontend Tests (No Coverage)
       working-directory: ./frontend

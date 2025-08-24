@@ -12,11 +12,9 @@ module.exports = {
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
-    '!src/index.js',
-    '!src/reportWebVitals.js',
+    '!src/main.jsx',
     '!src/**/*.test.{js,jsx}',
     '!src/**/*.spec.{js,jsx}',
-    '!src/main.jsx',
   ],
   coverageThreshold: {
     global: {
