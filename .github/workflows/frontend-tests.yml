@@ -198,19 +198,19 @@ jobs:
             if [ "$COVERAGE_FAILED" = true ]; then
               echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
               echo "❌ **Coverage is below the required 60% threshold**" >> $GITHUB_STEP_SUMMARY
-              exit 1
+              # Don't exit here - let the job continue so outputs are available
+            else
+              echo "✅ All coverage thresholds met!" >> $GITHUB_STEP_SUMMARY
+              echo "   Statements: $statements% (threshold: $THRESHOLD_STATEMENTS%)" >> $GITHUB_STEP_SUMMARY
+              echo "   Branches: $branches% (threshold: $THRESHOLD_BRANCHES%)" >> $GITHUB_STEP_SUMMARY
+              echo "   Functions: $functions% (threshold: $THRESHOLD_FUNCTIONS%)" >> $GITHUB_STEP_SUMMARY
+              echo "   Lines: $lines% (threshold: $THRESHOLD_LINES%)" >> $GITHUB_STEP_SUMMARY
+              echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
             fi
-            
-            echo "✅ All coverage thresholds met!" >> $GITHUB_STEP_SUMMARY
-            echo "   Statements: $statements% (threshold: $THRESHOLD_STATEMENTS%)" >> $GITHUB_STEP_SUMMARY
-            echo "   Branches: $branches% (threshold: $THRESHOLD_BRANCHES%)" >> $GITHUB_STEP_SUMMARY
-            echo "   Functions: $functions% (threshold: $THRESHOLD_FUNCTIONS%)" >> $GITHUB_STEP_SUMMARY
-            echo "   Lines: $lines% (threshold: $THRESHOLD_LINES%)" >> $GITHUB_STEP_SUMMARY
-            echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
           else
             echo "⚠️ jq not available, cannot parse coverage data" >> $GITHUB_STEP_SUMMARY
             echo "coverage_available=false" >> $GITHUB_OUTPUT
-            exit 1
+            # Don't exit here - let the job continue so outputs are available
           fi
         else
           echo "❌ Coverage summary not found!" >> $GITHUB_STEP_SUMMARY
@@ -225,7 +225,7 @@ jobs:
           fi
           
           echo "coverage_available=false" >> $GITHUB_OUTPUT
-          exit 1
+          # Don't exit here - let the job continue so outputs are available
         fi
     
     - name: Upload Frontend Coverage Reports
@@ -233,6 +233,13 @@ jobs:
       with:
         name: frontend-coverage
         path: frontend/coverage/
+    
+    - name: Fail if Coverage Below Threshold
+      if: steps.coverage-check.outputs.coverage_below_threshold == 'true'
+      run: |
+        echo "❌ Coverage is below the required 60% threshold"
+        echo "Failing the job to enforce coverage requirements"
+        exit 1
     
     - name: Generate Diff Coverage Report (PR only)
       if: github.event_name == 'pull_request'
