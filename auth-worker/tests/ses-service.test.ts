@@ -113,7 +113,7 @@ describe('SESService', () => {
 
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Verify Your Email Address',
+        subject: 'Seasoned - Verify Your Email Address',
         htmlBody: expect.stringContaining('123456'),
         textBody: expect.stringContaining('123456')
       });
@@ -151,7 +151,7 @@ describe('SESService', () => {
       // Verify the sendEmail was called with the right parameters
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Verify Your Email Address',
+        subject: 'Seasoned - Verify Your Email Address',
         htmlBody: expect.stringContaining('123456'),
         textBody: expect.stringContaining('123456')
       });
@@ -171,7 +171,7 @@ describe('SESService', () => {
       // Verify the sendEmail was called with the right parameters
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Verify Your Email Address',
+        subject: 'Seasoned - Verify Your Email Address',
         htmlBody: expect.stringContaining('30 minutes'),
         textBody: expect.stringContaining('30 minutes')
       });
