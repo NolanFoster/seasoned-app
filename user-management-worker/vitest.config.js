@@ -2,13 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    environment: 'miniflare',
-    environmentOptions: {
-      bindings: {
-        USER_DB: 'USER_DB',
-        ENVIRONMENT: 'preview'
-      }
-    },
+    environment: 'node',
     setupFiles: ['./tests/setup.js'],
     coverage: {
       provider: 'v8',
