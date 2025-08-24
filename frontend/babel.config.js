@@ -9,6 +9,6 @@ module.exports = {
     ['@babel/preset-react', { runtime: 'automatic' }]
   ],
   plugins: [
-    require.resolve('./babel-plugin-transform-import-meta.js')
+    './babel-plugin-transform-import-meta.js'
   ]
 };
