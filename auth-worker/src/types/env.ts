@@ -11,4 +11,7 @@ export interface Env {
   AWS_SECRET_ACCESS_KEY: string;
   AWS_REGION?: string;
   FROM_EMAIL?: string;
+  
+  // JWT configuration
+  JWT_SECRET: string;
 }

@@ -176,6 +176,14 @@ app.post('/otp/verify', async (c) => {
       try {
         const emailHash = result.user_id; // This should be the email hash from OTP verification
         
+        if (!emailHash) {
+          console.error('No user_id returned from OTP verification');
+          return c.json({
+            success: false,
+            message: 'OTP verification failed - no user ID returned'
+          }, 400);
+        }
+        
         // Check if user exists
         const userResponse = await fetch(`${c.env.USER_MANAGEMENT_WORKER_URL}/users/email/${emailHash}`);
         
@@ -211,16 +219,201 @@ app.post('/otp/verify', async (c) => {
         if (!loginResponse.ok) {
           console.error('Failed to record login history');
         }
+
+        // Generate JWT token for successful authentication
+        try {
+          const { JWTService } = await import('./services/jwt-service');
+          const jwtService = new JWTService(c.env);
+          
+          // Create token with 24 hour expiration
+          const tokenResult = await jwtService.createToken(emailHash, email, 86400);
+          
+          if (tokenResult.success && tokenResult.token) {
+            // Return success with JWT token
+            return c.json({
+              success: true,
+              message: 'OTP verified successfully',
+              token: tokenResult.token,
+              expiresIn: 86400,
+              user: {
+                id: emailHash,
+                email: email
+              }
+            }, 200);
+          } else {
+            console.error('Failed to generate JWT token:', tokenResult.error);
+            // Fall back to success without token
+            return c.json({
+              success: true,
+              message: 'OTP verified successfully',
+              user: {
+                id: emailHash,
+                email: email
+              }
+            }, 200);
+          }
+        } catch (jwtError) {
+          console.error('Error generating JWT token:', jwtError);
+          // Fall back to success without token
+          return c.json({
+            success: true,
+            message: 'OTP verified successfully',
+            user: {
+              id: emailHash,
+              email: email
+            }
+          }, 200);
+        }
       } catch (userError) {
         console.error('Error managing user data:', userError);
         // Don't fail the OTP verification if user management fails
+        // Return success with basic user info
+        return c.json({
+          success: true,
+          message: 'OTP verified successfully',
+          user: {
+            id: result.user_id || '',
+            email: email
+          }
+        }, 200);
       }
     }
     
+    // If OTP verification failed, return the original result
     const statusCode = result.success ? 200 : 400;
     return c.json(result, statusCode);
   } catch (error) {
     console.error('Error verifying OTP:', error);
+    return c.json({
+      success: false,
+      message: 'Internal server error'
+    }, 500);
+  }
+});
+
+// Refresh JWT token
+app.post('/auth/refresh', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { token } = body;
+
+    if (!token || typeof token !== 'string') {
+      return c.json({
+        success: false,
+        message: 'Token is required and must be a string'
+      }, 400);
+    }
+
+    try {
+      const { JWTService } = await import('./services/jwt-service');
+      const jwtService = new JWTService(c.env);
+      
+      // Verify the existing token
+      const verifyResult = await jwtService.verifyToken(token);
+      
+      if (!verifyResult.success || !verifyResult.payload) {
+        return c.json({
+          success: false,
+          message: verifyResult.error || 'Invalid token'
+        }, 400);
+      }
+
+      // Check if token is close to expiration (within 1 hour)
+      const timeUntilExpiration = jwtService.getTimeUntilExpiration(verifyResult.payload);
+      if (timeUntilExpiration > 3600) {
+        return c.json({
+          success: false,
+          message: 'Token is not close to expiration yet'
+        }, 400);
+      }
+
+      // Create a new token with extended expiration
+      const newTokenResult = await jwtService.createToken(
+        verifyResult.payload.sub,
+        verifyResult.payload.email,
+        86400 // 24 hours
+      );
+      
+      if (newTokenResult.success && newTokenResult.token) {
+        return c.json({
+          success: true,
+          message: 'Token refreshed successfully',
+          token: newTokenResult.token,
+          expiresIn: 86400,
+          user: {
+            id: verifyResult.payload.sub,
+            email: verifyResult.payload.email
+          }
+        });
+      } else {
+        return c.json({
+          success: false,
+          message: 'Failed to refresh token'
+        }, 500);
+      }
+    } catch (jwtError) {
+      console.error('Error refreshing JWT token:', jwtError);
+      return c.json({
+        success: false,
+        message: 'Token refresh failed'
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Error in token refresh endpoint:', error);
+    return c.json({
+      success: false,
+      message: 'Internal server error'
+    }, 500);
+  }
+});
+
+// Validate JWT token
+app.post('/auth/validate', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { token } = body;
+
+    if (!token || typeof token !== 'string') {
+      return c.json({
+        success: false,
+        message: 'Token is required and must be a string'
+      }, 400);
+    }
+
+    try {
+      const { JWTService } = await import('./services/jwt-service');
+      const jwtService = new JWTService(c.env);
+      
+      const result = await jwtService.verifyToken(token);
+      
+      if (result.success && result.payload) {
+        return c.json({
+          success: true,
+          valid: true,
+          user: {
+            id: result.payload.sub,
+            email: result.payload.email
+          },
+          expiresAt: result.payload.exp,
+          timeUntilExpiration: jwtService.getTimeUntilExpiration(result.payload)
+        });
+      } else {
+        return c.json({
+          success: false,
+          valid: false,
+          message: result.error || 'Invalid token'
+        });
+      }
+    } catch (jwtError) {
+      console.error('Error validating JWT token:', jwtError);
+      return c.json({
+        success: false,
+        valid: false,
+        message: 'Token validation failed'
+      });
+    }
+  } catch (error) {
+    console.error('Error in token validation endpoint:', error);
     return c.json({
       success: false,
       message: 'Internal server error'

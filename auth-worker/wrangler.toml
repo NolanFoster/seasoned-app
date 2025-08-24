@@ -12,6 +12,11 @@ id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after 
 AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 
+# JWT configuration
+# JWT_SECRET must be set as a Cloudflare secret using:
+# wrangler secret put JWT_SECRET
+# This should be a strong, random string of at least 32 characters
+
 # Observability settings
 [observability]
 enabled = true
