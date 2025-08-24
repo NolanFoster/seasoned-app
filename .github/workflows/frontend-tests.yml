@@ -27,6 +27,12 @@ jobs:
     name: Frontend Tests and Coverage
     runs-on: ubuntu-latest
     outputs:
+      coverage_available: ${{ steps.coverage-check.outputs.coverage_available }}
+      coverage_lines: ${{ steps.coverage-check.outputs.coverage_lines }}
+      coverage_statements: ${{ steps.coverage-check.outputs.coverage_statements }}
+      coverage_functions: ${{ steps.coverage-check.outputs.coverage_functions }}
+      coverage_branches: ${{ steps.coverage-check.outputs.coverage_branches }}
+      coverage_below_threshold: ${{ steps.coverage-check.outputs.coverage_below_threshold }}
       diff_coverage_available: ${{ steps.diff-coverage.outputs.diff_coverage_available }}
       diff_coverage_below_threshold: ${{ steps.diff-coverage.outputs.diff_coverage_below_threshold }}
       diff_coverage_percentage: ${{ steps.diff-coverage.outputs.diff_coverage_percentage }}
@@ -52,9 +58,73 @@ jobs:
       working-directory: ./frontend
       run: npm ci
     
+    - name: Verify Jest Configuration
+      working-directory: ./frontend
+      run: |
+        echo "### Jest Configuration Verification" >> $GITHUB_STEP_SUMMARY
+        echo "Checking Jest configuration..." >> $GITHUB_STEP_SUMMARY
+        
+        # Check Jest version
+        echo "Jest version:" >> $GITHUB_STEP_SUMMARY
+        npx jest --version >> $GITHUB_STEP_SUMMARY
+        
+        # Check if Jest config exists
+        if [ -f jest.config.js ]; then
+          echo "✅ Jest config found" >> $GITHUB_STEP_SUMMARY
+          cat jest.config.js >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Jest config not found" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if test files exist
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Checking for test files..." >> $GITHUB_STEP_SUMMARY
+        find src -name "*.test.*" -o -name "*.spec.*" | head -10 >> $GITHUB_STEP_SUMMARY
+        
+        # Check package.json scripts
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Package.json test scripts:" >> $GITHUB_STEP_SUMMARY
+        npm run --silent 2>&1 | grep -E "(test|coverage)" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Run Frontend Tests (No Coverage)
+      working-directory: ./frontend
+      run: |
+        echo "Running tests without coverage..."
+        npm test 2>&1 | tee test-output.txt
+        
+        echo "Test output saved to test-output.txt"
+        echo "Checking for any Jest errors or warnings..."
+        if [ -f test-output.txt ]; then
+          echo "Test output (last 50 lines):"
+          tail -50 test-output.txt
+        fi
+    
     - name: Run Frontend Tests with Coverage
       working-directory: ./frontend
-      run: npm run test:coverage
+      run: |
+        echo "Running tests with coverage..."
+        npm run test:coverage 2>&1 | tee coverage-output.txt
+        
+        echo "Coverage output saved to coverage-output.txt"
+        echo "Checking if coverage files were generated..."
+        if [ -d coverage ]; then
+          echo "Coverage directory exists"
+          ls -la coverage/
+          
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "Coverage summary exists"
+            echo "First 20 lines of coverage summary:"
+            head -20 coverage/coverage-summary.json
+          else
+            echo "Coverage summary does not exist"
+            echo "Coverage output (last 50 lines):"
+            tail -50 coverage-output.txt
+          fi
+        else
+          echo "Coverage directory does not exist"
+          echo "Coverage output (last 50 lines):"
+          tail -50 coverage-output.txt
+        fi
     
     - name: Check Coverage Thresholds
       id: coverage-check
@@ -62,107 +132,101 @@ jobs:
       run: |
         echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
         
-        # Run coverage again to get the output for parsing
-        COVERAGE_OUTPUT=$(npm run test:coverage 2>&1)
-        echo "$COVERAGE_OUTPUT"
+        # Debug: Check what files exist
+        echo "Debug: Checking coverage directory contents..." >> $GITHUB_STEP_SUMMARY
+        ls -la coverage/ >> $GITHUB_STEP_SUMMARY 2>&1 || echo "Coverage directory not found" >> $GITHUB_STEP_SUMMARY
         
-        # Parse coverage percentages from Jest output
-        # Look for lines like "All files |   88.06 |    81.11 |   94.11 |   88.06 |"
-        COVERAGE_LINE=$(echo "$COVERAGE_OUTPUT" | grep "All files" | head -1)
-        
-        # Debug output
-        echo "Coverage line found: '$COVERAGE_LINE'"
-        
-        if [ -n "$COVERAGE_LINE" ]; then
-          # Extract percentages using awk, handling the pipe-separated format
-          # Format: "All files |   88.06 |    81.11 |   94.11 |   88.06 | [uncovered lines]"
-          # Field positions: 1=filename, 2=statements, 3=branches, 4=functions, 5=lines, 6=uncovered
-          STATEMENTS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $2); print $2}')
-          BRANCHES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $3); print $3}')
-          FUNCTIONS=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $4); print $4}')
-          LINES=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/[[:space:]]/, "", $5); print $5}')
+        # Check if coverage files were generated
+        if [ -f coverage/coverage-summary.json ]; then
+          echo "✅ Coverage summary generated successfully" >> $GITHUB_STEP_SUMMARY
           
-          # Debug output
-          echo "Parsed coverage values:"
-          echo "  Statements: $STATEMENTS%"
-          echo "  Branches: $BRANCHES%"
-          echo "  Functions: $FUNCTIONS%"
-          echo "  Lines: $LINES%"
+          # Debug: Show first few lines of coverage summary
+          echo "Debug: Coverage summary content (first 10 lines):" >> $GITHUB_STEP_SUMMARY
+          head -10 coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
           
-          # Validate that we got numeric values
-          if ! [[ "$STATEMENTS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
-            echo "Warning: Invalid statements value: '$STATEMENTS'"
-            STATEMENTS="0"
-          fi
-          if ! [[ "$BRANCHES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
-            echo "Warning: Invalid branches value: '$BRANCHES'"
-            BRANCHES="0"
-          fi
-          if ! [[ "$FUNCTIONS" =~ ^[0-9]+\.?[0-9]*$ ]]; then
-            echo "Warning: Invalid functions value: '$FUNCTIONS'"
-            FUNCTIONS="0"
-          fi
-          if ! [[ "$LINES" =~ ^[0-9]+\.?[0-9]*$ ]]; then
-            echo "Warning: Invalid lines value: '$LINES'"
-            LINES="0"
+          # Parse coverage percentages from JSON summary using jq
+          if command -v jq &> /dev/null; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Coverage Metrics:" >> $GITHUB_STEP_SUMMARY
+            
+            lines=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+            statements=$(jq -r '.total.statements.pct' coverage/coverage-summary.json)
+            functions=$(jq -r '.total.functions.pct' coverage/coverage-summary.json)
+            branches=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
+            
+            echo "- Lines: ${lines}%" >> $GITHUB_STEP_SUMMARY
+            echo "- Statements: ${statements}%" >> $GITHUB_STEP_SUMMARY
+            echo "- Functions: ${functions}%" >> $GITHUB_STEP_SUMMARY
+            echo "- Branches: ${branches}%" >> $GITHUB_STEP_SUMMARY
+            
+            # Set coverage thresholds (matching Jest config)
+            THRESHOLD_STATEMENTS=60
+            THRESHOLD_BRANCHES=60
+            THRESHOLD_FUNCTIONS=60
+            THRESHOLD_LINES=60
+            
+            # Check if coverage meets thresholds
+            COVERAGE_FAILED=false
+            
+            if (( $(echo "$statements < $THRESHOLD_STATEMENTS" | bc -l) )); then
+              echo "❌ Statement coverage ($statements%) is below threshold ($THRESHOLD_STATEMENTS%)"
+              COVERAGE_FAILED=true
+            fi
+            
+            if (( $(echo "$branches < $THRESHOLD_BRANCHES" | bc -l) )); then
+              echo "❌ Branch coverage ($branches%) is below threshold ($THRESHOLD_BRANCHES%)"
+              COVERAGE_FAILED=true
+            fi
+            
+            if (( $(echo "$functions < $THRESHOLD_FUNCTIONS" | bc -l) )); then
+              echo "❌ Function coverage ($functions%) is below threshold ($THRESHOLD_FUNCTIONS%)"
+              COVERAGE_FAILED=true
+            fi
+            
+            if (( $(echo "$lines < $THRESHOLD_LINES" | bc -l) )); then
+              echo "❌ Line coverage ($lines%) is below threshold ($THRESHOLD_LINES%)"
+              COVERAGE_FAILED=true
+            fi
+            
+            # Set outputs before potential exit
+            echo "coverage_available=true" >> $GITHUB_OUTPUT
+            echo "coverage_lines=$lines" >> $GITHUB_OUTPUT
+            echo "coverage_statements=$statements" >> $GITHUB_OUTPUT
+            echo "coverage_functions=$functions" >> $GITHUB_OUTPUT
+            echo "coverage_branches=$branches" >> $GITHUB_OUTPUT
+            
+            if [ "$COVERAGE_FAILED" = true ]; then
+              echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
+              echo "❌ **Coverage is below the required 60% threshold**" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            
+            echo "✅ All coverage thresholds met!" >> $GITHUB_STEP_SUMMARY
+            echo "   Statements: $statements% (threshold: $THRESHOLD_STATEMENTS%)" >> $GITHUB_STEP_SUMMARY
+            echo "   Branches: $branches% (threshold: $THRESHOLD_BRANCHES%)" >> $GITHUB_STEP_SUMMARY
+            echo "   Functions: $functions% (threshold: $THRESHOLD_FUNCTIONS%)" >> $GITHUB_STEP_SUMMARY
+            echo "   Lines: $lines% (threshold: $THRESHOLD_LINES%)" >> $GITHUB_STEP_SUMMARY
+            echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ jq not available, cannot parse coverage data" >> $GITHUB_STEP_SUMMARY
+            echo "coverage_available=false" >> $GITHUB_OUTPUT
+            exit 1
           fi
         else
-          # Fallback values if parsing fails
-          echo "Warning: Could not find coverage line in output"
-          STATEMENTS="0"
-          BRANCHES="0"
-          FUNCTIONS="0"
-          LINES="0"
-        fi
-        
-        # Set coverage thresholds (matching Jest config)
-        THRESHOLD_STATEMENTS=60
-        THRESHOLD_BRANCHES=60
-        THRESHOLD_FUNCTIONS=60
-        THRESHOLD_LINES=60
-        
-        # Check if coverage meets thresholds
-        COVERAGE_FAILED=false
-        
-        if (( $(echo "$STATEMENTS < $THRESHOLD_STATEMENTS" | bc -l) )); then
-          echo "❌ Statement coverage ($STATEMENTS%) is below threshold ($THRESHOLD_STATEMENTS%)"
-          COVERAGE_FAILED=true
-        fi
-        
-        if (( $(echo "$BRANCHES < $THRESHOLD_BRANCHES" | bc -l) )); then
-          echo "❌ Branch coverage ($BRANCHES%) is below threshold ($THRESHOLD_BRANCHES%)"
-          COVERAGE_FAILED=true
-        fi
-        
-        if (( $(echo "$FUNCTIONS < $THRESHOLD_FUNCTIONS" | bc -l) )); then
-          echo "❌ Function coverage ($FUNCTIONS%) is below threshold ($THRESHOLD_FUNCTIONS%)"
-          COVERAGE_FAILED=true
-        fi
-        
-        if (( $(echo "$LINES < $THRESHOLD_LINES" | bc -l) )); then
-          echo "❌ Line coverage ($LINES%) is below threshold ($THRESHOLD_LINES%)"
-          COVERAGE_FAILED=true
-        fi
-        
-        # Set outputs before potential exit
-        echo "coverage_available=true" >> $GITHUB_OUTPUT
-        echo "coverage_lines=$LINES" >> $GITHUB_OUTPUT
-        echo "coverage_statements=$STATEMENTS" >> $GITHUB_OUTPUT
-        echo "coverage_functions=$FUNCTIONS" >> $GITHUB_OUTPUT
-        echo "coverage_branches=$BRANCHES" >> $GITHUB_OUTPUT
-        
-        if [ "$COVERAGE_FAILED" = true ]; then
-          echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
-          echo "❌ **Coverage is below the required 60% threshold**" >> $GITHUB_STEP_SUMMARY
+          echo "❌ Coverage summary not found!" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage directory contents:" >> $GITHUB_STEP_SUMMARY
+          ls -la coverage/ || echo "Coverage directory not found" >> $GITHUB_STEP_SUMMARY
+          
+          # Show coverage output for debugging
+          if [ -f coverage-output.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage command output (last 50 lines):" >> $GITHUB_STEP_SUMMARY
+            tail -50 coverage-output.txt >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "coverage_available=false" >> $GITHUB_OUTPUT
           exit 1
         fi
-        
-        echo "✅ All coverage thresholds met!" >> $GITHUB_STEP_SUMMARY
-        echo "   Statements: $STATEMENTS% (threshold: $THRESHOLD_STATEMENTS%)" >> $GITHUB_STEP_SUMMARY
-        echo "   Branches: $BRANCHES% (threshold: $THRESHOLD_BRANCHES%)" >> $GITHUB_STEP_SUMMARY
-        echo "   Functions: $FUNCTIONS% (threshold: $THRESHOLD_FUNCTIONS%)" >> $GITHUB_STEP_SUMMARY
-        echo "   Lines: $LINES% (threshold: $THRESHOLD_LINES%)" >> $GITHUB_STEP_SUMMARY
-        echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
     
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
@@ -261,55 +325,28 @@ jobs:
         echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [ -d ./coverage-reports/frontend ]; then
-          echo "✅ Frontend coverage reports available" >> $GITHUB_STEP_SUMMARY
-          
-          # Extract and display coverage percentages from JSON summary
-          if [ -f ./coverage-reports/frontend/coverage-summary.json ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Coverage Metrics:" >> $GITHUB_STEP_SUMMARY
-            echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
-            
-            # Parse coverage summary using jq
-            sudo apt-get install -y jq
-            
-            lines=$(jq -r '.total.lines.pct' ./coverage-reports/frontend/coverage-summary.json)
-            statements=$(jq -r '.total.statements.pct' ./coverage-reports/frontend/coverage-summary.json)
-            functions=$(jq -r '.total.functions.pct' ./coverage-reports/frontend/coverage-summary.json)
-            branches=$(jq -r '.total.branches.pct' ./coverage-reports/frontend/coverage-summary.json)
-            
-            echo "| Lines | ${lines}% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Statements | ${statements}% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Functions | ${functions}% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Branches | ${branches}% |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Minimum Required: 60%**" >> $GITHUB_STEP_SUMMARY
-            
-            # Check if any metric is below threshold and set output
-            if (( $(echo "$lines < 60" | bc -l) )) || \
-               (( $(echo "$statements < 60" | bc -l) )) || \
-               (( $(echo "$functions < 60" | bc -l) )) || \
-               (( $(echo "$branches < 60" | bc -l) )); then
-              echo "coverage_below_threshold=true" >> $GITHUB_OUTPUT
-            else
-              echo "coverage_below_threshold=false" >> $GITHUB_OUTPUT
-            fi
-            
-            # Store coverage values for PR comment
-            echo "coverage_lines=$lines" >> $GITHUB_OUTPUT
-            echo "coverage_statements=$statements" >> $GITHUB_OUTPUT
-            echo "coverage_functions=$functions" >> $GITHUB_OUTPUT
-            echo "coverage_branches=$branches" >> $GITHUB_OUTPUT
-            echo "coverage_available=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ coverage-summary.json not found in frontend coverage reports" >> $GITHUB_STEP_SUMMARY
-            echo "coverage_available=false" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "⚠️ No frontend coverage reports found" >> $GITHUB_STEP_SUMMARY
-          echo "coverage_available=false" >> $GITHUB_OUTPUT
-        fi
+        # Get coverage data from test-frontend job outputs
+        echo "✅ Frontend coverage data available from test job" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Coverage Metrics:" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Use outputs from test-frontend job
+        echo "| Lines | ${{ needs.test-frontend.outputs.coverage_lines }}% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Statements | ${{ needs.test-frontend.outputs.coverage_statements }}% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Functions | ${{ needs.test-frontend.outputs.coverage_functions }}% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Branches | ${{ needs.test-frontend.outputs.coverage_branches }}% |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Minimum Required: 60%**" >> $GITHUB_STEP_SUMMARY
+        
+        # Set outputs for PR comment
+        echo "coverage_available=${{ needs.test-frontend.outputs.coverage_available }}" >> $GITHUB_OUTPUT
+        echo "coverage_lines=${{ needs.test-frontend.outputs.coverage_lines }}" >> $GITHUB_OUTPUT
+        echo "coverage_statements=${{ needs.test-frontend.outputs.coverage_statements }}" >> $GITHUB_OUTPUT
+        echo "coverage_functions=${{ needs.test-frontend.outputs.coverage_functions }}" >> $GITHUB_OUTPUT
+        echo "coverage_branches=${{ needs.test-frontend.outputs.coverage_branches }}" >> $GITHUB_OUTPUT
+        echo "coverage_below_threshold=${{ needs.test-frontend.outputs.coverage_below_threshold }}" >> $GITHUB_OUTPUT
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Coverage artifacts have been uploaded and are available in the workflow run." >> $GITHUB_STEP_SUMMARY

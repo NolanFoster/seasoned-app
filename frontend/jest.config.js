@@ -16,6 +16,7 @@ module.exports = {
     '!src/reportWebVitals.js',
     '!src/**/*.test.{js,jsx}',
     '!src/**/*.spec.{js,jsx}',
+    '!src/main.jsx',
   ],
   coverageThreshold: {
     global: {
