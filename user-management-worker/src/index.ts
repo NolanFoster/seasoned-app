@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { Env } from './types/env';
+import { Env, Bindings } from './types/env';
 import { UserDatabaseService } from './services/user-database';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Bindings }>();
 
 // Middleware
 app.use('*', logger());

@@ -146,7 +146,7 @@ export class UserDatabaseService {
           user_id, ip_address, user_agent, location_data,
           country, region, city, latitude, longitude, timezone,
           login_method, success, failure_reason, device_fingerprint, risk_score
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `).bind(
         input.user_id,

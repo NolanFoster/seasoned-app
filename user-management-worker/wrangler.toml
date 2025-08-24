@@ -6,7 +6,7 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "USER_DB"
 database_name = "user-db"
-database_id = "user_db_id" # Will be replaced with actual ID after creation
+database_id = "863a849b-1dd9-4832-a23b-977ff508713a"
 
 # Observability settings
 [observability]
@@ -20,7 +20,7 @@ vars = { ENVIRONMENT = "preview" }
 [[env.preview.d1_databases]]
 binding = "USER_DB"
 database_name = "user-db-preview"
-database_id = "user_db_preview_id" # Will be replaced with actual ID after creation
+database_id = "863a849b-1dd9-4832-a23b-977ff508713a"
 
 [env.preview.observability]
 enabled = true
@@ -33,7 +33,7 @@ vars = { ENVIRONMENT = "production" }
 [[env.production.d1_databases]]
 binding = "USER_DB"
 database_name = "user-db-production"
-database_id = "user_db_production_id" # Will be replaced with actual ID after creation
+database_id = "f8a952a5-acdb-48c7-88e7-57a53402e719"
 
 [env.production.observability]
 enabled = true
@@ -46,7 +46,7 @@ vars = { ENVIRONMENT = "staging" }
 [[env.staging.d1_databases]]
 binding = "USER_DB"
 database_name = "user-db-staging"
-database_id = "user_db_staging_id" # Will be replaced with actual ID after creation
+database_id = "171ffc3f-40bd-4738-b879-4ccd8d79db39"
 
 [env.staging.observability]
 enabled = true
