@@ -851,6 +851,80 @@ async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipe
   }
 }
 
+// Function to extract meaningful cooking terms from dish names and categories
+function extractCookingTerms(categoryName, dishNames) {
+  // Common cooking ingredients and terms that are likely to be in recipe database
+  const meaningfulTerms = new Set();
+  
+  // Basic ingredient keywords that are likely to be in recipes
+  const basicIngredients = [
+    'tomato', 'tomatoes', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp',
+    'pasta', 'rice', 'quinoa', 'bread', 'cheese', 'egg', 'eggs',
+    'onion', 'garlic', 'basil', 'oregano', 'thyme', 'rosemary',
+    'lemon', 'lime', 'apple', 'berry', 'strawberry', 'blueberry',
+    'mushroom', 'spinach', 'lettuce', 'carrot', 'potato', 'sweet',
+    'oil', 'butter', 'cream', 'milk', 'yogurt'
+  ];
+  
+  // Cooking methods and terms
+  const cookingTerms = [
+    'grilled', 'roasted', 'baked', 'fried', 'steamed', 'sauteed', 'braised',
+    'salad', 'soup', 'stew', 'pasta', 'pizza', 'sandwich', 'wrap'
+  ];
+  
+  // Combine all search terms
+  const allSearchableTerms = [...basicIngredients, ...cookingTerms];
+  
+  // Extract terms from category name
+  const categoryWords = categoryName.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 2);
+    
+  categoryWords.forEach(word => {
+    if (allSearchableTerms.includes(word)) {
+      meaningfulTerms.add(word);
+    }
+  });
+  
+  // Extract ingredients and cooking terms from dish names
+  dishNames.forEach(dishName => {
+    const dishWords = dishName.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2);
+      
+    dishWords.forEach(word => {
+      if (allSearchableTerms.includes(word)) {
+        meaningfulTerms.add(word);
+      }
+    });
+  });
+  
+  // If no meaningful terms found, fall back to the most basic terms from dish names
+  if (meaningfulTerms.size === 0) {
+    dishNames.forEach(dishName => {
+      const dishWords = dishName.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 3);
+        
+      // Take the longest words as they're likely to be ingredient names
+      const longestWords = dishWords
+        .filter(word => !['with', 'and', 'the', 'for', 'recipe', 'dish', 'food', 'sauce', 'glaze'].includes(word))
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 2);
+        
+      longestWords.forEach(word => meaningfulTerms.add(word));
+    });
+  }
+  
+  // Convert to array and prioritize ingredients over cooking methods
+  const searchTerms = Array.from(meaningfulTerms).slice(0, 6); // Limit to 6 terms max
+  
+  return searchTerms;
+}
+
 // Function to search for recipes by category and dish names
 async function searchRecipeByCategory(categoryName, dishNames, limit, env, requestId) {
   const startTime = Date.now();
@@ -858,24 +932,29 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
   try {
     // Try to search for recipes using the search database if available
     if (env.SEARCH_DB_URL) {
-      // Search for recipes using the category name and dish names
-      // Create array of tags for smart-search
-      const allTags = [categoryName, ...dishNames];
+      // Extract meaningful cooking terms instead of using creative category names
+      const cookingTerms = extractCookingTerms(categoryName, dishNames);
+      
+      // If we have meaningful cooking terms, use them; otherwise fall back to dish names only
+      const searchTerms = cookingTerms.length > 0 ? cookingTerms : dishNames;
       
       log('debug', 'Searching for recipes using smart-search database', {
         requestId,
         category: categoryName,
-        searchTerms: allTags, // Use all tags for smart-search
+        originalDishNames: dishNames,
+        extractedCookingTerms: cookingTerms,
+        searchTerms: searchTerms,
         limit
       });
-      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(allTags))}&type=RECIPE&limit=${limit}`;
+      
+      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(searchTerms))}&type=RECIPE&limit=${limit}`;
       
       log('debug', 'Smart-search query details', {
         requestId,
         category: categoryName,
         dishCount: dishNames.length,
-        allTags: allTags,
-        tagsJSON: JSON.stringify(allTags),
+        cookingTermsExtracted: cookingTerms.length,
+        finalSearchTerms: searchTerms,
         searchUrl: searchUrl
       });
       
@@ -908,7 +987,7 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
           metrics.increment('recipes_found_via_smart_search', recipes.length);
           metrics.increment(`smart_search_strategy_${searchResults.strategy || 'unknown'}`, 1);
           if (searchResults.similarityScore) {
-            metrics.gauge('smart_search_similarity_score', searchResults.similarityScore);
+            metrics.increment('smart_search_similarity_score', Math.round(searchResults.similarityScore * 100));
           }
           
           log('info', 'Recipes found via smart-search database', {
@@ -1330,5 +1409,6 @@ export {
   getSeason, 
   getMockRecommendations, 
   enhanceRecommendationsWithRecipes, 
-  searchRecipeByCategory 
+  searchRecipeByCategory,
+  extractCookingTerms
 };
