@@ -52,7 +52,7 @@ dataset = "recipe_recommendations_metrics_preview"
 [env.staging]
 name = "staging-recipe-recommendation-worker"
 [env.staging.vars]
-SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+SEARCH_DB_URL = "https://staging-recipe-search-db.nolanfoster.workers.dev"
 RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.staging.ai]

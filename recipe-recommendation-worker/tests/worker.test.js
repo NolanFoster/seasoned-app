@@ -328,9 +328,9 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes[0].source).toBe('smart_search_database');
       expect(recipes[0].fallback).toBeUndefined();
       
-      // Verify the smart-search endpoint was called
+      // Verify the smart-search endpoint was called with tags parameter
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/smart-search'),
+        expect.stringContaining('/api/smart-search?tags='),
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({

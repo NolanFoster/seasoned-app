@@ -859,8 +859,8 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
     // Try to search for recipes using the search database if available
     if (env.SEARCH_DB_URL) {
       // Search for recipes using the category name and dish names
-      // Combine all tags into a single string for smart-search
-      const allTags = [categoryName, ...dishNames].join(' ');
+      // Create array of tags for smart-search
+      const allTags = [categoryName, ...dishNames];
       
       log('debug', 'Searching for recipes using smart-search database', {
         requestId,
@@ -868,13 +868,14 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
         searchTerms: allTags, // Use all tags for smart-search
         limit
       });
-      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(allTags)}&type=RECIPE&limit=${limit}`;
+      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(allTags))}&type=RECIPE&limit=${limit}`;
       
       log('debug', 'Smart-search query details', {
         requestId,
         category: categoryName,
         dishCount: dishNames.length,
         allTags: allTags,
+        tagsJSON: JSON.stringify(allTags),
         searchUrl: searchUrl
       });
       
