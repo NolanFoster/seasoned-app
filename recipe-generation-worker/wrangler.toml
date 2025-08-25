@@ -5,7 +5,8 @@ compatibility_date = "2024-01-10"
 # Development settings
 [env.preview]
 name = "preview-recipe-generation-worker"
-vars = { ENVIRONMENT = "preview" }
+[env.preview.vars]
+ENVIRONMENT = "preview"
 
 [env.preview.observability]
 enabled = true
@@ -13,7 +14,8 @@ enabled = true
 # Staging settings
 [env.staging]
 name = "staging-recipe-generation-worker"
-vars = { ENVIRONMENT = "staging" }
+[env.staging.vars]
+ENVIRONMENT = "staging"
 
 [env.staging.observability]
 enabled = true
@@ -21,7 +23,8 @@ enabled = true
 # Production environment
 [env.production]
 name = "recipe-generation-worker-production"
-vars = { ENVIRONMENT = "production" }
+[env.production.vars]
+ENVIRONMENT = "production"
 
 [env.production.observability]
 enabled = true

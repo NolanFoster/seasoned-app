@@ -16,11 +16,50 @@ export default {
 
     // Route handling
     if (url.pathname === '/') {
-      // Home page - show API documentation
-      return new Response(generateHomePage(), {
+      // API documentation endpoint
+      return new Response(JSON.stringify({
+        service: 'Recipe Generation Service',
+        description: 'AI-powered recipe generation and customization',
+        version: '1.0.0',
+        environment: env.ENVIRONMENT || 'development',
+        endpoints: {
+          'GET /': {
+            description: 'API documentation and service information',
+            response: 'JSON object with all available endpoints'
+          },
+          'GET /health': {
+            description: 'Health check endpoint to verify service status',
+            response: 'JSON object with health status, environment, and timestamp'
+          },
+          'POST /generate': {
+            description: 'Generate a new recipe based on provided parameters',
+            requestBody: {
+              type: 'application/json',
+              schema: {
+                ingredients: 'Array of available ingredients',
+                cuisine: 'Preferred cuisine style (optional)',
+                dietary: 'Array of dietary restrictions (optional)',
+                servings: 'Number of servings (optional)'
+              }
+            },
+            response: 'JSON object with generated recipe (implementation coming soon)',
+            status: 'Coming Soon'
+          }
+        },
+        usage: {
+          healthCheck: 'curl https://recipe-generation-worker.nolanfoster.workers.dev/health',
+          recipeGeneration: 'curl -X POST https://recipe-generation-worker.nolanfoster.workers.dev/generate -H "Content-Type: application/json" -d \'{"ingredients": ["chicken", "rice"], "cuisine": "italian"}\''
+        },
+        environments: {
+          preview: 'For development and testing',
+          staging: 'For pre-production validation',
+          production: 'For live usage'
+        }
+      }), {
+        status: 200,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'text/html;charset=UTF-8'
+          'Content-Type': 'application/json'
         }
       });
     }
@@ -101,103 +140,3 @@ export default {
     });
   }
 };
-
-function generateHomePage() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recipe Generation Service</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-            color: #333;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px;
-        }
-        .endpoint {
-            background: #f8f9fa;
-            border-left: 4px solid #007bff;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
-        .method {
-            font-weight: bold;
-            color: #007bff;
-        }
-        .url {
-            font-family: monospace;
-            background: #e9ecef;
-            padding: 2px 6px;
-            border-radius: 3px;
-        }
-        .description {
-            margin-top: 10px;
-            color: #666;
-        }
-        .health-status {
-            display: inline-block;
-            padding: 4px 8px;
-            background: #28a745;
-            color: white;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🍳 Recipe Generation Service</h1>
-        <p>AI-powered recipe generation and customization</p>
-        <div class="health-status">Healthy</div>
-    </div>
-
-    <h2>API Endpoints</h2>
-    
-    <div class="endpoint">
-        <div><span class="method">GET</span> <span class="url">/health</span></div>
-        <div class="description">Health check endpoint to verify service status</div>
-    </div>
-
-    <div class="endpoint">
-        <div><span class="method">POST</span> <span class="url">/generate</span></div>
-        <div class="description">Generate a new recipe based on provided parameters (coming soon)</div>
-    </div>
-
-    <h2>Usage Examples</h2>
-    
-    <h3>Health Check</h3>
-    <pre><code>curl https://recipe-generation-worker.nolanfoster.workers.dev/health</code></pre>
-
-    <h3>Recipe Generation (Coming Soon)</h3>
-    <pre><code>curl -X POST https://recipe-generation-worker.nolanfoster.workers.dev/generate \\
-  -H "Content-Type: application/json" \\
-  -d '{"ingredients": ["chicken", "rice"], "cuisine": "italian"}'</code></pre>
-
-    <h2>Environment</h2>
-    <p>This service supports multiple environments:</p>
-    <ul>
-        <li><strong>Preview:</strong> For development and testing</li>
-        <li><strong>Staging:</strong> For pre-production validation</li>
-        <li><strong>Production:</strong> For live usage</li>
-    </ul>
-
-    <footer style="margin-top: 40px; text-align: center; color: #666;">
-        <p>Recipe Generation Service - Powered by Cloudflare Workers</p>
-    </footer>
-</body>
-</html>`;
-}

@@ -26,28 +26,57 @@ describe('Recipe Generation Worker', () => {
     });
   });
 
-  describe('Home page', () => {
-    it('should return home page HTML on root path', async () => {
+  describe('API Documentation', () => {
+    it('should return API documentation JSON on root path', async () => {
       const request = new Request('https://test.com/');
       
       const response = await worker.fetch(request, mockEnv);
       
       expect(response.status).toBe(200);
-      expect(response.headers.get('Content-Type')).toBe('text/html;charset=UTF-8');
+      expect(response.headers.get('Content-Type')).toBe('application/json');
       
-      const html = await response.text();
-      expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('Recipe Generation Service');
-      expect(html).toContain('AI-powered recipe generation and customization');
+      const data = await response.json();
+      expect(data.service).toBe('Recipe Generation Service');
+      expect(data.description).toBe('AI-powered recipe generation and customization');
+      expect(data.version).toBe('1.0.0');
+      expect(data.environment).toBe('test');
+      expect(data.endpoints).toBeDefined();
+      expect(data.usage).toBeDefined();
+      expect(data.environments).toBeDefined();
     });
 
-    it('should include CORS headers on home page', async () => {
+    it('should include CORS headers on API documentation', async () => {
       const request = new Request('https://test.com/');
       
       const response = await worker.fetch(request, mockEnv);
       
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
+    });
+
+    it('should document all available endpoints', async () => {
+      const request = new Request('https://test.com/');
+      const response = await worker.fetch(request, mockEnv);
+      const data = await response.json();
+      
+      expect(data.endpoints['GET /']).toBeDefined();
+      expect(data.endpoints['GET /health']).toBeDefined();
+      expect(data.endpoints['POST /generate']).toBeDefined();
+      
+      expect(data.endpoints['GET /'].description).toBe('API documentation and service information');
+      expect(data.endpoints['GET /health'].description).toBe('Health check endpoint to verify service status');
+      expect(data.endpoints['POST /generate'].description).toBe('Generate a new recipe based on provided parameters');
+    });
+
+    it('should include usage examples', async () => {
+      const request = new Request('https://test.com/');
+      const response = await worker.fetch(request, mockEnv);
+      const data = await response.json();
+      
+      expect(data.usage.healthCheck).toBeDefined();
+      expect(data.usage.recipeGeneration).toBeDefined();
+      expect(data.usage.healthCheck).toContain('curl');
+      expect(data.usage.recipeGeneration).toContain('curl -X POST');
     });
   });
 
