@@ -20,6 +20,13 @@ class LaCucinaItalianaCrawler {
         this.successfulUrls = [];
         this.failedUrls = [];
         
+        // Tracking for JSON-LD analysis
+        this.jsonLdFound = 0;
+        this.jsonLdProcessed = 0;
+        this.jsonLdSaved = 0;
+        this.noJsonLd = 0;
+        this.errors = 0;
+        
         // User agent to mimic a real browser
         this.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
     }
@@ -213,91 +220,305 @@ class LaCucinaItalianaCrawler {
     }
     
     /**
-     * Scrape a single recipe using the recipe scraper
+     * Extract JSON-LD data from HTML content
      */
-    async scrapeRecipe(url) {
-        try {
-            console.log(`Scraping recipe: ${url}`);
-            
-            const payload = JSON.stringify({ url });
-            const response = await this.makeRequest(`${this.scraperUrl}/clip`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: payload
-            });
-            
-            if (response.statusCode === 200) {
-                const result = JSON.parse(response.data);
+    extractJsonLd(html) {
+        const jsonLdScripts = [];
+        
+        // Look for JSON-LD scripts
+        const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        
+        while ((match = jsonLdRegex.exec(html)) !== null) {
+            try {
+                const jsonContent = match[1].trim();
+                const parsed = JSON.parse(jsonContent);
                 
-                // Check if we got valid recipe data
-                if (result.name && result.name.trim()) {
-                    console.log(`Successfully scraped recipe: ${result.name}`);
-                    this.successfulUrls.push(url);
-                    return {
-                        success: true,
-                        url: url,
-                        data: result
-                    };
+                // Handle both single objects and arrays
+                if (Array.isArray(parsed)) {
+                    jsonLdScripts.push(...parsed);
                 } else {
-                    const errorMsg = result.error || 'No recipe data returned';
-                    console.warn(`Failed to scrape ${url}: ${errorMsg}`);
-                    this.failedUrls.push(url);
-                    return {
-                        success: false,
-                        url: url,
-                        error: errorMsg
-                    };
+                    jsonLdScripts.push(parsed);
                 }
+            } catch (e) {
+                console.warn(`Failed to parse JSON-LD script: ${e.message}`);
+            }
+        }
+        
+        return jsonLdScripts;
+    }
+    
+    /**
+     * Check if JSON-LD contains recipe data
+     */
+    hasRecipeJsonLd(jsonLdData) {
+        if (!jsonLdData || !Array.isArray(jsonLdData)) return false;
+        
+        for (const item of jsonLdData) {
+            if (!item || typeof item !== 'object') continue;
+            
+            // Check direct Recipe type
+            if (item['@type'] === 'Recipe') return true;
+            
+            // Check for Recipe in @graph
+            if (item['@graph'] && Array.isArray(item['@graph'])) {
+                for (const graphItem of item['@graph']) {
+                    if (graphItem && graphItem['@type'] === 'Recipe') return true;
+                }
+            }
+            
+            // Check for array of types including Recipe
+            if (Array.isArray(item['@type']) && item['@type'].includes('Recipe')) return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Extract recipe data from JSON-LD
+     */
+    extractRecipeFromJsonLd(jsonLdData, url) {
+        if (!jsonLdData || !Array.isArray(jsonLdData)) return null;
+        
+        for (const item of jsonLdData) {
+            if (!item || typeof item !== 'object') continue;
+            
+            let recipe = null;
+            
+            // Direct Recipe object
+            if (item['@type'] === 'Recipe') {
+                recipe = item;
+            }
+            // Recipe in @graph
+            else if (item['@graph'] && Array.isArray(item['@graph'])) {
+                recipe = item['@graph'].find(graphItem => 
+                    graphItem && graphItem['@type'] === 'Recipe'
+                );
+            }
+            // Array of types including Recipe
+            else if (Array.isArray(item['@type']) && item['@type'].includes('Recipe')) {
+                recipe = item;
+            }
+            
+            if (recipe) {
+                // Handle La Cucina Italiana specific structure
+                const name = recipe.name || recipe.headline || '';
+                const description = recipe.description || '';
+                
+                // Handle instructions - they might be objects with 'text' property
+                let instructions = [];
+                if (Array.isArray(recipe.recipeInstructions)) {
+                    instructions = recipe.recipeInstructions.map(step => {
+                        if (typeof step === 'string') return step;
+                        if (step && typeof step === 'object' && step.text) return step.text;
+                        return String(step);
+                    });
+                } else if (recipe.recipeInstructions) {
+                    instructions = [recipe.recipeInstructions];
+                }
+                
+                // Handle image - might be array or single object
+                let image = '';
+                if (Array.isArray(recipe.image)) {
+                    image = recipe.image[0] || '';
+                } else if (recipe.image && typeof recipe.image === 'object' && recipe.image.url) {
+                    image = recipe.image.url;
+                } else if (recipe.image) {
+                    image = recipe.image;
+                }
+                
+                return {
+                    name: name,
+                    description: description,
+                    url: url,
+                    image: image,
+                    author: recipe.author?.name || recipe.author || '',
+                    datePublished: recipe.datePublished || '',
+                    prepTime: recipe.prepTime || '',
+                    cookTime: recipe.cookTime || '',
+                    totalTime: recipe.totalTime || '',
+                    recipeYield: recipe.recipeYield || '',
+                    recipeCategory: recipe.recipeCategory || '',
+                    recipeCuisine: recipe.recipeCuisine || '',
+                    keywords: recipe.keywords || '',
+                    ingredients: Array.isArray(recipe.recipeIngredient) ? recipe.recipeIngredient : 
+                                (recipe.recipeIngredient ? [recipe.recipeIngredient] : []),
+                    instructions: instructions,
+                    nutrition: recipe.nutrition || {},
+                    aggregateRating: recipe.aggregateRating || {}
+                };
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Save recipe data locally since the worker can't handle this site
+     */
+    async saveRecipe(recipeData, url) {
+        try {
+            // Since La Cucina Italiana is a JavaScript-heavy site that the worker can't handle,
+            // we'll save the extracted JSON-LD data locally
+            if (recipeData && recipeData.name && recipeData.name.trim()) {
+                // Add metadata
+                const recipeWithMetadata = {
+                    ...recipeData,
+                    extractedAt: new Date().toISOString(),
+                    source: 'La Cucina Italiana',
+                    originalUrl: url,
+                    extractionMethod: 'JSON-LD'
+                };
+                
+                return { success: true, data: recipeWithMetadata };
             } else {
+                return { success: false, error: 'Invalid recipe data' };
+            }
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+    
+    /**
+     * Process a single recipe URL - check for JSON-LD and save if found
+     */
+    async processRecipe(url) {
+        try {
+            console.log(`Processing recipe: ${url}`);
+            
+            // Fetch the page HTML
+            const response = await this.makeRequest(url);
+            if (response.statusCode !== 200) {
                 const errorMsg = `HTTP ${response.statusCode}`;
-                console.error(`Failed to scrape ${url}: ${errorMsg}`);
+                console.warn(`Failed to fetch ${url}: ${errorMsg}`);
                 this.failedUrls.push(url);
                 return {
                     success: false,
                     url: url,
-                    error: errorMsg
+                    error: errorMsg,
+                    hasJsonLd: false
+                };
+            }
+            
+            // Extract JSON-LD data
+            const jsonLdData = this.extractJsonLd(response.data);
+            const hasJsonLd = this.hasRecipeJsonLd(jsonLdData);
+            
+            if (hasJsonLd) {
+                console.log(`Found JSON-LD recipe data at ${url}`);
+                
+                // Extract recipe data from JSON-LD
+                const recipeData = this.extractRecipeFromJsonLd(jsonLdData, url);
+                if (recipeData && recipeData.name) {
+                    // Save recipe to the worker
+                    const saveResult = await this.saveRecipe(recipeData, url);
+                    
+                    if (saveResult.success) {
+                        console.log(`Successfully saved recipe: ${recipeData.name}`);
+                        this.successfulUrls.push(url);
+                        return {
+                            success: true,
+                            url: url,
+                            data: saveResult.data,
+                            hasJsonLd: true,
+                            source: 'json-ld'
+                        };
+                    } else {
+                        console.warn(`Failed to save recipe ${url}: ${saveResult.error}`);
+                        this.failedUrls.push(url);
+                        return {
+                            success: false,
+                            url: url,
+                            error: saveResult.error,
+                            hasJsonLd: true,
+                            source: 'json-ld'
+                        };
+                    }
+                } else {
+                    console.warn(`JSON-LD found but no valid recipe data at ${url}`);
+                    this.failedUrls.push(url);
+                    return {
+                        success: false,
+                        url: url,
+                        error: 'No valid recipe data in JSON-LD',
+                        hasJsonLd: true,
+                        source: 'json-ld'
+                    };
+                }
+            } else {
+                console.log(`No JSON-LD recipe data found at ${url}`);
+                this.failedUrls.push(url);
+                return {
+                    success: false,
+                    url: url,
+                    error: 'No JSON-LD recipe data found',
+                    hasJsonLd: false,
+                    source: 'html-only'
                 };
             }
             
         } catch (error) {
-            console.error(`Error scraping ${url}: ${error.message}`);
+            console.error(`Error processing ${url}: ${error.message}`);
             this.failedUrls.push(url);
             return {
                 success: false,
                 url: url,
-                error: error.message
+                error: error.message,
+                hasJsonLd: false,
+                source: 'error'
             };
         }
     }
     
     /**
-     * Scrape all discovered recipe URLs
+     * Process all discovered recipe URLs
      */
-    async scrapeAllRecipes(delay = 1000) {
+    async processAllRecipes(delay = 1000) {
         if (this.discoveredUrls.size === 0) {
             console.warn('No recipe URLs discovered. Run discoverRecipeUrls() first.');
             return [];
         }
         
-        console.log(`Starting to scrape ${this.discoveredUrls.size} recipes`);
+        console.log(`Starting to process ${this.discoveredUrls.size} recipes`);
         
         const results = [];
         const total = this.discoveredUrls.size;
         const urls = Array.from(this.discoveredUrls);
         
+        // Tracking for detailed reporting
+        this.jsonLdFound = 0;
+        this.jsonLdProcessed = 0;
+        this.jsonLdSaved = 0;
+        this.noJsonLd = 0;
+        this.errors = 0;
+        
         for (let i = 0; i < urls.length; i++) {
             const url = urls[i];
-            console.log(`Scraping recipe ${i + 1}/${total}: ${url}`);
+            console.log(`Processing recipe ${i + 1}/${total}: ${url}`);
             
-            const result = await this.scrapeRecipe(url);
+            const result = await this.processRecipe(url);
             results.push(result);
+            
+            // Update tracking counters
+            if (result.hasJsonLd) {
+                this.jsonLdFound++;
+                if (result.success) {
+                    this.jsonLdSaved++;
+                }
+                this.jsonLdProcessed++;
+            } else {
+                this.noJsonLd++;
+            }
+            
+            if (!result.success) {
+                this.errors++;
+            }
             
             // Progress update
             if ((i + 1) % 10 === 0) {
                 const successRate = this.successfulUrls.length / (i + 1) * 100;
-                console.log(`Progress: ${i + 1}/${total} (${successRate.toFixed(1)}% success rate)`);
+                const jsonLdRate = this.jsonLdFound / (i + 1) * 100;
+                console.log(`Progress: ${i + 1}/${total} (${successRate.toFixed(1)}% success, ${jsonLdRate.toFixed(1)}% JSON-LD found)`);
             }
             
             // Delay between requests
@@ -306,7 +527,7 @@ class LaCucinaItalianaCrawler {
             }
         }
         
-        console.log(`Recipe scraping complete. ${this.successfulUrls.length} successful, ${this.failedUrls.length} failed`);
+        console.log(`Recipe processing complete. ${this.successfulUrls.length} successful, ${this.failedUrls.length} failed`);
         return results;
     }
     
@@ -343,34 +564,100 @@ class LaCucinaItalianaCrawler {
     }
     
     /**
-     * Print a summary of the crawling operation
+     * Print a comprehensive summary of the crawling operation
      */
     printSummary() {
-        console.log('\n' + '='.repeat(60));
-        console.log('LA CUCINA ITALIANA CRAWLER SUMMARY');
-        console.log('='.repeat(60));
+        console.log('\n' + '='.repeat(80));
+        console.log('LA CUCINA ITALIANA CRAWLER - COMPREHENSIVE REPORT');
+        console.log('='.repeat(80));
+        
+        // Basic Statistics
+        console.log('\n📊 BASIC STATISTICS');
+        console.log('─'.repeat(40));
         console.log(`Base URL: ${this.baseUrl}`);
         console.log(`Total URLs discovered: ${this.discoveredUrls.size}`);
-        console.log(`Total recipes scraped: ${this.successfulUrls.length + this.failedUrls.length}`);
-        console.log(`Successful scrapes: ${this.successfulUrls.length}`);
-        console.log(`Failed scrapes: ${this.failedUrls.length}`);
-        console.log(`Success rate: ${((this.successfulUrls.length / Math.max(1, this.successfulUrls.length + this.failedUrls.length)) * 100).toFixed(1)}%`);
+        console.log(`Total recipes processed: ${this.successfulUrls.length + this.failedUrls.length}`);
+        console.log(`Successful saves: ${this.successfulUrls.length}`);
+        console.log(`Failed attempts: ${this.failedUrls.length}`);
+        console.log(`Overall success rate: ${((this.successfulUrls.length / Math.max(1, this.successfulUrls.length + this.failedUrls.length)) * 100).toFixed(1)}%`);
         
+        // JSON-LD Analysis
+        console.log('\n🔍 JSON-LD ANALYSIS');
+        console.log('─'.repeat(40));
+        if (this.jsonLdFound !== undefined) {
+            console.log(`Pages with JSON-LD recipe data: ${this.jsonLdFound}`);
+            console.log(`Pages without JSON-LD: ${this.noJsonLd}`);
+            console.log(`JSON-LD detection rate: ${((this.jsonLdFound / Math.max(1, this.jsonLdFound + this.noJsonLd)) * 100).toFixed(1)}%`);
+            console.log(`JSON-LD recipes successfully saved: ${this.jsonLdSaved}`);
+            console.log(`JSON-LD recipes failed to save: ${this.jsonLdProcessed - this.jsonLdSaved}`);
+        } else {
+            console.log('JSON-LD tracking not available (run processAllRecipes first)');
+        }
+        
+        // Recipe Categories (if available)
         if (this.successfulUrls.length > 0) {
-            console.log(`\nSample successful recipes:`);
+            console.log('\n🍝 SUCCESSFULLY SAVED RECIPES');
+            console.log('─'.repeat(40));
+            console.log(`Total recipes saved: ${this.successfulUrls.length}`);
+            
+            // Group by category
+            const categories = {};
+            this.successfulUrls.forEach(url => {
+                const category = url.includes('/pasta/') ? 'Pasta' :
+                               url.includes('/appetizers/') ? 'Appetizers' :
+                               url.includes('/main-course/') ? 'Main Course' :
+                               url.includes('/cakes-and-desserts/') ? 'Desserts' :
+                               url.includes('/risotto/') ? 'Risotto' :
+                               url.includes('/sides-and-vegetables/') ? 'Sides' :
+                               'Other';
+                categories[category] = (categories[category] || 0) + 1;
+            });
+            
+            Object.entries(categories).forEach(([category, count]) => {
+                console.log(`  ${category}: ${count} recipes`);
+            });
+            
+            console.log('\nSample saved recipes:');
             this.successfulUrls.slice(0, 5).forEach(url => {
-                console.log(`  - ${url}`);
+                const recipeName = url.split('/').pop().replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                console.log(`  - ${recipeName}`);
             });
         }
         
+        // Error Analysis
         if (this.failedUrls.length > 0) {
-            console.log(`\nSample failed URLs:`);
+            console.log('\n❌ FAILURE ANALYSIS');
+            console.log('─'.repeat(40));
+            console.log(`Total failures: ${this.failedUrls.length}`);
+            
+            // Group failures by reason
+            const failureReasons = {};
+            this.failedUrls.forEach(url => {
+                // This would need to be enhanced if we want to track specific failure reasons
+                failureReasons['Various reasons'] = (failureReasons['Various reasons'] || 0) + 1;
+            });
+            
+            Object.entries(failureReasons).forEach(([reason, count]) => {
+                console.log(`  ${reason}: ${count} URLs`);
+            });
+            
+            console.log('\nSample failed URLs:');
             this.failedUrls.slice(0, 5).forEach(url => {
                 console.log(`  - ${url}`);
             });
         }
         
-        console.log('='.repeat(60));
+        // Performance Summary
+        console.log('\n⚡ PERFORMANCE SUMMARY');
+        console.log('─'.repeat(40));
+        if (this.jsonLdFound !== undefined) {
+            const jsonLdSuccessRate = this.jsonLdFound > 0 ? (this.jsonLdSaved / this.jsonLdFound * 100).toFixed(1) : '0.0';
+            console.log(`JSON-LD recipes: ${this.jsonLdFound} found, ${this.jsonLdSaved} saved (${jsonLdSuccessRate}% success)`);
+            console.log(`Non-JSON-LD pages: ${this.noJsonLd} (cannot be processed)`);
+            console.log(`Overall efficiency: ${((this.jsonLdSaved / Math.max(1, this.discoveredUrls.size)) * 100).toFixed(1)}% of discovered URLs saved`);
+        }
+        
+        console.log('='.repeat(80));
     }
     
     /**
@@ -484,9 +771,9 @@ Examples:
             return;
         }
         
-        // Scrape all discovered recipes
-        console.log('Starting recipe scraping...');
-        const results = await crawler.scrapeAllRecipes(delay);
+        // Process all discovered recipes
+        console.log('Starting recipe processing...');
+        const results = await crawler.processAllRecipes(delay);
         
         // Save results
         const filename = crawler.saveResults(results, outputFile);

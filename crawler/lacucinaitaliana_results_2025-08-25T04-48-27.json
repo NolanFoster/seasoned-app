@@ -1,0 +1,470 @@
+{
+  "metadata": {
+    "crawler": "La Cucina Italiana Crawler (Node.js)",
+    "timestamp": "2025-08-25T04:48:27.181Z",
+    "baseUrl": "https://www.lacucinaitaliana.com",
+    "totalDiscovered": 9,
+    "totalScraped": 9,
+    "successful": 9,
+    "failed": 0
+  },
+  "results": [
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "data": {
+        "name": "Casarecce Pasta With Broccoli and Tuna",
+        "description": "This simple pasta with tuna and broccoli is the perfect weeknight meal. ",
+        "url": "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+        "image": "https://rms.condenast.it/rms/public/5d3/f03/de5/thumb_982_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-19T14:40:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT30M",
+        "recipeYield": "4",
+        "recipeCategory": "pasta",
+        "recipeCuisine": "Italian",
+        "keywords": "",
+        "ingredients": [
+          "12OZ. casarecce or other short pasta ",
+          "12OZ. broccoli crowns ",
+          "5OZ. oil-packed tuna ",
+          "2OZ. shallot, chopped ",
+          " wild fennel ",
+          " red chili pepper ",
+          "2SPRIG thyme ",
+          " extra-virgin olive oil ",
+          " salt "
+        ],
+        "instructions": [
+          "<p>Boil the broccoli in a large pot of unsalted water until just crisp-tender, around 3 minutes. Drain with a slotted spoon. Add salt to the water and add pasta to cook until al dente.&nbsp;</p>\r\n\r\n<p>\r\n\t<br>\r\n</p>\r\n",
+          "<p>In the meantime, chop thyme and wild fennel. Sauté broccoli and chopped shallot in oil. Add tuna, chili pepper, chopped thyme and fennel, salt and 2 ladles (around 1 cup) pasta cooking water. Cook for 10 minutes.</p>\r\n",
+          "<p>Drain the pasta when al dente and return to the warm pot. Stir in the sauce and sauté to coat. Serve immediately.&nbsp;</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 15,
+          "ratingValue": "4.3"
+        },
+        "extractedAt": "2025-08-25T04:48:14.476Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "data": {
+        "name": "Ravioli with Rocket, Artichokes and Almonds",
+        "description": "Topped with smokey artichokes, toasted almonds and herbs, this light ravioli recipe filled with ricotta and arugula is worth the effort. ",
+        "url": "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+        "image": "https://rms.condenast.it/rms/public/607/95f/9a2/thumb_6966_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-19T14:00:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT160M",
+        "recipeYield": "4",
+        "recipeCategory": "pasta",
+        "recipeCuisine": "Italian",
+        "keywords": "Ravioli",
+        "ingredients": [
+          " INGREDIENTS FOR THE DOUGH ",
+          "2 1/2CUPS all-purpose flour ",
+          "4 egg yolks ",
+          "1 large egg ",
+          " INGREDIENTS FOR THE FILLING ",
+          "9OZ. ricotta  ",
+          "5OZ. arugula ",
+          "3/4OZ. pecorino cheese, grated ",
+          "3 anchovy fillets in oil ",
+          "1 shallot ",
+          " unsalted butter ",
+          " salt ",
+          " INGREDIENTS FOR THE DRESSING ",
+          "4OZ. raw almonds, chopped  ",
+          "3 artichokes ",
+          " dry white wine ",
+          " extra-virgin olive oil ",
+          " unsalted butter ",
+          " salt "
+        ],
+        "instructions": [
+          "<pre><strong><span lang=\"en-US\">For the ravioli:</span></strong><strong><span lang=\"en-US\"> </span></strong><span lang=\"en-US\">Mix the flour with the egg, egg yolks and 2 Tbsp. water to obtain a smooth mixture (work it first in a bowl, then on a floured work surface). Cover with plastic wrap and let rest for 1 hour.</span></pre>\r\n",
+          "<pre><strong><span lang=\"en-US\">For the filling:</span></strong><span lang=\"en-US\">&nbsp;wash and cut the arugula; chop the shallot and sweat it in a saucepan. To sweat the shallot, heat 1 1/4 oz. butter over medium-low heat. Add the shallot and stir frequently until soft (around 2 minutes) Add anchovy fillets, smashing them with a spoon to break them up, until they start to dissolve; finally add the arugula and salt, and cook for 5-6 minutes. Remove from the heat and let cool. Mix with the ricotta and the pecorino. Scoop the filling into a pastry bag with a spoon or spatula. </span></pre>\r\n",
+          "<p align=\"left\"><strong><span lang=\"en-US\"><strong>For the ravioli:</strong></span></strong><span lang=\"en-US\">&nbsp;divide the dough into 4 pieces. Working with 1 piece at a time, keeping remaining dough wrapped in plastic as you work, flatten dough into a narrow rectangle. Roll out the dough lengthwise until the pasta sheet is 1/16\" thick. Cut sheet of dough in half crosswise. Starting 1\" from the short edge, spoon the filling in walnut-size mounds (1 Tbsp.), spacing about 1\" apart; brush a little water around the filling and top with the second length of dough. Press around each mound of filling pressing outward toward the edges to remove any air pockets. Use a sharp knife or round or drop-shaped pastry cutter (2 1/4\" diameter) to cut each ravioli.&nbsp;</span></p>\r\n",
+          "<p><strong><span lang=\"en-US\">For the topping:</span></strong><span lang=\"en-US\">&nbsp;trim the artichokes, removing the tough outer leaves and cut them into 8 wedges. Heat a thin layer of oil in a pan over medium-high heat and cook artichokes with a pinch of salt for 5 minutes. Add 1/2 cup wine and cook for 10 minutes.</span></p>\r\n\r\n<p>\r\n\t<br>\r\n\t<br>\r\n</p>\r\n",
+          "<p align=\"left\"><span lang=\"en-US\">Meanwhile, toast the almonds in a dry skillet. Add 1 Tbsp. butter and sauté them for 2 more minutes until they are glossy.</span></p>\r\n",
+          "<p align=\"left\"><span lang=\"en-US\">Bring water to a boil in a large pan and add salt. Add the ravioli and boil for 2-3 minutes or until they float to the surface, drain and dress with the butter and almonds. Top with artichokes and sage leaves and rosemary to taste. Serve immediately.</span></p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 2,
+          "ratingValue": "5.0"
+        },
+        "extractedAt": "2025-08-25T04:48:16.128Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "data": {
+        "name": "Mini Salmon Pandoro Club Sandwich",
+        "description": "Cut the pandoro bread into horizontal slices, about 1/2 inch thick. Choose 3 slices from the middle, so that they are the most similar in size. Place ...",
+        "url": "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+        "image": "https://rms.condenast.it/rms/public/5d9/707/3df/thumb_5181_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-19T14:00:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT15M",
+        "recipeYield": "4",
+        "recipeCategory": "appetizers",
+        "recipeCuisine": "Italian",
+        "keywords": "Menu Di Natale,Natale,Panettone,Ricette Per Natale",
+        "ingredients": [
+          "1LB. pandoro (sweet yeast bread) ",
+          "1/3LB. smoked salmon ",
+          "1/4LB. robiola cheese ",
+          " Chives ",
+          " Lemon "
+        ],
+        "instructions": [
+          "<p>Cut the pandoro bread into horizontal slices, about 1/2 inch thick. Choose 3 slices from the middle, so that they are the most similar in size. Place them on a baking tray lined with parchment paper and toast at 340°F for 4-5 minutes. Mix the robiola cheese with a pinch of grated lemon zest and a few chives. Spread 2 of the 3 slices of bread with the cheese and top with the sliced salmon. Stack the slices and close the sandwich with the third, plain slice.</p>\r\n",
+          "<p>Cut it into 4 wedges and serve. Tip: With the rest of the pandoro, you can make other finger sandwiches, which can also be filled with robiola and salmon, or with other assorted ingredients. We chose to use robiola with the pandoro because the bread is already very rich in butter. Alternatively, you can make an herb butter: Whip 3-5 tablespoons of butter with a whisk to make it frothy, then mix it with chives and lemon zest. Then spread it on the pandoro and proceed as above.</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {},
+        "extractedAt": "2025-08-25T04:48:18.170Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "data": {
+        "name": "Mini Pear Panettones with Mulled Wine Sauce",
+        "description": "Peel and dice 1 pear; cook it in a pan for 4-5 minutes until dried out and golden. In a saucepan, combine the wine with 3 tablespoons of brown sugar, ...",
+        "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+        "image": "https://rms.condenast.it/rms/public/5df/0f6/fe4/thumb_5619_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-19T13:48:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "",
+        "recipeYield": "",
+        "recipeCategory": "cakes and desserts",
+        "recipeCuisine": "Italian",
+        "keywords": "Dolci Di Natale,Menu Di Natale,Natale,Natale 2018,Veg,Vegana,Vegano",
+        "ingredients": [
+          "1LB. firm pears (about 2) ",
+          "1 1/4C. red wine ",
+          "1C. whole wheat flour ",
+          "1/3CUP soy milk ",
+          "2 1/2TBSP. corn oil ",
+          "1 1/2TBSP. potato starch ",
+          "2TSP. baking powder ",
+          " 1 cinnamon stick ",
+          " 1 orange ",
+          " 1/2 vanilla bean pod ",
+          " Brown sugar ",
+          " Peppercorns ",
+          " Cloves ",
+          " Fresh ginger "
+        ],
+        "instructions": [],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 15,
+          "ratingValue": "2.9"
+        },
+        "extractedAt": "2025-08-25T04:48:19.433Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "data": {
+        "name": "Bolognese-Style Soup",
+        "description": "Mortadella and Parmigiano Reggiano, two key ingredients from the region of Emilia Romagna make this Bolognese-style soup, anything but ordinary.",
+        "url": "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+        "image": "https://rms.condenast.it/rms/public/5d3/f08/960/thumb_2900_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-08T14:43:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT60M",
+        "recipeYield": "4",
+        "recipeCategory": "main course",
+        "recipeCuisine": "Italian",
+        "keywords": "Piatti Della Tradizione,Piatti Della Tradizone,Piatti Regionali,Piatti Tipici,Piatto Regionale,Typical Dishes,Regione,Ricetta Regionale,Ricette Della Tradizione,Zuppa,Zuppe,Zuppe E Vellutate",
+        "ingredients": [
+          "1/2CUP, PLUS EXTRA semolina  ",
+          "1CUP Parmigiano Reggiano, grated  ",
+          "1/3CUP unsalted butter, softened ",
+          "2OZ. mortadella ",
+          "4 large eggs ",
+          " nutmeg ",
+          "1QT. beef broth ",
+          " salt "
+        ],
+        "instructions": [
+          "<p>Preheat the oven to 350°F.&nbsp;</p>\r\n",
+          "<p>Finely chop the mortadella. In a mixing bowl, combine egg yolks, Parmigiano Reggiano, and 1/2 cup semolina. Add some grated nutmeg and a pinch of salt. Add 4 Tbsp. butter and mortadella. Beat egg whites to stiff peaks and add to the mixture.</p>\r\n",
+          "<p>Butter a wide, shallow rectangular pan with 2 Tbsp. butter. Dust with 1 tsp. semolina. Pour in the mixture spreading it out evenly and bake for around 20 minutes. Let cool and cut into cubes.&nbsp;</p>\r\n",
+          "<p>Bring broth to a boil and cook the cubes for another 5 minutes. Serve.&nbsp;</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 5,
+          "ratingValue": "3.8"
+        },
+        "extractedAt": "2025-08-25T04:48:21.528Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "data": {
+        "name": "Homemade Pasta With Ligurian Pesto",
+        "description": "While using a mortar and pestle takes a bit of elbow grease, the resulting pesto can't be beat. Add homemade farfalle pasta, green beans and potatoes to the mix for this Ligurian classic dish. ",
+        "url": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+        "image": "https://rms.condenast.it/rms/public/5d3/f06/08c/thumb_1844_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-08T14:40:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT60M",
+        "recipeYield": "4",
+        "recipeCategory": "pasta",
+        "recipeCuisine": "Italian",
+        "keywords": "Pasta Fresca,Pesto",
+        "ingredients": [
+          "2CUPS all-purpose flour ",
+          "8OZ. potatoes ",
+          "12OZ. green beans ",
+          "3TBSP. pine nuts ",
+          "3 large eggs ",
+          " basil ",
+          " garlic ",
+          " Grana Padano cheese, grated ",
+          " Pecorino Romano cheese, grated ",
+          " extra-virgin olive oil ",
+          " coarse and fine salt "
+        ],
+        "instructions": [
+          "<p>To prepare the pasta dough, place the flour in a mound on a flat surface, making a well in the middle. Add eggs and salt into the well. Using a fork, start carefully incorporating the flour from the walls of the well into the egg. When flour and egg are combined, knead dough with your hands until smooth and elastic. Cover the dough and let rest while you prepare the pesto.&nbsp;</p>\r\n\r\n<p>\r\n\t<br>\r\n</p>\r\n",
+          "<p>Finely chop half a peeled garlic clove and place it in a mortar. Wash basil and pat dry, then transfer 2 oz. to the mortar with the garlic, pine nuts, and a little coarse salt. Grind together to a chunky paste. Add 2 oz. Grana Padano cheese mixed with Pecorino Romano and 1/3-1/2 cup oil.</p>\r\n",
+          "<p>&nbsp;Peel the potato and finely dice; chop green beans.</p>\r\n",
+          "<p>Roll out the pasta with a rolling pin, then use a wavy-edged roller to cut into rectangles. Pinch pasta rectangles in the center to create bow-shaped farfalle.</p>\r\n",
+          "<p>Bring a pot of water to the boil, add salt, and cook the green beans. After 3 minutes, add the pasta and potatoes and cook for 5-7 minutes. Remove using a skimmer and toss with the pesto to coat. Garnish with grated cheese and basil.</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {},
+        "extractedAt": "2025-08-25T04:48:23.225Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "data": {
+        "name": "Tortiglioni With Anchovies",
+        "description": "Addictively crunchy breadcrumbs and salt-packed anchovies are powerful flavor combination for this pantry pasta. ",
+        "url": "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+        "image": "https://rms.condenast.it/rms/public/5d3/f0a/7d7/thumb_3638_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-08T14:10:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT15M",
+        "recipeYield": "4",
+        "recipeCategory": "pasta",
+        "recipeCuisine": "Italian",
+        "keywords": "Acciughe,Anchovy Fillets,Pasta,Primi,Primi Piatti,Primo",
+        "ingredients": [
+          "12OZ. tortiglioni pasta ",
+          "2/3CUP olive oil ",
+          "4OZ. salt-packed anchovies ",
+          "3OZ. shelled walnuts, finely chopped ",
+          " breadcrumbs ",
+          " garlic ",
+          " marjoram ",
+          " salt "
+        ],
+        "instructions": [
+          "<p>Remove the bones from the anchovies and rinse them thoroughly to remove the salt.&nbsp;</p>\r\n",
+          "<p>Cook the pasta in a large pot of boiling salted water until al dente.&nbsp;</p>\r\n",
+          "<p>Heat the olive oil in a pan. Break the anchovies into pieces and add them to the pan with 2 peeled and slightly crushed garlic cloves. Add 6 Tbsp. bread crumbs and sauté. Add the finely chopped hazelnuts. Stir ensuring that the breadcrumbs and nuts brown and become crisp without burning.</p>\r\n",
+          "<p>Once the pasta is al dente, drain and toss in the pan to coat with the breadcrumbs. Remove the garlic, sprinkle with torn marjoram, and serve.</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 3,
+          "ratingValue": "4.3"
+        },
+        "extractedAt": "2025-08-25T04:48:24.687Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "data": {
+        "name": "Penne With Mozzarella, Red Peppers and Capers",
+        "description": "Smooth, tubular penne with mozzarella, red peppers and capers is an easy pasta for a weeknight dinner.",
+        "url": "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+        "image": "https://rms.condenast.it/rms/public/60a/264/9f3/thumb_6995_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-08T14:00:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT20M",
+        "recipeYield": "4",
+        "recipeCategory": "pasta",
+        "recipeCuisine": "Italian",
+        "keywords": "Pasta",
+        "ingredients": [
+          "1LB. penne pasta ",
+          "4OZ. mozzarella, diced ",
+          "1 roasted red bell pepper lobe, diced ",
+          "1 1/2OZ. olive oil ",
+          "4 small spring onions ",
+          " salt-packed capers, rinsed and chopped ",
+          " parsley ",
+          " salt "
+        ],
+        "instructions": [
+          "<p>Cook penne in plenty of boiling salted water until al dente.&nbsp;</p>\r\n",
+          "<p>In the meantime, slice spring onions thinly and sauté with oil and a spoonful of capers. Add diced bell pepper. Drain pasta when al dente and add to the pan. Toss quickly and add diced mozzarella. As soon as mozzarella begins to stretch and melt, remove from the heat. Sprinkle pasta with chopped parsley and serve immediately.</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 1,
+          "ratingValue": "5.0"
+        },
+        "extractedAt": "2025-08-25T04:48:25.927Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": true,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+      "data": {
+        "name": "Farfalle With Almonds and Olive Tapenade",
+        "description": "A quick summertime vegetarian pasta packed with in-season tomatoes, crunchy almonds, and briny olive tapenade. ",
+        "url": "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+        "image": "https://rms.condenast.it/rms/public/5d3/f08/934/thumb_2894_1200_670_0_0_auto.jpg",
+        "author": "Redazione Web",
+        "datePublished": "2023-12-01T14:40:00.000000Z",
+        "prepTime": "",
+        "cookTime": "",
+        "totalTime": "PT20M",
+        "recipeYield": "4",
+        "recipeCategory": "pasta",
+        "recipeCuisine": "Italian",
+        "keywords": "Olive,Pasta,Simple Meals,Quick Meals,Ricette,Easy Recipes,Quick Recipes",
+        "ingredients": [
+          "12OZ. farfalle pasta ",
+          "6OZ. cherry tomatoes ",
+          "5TBSP. readymade olive tapenade ",
+          "2OZ. raw almonds  ",
+          " fresh marjoram ",
+          " extra-virgin olive oil ",
+          " salt "
+        ],
+        "instructions": [
+          "<p>Wash the tomatoes, cut them in half and toss them in a bowl with a drizzle of oil and the leaves of 4 sprigs of marjoram.&nbsp;</p>\r\n",
+          "<p>Cook the pasta in boiling salted water until al dente.</p>\r\n",
+          "<p>Chop the almonds with a knife and sauté them in a pan with 1/4 cup oil for 1 minute. &nbsp;Add the tomatoes and mix well.&nbsp;</p>\r\n",
+          "<p>Drain the farfalle and top with the olive tapenade, tomatoes and almonds.</p>\r\n"
+        ],
+        "nutrition": {},
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "bestRating": 5,
+          "ratingCount": 3,
+          "ratingValue": "4.3"
+        },
+        "extractedAt": "2025-08-25T04:48:27.181Z",
+        "source": "La Cucina Italiana",
+        "originalUrl": "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+        "extractionMethod": "JSON-LD"
+      },
+      "hasJsonLd": true,
+      "source": "json-ld"
+    }
+  ],
+  "urls": {
+    "discovered": [
+      "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade"
+    ],
+    "successful": [
+      "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade"
+    ],
+    "failed": []
+  }
+}

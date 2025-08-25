@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "crawler": "La Cucina Italiana Crawler (Node.js)",
+    "timestamp": "2025-08-25T04:48:00.221Z",
+    "baseUrl": "https://www.lacucinaitaliana.com",
+    "totalDiscovered": 9,
+    "totalScraped": 9,
+    "successful": 0,
+    "failed": 9
+  },
+  "results": [
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+      "error": "No recipe data returned from save worker",
+      "hasJsonLd": true,
+      "source": "json-ld"
+    }
+  ],
+  "urls": {
+    "discovered": [
+      "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade"
+    ],
+    "successful": [],
+    "failed": [
+      "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade"
+    ]
+  }
+}
