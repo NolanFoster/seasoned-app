@@ -1,0 +1,25 @@
+{
+  "name": "recipe-generation-worker",
+  "version": "1.0.0",
+  "description": "Worker for generating recipes using AI",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env preview",
+    "deploy": "wrangler publish",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .js",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "@vitest/coverage-v8": "^1.2.1",
+    "vitest": "^1.2.1",
+    "wrangler": "^3.24.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
