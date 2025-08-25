@@ -9,7 +9,7 @@ const https = require('https');
 const { URL } = require('url');
 
 class RecipeDatabaseSaver {
-    constructor(workerUrl = 'https://recipe-scraper.nolanfoster.workers.dev') {
+    constructor(workerUrl = 'https://recipe-save-worker.nolanfoster.workers.dev') {
         this.workerUrl = workerUrl.replace(/\/$/, '');
         this.savedRecipes = [];
         this.failedRecipes = [];
@@ -84,61 +84,116 @@ class RecipeDatabaseSaver {
 
     /**
      * Save a single recipe to the database
-     * Since the worker expects URLs to scrape, we'll try to use the existing data
-     * by sending the URL and hoping it can extract the same data
+     * Try different endpoints and approaches to save the recipe data
      */
     async saveRecipeToDatabase(recipeData) {
         try {
             const url = recipeData.url;
             console.log(`Saving recipe: ${recipeData.name}`);
             
-            // Try to save using the worker's scrape endpoint
-            const response = await this.makeRequest(`${this.workerUrl}/scrape?url=${encodeURIComponent(url)}&save=true`);
+            // Try different approaches to save the recipe
             
-            if (response.statusCode === 200) {
-                const result = JSON.parse(response.data);
+            // Approach 1: Try POST to root endpoint with recipe data
+            console.log('  Trying POST to root endpoint...');
+            try {
+                const response = await this.makeRequest(`${this.workerUrl}/`, {
+                    method: 'POST',
+                    body: JSON.stringify(recipeData)
+                });
                 
-                if (result.results && result.results.length > 0) {
-                    const recipeResult = result.results[0];
-                    
-                    if (recipeResult.success) {
-                        console.log(`✅ Successfully saved: ${recipeData.name}`);
-                        this.savedRecipes.push({
-                            name: recipeData.name,
-                            url: url,
-                            workerData: recipeResult
-                        });
-                        return { success: true, data: recipeResult };
-                    } else {
-                        console.warn(`⚠️ Worker failed to save ${recipeData.name}: ${recipeResult.error}`);
-                        this.failedRecipes.push({
-                            name: recipeData.name,
-                            url: url,
-                            error: recipeResult.error,
-                            originalData: recipeData
-                        });
-                        return { success: false, error: recipeResult.error };
-                    }
-                } else {
-                    console.warn(`⚠️ No results from worker for ${recipeData.name}`);
-                    this.failedRecipes.push({
+                if (response.statusCode === 200) {
+                    console.log(`✅ Successfully saved via root endpoint: ${recipeData.name}`);
+                    this.savedRecipes.push({
                         name: recipeData.name,
                         url: url,
-                        error: 'No results from worker',
-                        originalData: recipeData
+                        method: 'POST root',
+                        workerData: response.data
                     });
-                    return { success: false, error: 'No results from worker' };
+                    return { success: true, data: response.data };
                 }
-            } else {
-                console.error(`❌ HTTP error ${response.statusCode} for ${recipeData.name}`);
-                this.failedRecipes.push({
-                    name: recipeData.name,
-                    url: url,
-                    error: `HTTP ${response.statusCode}`,
-                    originalData: recipeData
-                });
-                return { success: false, error: `HTTP ${response.statusCode}` };
+            } catch (e) {
+                console.log('  Root endpoint failed, trying alternatives...');
             }
+            
+            // Approach 2: Try POST to /save endpoint
+            console.log('  Trying POST to /save endpoint...');
+            try {
+                const response = await this.makeRequest(`${this.workerUrl}/save`, {
+                    method: 'POST',
+                    body: JSON.stringify(recipeData)
+                });
+                
+                if (response.statusCode === 200) {
+                    console.log(`✅ Successfully saved via /save endpoint: ${recipeData.name}`);
+                    this.savedRecipes.push({
+                        name: recipeData.name,
+                        url: url,
+                        method: 'POST /save',
+                        workerData: response.data
+                    });
+                    return { success: true, data: response.data };
+                }
+            } catch (e) {
+                console.log('  /save endpoint failed, trying alternatives...');
+            }
+            
+            // Approach 3: Try POST to /recipe endpoint
+            console.log('  Trying POST to /recipe endpoint...');
+            try {
+                const response = await this.makeRequest(`${this.workerUrl}/recipe`, {
+                    method: 'POST',
+                    body: JSON.stringify(recipeData)
+                });
+                
+                if (response.statusCode === 200) {
+                    console.log(`✅ Successfully saved via /recipe endpoint: ${recipeData.name}`);
+                    this.savedRecipes.push({
+                        name: recipeData.name,
+                        url: url,
+                        method: 'POST /recipe',
+                        workerData: response.data
+                    });
+                    return { success: true, data: response.data };
+                }
+            } catch (e) {
+                console.log('  /recipe endpoint failed, trying alternatives...');
+            }
+            
+            // Approach 4: Try GET with query parameters
+            console.log('  Trying GET with query parameters...');
+            try {
+                const queryParams = new URLSearchParams({
+                    name: recipeData.name,
+                    url: recipeData.url,
+                    ingredients: JSON.stringify(recipeData.ingredients),
+                    instructions: JSON.stringify(recipeData.instructions)
+                });
+                
+                const response = await this.makeRequest(`${this.workerUrl}/?${queryParams.toString()}`);
+                
+                if (response.statusCode === 200) {
+                    console.log(`✅ Successfully saved via GET endpoint: ${recipeData.name}`);
+                    this.savedRecipes.push({
+                        name: recipeData.name,
+                        url: url,
+                        method: 'GET query',
+                        workerData: response.data
+                    });
+                    return { success: true, data: response.data };
+                }
+            } catch (e) {
+                console.log('  GET endpoint failed...');
+            }
+            
+            // If all approaches fail
+            console.warn(`⚠️ All save attempts failed for ${recipeData.name}`);
+            this.failedRecipes.push({
+                name: recipeData.name,
+                url: url,
+                error: 'All save endpoints failed',
+                originalData: recipeData
+            });
+            return { success: false, error: 'All save endpoints failed' };
             
         } catch (error) {
             console.error(`❌ Error saving ${recipeData.name}: ${error.message}`);
@@ -249,7 +304,7 @@ async function main() {
     console.log('La Cucina Italiana Recipe Database Saver');
     console.log('========================================');
     console.log(`Results file: ${resultsFile}`);
-    console.log(`Worker URL: https://recipe-scraper.nolanfoster.workers.dev`);
+    console.log(`Worker URL: https://recipe-save-worker.nolanfoster.workers.dev`);
     console.log('');
     
     const saver = new RecipeDatabaseSaver();
