@@ -414,32 +414,43 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                           </div>
                         </div>
                         <div className="recipe-card-content">
-                          {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
-                            <div className="recipe-card-time">
-                              <div className="time-item">
-                                <span className="time-label">Prep</span>
-                                <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
-                              </div>
-                              <div className="time-divider"></div>
-                              <div className="time-item">
-                                <span className="time-label">Cook</span>
-                                <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
-                              </div>
-                              {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
-                                <>
+                          {/* Only show timing information for non-AI-generated recipes */}
+                          {!(recipe.source === 'ai_generated' || recipe.fallback) && (
+                            <>
+                              {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                                <div className="recipe-card-time">
+                                  <div className="time-item">
+                                    <span className="time-label">Prep</span>
+                                    <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                                  </div>
                                   <div className="time-divider"></div>
                                   <div className="time-item">
-                                    <span className="time-label">Yield</span>
-                                    <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                    <span className="time-label">Cook</span>
+                                    <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
                                   </div>
-                                </>
+                                  {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                                    <>
+                                      <div className="time-divider"></div>
+                                      <div className="time-item">
+                                        <span className="time-label">Yield</span>
+                                        <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="recipe-card-time">
+                                  <span className="time-icon">⏱️</span>
+                                  <span className="no-time">-</span>
+                                </p>
                               )}
+                            </>
+                          )}
+                          {/* Show "Generate with AI" for AI-generated recipes */}
+                          {(recipe.source === 'ai_generated' || recipe.fallback) && (
+                            <div className="ai-generated-indicator">
+                              <span className="ai-generated-text">Generate with AI</span>
                             </div>
-                          ) : (
-                            <p className="recipe-card-time">
-                              <span className="time-icon">⏱️</span>
-                              <span className="no-time">-</span>
-                            </p>
                           )}
                         </div>
                       </div>
@@ -575,32 +586,43 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                           </div>
                         </div>
                         <div className="recipe-card-content">
-                          {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
-                            <div className="recipe-card-time">
-                              <div className="time-item">
-                                <span className="time-label">Prep</span>
-                                <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
-                              </div>
-                              <div className="time-divider"></div>
-                              <div className="time-item">
-                                <span className="time-label">Cook</span>
-                                <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
-                              </div>
-                              {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
-                                <>
+                          {/* Only show timing information for non-AI-generated recipes */}
+                          {!(recipe.source === 'ai_generated' || recipe.fallback) && (
+                            <>
+                              {recipe.prep_time || recipe.cook_time || recipe.recipe_yield || recipe.recipeYield || recipe.yield ? (
+                                <div className="recipe-card-time">
+                                  <div className="time-item">
+                                    <span className="time-label">Prep</span>
+                                    <span className="time-value">{formatDuration(recipe.prep_time || recipe.prepTime) || '-'}</span>
+                                  </div>
                                   <div className="time-divider"></div>
                                   <div className="time-item">
-                                    <span className="time-label">Yield</span>
-                                    <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                    <span className="time-label">Cook</span>
+                                    <span className="time-value">{formatDuration(recipe.cook_time || recipe.cookTime) || '-'}</span>
                                   </div>
-                                </>
+                                  {(recipe.recipe_yield || recipe.recipeYield || recipe.yield) && (
+                                    <>
+                                      <div className="time-divider"></div>
+                                      <div className="time-item">
+                                        <span className="time-label">Yield</span>
+                                        <span className="time-value">{recipe.recipe_yield || recipe.recipeYield || recipe.yield}</span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="recipe-card-time">
+                                  <span className="time-icon">⏱️</span>
+                                  <span className="no-time">-</span>
+                                </p>
                               )}
+                            </>
+                          )}
+                          {/* Show "Generate with AI" for AI-generated recipes */}
+                          {(recipe.source === 'ai_generated' || recipe.fallback) && (
+                            <div className="ai-generated-indicator">
+                              <span className="ai-generated-text">Generate with AI</span>
                             </div>
-                          ) : (
-                            <p className="recipe-card-time">
-                              <span className="time-icon">⏱️</span>
-                              <span className="no-time">-</span>
-                            </p>
                           )}
                         </div>
                       </div>
