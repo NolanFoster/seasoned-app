@@ -914,135 +914,109 @@ function App() {
           const newRecipesByCategory = new Map();
           const searchPromises = [];
           
-          for (const [categoryName, tags] of Object.entries(data.recommendations)) {
-            if (Array.isArray(tags)) {
-              debugLogEmoji('📂', `Processing category "${categoryName}" with ${tags.length} tags`);
+          for (const [categoryName, recipes] of Object.entries(data.recommendations)) {
+            if (Array.isArray(recipes)) {
+              debugLogEmoji('📂', `Processing category "${categoryName}" with ${recipes.length} recipes from recommendations`);
               // Initialize category in the map
               newRecipesByCategory.set(categoryName, []);
               
-              // Create search promises for each tag using smart search
-              for (const tag of tags) {
-                debugLogEmoji('🏷️', `Processing tag: "${tag}"`);
+              // Process recipes directly from recommendation response
+              for (const recipe of recipes) {
+                debugLogEmoji('🍽️', `Processing recipe: "${recipe.name || recipe.id}"`);
                 
-                // Create an async function for processing each tag
-                const processTag = async () => {
+                // Create an async function for processing each recipe
+                const processRecipe = async () => {
                   try {
-                    const recipes = await smartSearch(tag);
-                    if (recipes && recipes.length > 0) {
-                      debugLogEmoji('✅', `Tag "${tag}" successfully found ${recipes.length} recipes`);
+                    let completeRecipe = null;
+                    
+                    // Check if this is a real recipe with an ID or a fallback dish suggestion
+                    if (recipe.id && !recipe.fallback && recipe.source !== 'ai_generated') {
+                      // Try to fetch complete recipe data from KV storage
+                      debugLogEmoji('🔄', `Fetching complete data for recipe ${recipe.id} from KV...`);
+                      completeRecipe = await fetchCompleteRecipeData(recipe.id);
                       
-                      // Fetch complete recipe data from KV for each recipe IN PARALLEL
-                      debugLogEmoji('🔄', `Fetching complete data for ${recipes.length} recipes from KV...`);
-                      
-                      let completeRecipes;
-                      
-                      // For large sets of recipes, use batch processing to avoid overwhelming the API
-                      if (recipes.length > 20) {
-                        debugLogEmoji('📦', `Using batch processing for ${recipes.length} recipes (batch size: 10)`);
-                        const fetchResults = await processBatch(recipes, 10, async (recipe, index) => {
-                          const completeRecipe = await fetchCompleteRecipeData(recipe.id);
-                          if (completeRecipe) {
-                            debugLogEmoji('✅', `[${index + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
-                            return completeRecipe;
-                          } else {
-                            console.warn(`⚠️ [${index + 1}/${recipes.length}] Recipe ${recipe.id} not found in KV storage - skipping (might be deleted)`);
-                            return null;
-                          }
-                        });
-                        completeRecipes = fetchResults.filter(recipe => recipe !== null);
+                      if (completeRecipe) {
+                        debugLogEmoji('✅', `Recipe ${recipe.id} fetched successfully from KV`);
                       } else {
-                        // For smaller sets, fetch all at once
-                        const fetchPromises = recipes.map((recipe, index) => 
-                          fetchCompleteRecipeData(recipe.id)
-                            .then(completeRecipe => {
-                              if (completeRecipe) {
-                                debugLogEmoji('✅', `[${index + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
-                                return completeRecipe;
-                              } else {
-                                console.warn(`⚠️ [${index + 1}/${recipes.length}] Recipe ${recipe.id} not found in KV storage - skipping (might be deleted)`);
-                                return null;
-                              }
-                            })
-                            .catch(error => {
-                              console.error(`❌ [${index + 1}/${recipes.length}] Error fetching recipe ${recipe.id}:`, error);
-                              return null;
-                            })
-                        );
-                        
-                        const fetchResults = await Promise.all(fetchPromises);
-                        completeRecipes = fetchResults.filter(recipe => recipe !== null);
+                        console.warn(`⚠️ Recipe ${recipe.id} not found in KV storage - using recommendation data`);
+                        // Use the recipe data from recommendations as fallback
+                        completeRecipe = recipe;
                       }
+                    } else {
+                      // This is a fallback dish suggestion from AI, use it directly
+                      debugLogEmoji('🤖', `Using AI-generated dish suggestion: ${recipe.name}`);
+                      completeRecipe = recipe;
+                    }
+                    
+                    if (completeRecipe) {
+                      // Transform the recipe to frontend format
+                      const recipeData = completeRecipe.data || completeRecipe;
+                      const transformedRecipe = {
+                        id: completeRecipe.id || recipeData.id,
+                        name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
+                        description: decodeHtmlEntities(recipeData.description || ''),
+                        image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+                        image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+                        ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                        ),
+                        instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                          return inst;
+                        }),
+                        recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                        ),
+                        recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                          return inst;
+                        }),
+                        prep_time: recipeData.prepTime || recipeData.prep_time || null,
+                        cook_time: recipeData.cookTime || recipeData.cook_time || null,
+                        recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
+                        source_url: recipeData.source_url || recipeData.url || '',
+                        video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
+                        video: recipeData.video || null,
+                        author: recipeData.author || '',
+                        datePublished: recipeData.datePublished || '',
+                        recipeCategory: recipeData.recipeCategory || '',
+                        recipeCuisine: recipeData.recipeCuisine || '',
+                        keywords: recipeData.keywords || '',
+                        nutrition: recipeData.nutrition || {},
+                        aggregateRating: recipeData.aggregateRating || {},
+                        // Add metadata from recommendation
+                        source: recipe.source || 'recommendation',
+                        type: recipe.type || 'recipe',
+                        fallback: recipe.fallback || false
+                      };
                       
-                      debugLogEmoji('🎯', `Completed KV fetching: ${completeRecipes.length}/${recipes.length} recipes retrieved`);
-                      
-                      // Transform complete recipes to frontend format
-                      const transformedRecipes = completeRecipes.map(recipe => {
-                        // Handle both KV format and search result format
-                        const recipeData = recipe.data || recipe;
-                        const transformed = {
-                          id: recipe.id || recipeData.id,
-                          name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
-                          description: decodeHtmlEntities(recipeData.description || ''),
-                          image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                          image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                          ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                          ),
-                          instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                            return inst;
-                          }),
-                          recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                          ),
-                          recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                            return inst;
-                          }),
-                          prep_time: recipeData.prepTime || recipeData.prep_time || null,
-                          cook_time: recipeData.cookTime || recipeData.cook_time || null,
-                          recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
-                          source_url: recipeData.source_url || recipeData.url || '',
-                          video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
-                          video: recipeData.video || null,
-                          author: recipeData.author || '',
-                          datePublished: recipeData.datePublished || '',
-                          recipeCategory: recipeData.recipeCategory || '',
-                          recipeCuisine: recipeData.recipeCuisine || '',
-                          keywords: recipeData.keywords || '',
-                          nutrition: recipeData.nutrition || {},
-                          aggregateRating: recipeData.aggregateRating || {}
-                        };
-                        
-                        // Debug: Log what we're actually transforming
-                        debugLogEmoji('🔍', `Transformed recipe ${transformed.id}:`, {
-                          name: transformed.name,
-                          hasIngredients: transformed.ingredients.length > 0,
-                          hasInstructions: transformed.instructions.length > 0,
-                          ingredientCount: transformed.ingredients.length,
-                          instructionCount: transformed.instructions.length
-                        });
-                        
-                        return transformed;
+                      debugLogEmoji('🔍', `Transformed recipe ${transformedRecipe.id}:`, {
+                        name: transformedRecipe.name,
+                        hasIngredients: transformedRecipe.ingredients.length > 0,
+                        hasInstructions: transformedRecipe.instructions.length > 0,
+                        source: transformedRecipe.source,
+                        fallback: transformedRecipe.fallback
                       });
                       
-                      debugLogEmoji('🎯', `Category "${categoryName}" now has ${transformedRecipes.length} complete recipes`);
-                      return { category: categoryName, recipes: transformedRecipes };
-                    } else {
-                      debugLogEmoji('⚠️', `Tag "${tag}" found no recipes`);
-                      return { category: categoryName, recipes: [] };
+                      // Add the recipe to the category
+                      const existingRecipes = newRecipesByCategory.get(categoryName) || [];
+                      newRecipesByCategory.set(categoryName, [...existingRecipes, transformedRecipe]);
+                      
+                      return { category: categoryName, recipes: [transformedRecipe] };
                     }
+                    
+                    return { category: categoryName, recipes: [] };
                   } catch (error) {
-                    console.warn(`❌ Smart search failed for tag "${tag}":`, error);
-                    return { category: categoryName, recipes: [] }; // Return empty array for failed searches
+                    console.error(`❌ Error processing recipe "${recipe.name || recipe.id}":`, error);
+                    return { category: categoryName, recipes: [] };
                   }
                 };
                 
-                searchPromises.push(processTag());
+                searchPromises.push(processRecipe());
               }
             }
           }
