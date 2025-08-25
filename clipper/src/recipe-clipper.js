@@ -269,7 +269,11 @@ async function extractRecipeWithGPT(pageUrl, env) {
         }
       }
       
-      return jsonLdRecipe;
+      // Strip HTML tags from all text fields
+      const cleanedJsonLdRecipe = cleanRecipeData(jsonLdRecipe);
+      console.log('JSON-LD recipe data with HTML tags removed:', JSON.stringify(cleanedJsonLdRecipe, null, 2));
+      
+      return cleanedJsonLdRecipe;
     }
     
     console.log('No JSON-LD recipe data found, proceeding with LLM extraction...');
@@ -1071,6 +1075,155 @@ function cleanJsonContent(jsonString) {
   }
 }
 
+// Strip HTML tags from text content
+function stripHtmlTags(text) {
+  if (typeof text !== 'string') {
+    return text;
+  }
+  
+  // Remove HTML tags while preserving line breaks and basic formatting
+  return text
+    .replace(/<br\s*\/?>/gi, '\n')  // Convert <br> tags to line breaks
+    .replace(/<\/p>/gi, '\n')       // Convert </p> tags to line breaks
+    .replace(/<\/div>/gi, '\n')     // Convert </div> tags to line breaks
+    .replace(/<\/li>/gi, '\n')      // Convert </li> tags to line breaks
+    .replace(/<\/h[1-6]>/gi, '\n') // Convert </h1> through </h6> tags to line breaks
+    .replace(/<\/ul>/gi, '\n')      // Convert </ul> tags to line breaks
+    .replace(/<\/ol>/gi, '\n')      // Convert </ol> tags to line breaks
+    .replace(/<[^>]*>/g, '')       // Remove all remaining HTML tags
+    .replace(/&nbsp;/g, ' ')       // Convert &nbsp; to regular spaces
+    .replace(/&amp;/g, '&')        // Convert &amp; to &
+    .replace(/&lt;/g, '<')         // Convert &lt; to <
+    .replace(/&gt;/g, '>')         // Convert &gt; to >
+    .replace(/&quot;/g, '"')       // Convert &quot; to "
+    .replace(/&#39;/g, "'")        // Convert &#39; to '
+    .replace(/\n\s*\n/g, '\n')    // Remove multiple consecutive line breaks
+    .replace(/\n\s+/g, '\n')      // Remove leading spaces after line breaks
+    .replace(/[^\S\n]+/g, ' ')    // Normalize multiple spaces to single space (but preserve line breaks)
+    .trim();                       // Trim whitespace
+}
+
+// Clean recipe data by stripping HTML tags from all text fields
+function cleanRecipeData(recipeData) {
+  if (!recipeData || typeof recipeData !== 'object') {
+    return recipeData;
+  }
+  
+  const cleaned = { ...recipeData };
+  
+  // Clean text fields
+  if (cleaned.name) cleaned.name = stripHtmlTags(String(cleaned.name).trim());
+  if (cleaned.description) cleaned.description = stripHtmlTags(String(cleaned.description).trim());
+  if (cleaned.author) {
+    if (typeof cleaned.author === 'object' && cleaned.author.name) {
+      cleaned.author.name = stripHtmlTags(String(cleaned.author.name).trim());
+    } else {
+      cleaned.author = stripHtmlTags(String(cleaned.author).trim());
+    }
+  }
+  if (cleaned.recipeCategory) cleaned.recipeCategory = stripHtmlTags(String(cleaned.recipeCategory).trim());
+  if (cleaned.recipeCuisine) cleaned.recipeCuisine = stripHtmlTags(String(cleaned.recipeCuisine).trim());
+  
+  // Clean keywords
+  if (cleaned.keywords) {
+    if (Array.isArray(cleaned.keywords)) {
+      cleaned.keywords = cleaned.keywords.map(k => stripHtmlTags(String(k).trim())).filter(k => k.length > 0);
+    } else {
+      cleaned.keywords = stripHtmlTags(String(cleaned.keywords).trim());
+    }
+  }
+  
+  // Clean ingredients
+  if (cleaned.recipeIngredient) {
+    if (Array.isArray(cleaned.recipeIngredient)) {
+      cleaned.recipeIngredient = cleaned.recipeIngredient.map(i => stripHtmlTags(String(i).trim())).filter(i => i.length > 0);
+    } else if (typeof cleaned.recipeIngredient === 'string') {
+      cleaned.recipeIngredient = cleaned.recipeIngredient.split('\n').map(i => stripHtmlTags(i.trim())).filter(i => i.length > 0);
+    }
+  }
+  
+  // Clean instructions
+  if (cleaned.recipeInstructions) {
+    if (Array.isArray(cleaned.recipeInstructions)) {
+      cleaned.recipeInstructions = cleaned.recipeInstructions.map(step => {
+        if (typeof step === 'string') {
+          return { "@type": "HowToStep", text: stripHtmlTags(step.trim()) };
+        } else if (step && typeof step === 'object' && step.text) {
+          return { "@type": "HowToStep", text: stripHtmlTags(String(step.text).trim()) };
+        } else if (step && typeof step === 'object' && step.name) {
+          return { "@type": "HowToStep", text: stripHtmlTags(String(step.name).trim()) };
+        } else if (step && typeof step === 'object') {
+          const textField = Object.keys(step).find(key => 
+            ['text', 'instruction', 'step', 'description', 'name'].includes(key.toLowerCase())
+          );
+          if (textField) {
+            return { "@type": "HowToStep", text: stripHtmlTags(String(step[textField]).trim()) };
+          }
+        }
+        return null;
+      }).filter(step => step && step.text.length > 0);
+    } else if (typeof cleaned.recipeInstructions === 'string') {
+      cleaned.recipeInstructions = cleaned.recipeInstructions.split('\n').map(step => ({ 
+        "@type": "HowToStep", 
+        text: stripHtmlTags(step.trim()) 
+      })).filter(step => step.text.length > 0);
+    }
+  }
+  
+  // Clean nutrition fields
+  if (cleaned.nutrition && typeof cleaned.nutrition === 'object') {
+    const nutritionFields = ['calories', 'proteinContent', 'fatContent', 'carbohydrateContent', 
+                            'fiberContent', 'sugarContent', 'sodiumContent', 'cholesterolContent', 
+                            'saturatedFatContent', 'transFatContent', 'unsaturatedFatContent', 'servingSize'];
+    nutritionFields.forEach(field => {
+      if (cleaned.nutrition[field]) {
+        cleaned.nutrition[field] = stripHtmlTags(String(cleaned.nutrition[field]).trim());
+      }
+    });
+  }
+  
+  // Clean video fields
+  if (cleaned.video && typeof cleaned.video === 'object') {
+    if (cleaned.video.name) cleaned.video.name = stripHtmlTags(String(cleaned.video.name).trim());
+    if (cleaned.video.description) cleaned.video.description = stripHtmlTags(String(cleaned.video.description).trim());
+  }
+  
+  // Clean backward compatibility fields
+  if (cleaned.ingredients) {
+    if (Array.isArray(cleaned.ingredients)) {
+      cleaned.ingredients = cleaned.ingredients.map(i => stripHtmlTags(String(i).trim())).filter(i => i.length > 0);
+    } else if (typeof cleaned.ingredients === 'string') {
+      cleaned.ingredients = cleaned.ingredients.split('\n').map(i => stripHtmlTags(i.trim())).filter(i => i.length > 0);
+    }
+  }
+  
+  if (cleaned.instructions) {
+    if (Array.isArray(cleaned.instructions)) {
+      cleaned.instructions = cleaned.instructions.map(step => {
+        if (typeof step === 'string') {
+          return stripHtmlTags(step.trim());
+        } else if (step && typeof step === 'object' && step.text) {
+          return stripHtmlTags(String(step.text).trim());
+        } else if (step && typeof step === 'object' && step.name) {
+          return stripHtmlTags(String(step.name).trim());
+        } else if (step && typeof step === 'object') {
+          const textField = Object.keys(step).find(key => 
+            ['text', 'instruction', 'step', 'description', 'name'].includes(key.toLowerCase())
+          );
+          if (textField) {
+            return stripHtmlTags(String(step[textField]).trim());
+          }
+        }
+        return '';
+      }).filter(step => step.length > 0);
+    } else if (typeof cleaned.instructions === 'string') {
+      cleaned.instructions = cleaned.instructions.split('\n').map(step => step.trim()).filter(step => step.length > 0);
+    }
+  }
+  
+  return cleaned;
+}
+
 // Clean HTML content for GPT processing - optimized for token reduction
 function cleanHtmlForGPT(html) {
   // Remove script tags (but preserve JSON-LD), style tags, and other non-content elements
@@ -1737,7 +1890,11 @@ ${truncatedHtml}`;
     
     console.log('Cleaned recipe data:', JSON.stringify(cleanedRecipe, null, 2));
 
-    return cleanedRecipe;
+    // Strip HTML tags from all text fields
+    const finalRecipe = cleanRecipeData(cleanedRecipe);
+    console.log('Final recipe data with HTML tags removed:', JSON.stringify(finalRecipe, null, 2));
+
+    return finalRecipe;
   } catch (error) {
     console.error('Error calling AI model:', error);
     
@@ -2358,6 +2515,8 @@ export {
   extractRecipeFromJsonLd,
   cleanJsonContent,
   cleanHtmlForGPT,
+  stripHtmlTags,
+  cleanRecipeData,
   extractDescriptionFromHTML,
   extractAuthorFromHTML,
   extractDateFromHTML,
