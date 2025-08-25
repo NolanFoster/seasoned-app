@@ -6,7 +6,10 @@ describe('Root Endpoint', () => {
   const mockEnv: Env = {
     OTP_KV: {} as KVNamespace,
     USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
-    ENVIRONMENT: 'preview'
+    ENVIRONMENT: 'preview',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+    JWT_SECRET: 'test-jwt-secret'
   };
 
   it('should return worker information', async () => {
@@ -26,7 +29,10 @@ describe('404 Handler', () => {
   const mockEnv: Env = {
     OTP_KV: {} as KVNamespace,
     USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
-    ENVIRONMENT: 'preview'
+    ENVIRONMENT: 'preview',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+    JWT_SECRET: 'test-jwt-secret'
   };
 
   it('should return 404 for unknown endpoints', async () => {

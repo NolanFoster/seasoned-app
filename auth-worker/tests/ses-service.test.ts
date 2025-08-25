@@ -17,7 +17,8 @@ const mockEnv = {
   FROM_EMAIL: 'test@example.com',
   OTP_KV: {} as any,
   ENVIRONMENT: 'development' as const,
-  USER_MANAGEMENT_WORKER_URL: 'http://localhost:8787'
+  USER_MANAGEMENT_WORKER_URL: 'http://localhost:8787',
+  JWT_SECRET: 'test-jwt-secret'
 };
 
 describe('SESService', () => {
@@ -113,7 +114,7 @@ describe('SESService', () => {
 
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Verify Your Email Address',
+        subject: 'Seasoned - Verify Your Email Address',
         htmlBody: expect.stringContaining('123456'),
         textBody: expect.stringContaining('123456')
       });
@@ -151,7 +152,7 @@ describe('SESService', () => {
       // Verify the sendEmail was called with the right parameters
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Verify Your Email Address',
+        subject: 'Seasoned - Verify Your Email Address',
         htmlBody: expect.stringContaining('123456'),
         textBody: expect.stringContaining('123456')
       });
@@ -171,7 +172,7 @@ describe('SESService', () => {
       // Verify the sendEmail was called with the right parameters
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Verify Your Email Address',
+        subject: 'Seasoned - Verify Your Email Address',
         htmlBody: expect.stringContaining('30 minutes'),
         textBody: expect.stringContaining('30 minutes')
       });
