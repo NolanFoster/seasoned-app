@@ -139,10 +139,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     try {
       setIsLoadingRecommendations(true);
       
-      // Try to get user's location or use a default
-      let location = userLocation || 'San Francisco, CA'; // Default location
+      let location = userLocation; // Start with cached user location
       
-      // Try to get user's location from browser
+      // Try to get user's location from browser if we don't have it cached
       if (!userLocation && navigator.geolocation) {
         try {
           const position = await new Promise((resolve, reject) => {
@@ -187,9 +186,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           setUserLocation(location);
           debugLogEmoji('📍', 'Got user location:', location);
         } catch (geoError) {
-          console.log('Could not get user location, using default');
+          console.log('Could not get user location, will use no specific location');
           debugLogEmoji('❌', 'Geolocation failed:', geoError.message);
+          // Don't set a default location - let the backend handle location-agnostic recommendations
+          location = '';
         }
+      }
+      
+      // If we still don't have a location, use empty string for location-agnostic recommendations
+      if (!location) {
+        location = '';
+        debugLogEmoji('🌍', 'Using location-agnostic recommendations');
       }
       
       const currentDate = new Date().toISOString().split('T')[0];

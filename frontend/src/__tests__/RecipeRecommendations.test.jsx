@@ -368,19 +368,19 @@ describe('Recipe Recommendations Feature', () => {
       });
     });
 
-    it('should use default location when geolocation fails', async () => {
+    it('should use empty location when geolocation fails', async () => {
       mockGeolocation.getCurrentPosition.mockImplementation((success, error) => {
         error({ code: 1, message: 'User denied location' });
       });
       
       render(<App />);
       
-      // Should still load recommendations with default location
+      // Should still load recommendations with empty location for location-agnostic recommendations
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
           expect.stringContaining('/recommendations'),
           expect.objectContaining({
-            body: expect.stringContaining('San Francisco, CA')
+            body: expect.stringContaining('"location":""')
           })
         );
       });
