@@ -5,7 +5,7 @@ This repository enforces code coverage requirements to maintain code quality.
 ## Coverage Thresholds
 
 ### Overall Coverage
-- **Minimum Required**: 40% for all metrics (lines, statements, functions, branches)
+- **Minimum Required**: 60% for all metrics (lines, statements, functions, branches)
 - Enforced by Jest configuration in `frontend/jest.config.js`
 - Tests will fail if coverage falls below this threshold
 
@@ -18,9 +18,9 @@ This repository enforces code coverage requirements to maintain code quality.
 
 ## GitHub Actions Workflow
 
-The `test-and-coverage.yml` workflow:
+The `frontend-tests.yml` workflow:
 1. Runs tests with coverage collection
-2. Checks overall coverage meets 40% threshold
+2. Checks overall coverage meets 60% threshold
 3. For PRs: Analyzes differential coverage of new code (must be ≥85%)
 4. Posts coverage summary as PR comment
 5. Uploads coverage reports as artifacts
@@ -57,7 +57,7 @@ To test coverage locally:
 cd frontend
 npm run test:coverage
 
-# The command will fail if coverage is below 40%
+# The command will fail if coverage is below 60%
 ```
 
 ## Coverage Reports
@@ -87,7 +87,7 @@ If you see "No coverage data available" in the workflow:
 
 ### Coverage Below Threshold
 
-If coverage fails due to being below 40%:
+If coverage fails due to being below 60%:
 1. Add more tests to increase coverage
 2. Focus on untested files shown in the coverage report
 3. Use `npm run test:coverage` locally to see detailed coverage information
