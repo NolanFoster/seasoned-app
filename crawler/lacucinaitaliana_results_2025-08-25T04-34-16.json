@@ -1,0 +1,237 @@
+{
+  "metadata": {
+    "crawler": "La Cucina Italiana Crawler (Node.js)",
+    "timestamp": "2025-08-25T04:34:16.293Z",
+    "baseUrl": "https://www.lacucinaitaliana.com",
+    "totalDiscovered": 31,
+    "totalScraped": 31,
+    "successful": 0,
+    "failed": 31
+  },
+  "results": [
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/italian-food",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/italian-food/menu",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/italian-food/italian-dishes",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/italian-food/how-to-cook",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/italian-food/hacks",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/trends/healthy-food",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pasta",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pizza",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/risotto",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/appetizers",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/main-course",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/sides-and-vegetables",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/cakes-and-desserts",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/1",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/2",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/3",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/4",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/5",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/6",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/7",
+      "error": "No recipe data returned"
+    },
+    {
+      "success": false,
+      "url": "https://www.lacucinaitaliana.com/recipes/pag/331",
+      "error": "No recipe data returned"
+    }
+  ],
+  "urls": {
+    "discovered": [
+      "https://www.lacucinaitaliana.com/italian-food",
+      "https://www.lacucinaitaliana.com/recipes",
+      "https://www.lacucinaitaliana.com/italian-food/menu",
+      "https://www.lacucinaitaliana.com/italian-food/italian-dishes",
+      "https://www.lacucinaitaliana.com/italian-food/how-to-cook",
+      "https://www.lacucinaitaliana.com/italian-food/hacks",
+      "https://www.lacucinaitaliana.com/trends/healthy-food",
+      "https://www.lacucinaitaliana.com/recipes/pasta",
+      "https://www.lacucinaitaliana.com/recipes/pizza",
+      "https://www.lacucinaitaliana.com/recipes/risotto",
+      "https://www.lacucinaitaliana.com/recipes/appetizers",
+      "https://www.lacucinaitaliana.com/recipes/main-course",
+      "https://www.lacucinaitaliana.com/recipes/sides-and-vegetables",
+      "https://www.lacucinaitaliana.com/recipes/cakes-and-desserts",
+      "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+      "https://www.lacucinaitaliana.com/recipes/pag/1",
+      "https://www.lacucinaitaliana.com/recipes/pag/2",
+      "https://www.lacucinaitaliana.com/recipes/pag/3",
+      "https://www.lacucinaitaliana.com/recipes/pag/4",
+      "https://www.lacucinaitaliana.com/recipes/pag/5",
+      "https://www.lacucinaitaliana.com/recipes/pag/6",
+      "https://www.lacucinaitaliana.com/recipes/pag/7",
+      "https://www.lacucinaitaliana.com/recipes/pag/331"
+    ],
+    "successful": [],
+    "failed": [
+      "https://www.lacucinaitaliana.com/italian-food",
+      "https://www.lacucinaitaliana.com/recipes",
+      "https://www.lacucinaitaliana.com/italian-food/menu",
+      "https://www.lacucinaitaliana.com/italian-food/italian-dishes",
+      "https://www.lacucinaitaliana.com/italian-food/how-to-cook",
+      "https://www.lacucinaitaliana.com/italian-food/hacks",
+      "https://www.lacucinaitaliana.com/trends/healthy-food",
+      "https://www.lacucinaitaliana.com/recipes/pasta",
+      "https://www.lacucinaitaliana.com/recipes/pizza",
+      "https://www.lacucinaitaliana.com/recipes/risotto",
+      "https://www.lacucinaitaliana.com/recipes/appetizers",
+      "https://www.lacucinaitaliana.com/recipes/main-course",
+      "https://www.lacucinaitaliana.com/recipes/sides-and-vegetables",
+      "https://www.lacucinaitaliana.com/recipes/cakes-and-desserts",
+      "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna",
+      "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds",
+      "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich",
+      "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce",
+      "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup",
+      "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto",
+      "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies",
+      "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce",
+      "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade",
+      "https://www.lacucinaitaliana.com/recipes/pag/1",
+      "https://www.lacucinaitaliana.com/recipes/pag/2",
+      "https://www.lacucinaitaliana.com/recipes/pag/3",
+      "https://www.lacucinaitaliana.com/recipes/pag/4",
+      "https://www.lacucinaitaliana.com/recipes/pag/5",
+      "https://www.lacucinaitaliana.com/recipes/pag/6",
+      "https://www.lacucinaitaliana.com/recipes/pag/7",
+      "https://www.lacucinaitaliana.com/recipes/pag/331"
+    ]
+  }
+}

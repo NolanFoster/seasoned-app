@@ -1,0 +1,202 @@
+{
+  "timestamp": "2025-08-25T05:10:21.812Z",
+  "totalProcessed": 48,
+  "successfullySaved": 48,
+  "failed": 0,
+  "successRate": "100.0%",
+  "savedRecipes": [
+    {
+      "name": "Casarecce Pasta With Broccoli and Tuna",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/caserecce-with-broccoli-and-tuna"
+    },
+    {
+      "name": "Ravioli with Rocket, Artichokes and Almonds",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/ravioli-rocket-artichokes-and-almonds"
+    },
+    {
+      "name": "Mini Salmon Pandoro Club Sandwich",
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/mini-salmon-pandoro-club-sandwich"
+    },
+    {
+      "name": "Mini Pear Panettones with Mulled Wine Sauce",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mini-pear-panettones-with-mulled-wine-sauce"
+    },
+    {
+      "name": "Bolognese-Style Soup",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/bolognese-style-soup"
+    },
+    {
+      "name": "Homemade Pasta With Ligurian Pesto",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-pasta-with-ligurian-pesto"
+    },
+    {
+      "name": "Tortiglioni With Anchovies",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/tortiglioni-with-anchovies"
+    },
+    {
+      "name": "Penne With Mozzarella, Red Peppers and Capers",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/smooth-penne-spicy-sauce"
+    },
+    {
+      "name": "Farfalle With Almonds and Olive Tapenade",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/farfalle-with-almonds-and-olive-tapenade"
+    },
+    {
+      "name": "Anchovy Pie",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/anchovy-pie"
+    },
+    {
+      "name": "Mostaccioli Cookies from Molise",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mostaccioli-cookies-from-molise"
+    },
+    {
+      "name": "Cassata",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/cassata"
+    },
+    {
+      "name": "Polenta Crostini With Tuna",
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/polenta-crostini-with-tuna"
+    },
+    {
+      "name": "Spaghettoni Profumati (Fragrant Spaghetti)",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/spaghettoni-profumati-fragrant-spaghetti"
+    },
+    {
+      "name": "Mandarin Olive Oil Cake",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/mandarin-olive-oil-cake"
+    },
+    {
+      "name": "Olive and Caper Bread",
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/olive-and-caper-bread"
+    },
+    {
+      "name": "Cavatelli with Vedovo Sauce",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/cavatelli-with-vedovo-sauce"
+    },
+    {
+      "name": "Pumpkin Risotto with Capers and Grapefruit",
+      "url": "https://www.lacucinaitaliana.com/recipe/risotto/pumpkin-risotto-with-capers-and-grapefruit"
+    },
+    {
+      "name": "Orange Turkey with Spinach and Almonds",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/orange-turkey-with-spinach-and-almonds"
+    },
+    {
+      "name": "Spaghetti With Seafood Sauce and Crispy Thyme Bread Crumbs",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/thick-spaghetti-with-seafood-sauce-and-crispy-thyme-bread-crumbs"
+    },
+    {
+      "name": "Baked Gorgonzola Ravioli",
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/baked-gorgonzola-ravioli"
+    },
+    {
+      "name": "Pizzette della Nonna Rosita",
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/pizzette-della-nonna-rosita"
+    },
+    {
+      "name": "Carrot Salad with Fresh Cilantro",
+      "url": "https://www.lacucinaitaliana.com/recipe/sides-and-vegetables/carrot-salad-with-fresh-cilantro"
+    },
+    {
+      "name": "Timbales With Sausage",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/timbales-with-sausage"
+    },
+    {
+      "name": "Simply Delicious Soup with Clam, Mushroom and Turnip Greens",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/simply-delicious-soup-clam-mushroom-and-turnip-greens"
+    },
+    {
+      "name": "Ricotta Cheese Tortelloni With Butter and Sage",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/homemade-ricotta-cheese-tortelloni-butter-and-sage"
+    },
+    {
+      "name": "Cacio e Pepe Spaghetti With Mullet Roe",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/spaghetti-cacio-e-pepe-with-mullet-roe"
+    },
+    {
+      "name": "Polenta with Mushroom Ragù",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/polenta-mushroom-ragu"
+    },
+    {
+      "name": "Bucatini in Spicy Sauce",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/bucatini-in-spicy-sauce"
+    },
+    {
+      "name": "Chicken and Spinach Lasagna",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/chicken-and-spinach-lasagna"
+    },
+    {
+      "name": "Ginger Risotto with Herb Oil",
+      "url": "https://www.lacucinaitaliana.com/recipe/risotto/ginger-risotto-with-herb-oil"
+    },
+    {
+      "name": "Fusilli With Chili Pepper, Ricotta, and Anchovies",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/fusilli-with-chili-pepper-ricotta-and-anchovies"
+    },
+    {
+      "name": "Kale chips with sesame seeds and goat cheese  ",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/kale-chips-sesame-seeds-and-goat-cheese"
+    },
+    {
+      "name": "Sea Bass Tortelli in Fish Broth",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/sea-bass-tortelli-in-fish-broth"
+    },
+    {
+      "name": "Focaccia",
+      "url": "https://www.lacucinaitaliana.com/recipe/pizza/focaccia"
+    },
+    {
+      "name": "Macaroni Risotto With Carrots and Blueberries",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/macaroni-risotto-with-carrots-and-blueberries"
+    },
+    {
+      "name": "Caciocavallo Cheese Bites",
+      "url": "https://www.lacucinaitaliana.com/recipe/appetizers/stuffed-caciocavallo-cheese"
+    },
+    {
+      "name": "Turkey Braised in Apple Juice",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/turkey-braised-in-apple-juice"
+    },
+    {
+      "name": "Beef and Sausage Meatballs",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/rustic-beef-and-sausage-meatballs"
+    },
+    {
+      "name": "Cake with Oil, Lentils and Nuts",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/cake-with-oil-lentils-and-nuts"
+    },
+    {
+      "name": "Fried Pipe Pasta Cubes",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/fried-pipe-pasta-cubes"
+    },
+    {
+      "name": "Caramelle with Mortadella and Pumpkin Velouté",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/caramelle-with-mortadella-and-pumpkin-veloute"
+    },
+    {
+      "name": "Pasta with Squash, Sausage and Lettuce Cream",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/calamarata-with-pumpkin-sausage-and-lettuce-cream"
+    },
+    {
+      "name": "Sweet Penne and Almond Milk Soup",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/sweet-penne-and-almond-milk-soup"
+    },
+    {
+      "name": "Bread and chicory",
+      "url": "https://www.lacucinaitaliana.com/recipe/main-course/bread-and-chicory"
+    },
+    {
+      "name": "Spaghetti all'Arrabbiata (Spicy Spaghetti)",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/spaghetti-allarrabbiata-spicy-spaghetti"
+    },
+    {
+      "name": "Artusi’s Italian Trifle",
+      "url": "https://www.lacucinaitaliana.com/recipe/cakes-and-desserts/artusis-italian-trifle"
+    },
+    {
+      "name": "Pumpkin Ravioli",
+      "url": "https://www.lacucinaitaliana.com/recipe/pasta/pumpkin-ravioli"
+    }
+  ],
+  "failedRecipes": []
+}
