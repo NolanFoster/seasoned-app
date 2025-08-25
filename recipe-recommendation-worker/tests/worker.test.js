@@ -75,15 +75,12 @@ describe('Recipe Recommendation Worker', () => {
       
       Object.values(recs.recommendations).forEach(recipes => {
         recipes.forEach(recipe => {
-          // Check for JSON-LD Recipe properties
-          expect(recipe).toHaveProperty('@context');
-          expect(recipe).toHaveProperty('@type');
-          expect(recipe).toHaveProperty('@id');
-          expect(recipe).toHaveProperty('identifier');
+          expect(recipe).toHaveProperty('id');
           expect(recipe).toHaveProperty('name');
           expect(recipe).toHaveProperty('description');
-          expect(recipe).toHaveProperty('recipeIngredient');
-          expect(recipe).toHaveProperty('recipeInstructions');
+          expect(recipe).toHaveProperty('ingredients');
+          expect(recipe).toHaveProperty('instructions');
+          expect(recipe).toHaveProperty('type');
           expect(recipe).toHaveProperty('source');
           expect(recipe).toHaveProperty('fallback');
           expect(recipe.fallback).toBe(true);
@@ -244,11 +241,7 @@ describe('Recipe Recommendation Worker', () => {
       Object.values(enhanced).forEach(recipes => {
         expect(recipes.length).toBeLessThanOrEqual(2);
         recipes.forEach(recipe => {
-          // Check for JSON-LD Recipe properties
-          expect(recipe).toHaveProperty('@context');
-          expect(recipe).toHaveProperty('@type');
-          expect(recipe).toHaveProperty('@id');
-          expect(recipe).toHaveProperty('identifier');
+          expect(recipe).toHaveProperty('id');
           expect(recipe).toHaveProperty('name');
           expect(recipe).toHaveProperty('fallback');
           expect(recipe.fallback).toBe(true);
@@ -277,11 +270,7 @@ describe('Recipe Recommendation Worker', () => {
       
       enhanced['Test Category'].forEach(recipe => {
         expect(recipe.fallback).toBe(true);
-        // Check for JSON-LD Recipe properties instead of old type property
-        expect(recipe).toHaveProperty('@context');
-        expect(recipe).toHaveProperty('@type');
-        expect(recipe).toHaveProperty('@id');
-        expect(recipe).toHaveProperty('identifier');
+        expect(recipe.type).toBe('dish_suggestion');
       });
     });
   });
@@ -317,10 +306,10 @@ describe('Recipe Recommendation Worker', () => {
       
       expect(recipes).toBeDefined();
       expect(recipes.length).toBe(1);
-      expect(recipes[0].identifier).toBe('recipe1');
+      expect(recipes[0].id).toBe('recipe1');
       expect(recipes[0].name).toBe('Test Recipe 1');
       expect(recipes[0].source).toBe('search_database');
-      expect(recipes[0].fallback).toBe(false);
+      expect(recipes[0].fallback).toBeUndefined();
     });
 
     it('should fall back to recipe save worker if search database fails', async () => {
@@ -356,7 +345,7 @@ describe('Recipe Recommendation Worker', () => {
       
       expect(recipes).toBeDefined();
       expect(recipes.length).toBe(1);
-      expect(recipes[0].identifier).toBe('recipe2');
+      expect(recipes[0].id).toBe('recipe2');
       expect(recipes[0].name).toBe('Test Recipe 2');
       expect(recipes[0].source).toBe('recipe_save_worker');
     });
@@ -382,11 +371,7 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes).toBeDefined();
       expect(recipes.length).toBe(2); // Limited to 2
       expect(recipes[0].fallback).toBe(true);
-      // Check for JSON-LD Recipe properties instead of old type property
-      expect(recipes[0]).toHaveProperty('@context');
-      expect(recipes[0]).toHaveProperty('@type');
-      expect(recipes[0]).toHaveProperty('@id');
-      expect(recipes[0]).toHaveProperty('identifier');
+      expect(recipes[0].type).toBe('dish_suggestion');
       expect(recipes[0].source).toBe('ai_generated');
     });
 
