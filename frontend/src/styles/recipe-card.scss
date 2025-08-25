@@ -689,6 +689,33 @@
   }
 }
 
+/* AI Generated Recipe Indicator */
+.ai-generated-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.ai-generated-indicator:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.ai-generated-text {
+  color: white;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 /* Dark mode overrides for recipe cards */
 @media (prefers-color-scheme: dark) {
   .recipe-card {
@@ -763,6 +790,21 @@
   .recipe-video-link:hover {
     background: rgba(231, 76, 60, 0.25);
     border-color: rgba(231, 76, 60, 0.5);
+  }
+  
+  /* Dark mode AI generated indicator */
+  .ai-generated-indicator {
+    background: linear-gradient(135deg, #8e9aaf 0%, #a8a4a6 100%);
+    box-shadow: 0 2px 8px rgba(142, 154, 175, 0.4);
+  }
+  
+  .ai-generated-indicator:hover {
+    box-shadow: 0 4px 12px rgba(142, 154, 175, 0.5);
+  }
+  
+  .ai-generated-text {
+    color: #2c3e50;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
   }
   
   /* Dark mode carousel navigation */
