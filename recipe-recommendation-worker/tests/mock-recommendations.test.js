@@ -413,14 +413,16 @@ describe('Mock Recommendations Comprehensive Tests', () => {
         expect(items.length).toBeGreaterThan(0);
         expect(category.length).toBeGreaterThan(0);
         
-        // Each item should be a recipe object
+        // Each item should be a JSON-LD Recipe object
         items.forEach(item => {
-          expect(item).toHaveProperty('id');
+          expect(item).toHaveProperty('@context');
+          expect(item).toHaveProperty('@type');
+          expect(item).toHaveProperty('@id');
+          expect(item).toHaveProperty('identifier');
           expect(item).toHaveProperty('name');
           expect(item).toHaveProperty('description');
-          expect(item).toHaveProperty('ingredients');
-          expect(item).toHaveProperty('instructions');
-          expect(item).toHaveProperty('type');
+          expect(item).toHaveProperty('recipeIngredient');
+          expect(item).toHaveProperty('recipeInstructions');
           expect(item).toHaveProperty('source');
           expect(item).toHaveProperty('fallback');
           expect(item.fallback).toBe(true);
