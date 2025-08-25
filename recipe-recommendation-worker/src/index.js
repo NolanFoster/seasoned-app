@@ -858,16 +858,25 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
   try {
     // Try to search for recipes using the search database if available
     if (env.SEARCH_DB_URL) {
-      log('debug', 'Searching for recipes using search database', {
+      // Search for recipes using the category name and dish names
+      // Combine all tags into a single string for smart-search
+      const allTags = [categoryName, ...dishNames].join(' ');
+      
+      log('debug', 'Searching for recipes using smart-search database', {
         requestId,
         category: categoryName,
-        searchTerms: dishNames.slice(0, 3).join(', '), // Use first 3 dish names for search
+        searchTerms: allTags, // Use all tags for smart-search
         limit
       });
-
-      // Search for recipes using the category name and dish names
-      const searchTerms = [categoryName, ...dishNames.slice(0, 3)].join(' ');
-      const searchUrl = `${env.SEARCH_DB_URL}/api/search?q=${encodeURIComponent(searchTerms)}&type=RECIPE&limit=${limit}`;
+      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(allTags)}&type=RECIPE&limit=${limit}`;
+      
+      log('debug', 'Smart-search query details', {
+        requestId,
+        category: categoryName,
+        dishCount: dishNames.length,
+        allTags: allTags,
+        searchUrl: searchUrl
+      });
       
       const response = await fetch(searchUrl, {
         method: 'GET',
@@ -880,8 +889,8 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
       if (response.ok) {
         const searchResults = await response.json();
         
-        if (searchResults.nodes && searchResults.nodes.length > 0) {
-          const recipes = searchResults.nodes.slice(0, limit).map(node => ({
+        if (searchResults.results && searchResults.results.length > 0) {
+          const recipes = searchResults.results.slice(0, limit).map(node => ({
             id: node.id,
             name: node.properties.name || 'Unknown Recipe',
             description: node.properties.description || '',
@@ -890,19 +899,26 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
             image_url: node.properties.image_url || null,
             source_url: node.properties.source_url || null,
             type: 'recipe',
-            source: 'search_database'
+            source: 'smart_search_database'
           }));
           
           const duration = Date.now() - startTime;
-          metrics.timing('recipe_search_duration', duration, { source: 'search_database' });
-          metrics.increment('recipes_found_via_search', recipes.length);
+          metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
+          metrics.increment('recipes_found_via_smart_search', recipes.length);
+          metrics.increment(`smart_search_strategy_${searchResults.strategy || 'unknown'}`, 1);
+          if (searchResults.similarityScore) {
+            metrics.gauge('smart_search_similarity_score', searchResults.similarityScore);
+          }
           
-          log('info', 'Recipes found via search database', {
+          log('info', 'Recipes found via smart-search database', {
             requestId,
             category: categoryName,
             found: recipes.length,
             requested: limit,
-            duration: `${duration}ms`
+            duration: `${duration}ms`,
+            source: 'smart_search_database',
+            strategy: searchResults.strategy || 'unknown',
+            similarityScore: searchResults.similarityScore || 0
           });
           
           return recipes;

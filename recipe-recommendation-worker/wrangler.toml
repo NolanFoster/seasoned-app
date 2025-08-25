@@ -22,10 +22,10 @@ RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.production]
 name = "recipe-recommendation-worker"
-vars = { 
-  SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev",
-  RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
-}
+[env.production.vars]
+SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
+
 
 [env.production.ai]
 binding = "AI"
@@ -36,10 +36,10 @@ dataset = "recipe_recommendations_metrics_prod"
 
 [env.preview]
 name = "preview-recipe-recommendation-worker"
-vars = { 
-  SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev",
-  RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
-}
+[env.preview.vars]
+SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
+
 
 [env.preview.ai]
 binding = "AI"
@@ -51,10 +51,9 @@ dataset = "recipe_recommendations_metrics_preview"
 # Staging environment
 [env.staging]
 name = "staging-recipe-recommendation-worker"
-vars = { 
-  SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev",
-  RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
-}
+[env.staging.vars]
+SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
+RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.staging.ai]
 binding = "AI"

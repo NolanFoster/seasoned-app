@@ -3,6 +3,21 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock shared utilities before importing the main module
+vi.mock('../../shared/utility-functions.js', () => ({
+  log: vi.fn(),
+  generateRequestId: vi.fn(() => 'test-request-id')
+}));
+
+vi.mock('../../shared/metrics-collector.js', () => ({
+  MetricsCollector: vi.fn().mockImplementation(() => ({
+    timing: vi.fn(),
+    increment: vi.fn(),
+    gauge: vi.fn()
+  }))
+}));
+
 import { 
   getRecipeRecommendations, 
   getSeason, 
@@ -276,9 +291,9 @@ describe('Recipe Recommendation Worker', () => {
   });
 
   describe('searchRecipeByCategory', () => {
-    it('should search for recipes using search database', async () => {
+    it('should search for recipes using smart-search database', async () => {
       const mockSearchResponse = {
-        nodes: [
+        results: [
           {
             id: 'recipe1',
             properties: {
@@ -288,7 +303,9 @@ describe('Recipe Recommendation Worker', () => {
               instructions: ['step1', 'step2']
             }
           }
-        ]
+        ],
+        strategy: 'original',
+        similarityScore: 1.0
       };
       
       global.fetch.mockResolvedValueOnce({
@@ -298,8 +315,8 @@ describe('Recipe Recommendation Worker', () => {
       
       const recipes = await searchRecipeByCategory(
         'Test Category', 
-        ['dish1', 'dish2'], 
-        2, 
+        ['dish1'], 
+        1, 
         mockEnv, 
         'test-123'
       );
@@ -308,8 +325,20 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes.length).toBe(1);
       expect(recipes[0].id).toBe('recipe1');
       expect(recipes[0].name).toBe('Test Recipe 1');
-      expect(recipes[0].source).toBe('search_database');
+      expect(recipes[0].source).toBe('smart_search_database');
       expect(recipes[0].fallback).toBeUndefined();
+      
+      // Verify the smart-search endpoint was called
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/smart-search'),
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Request-ID': 'test-123'
+          })
+        })
+      );
     });
 
     it('should fall back to recipe save worker if search database fails', async () => {
@@ -337,8 +366,8 @@ describe('Recipe Recommendation Worker', () => {
       
       const recipes = await searchRecipeByCategory(
         'Test Category', 
-        ['dish1', 'dish2'], 
-        2, 
+        ['dish1'], // Using only 1 dish to match expected result
+        1, 
         mockEnv, 
         'test-123'
       );
