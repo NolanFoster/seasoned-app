@@ -50,15 +50,29 @@
   color: white;
 }
 
-.timer-button-inline:hover {
+.timer-button-inline:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
-.timer-button-inline:active {
+.timer-button-inline:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timer-button-disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  transform: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.timer-button-disabled:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .timer-icon-inline {
@@ -66,6 +80,144 @@
   height: 16px;
   filter: brightness(0) invert(1); /* Make the icon white */
   display: block;
+}
+
+/* Floating Timer Styles */
+.floating-timer {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: floating-timer-slide-up 0.3s ease-out;
+}
+
+@keyframes floating-timer-slide-up {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.floating-timer-content {
+  padding: 20px;
+  text-align: center;
+}
+
+.floating-timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.floating-timer-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+  text-align: left;
+}
+
+.floating-timer-dismiss {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.floating-timer-dismiss:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.floating-timer-display {
+  margin-bottom: 20px;
+}
+
+.floating-timer-time {
+  font-size: 48px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #333;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.floating-timer-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.floating-timer-control-btn,
+.floating-timer-stop-btn {
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.floating-timer-control-btn {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.floating-timer-control-btn:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.floating-timer-control-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.floating-timer-stop-btn {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.floating-timer-stop-btn:hover {
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+}
+
+.floating-timer-stop-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
 }
 
 /* Active Timer Styles */
@@ -182,6 +334,32 @@
     height: 20px;
     font-size: 10px;
   }
+  
+  .floating-timer {
+    bottom: 10px;
+    width: 95%;
+    max-width: none;
+  }
+  
+  .floating-timer-content {
+    padding: 16px;
+  }
+  
+  .floating-timer-time {
+    font-size: 36px;
+  }
+  
+  .floating-timer-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .floating-timer-control-btn,
+  .floating-timer-stop-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    min-width: auto;
+  }
 }
 
 /* Tablet responsiveness */
@@ -214,5 +392,13 @@
     width: 22px;
     height: 22px;
     font-size: 11px;
+  }
+  
+  .floating-timer {
+    width: 92%;
+  }
+  
+  .floating-timer-time {
+    font-size: 42px;
   }
 }

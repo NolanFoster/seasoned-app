@@ -131,68 +131,37 @@ function App() {
       <div className="instruction-with-timers">
         <div className="instruction-text">{text}</div>
         <div className="timer-buttons-container">
-          {timers.map((timer, index) => {
-            const timerId = `timer-${timer.index}-${index}`;
-            const activeTimer = activeTimers.get(timerId);
-            
-            if (activeTimer) {
-              // Show active timer with countdown and controls
-              return (
-                <div key={timerId} className="timer-active">
-                  <div className="timer-display">
-                    <span className="timer-time">{formatTime(activeTimer.remainingSeconds)}</span>
-                    <button 
-                      className="timer-control-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (activeTimer.isRunning) {
-                          pauseTimer(timerId);
-                        } else {
-                          startTimer(timerId);
-                        }
-                      }}
-                      title={activeTimer.isRunning ? "Pause timer" : "Start timer"}
-                    >
-                      {activeTimer.isRunning ? "⏸️" : "▶️"}
-                    </button>
-                    <button 
-                      className="timer-stop-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        stopTimer(timerId);
-                      }}
-                      title="Stop timer"
-                    >
-                      ⏹️
-                    </button>
-                  </div>
-                </div>
-              );
-            } else {
-              // Show timer button
+                      {timers.map((timer, index) => {
+              const timerId = `timer-${timer.index}-${index}`;
+              const activeTimer = activeTimers.get(timerId);
+              const isFloatingActive = floatingTimer && floatingTimer.id === timerId;
+              
+              // Show disabled button when timer is active (either inline or floating)
               return (
                 <button 
                   key={timerId}
-                  className="timer-button-inline"
-                  title={`Set timer for ${timer.text}`}
+                  className={`timer-button-inline ${activeTimer ? 'timer-button-disabled' : ''}`}
+                  title={activeTimer ? `Timer active: ${activeTimer.timeText}` : `Set timer for ${timer.text}`}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    startNewTimer(timerId, timer.text);
+                    if (!activeTimer) {
+                      startNewTimer(timerId, timer.text);
+                    }
                   }}
+                  disabled={activeTimer}
                 >
                   <img 
                     src="/timer.svg" 
                     alt="Timer" 
                     className="timer-icon-inline"
                   />
-                  <span className="timer-text">Set timer for {timer.text}</span>
+                  <span className="timer-text">
+                    {activeTimer ? `Timer: ${formatTime(activeTimer.remainingSeconds)}` : `Set timer for ${timer.text}`}
+                  </span>
                 </button>
               );
-            }
-          })}
+            })}
         </div>
       </div>
     );
@@ -263,6 +232,7 @@ function App() {
     };
     
     setActiveTimers(prev => new Map(prev).set(timerId, newTimer));
+    setFloatingTimer(newTimer); // Set as floating timer
     
     // Start the interval
     const interval = setInterval(() => {
@@ -297,6 +267,7 @@ function App() {
               newTimers.delete(timerId);
               return newTimers;
             });
+            setFloatingTimer(null); // Clear floating timer
           }, 3000);
           
           return prev;
@@ -305,6 +276,12 @@ function App() {
         const updatedTimer = { ...currentTimer, remainingSeconds: remaining };
         const newTimers = new Map(prev);
         newTimers.set(timerId, updatedTimer);
+        
+        // Update floating timer if this is the active one
+        if (floatingTimer && floatingTimer.id === timerId) {
+          setFloatingTimer(updatedTimer);
+        }
+        
         return newTimers;
       });
     }, 1000);
@@ -395,6 +372,12 @@ function App() {
       const updatedTimer = { ...currentTimer, isRunning: false };
       const newTimers = new Map(prev);
       newTimers.set(timerId, updatedTimer);
+      
+      // Update floating timer if this is the active one
+      if (floatingTimer && floatingTimer.id === timerId) {
+        setFloatingTimer(updatedTimer);
+      }
+      
       return newTimers;
     });
   };
@@ -417,6 +400,11 @@ function App() {
       newTimers.delete(timerId);
       return newTimers;
     });
+    
+    // Clear floating timer if this was the active one
+    if (floatingTimer && floatingTimer.id === timerId) {
+      setFloatingTimer(null);
+    }
   };
 
   // Recipes are now populated by the recommendations system instead of direct API calls
@@ -467,6 +455,7 @@ function App() {
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
   const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
+  const [floatingTimer, setFloatingTimer] = useState(null); // Currently active floating timer
   
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
@@ -3455,6 +3444,49 @@ function App() {
           videoUrl={currentVideoUrl} 
           onClose={() => setShowVideoPopup(false)} 
         />
+      )}
+
+      {/* Floating Timer */}
+      {floatingTimer && (
+        <div className="floating-timer">
+          <div className="floating-timer-content">
+            <div className="floating-timer-header">
+              <span className="floating-timer-label">Timer: {floatingTimer.timeText}</span>
+              <button 
+                className="floating-timer-dismiss"
+                onClick={() => setFloatingTimer(null)}
+                title="Dismiss timer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="floating-timer-display">
+              <span className="floating-timer-time">{formatTime(floatingTimer.remainingSeconds)}</span>
+            </div>
+            <div className="floating-timer-controls">
+              <button 
+                className="floating-timer-control-btn"
+                onClick={() => {
+                  if (floatingTimer.isRunning) {
+                    pauseTimer(floatingTimer.id);
+                  } else {
+                    startTimer(floatingTimer.id);
+                  }
+                }}
+                title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
+              >
+                {floatingTimer.isRunning ? "⏸️ Pause" : "▶️ Start"}
+              </button>
+              <button 
+                className="floating-timer-stop-btn"
+                onClick={() => stopTimer(floatingTimer.id)}
+                title="Stop timer"
+              >
+                ⏹️ Stop
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       </div>
     </>
