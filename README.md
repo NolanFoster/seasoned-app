@@ -348,10 +348,12 @@ This project follows a strict testing and staging deployment workflow to ensure 
 
 #### Quick Start
 
-1. Install the pre-commit hook:
+1. **Install the pre-commit hook (REQUIRED):**
    ```bash
    ./.github/hooks/install-hooks.sh
    ```
+   
+   This hook automatically runs tests for all workers and frontend changes, preventing broken code from being committed.
 
 2. Make your changes and commit (tests run automatically)
 
@@ -361,6 +363,8 @@ This project follows a strict testing and staging deployment workflow to ensure 
    ```
 
 4. After staging validation, create a PR to main
+
+**⚠️ Important**: Never skip the pre-commit hook installation - it's your safety net!
 
 For detailed workflow rules, see `.cursorrules` in the project root.
 
