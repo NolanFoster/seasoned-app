@@ -64,20 +64,18 @@ describe('Embedding Handler', () => {
       list_complete: true
     });
 
-    // Mock recipe data retrieval
-    env.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-
-    // Mock vectorize query (existing embedding found)
+    // Mock vectorize query to return existing embeddings (bulk check)
     env.RECIPE_VECTORS.query.mockResolvedValue({
-      matches: [{ id: 'recipe-1' }]
+      matches: [{ id: 'recipe-1' }],
+      cursor: null
     });
 
     const response = await handleEmbedding(request, env, corsHeaders);
     const data = await parseResponse(response);
 
     expect(response.status).toBe(200);
+    expect(data.message).toBe('All recipes already have embeddings. No new recipes to process.');
     expect(data.processed).toBe(0);
-    expect(data.skipped).toBe(1);
     expect(env.AI.run).not.toHaveBeenCalled();
   });
 

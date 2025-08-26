@@ -108,6 +108,23 @@ export async function handleEmbedding(request, env, corsHeaders) {
       });
     }
 
+    // Filter out recipes that already have embeddings
+    const newRecipes = await filterNewRecipes(recipeKeys, env.RECIPE_VECTORS);
+
+    if (newRecipes.length === 0) {
+      return new Response(JSON.stringify({
+        message: 'All recipes already have embeddings. No new recipes to process.',
+        processed: 0,
+        duration: Date.now() - startTime
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
     // Process recipes in small batches to avoid subrequest limits
     // Cloudflare Workers limit: 50 subrequests per invocation
     const batchSize = isScheduled ? 3 : 2; // Much smaller batches to stay under limits
@@ -122,7 +139,7 @@ export async function handleEmbedding(request, env, corsHeaders) {
     let subrequestCount = 0;
     const maxSubrequests = isScheduled ? 40 : 20; // Conservative limits
 
-    for (let i = 0; i < recipeKeys.length; i += batchSize) {
+    for (let i = 0; i < newRecipes.length; i += batchSize) {
       // Check if we're approaching the subrequest limit
       if (subrequestCount >= maxSubrequests) {
         console.log(`Stopping processing to avoid subrequest limit. Processed ${results.processed} recipes.`);
@@ -133,8 +150,8 @@ export async function handleEmbedding(request, env, corsHeaders) {
         break;
       }
 
-      const batch = recipeKeys.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(recipeKeys.length / batchSize)} (subrequests: ${subrequestCount}/${maxSubrequests})`);
+      const batch = newRecipes.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(newRecipes.length / batchSize)} (subrequests: ${subrequestCount}/${maxSubrequests})`);
 
       const batchResults = await processBatch(batch, env);
       
@@ -147,7 +164,7 @@ export async function handleEmbedding(request, env, corsHeaders) {
       results.details.push(...batchResults.details);
 
       // Add a longer delay between batches to prevent overwhelming the system
-      if (i + batchSize < recipeKeys.length && subrequestCount < maxSubrequests) {
+      if (i + batchSize < newRecipes.length && subrequestCount < maxSubrequests) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
@@ -206,6 +223,69 @@ async function getRecipeKeys(kvStorage) {
 }
 
 /**
+ * Get all existing vector IDs from vectorize storage
+ */
+async function getExistingVectorIds(vectorStorage) {
+  try {
+    const existingIds = new Set();
+    
+    // Query with a dummy vector to get all records, using a large topK
+    // We'll use a zero vector since we just want to get the IDs
+    const dummyVector = new Array(384).fill(0); // Assuming 384-dimensional vectors
+    
+    // Get all existing vectors in batches
+    let cursor = null;
+    const batchSize = 1000;
+    
+    do {
+      const query = await vectorStorage.query(dummyVector, {
+        topK: batchSize,
+        cursor: cursor
+      });
+      
+      if (query.matches) {
+        query.matches.forEach(match => {
+          if (match.id) {
+            existingIds.add(match.id);
+          }
+        });
+      }
+      
+      cursor = query.cursor || null;
+    } while (cursor);
+    
+    console.log(`Found ${existingIds.size} existing vectors in database`);
+    return existingIds;
+  } catch (error) {
+    console.error('Error getting existing vector IDs:', error);
+    return new Set(); // Return empty set if we can't check
+  }
+}
+
+/**
+ * Filter out recipe keys that already have embeddings
+ */
+async function filterNewRecipes(recipeKeys, vectorStorage) {
+  try {
+    console.log(`Checking for existing embeddings among ${recipeKeys.length} recipes...`);
+    
+    // Get all existing vector IDs
+    const existingIds = await getExistingVectorIds(vectorStorage);
+    
+    // Filter out recipes that already have embeddings
+    const newRecipes = recipeKeys.filter(key => !existingIds.has(key));
+    
+    console.log(`Found ${recipeKeys.length - newRecipes.length} existing embeddings, ${newRecipes.length} new recipes to process`);
+    
+    return newRecipes;
+  } catch (error) {
+    console.error('Error filtering new recipes:', error);
+    // If we can't check existing embeddings, process all recipes
+    return recipeKeys;
+  }
+}
+
+/**
  * Process a batch of recipes for embedding generation
  */
 async function processBatch(recipeKeys, env) {
@@ -229,16 +309,6 @@ async function processBatch(recipeKeys, env) {
       }
 
       const recipeData = recipeResult.recipe;
-
-      // Check if embedding already exists in vectorize
-      const existingEmbedding = await checkExistingEmbedding(key, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count Vectorize query as subrequest
-      
-      if (existingEmbedding) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'already_exists' });
-        continue;
-      }
 
       // Generate embedding text from recipe data
       const embeddingText = generateEmbeddingText(recipeData);
@@ -274,23 +344,6 @@ async function processBatch(recipeKeys, env) {
   }
 
   return results;
-}
-
-/**
- * Check if embedding already exists for a recipe
- */
-async function checkExistingEmbedding(recipeId, vectorStorage) {
-  try {
-    // Query vectorize to see if this recipe already has an embedding
-    const query = await vectorStorage.query([0.0], {
-      filter: { id: recipeId },
-      topK: 1
-    });
-    return query.matches && query.matches.length > 0;
-  } catch (error) {
-    console.warn(`Could not check existing embedding for ${recipeId}:`, error);
-    return false; // Assume it doesn't exist if we can't check
-  }
 }
 
 /**
