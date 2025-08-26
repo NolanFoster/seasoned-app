@@ -30,6 +30,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
   const [userLocation, setUserLocation] = useState(null);
   const [externalRecipes, setExternalRecipes] = useState({});
   const [recipeCache, setRecipeCache] = useState(new Map()); // Cache for recipe searches
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [loadedCategories, setLoadedCategories] = useState(new Set()); // Track which categories have been loaded
   const [visibleCategories, setVisibleCategories] = useState(new Set()); // Track which categories are visible
 
@@ -144,6 +145,19 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       // Try to get user's location from browser if we don't have it cached
       if (!userLocation && navigator.geolocation) {
         try {
+          debugLogEmoji('📍', 'Requesting user location permission...');
+          
+          // Check current permission state
+          if (navigator.permissions) {
+            const permission = await navigator.permissions.query({name: 'geolocation'});
+            debugLogEmoji('🔒', 'Geolocation permission state:', permission.state);
+            
+            if (permission.state === 'denied') {
+              debugLogEmoji('❌', 'Geolocation permission denied by user');
+              throw new Error('Geolocation permission denied');
+            }
+          }
+          
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { 
               timeout: 10000,
@@ -188,9 +202,18 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
         } catch (geoError) {
           console.log('Could not get user location, will use no specific location');
           debugLogEmoji('❌', 'Geolocation failed:', geoError.message);
+          
+          // If it's a permission issue, show location prompt
+          if (geoError.code === geoError.PERMISSION_DENIED || geoError.message.includes('denied')) {
+            debugLogEmoji('💡', 'Location permission denied - showing manual location option');
+            setShowLocationPrompt(true);
+          }
+          
           // Don't set a default location - let the backend handle location-agnostic recommendations
           location = '';
         }
+      } else if (!navigator.geolocation) {
+        debugLogEmoji('🚫', 'Geolocation not supported by this browser');
       }
       
       // If we still don't have a location, use empty string for location-agnostic recommendations
@@ -328,6 +351,60 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     } catch (e) {
       console.error(`Error searching for category "${tags.join(' ')}":`, e);
       return [];
+    }
+  }
+
+  async function requestLocationManually() {
+    try {
+      debugLogEmoji('📍', 'Manual location request initiated');
+      setShowLocationPrompt(false);
+      
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 15000,
+          enableHighAccuracy: true,
+          maximumAge: 0 // Force fresh location request
+        });
+      });
+      
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      
+      // Try to get city name using reverse geocoding
+      try {
+        const geocodeResponse = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+        );
+        
+        if (geocodeResponse.ok) {
+          const geocodeData = await geocodeResponse.json();
+          const city = geocodeData.city || geocodeData.locality;
+          const region = geocodeData.principalSubdivision || geocodeData.countryName;
+          
+          let location;
+          if (city && region) {
+            location = `${city}, ${region}`;
+          } else if (city) {
+            location = city;
+          } else {
+            location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+          }
+          
+          setUserLocation(location);
+          debugLogEmoji('📍', 'Manual location set:', location);
+          
+          // Refresh recommendations with new location
+          fetchRecommendations();
+        }
+      } catch (geocodeError) {
+        console.log('Reverse geocoding failed, using coordinates');
+        const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+        setUserLocation(location);
+        fetchRecommendations();
+      }
+    } catch (error) {
+      debugLogEmoji('❌', 'Manual location request failed:', error.message);
+      setShowLocationPrompt(false);
     }
   }
 
@@ -477,6 +554,49 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     });
     return (
       <div className="recommendations-container">
+        {/* Location permission prompt */}
+        {showLocationPrompt && (
+          <div className="location-prompt" style={{
+            background: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '8px',
+            padding: '16px',
+            margin: '16px 0',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 12px 0' }}>
+              📍 Get location-based recipe recommendations
+            </p>
+            <button 
+              onClick={requestLocationManually}
+              style={{
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                marginRight: '8px'
+              }}
+            >
+              Enable Location
+            </button>
+            <button 
+              onClick={() => setShowLocationPrompt(false)}
+              style={{
+                background: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '8px 16px',
+                cursor: 'pointer'
+              }}
+            >
+              Skip
+            </button>
+          </div>
+        )}
+        
         {(() => {
           try {
             // Show loading state with placeholder categories
