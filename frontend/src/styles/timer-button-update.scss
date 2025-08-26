@@ -82,23 +82,23 @@
   display: block;
 }
 
-/* Timer FAB Styles */
-.timer-fab {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
+/* Header Timer FAB Styles */
+.header-timer-fab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  animation: timer-fab-slide-in 0.3s ease-out;
-  min-width: 200px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
+  animation: header-timer-slide-in 0.3s ease-out;
+  margin-right: 8px;
 }
 
-@keyframes timer-fab-slide-in {
+@keyframes header-timer-slide-in {
   from {
     transform: translateX(100%);
     opacity: 0;
@@ -109,48 +109,41 @@
   }
 }
 
-.timer-fab-content {
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.timer-fab-display {
+.header-timer-display {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
+  min-width: 60px;
 }
 
-.timer-fab-time {
-  font-size: 24px;
-  font-weight: 700;
+.header-timer-time {
+  font-size: 18px;
+  font-weight: 600;
   font-family: 'Courier New', monospace;
-  color: #333;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   line-height: 1;
 }
 
-.timer-fab-label {
-  font-size: 12px;
+.header-timer-label {
+  font-size: 10px;
   font-weight: 500;
-  color: #666;
-  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 1px;
   text-align: center;
 }
 
-.timer-fab-controls {
+.header-timer-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
-.timer-fab-control-btn,
-.timer-fab-stop-btn,
-.timer-fab-dismiss {
-  width: 40px;
-  height: 40px;
+.header-timer-control-btn,
+.header-timer-stop-btn,
+.header-timer-dismiss {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -158,57 +151,50 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-}
-
-.timer-fab-control-btn {
-  background: linear-gradient(135deg, #4CAF50, #45a049);
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.2);
   color: white;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.timer-fab-control-btn:hover {
-  background: linear-gradient(135deg, #45a049, #3d8b40);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
-}
-
-.timer-fab-control-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 1px 4px rgba(76, 175, 80, 0.3);
-}
-
-.timer-fab-stop-btn {
-  background: linear-gradient(135deg, #f44336, #d32f2f);
-  color: white;
-  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
-}
-
-.timer-fab-stop-btn:hover {
-  background: linear-gradient(135deg, #d32f2f, #c62828);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
-}
-
-.timer-fab-stop-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 1px 4px rgba(244, 67, 54, 0.3);
-}
-
-.timer-fab-dismiss {
-  background: rgba(0, 0, 0, 0.1);
-  color: #666;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.timer-fab-dismiss:hover {
-  background: rgba(0, 0, 0, 0.2);
-  color: #333;
+.header-timer-control-btn:hover,
+.header-timer-stop-btn:hover,
+.header-timer-dismiss:hover {
+  background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
 }
 
-.timer-fab-dismiss:active {
+.header-timer-control-btn:active,
+.header-timer-stop-btn:active,
+.header-timer-dismiss:active {
   transform: scale(0.95);
+}
+
+.header-timer-stop-btn {
+  background: rgba(255, 100, 100, 0.3);
+}
+
+.header-timer-stop-btn:hover {
+  background: rgba(255, 100, 100, 0.4);
+}
+
+.header-timer-dismiss {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.header-timer-dismiss:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Nutrition button slide animation */
+.nutrition-slide-right {
+  transform: translateX(120px);
+  transition: transform 0.3s ease-out;
+}
+
+.fab-nutrition-trigger {
+  transition: transform 0.3s ease-out;
 }
 
 /* Active Timer Styles */
@@ -326,31 +312,38 @@
     font-size: 10px;
   }
   
-  .timer-fab {
-    top: 10px;
-    right: 10px;
-    min-width: 180px;
-  }
-  
-  .timer-fab-content {
-    padding: 12px;
+  .header-timer-fab {
+    padding: 6px 10px;
     gap: 8px;
+    margin-right: 6px;
   }
   
-  .timer-fab-time {
-    font-size: 20px;
+  .header-timer-display {
+    min-width: 50px;
   }
   
-  .timer-fab-label {
-    font-size: 11px;
+  .header-timer-time {
+    font-size: 16px;
   }
   
-  .timer-fab-control-btn,
-  .timer-fab-stop-btn,
-  .timer-fab-dismiss {
-    width: 36px;
-    height: 36px;
-    font-size: 14px;
+  .header-timer-label {
+    font-size: 9px;
+  }
+  
+  .header-timer-controls {
+    gap: 4px;
+  }
+  
+  .header-timer-control-btn,
+  .header-timer-stop-btn,
+  .header-timer-dismiss {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .nutrition-slide-right {
+    transform: translateX(100px);
   }
 }
 
@@ -386,11 +379,16 @@
     font-size: 11px;
   }
   
-  .timer-fab {
-    min-width: 190px;
+  .header-timer-fab {
+    padding: 7px 11px;
+    gap: 10px;
   }
   
-  .timer-fab-time {
-    font-size: 22px;
+  .header-timer-time {
+    font-size: 17px;
+  }
+  
+  .nutrition-slide-right {
+    transform: translateX(110px);
   }
 }

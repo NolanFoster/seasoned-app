@@ -3122,10 +3122,49 @@ function App() {
               <span className="back-arrow">←</span>
             </button>
             
+            {/* Timer FAB - integrated into header */}
+            {floatingTimer && (
+              <div className="header-timer-fab">
+                <div className="header-timer-display">
+                  <span className="header-timer-time">{formatTime(floatingTimer.remainingSeconds)}</span>
+                  <span className="header-timer-label">{floatingTimer.timeText}</span>
+                </div>
+                <div className="header-timer-controls">
+                  <button 
+                    className="header-timer-control-btn"
+                    onClick={() => {
+                      if (floatingTimer.isRunning) {
+                        pauseTimer(floatingTimer.id);
+                      } else {
+                        startTimer(floatingTimer.id);
+                      }
+                    }}
+                    title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
+                  >
+                    {floatingTimer.isRunning ? "⏸️" : "▶️"}
+                  </button>
+                  <button 
+                    className="header-timer-stop-btn"
+                    onClick={() => stopTimer(floatingTimer.id)}
+                    title="Stop timer"
+                  >
+                    ⏹️
+                  </button>
+                  <button 
+                    className="header-timer-dismiss"
+                    onClick={() => setFloatingTimer(null)}
+                    title="Dismiss timer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {/* Nutrition FAB - only show if nutrition data exists */}
             {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
               <button 
-                className="fab-nutrition-trigger"
+                className={`fab-nutrition-trigger ${floatingTimer ? 'nutrition-slide-right' : ''}`}
                 onClick={() => setShowNutrition(!showNutrition)}
                 title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
               >
@@ -3446,46 +3485,7 @@ function App() {
         />
       )}
 
-      {/* Timer FAB */}
-      {floatingTimer && (
-        <div className="timer-fab">
-          <div className="timer-fab-content">
-            <div className="timer-fab-display">
-              <span className="timer-fab-time">{formatTime(floatingTimer.remainingSeconds)}</span>
-              <span className="timer-fab-label">{floatingTimer.timeText}</span>
-            </div>
-            <div className="timer-fab-controls">
-              <button 
-                className="timer-fab-control-btn"
-                onClick={() => {
-                  if (floatingTimer.isRunning) {
-                    pauseTimer(floatingTimer.id);
-                  } else {
-                    startTimer(floatingTimer.id);
-                  }
-                }}
-                title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
-              >
-                {floatingTimer.isRunning ? "⏸️" : "▶️"}
-              </button>
-              <button 
-                className="timer-fab-stop-btn"
-                onClick={() => stopTimer(floatingTimer.id)}
-                title="Stop timer"
-              >
-                ⏹️
-              </button>
-              <button 
-                className="timer-fab-dismiss"
-                onClick={() => setFloatingTimer(null)}
-                title="Dismiss timer"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
       </div>
     </>
   );
