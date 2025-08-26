@@ -10,16 +10,21 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --ext .js",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src tests",
     "type-check": "tsc --noEmit"
   },
-  "dependencies": {},
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",
+    "@eslint/js": "^9.0.0",
     "@vitest/coverage-v8": "^1.2.1",
+    "audit-ci": "^7.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0",
     "vitest": "^1.2.1",
-    "wrangler": "^3.24.0",
-    "eslint": "^8.0.0",
-    "typescript": "^5.0.0"
+    "vitest-environment-miniflare": "^2.14.4",
+    "wrangler": "^3.24.0"
   }
 }

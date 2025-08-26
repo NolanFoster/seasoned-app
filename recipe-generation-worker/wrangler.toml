@@ -1,19 +1,27 @@
+# Recipe Generation Worker Configuration
 name = "recipe-generation-worker"
 main = "src/index.js"
 compatibility_date = "2024-01-10"
 
-# Development settings
+# Default configuration
+[vars]
+ENVIRONMENT = "development"
+
+[observability]
+enabled = true
+
+# Preview environment (for PR previews)
 [env.preview]
-name = "preview-recipe-generation-worker"
+name = "recipe-generation-worker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
 
 [env.preview.observability]
 enabled = true
 
-# Staging settings
+# Staging environment
 [env.staging]
-name = "staging-recipe-generation-worker"
+name = "recipe-generation-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 
@@ -22,12 +30,9 @@ enabled = true
 
 # Production environment
 [env.production]
-name = "recipe-generation-worker-production"
+name = "recipe-generation-worker"
 [env.production.vars]
 ENVIRONMENT = "production"
 
 [env.production.observability]
-enabled = true
-
-[observability]
 enabled = true
