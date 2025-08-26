@@ -7,6 +7,21 @@ type: always
 
 # Testing and Deployment Workflow
 
+## Pre-commit Hook Setup (REQUIRED)
+**Before making any code changes, ensure the pre-commit hook is installed:**
+```bash
+# Copy the pre-commit hook to git hooks directory
+cp .github/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+The pre-commit hook automatically runs tests for:
+- Frontend changes (runs `npm test` in frontend/)
+- All worker changes (runs `npm test` in respective worker directories)
+- Shared utilities changes (runs `npm test` in shared/)
+
+**Never disable or skip the pre-commit hook - it's your safety net!**
+
 ## Always Test Before Committing
 - Run all relevant tests before committing any code changes
 - For frontend changes: Run `npm test` or `yarn test` in the frontend directory
@@ -33,6 +48,7 @@ When tests pass:
 
 ## Pre-commit Checklist
 Before any commit:
+- [ ] Pre-commit hook is installed and executable
 - [ ] All tests pass locally
 - [ ] Code follows project linting rules
 - [ ] No console.logs or debug statements in production code

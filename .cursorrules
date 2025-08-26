@@ -1,5 +1,14 @@
 # Cursor Rules
 
+## 🚨 CRITICAL: Pre-commit Hook Setup
+**Before making ANY code changes, you MUST install the pre-commit hook:**
+```bash
+cp .github/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+This hook automatically runs tests for all workers and frontend changes, preventing broken code from being committed.
+
 This project uses modular rules stored in `.cursor/rules/`. The following rules are automatically applied:
 
 ## Active Rules

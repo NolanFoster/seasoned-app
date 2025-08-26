@@ -12,7 +12,12 @@ if [ -f ".github/hooks/pre-commit" ]; then
     cp .github/hooks/pre-commit .git/hooks/pre-commit
     chmod +x .git/hooks/pre-commit
     echo "✅ Pre-commit hook installed successfully!"
-    echo "The hook will automatically run tests before each commit."
+    echo "The hook will automatically run tests for:"
+    echo "  - Frontend changes (runs npm test in frontend/)"
+    echo "  - All worker changes (runs npm test in respective worker directories)"
+    echo "  - Shared utilities changes (runs npm test in shared/)"
+    echo ""
+    echo "🚨 Never disable or skip the pre-commit hook - it's your safety net!"
 else
     echo "❌ Pre-commit hook file not found at .github/hooks/pre-commit"
     exit 1
