@@ -10,6 +10,15 @@ ENVIRONMENT = "development"
 [observability]
 enabled = true
 
+# AI binding for LLaMA model
+[ai]
+binding = "AI"
+
+# Vectorize binding for recipe embeddings
+[[vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
+
 # Preview environment (for PR previews)
 [env.preview]
 name = "recipe-generation-worker-preview"
@@ -18,6 +27,10 @@ ENVIRONMENT = "preview"
 
 [env.preview.observability]
 enabled = true
+
+[[env.preview.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
 
 [[env.preview.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -32,6 +45,13 @@ ENVIRONMENT = "staging"
 [env.staging.observability]
 enabled = true
 
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
+
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
@@ -45,7 +65,7 @@ ENVIRONMENT = "production"
 [env.production.observability]
 enabled = true
 
-[[vectorize]]
+[[env.production.vectorize]]
 binding = "RECIPE_VECTORS"
 index_name = "recipe-vectors"
 
