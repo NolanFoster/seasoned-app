@@ -1,4 +1,8 @@
 
+<!-- Mermaid diagrams are enabled in this README -->
+<!-- Enable Mermaid rendering in GitHub -->
+<!-- GitHub Mermaid Support: This README contains Mermaid diagrams that should render automatically -->
+
 # Seasoned
 
 A modern recipe management application with SQLite backend and image upload support, built with React frontend and Cloudflare Workers backend.
@@ -23,6 +27,8 @@ A modern recipe management application with SQLite backend and image upload supp
 - **KV Storage**: Cloudflare KV for recipe caching
 - **Shared Libraries**: Common utilities shared across workers
 - **Deployment**: Cloudflare Workers
+
+> **Note**: This README contains Mermaid diagrams that should render automatically in GitHub. If you're viewing this in a different environment, you may need to use a Mermaid-compatible viewer.
 
 ## Authentication System Architecture
 
@@ -144,8 +150,16 @@ graph LR
     J --> K
     
     style A fill:#ffebee
+    style B fill:#ffebee
+    style C fill:#ffebee
+    style D fill:#ffebee
     style E fill:#e8f5e8
+    style F fill:#e8f5e8
+    style G fill:#e8f5e8
+    style H fill:#e8f5e8
     style I fill:#e3f2fd
+    style J fill:#e3f2fd
+    style K fill:#e3f2fd
 ```
 
 ### Key Components
@@ -181,7 +195,7 @@ graph LR
 
 ```mermaid
 flowchart TD
-    A[User Request] --> B{Request Type?}
+    A[User Request] --> B{{Request Type?}}
     
     B -->|Generate OTP| C[Validate Email]
     B -->|Verify OTP| D[Retrieve OTP Hash]
@@ -192,14 +206,14 @@ flowchart TD
     G --> H[Send via SES]
     H --> I[Return Success]
     
-    D --> J{OTP Exists?}
+    D --> J{{OTP Exists?}}
     J -->|No| K[Return Error]
-    J -->|Yes| L{Expired?}
+    J -->|Yes| L{{Expired?}}
     L -->|Yes| M[Cleanup & Error]
-    L -->|No| N{Attempts Exceeded?}
+    L -->|No| N{{Attempts Exceeded?}}
     N -->|Yes| O[Return Rate Limited]
     N -->|No| P[Verify Hash]
-    P --> Q{Valid?}
+    P --> Q{{Valid?}}
     Q -->|No| R[Increment Attempts]
     Q -->|Yes| S[Delete OTP]
     S --> T[Call User Management Worker]
