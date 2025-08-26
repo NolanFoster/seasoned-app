@@ -3446,26 +3446,17 @@ function App() {
         />
       )}
 
-      {/* Floating Timer */}
+      {/* Timer FAB */}
       {floatingTimer && (
-        <div className="floating-timer">
-          <div className="floating-timer-content">
-            <div className="floating-timer-header">
-              <span className="floating-timer-label">Timer: {floatingTimer.timeText}</span>
-              <button 
-                className="floating-timer-dismiss"
-                onClick={() => setFloatingTimer(null)}
-                title="Dismiss timer"
-              >
-                ✕
-              </button>
+        <div className="timer-fab">
+          <div className="timer-fab-content">
+            <div className="timer-fab-display">
+              <span className="timer-fab-time">{formatTime(floatingTimer.remainingSeconds)}</span>
+              <span className="timer-fab-label">{floatingTimer.timeText}</span>
             </div>
-            <div className="floating-timer-display">
-              <span className="floating-timer-time">{formatTime(floatingTimer.remainingSeconds)}</span>
-            </div>
-            <div className="floating-timer-controls">
+            <div className="timer-fab-controls">
               <button 
-                className="floating-timer-control-btn"
+                className="timer-fab-control-btn"
                 onClick={() => {
                   if (floatingTimer.isRunning) {
                     pauseTimer(floatingTimer.id);
@@ -3475,14 +3466,21 @@ function App() {
                 }}
                 title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
               >
-                {floatingTimer.isRunning ? "⏸️ Pause" : "▶️ Start"}
+                {floatingTimer.isRunning ? "⏸️" : "▶️"}
               </button>
               <button 
-                className="floating-timer-stop-btn"
+                className="timer-fab-stop-btn"
                 onClick={() => stopTimer(floatingTimer.id)}
                 title="Stop timer"
               >
-                ⏹️ Stop
+                ⏹️
+              </button>
+              <button 
+                className="timer-fab-dismiss"
+                onClick={() => setFloatingTimer(null)}
+                title="Dismiss timer"
+              >
+                ✕
               </button>
             </div>
           </div>

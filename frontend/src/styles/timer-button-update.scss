@@ -82,142 +82,133 @@
   display: block;
 }
 
-/* Floating Timer Styles */
-.floating-timer {
+/* Timer FAB Styles */
+.timer-fab {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 20px;
+  right: 20px;
   z-index: 1000;
-  width: 90%;
-  max-width: 400px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  animation: floating-timer-slide-up 0.3s ease-out;
+  animation: timer-fab-slide-in 0.3s ease-out;
+  min-width: 200px;
 }
 
-@keyframes floating-timer-slide-up {
+@keyframes timer-fab-slide-in {
   from {
-    transform: translateX(-50%) translateY(100%);
+    transform: translateX(100%);
     opacity: 0;
   }
   to {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
 
-.floating-timer-content {
-  padding: 20px;
-  text-align: center;
-}
-
-.floating-timer-header {
+.timer-fab-content {
+  padding: 16px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 12px;
 }
 
-.floating-timer-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+.timer-fab-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex: 1;
-  text-align: left;
 }
 
-.floating-timer-dismiss {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #666;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.floating-timer-dismiss:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: #333;
-}
-
-.floating-timer-display {
-  margin-bottom: 20px;
-}
-
-.floating-timer-time {
-  font-size: 48px;
+.timer-fab-time {
+  font-size: 24px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
   color: #333;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  line-height: 1;
 }
 
-.floating-timer-controls {
+.timer-fab-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  margin-top: 2px;
+  text-align: center;
+}
+
+.timer-fab-controls {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 8px;
+  align-items: center;
 }
 
-.floating-timer-control-btn,
-.floating-timer-stop-btn {
-  padding: 12px 24px;
-  border-radius: 12px;
+.timer-fab-control-btn,
+.timer-fab-stop-btn,
+.timer-fab-dismiss {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  font-size: 16px;
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  font-size: 16px;
 }
 
-.floating-timer-control-btn {
+.timer-fab-control-btn {
   background: linear-gradient(135deg, #4CAF50, #45a049);
   color: white;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.floating-timer-control-btn:hover {
-  background: linear-gradient(135deg, #45a049, #3d8b40);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
-}
-
-.floating-timer-control-btn:active {
-  transform: translateY(0);
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
-.floating-timer-stop-btn {
+.timer-fab-control-btn:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.timer-fab-control-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 4px rgba(76, 175, 80, 0.3);
+}
+
+.timer-fab-stop-btn {
   background: linear-gradient(135deg, #f44336, #d32f2f);
   color: white;
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
-}
-
-.floating-timer-stop-btn:hover {
-  background: linear-gradient(135deg, #d32f2f, #c62828);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
-}
-
-.floating-timer-stop-btn:active {
-  transform: translateY(0);
   box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.timer-fab-stop-btn:hover {
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
+.timer-fab-stop-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 4px rgba(244, 67, 54, 0.3);
+}
+
+.timer-fab-dismiss {
+  background: rgba(0, 0, 0, 0.1);
+  color: #666;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timer-fab-dismiss:hover {
+  background: rgba(0, 0, 0, 0.2);
+  color: #333;
+  transform: scale(1.1);
+}
+
+.timer-fab-dismiss:active {
+  transform: scale(0.95);
 }
 
 /* Active Timer Styles */
@@ -335,30 +326,31 @@
     font-size: 10px;
   }
   
-  .floating-timer {
-    bottom: 10px;
-    width: 95%;
-    max-width: none;
+  .timer-fab {
+    top: 10px;
+    right: 10px;
+    min-width: 180px;
   }
   
-  .floating-timer-content {
-    padding: 16px;
-  }
-  
-  .floating-timer-time {
-    font-size: 36px;
-  }
-  
-  .floating-timer-controls {
-    flex-direction: column;
+  .timer-fab-content {
+    padding: 12px;
     gap: 8px;
   }
   
-  .floating-timer-control-btn,
-  .floating-timer-stop-btn {
-    padding: 10px 20px;
+  .timer-fab-time {
+    font-size: 20px;
+  }
+  
+  .timer-fab-label {
+    font-size: 11px;
+  }
+  
+  .timer-fab-control-btn,
+  .timer-fab-stop-btn,
+  .timer-fab-dismiss {
+    width: 36px;
+    height: 36px;
     font-size: 14px;
-    min-width: auto;
   }
 }
 
@@ -394,11 +386,11 @@
     font-size: 11px;
   }
   
-  .floating-timer {
-    width: 92%;
+  .timer-fab {
+    min-width: 190px;
   }
   
-  .floating-timer-time {
-    font-size: 42px;
+  .timer-fab-time {
+    font-size: 22px;
   }
 }
