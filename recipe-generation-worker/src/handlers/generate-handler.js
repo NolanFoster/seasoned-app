@@ -36,26 +36,29 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Check if we're in a local development environment without AI access
     if (!env.AI || !env.RECIPE_VECTORS) {
       console.log('Running in local dev mode - returning mock response');
+      const mockRecipe = {
+        name: `Mock Recipe for: ${requestBody.recipeName || requestBody.ingredients?.join(', ') || 'Unknown'}`,
+        description: 'This is a mock recipe generated for local testing',
+        ingredients: ['2 cups mock ingredient 1', '1 lb mock ingredient 2', '1 tbsp mock seasoning'],
+        instructions: ['1. Prepare mock ingredients', '2. Cook according to mock method', '3. Serve hot'],
+        prepTime: '15 minutes',
+        cookTime: '20 minutes',
+        totalTime: '35 minutes',
+        servings: requestBody.servings || '4',
+        difficulty: 'Easy',
+        cuisine: requestBody.cuisine || 'Mock Cuisine',
+        dietary: requestBody.dietary || [],
+        generatedAt: new Date().toISOString(),
+        sourceIngredients: requestBody.ingredients || [],
+        generationTime: 0,
+        similarRecipesFound: 0,
+        mockMode: true
+      };
+
       return new Response(JSON.stringify({
         success: true,
-        recipe: {
-          name: `Mock Recipe for: ${requestBody.recipeName || requestBody.ingredients?.join(', ') || 'Unknown'}`,
-          description: 'This is a mock recipe generated for local testing',
-          ingredients: ['2 cups mock ingredient 1', '1 lb mock ingredient 2', '1 tbsp mock seasoning'],
-          instructions: ['1. Prepare mock ingredients', '2. Cook according to mock method', '3. Serve hot'],
-          prepTime: '15 minutes',
-          cookTime: '20 minutes',
-          totalTime: '35 minutes',
-          servings: requestBody.servings || '4',
-          difficulty: 'Easy',
-          cuisine: requestBody.cuisine || 'Mock Cuisine',
-          dietary: requestBody.dietary || [],
-          generatedAt: new Date().toISOString(),
-          sourceIngredients: requestBody.ingredients || [],
-          generationTime: 0,
-          similarRecipesFound: 0,
-          mockMode: true
-        },
+        recipe: mockRecipe,
+        jsonLd: convertToJsonLd(mockRecipe),
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -72,6 +75,7 @@ export async function handleGenerate(request, env, corsHeaders) {
     return new Response(JSON.stringify({
       success: true,
       recipe: generatedRecipe,
+      jsonLd: convertToJsonLd(generatedRecipe),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -547,4 +551,121 @@ function extractTime(text) {
 function extractServings(text) {
   const servingMatch = text.match(/(\d+)/);
   return servingMatch ? servingMatch[1] : '';
+}
+
+/**
+ * Convert recipe object to valid JSON-LD format according to schema.org/Recipe
+ */
+function convertToJsonLd(recipe) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Recipe",
+    "name": recipe.name || "Generated Recipe",
+    "description": recipe.description || "",
+    "datePublished": recipe.generatedAt || new Date().toISOString(),
+    "author": {
+      "@type": "Organization",
+      "name": "AI Recipe Generator"
+    }
+  };
+
+  // Add ingredients
+  if (recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
+    jsonLd.recipeIngredient = recipe.ingredients.map(ingredient => {
+      // Clean up ingredient text
+      return ingredient.replace(/^\d+\.\s*/, '').trim();
+    });
+  }
+
+  // Add instructions
+  if (recipe.instructions && Array.isArray(recipe.instructions) && recipe.instructions.length > 0) {
+    jsonLd.recipeInstructions = recipe.instructions.map((instruction, index) => {
+      // Clean up instruction text and ensure proper format
+      const cleanInstruction = instruction.replace(/^\d+\.\s*/, '').trim();
+      return {
+        "@type": "HowToStep",
+        "position": index + 1,
+        "text": cleanInstruction
+      };
+    });
+  }
+
+  // Add timing information
+  if (recipe.prepTime) {
+    jsonLd.prepTime = `PT${parseTimeToISO(recipe.prepTime)}`;
+  }
+  if (recipe.cookTime) {
+    jsonLd.cookTime = `PT${parseTimeToISO(recipe.cookTime)}`;
+  }
+  if (recipe.totalTime) {
+    jsonLd.totalTime = `PT${parseTimeToISO(recipe.totalTime)}`;
+  }
+
+  // Add servings/yield
+  if (recipe.servings) {
+    jsonLd.recipeYield = recipe.servings.toString();
+  }
+
+  // Add cuisine and category
+  if (recipe.cuisine) {
+    jsonLd.recipeCuisine = recipe.cuisine;
+  }
+  if (recipe.difficulty) {
+    jsonLd.recipeCategory = recipe.difficulty;
+  }
+
+  // Add dietary information as keywords
+  if (recipe.dietary && Array.isArray(recipe.dietary) && recipe.dietary.length > 0) {
+    jsonLd.keywords = recipe.dietary.join(', ');
+  }
+
+  // Add source ingredients as additional context
+  if (recipe.sourceIngredients && Array.isArray(recipe.sourceIngredients) && recipe.sourceIngredients.length > 0) {
+    if (!jsonLd.keywords) {
+      jsonLd.keywords = '';
+    }
+    jsonLd.keywords += (jsonLd.keywords ? ', ' : '') + recipe.sourceIngredients.join(', ');
+  }
+
+  // Add generation metadata
+  if (recipe.generationTime) {
+    jsonLd.comment = `Generated in ${recipe.generationTime}ms using AI recipe generation`;
+  }
+
+  return jsonLd;
+}
+
+/**
+ * Parse time string to ISO 8601 duration format
+ * Converts "15 minutes", "1 hour", "1 hour 30 minutes" to "15M", "1H", "1H30M"
+ */
+function parseTimeToISO(timeString) {
+  if (!timeString) return "0M";
+  
+  const timeStr = timeString.toLowerCase().trim();
+  let hours = 0;
+  let minutes = 0;
+
+  // Extract hours
+  const hourMatch = timeStr.match(/(\d+)\s*hour/);
+  if (hourMatch) {
+    hours = parseInt(hourMatch[1]);
+  }
+
+  // Extract minutes
+  const minuteMatch = timeStr.match(/(\d+)\s*minute/);
+  if (minuteMatch) {
+    minutes = parseInt(minuteMatch[1]);
+  }
+
+  // Convert to ISO 8601 duration format
+  let result = "";
+  if (hours > 0) {
+    result += `${hours}H`;
+  }
+  if (minutes > 0) {
+    result += `${minutes}M`;
+  }
+
+  return result || "0M";
 }
