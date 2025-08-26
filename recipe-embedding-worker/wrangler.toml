@@ -1,0 +1,85 @@
+# Recipe Embedding Worker Configuration
+name = "recipe-embedding-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-10"
+
+# Default configuration
+[vars]
+ENVIRONMENT = "development"
+
+[observability]
+enabled = true
+
+# Scheduled events - run daily at 2 AM UTC
+[triggers]
+crons = ["0 2 * * *"]
+
+# AI binding for embeddings
+[ai]
+binding = "AI"
+
+# Preview environment (for PR previews)
+[env.preview]
+name = "recipe-embedding-worker-preview"
+[env.preview.vars]
+ENVIRONMENT = "preview"
+
+[env.preview.observability]
+enabled = true
+
+[env.preview.ai]
+binding = "AI"
+
+[[env.preview.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+
+[[env.preview.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors-384"
+
+# Staging environment
+[env.staging]
+name = "recipe-embedding-worker-staging"
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.staging.observability]
+enabled = true
+
+[env.staging.triggers]
+crons = ["0 2 * * *"]
+
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
+
+[[env.staging.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors-384"
+
+# Production environment
+[env.production]
+name = "recipe-embedding-worker"
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[env.production.observability]
+enabled = true
+
+[env.production.triggers]
+crons = ["0 2 * * *"]
+
+[env.production.ai]
+binding = "AI"
+
+[[env.production.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
+[[env.production.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors-384"

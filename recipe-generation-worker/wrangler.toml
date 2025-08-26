@@ -19,6 +19,10 @@ ENVIRONMENT = "preview"
 [env.preview.observability]
 enabled = true
 
+[[env.preview.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
 # Staging environment
 [env.staging]
 name = "recipe-generation-worker-staging"
@@ -28,6 +32,10 @@ ENVIRONMENT = "staging"
 [env.staging.observability]
 enabled = true
 
+[[env.staging.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
 # Production environment
 [env.production]
 name = "recipe-generation-worker"
@@ -36,3 +44,11 @@ ENVIRONMENT = "production"
 
 [env.production.observability]
 enabled = true
+
+[[vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
+
+[[env.production.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
