@@ -3141,14 +3141,18 @@ function App() {
                     }}
                     title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
                   >
-                    {floatingTimer.isRunning ? "⏸️" : "▶️"}
+                    {floatingTimer.isRunning ? (
+                      <img src="/pause.svg" alt="Pause" className="timer-icon" />
+                    ) : (
+                      <img src="/play.svg" alt="Play" className="timer-icon" />
+                    )}
                   </button>
                   <button 
                     className="header-timer-stop-btn"
                     onClick={() => stopTimer(floatingTimer.id)}
                     title="Stop timer"
                   >
-                    ⏹️
+                    <img src="/stop.svg" alt="Stop" className="timer-icon" />
                   </button>
                   <button 
                     className="header-timer-dismiss"
