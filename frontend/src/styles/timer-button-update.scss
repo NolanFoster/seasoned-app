@@ -68,6 +68,74 @@
   display: block;
 }
 
+/* Active Timer Styles */
+.timer-active {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  color: white;
+}
+
+.timer-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-time {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  color: white;
+  min-width: 60px;
+  text-align: center;
+}
+
+.timer-control-btn,
+.timer-stop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  color: white;
+}
+
+.timer-control-btn:hover,
+.timer-stop-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.timer-control-btn:active,
+.timer-stop-btn:active {
+  transform: scale(0.95);
+}
+
+.timer-stop-btn {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.5);
+}
+
+.timer-stop-btn:hover {
+  background: rgba(255, 100, 100, 0.4);
+}
+
 /* Adjust list item to accommodate absolute positioning */
 .instructions-list li {
   position: relative;
@@ -98,6 +166,22 @@
   .timer-buttons-container {
     gap: 4px;
   }
+  
+  .timer-active {
+    padding: 4px 8px;
+  }
+  
+  .timer-time {
+    font-size: 12px;
+    min-width: 50px;
+  }
+  
+  .timer-control-btn,
+  .timer-stop-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
 }
 
 /* Tablet responsiveness */
@@ -114,5 +198,21 @@
   
   .timer-buttons-container {
     gap: 4px;
+  }
+  
+  .timer-active {
+    padding: 5px 10px;
+  }
+  
+  .timer-time {
+    font-size: 13px;
+    min-width: 55px;
+  }
+  
+  .timer-control-btn,
+  .timer-stop-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
   }
 }
