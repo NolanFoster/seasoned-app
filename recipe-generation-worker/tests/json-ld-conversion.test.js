@@ -8,14 +8,14 @@ import { describe, it, expect } from 'vitest';
  */
 function convertToJsonLd(recipe) {
   const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Recipe",
-    "name": recipe.name || "Generated Recipe",
-    "description": recipe.description || "",
-    "datePublished": recipe.generatedAt || new Date().toISOString(),
-    "author": {
-      "@type": "Organization",
-      "name": "AI Recipe Generator"
+    '@context': 'https://schema.org',
+    '@type': 'Recipe',
+    'name': recipe.name || 'Generated Recipe',
+    'description': recipe.description || '',
+    'datePublished': recipe.generatedAt || new Date().toISOString(),
+    'author': {
+      '@type': 'Organization',
+      'name': 'AI Recipe Generator'
     }
   };
 
@@ -33,9 +33,9 @@ function convertToJsonLd(recipe) {
       // Clean up instruction text and ensure proper format
       const cleanInstruction = instruction.replace(/^\d+\.\s*/, '').trim();
       return {
-        "@type": "HowToStep",
-        "position": index + 1,
-        "text": cleanInstruction
+        '@type': 'HowToStep',
+        'position': index + 1,
+        'text': cleanInstruction
       };
     });
   }
@@ -90,8 +90,8 @@ function convertToJsonLd(recipe) {
  * Converts "15 minutes", "1 hour", "1 hour 30 minutes" to "15M", "1H", "1H30M"
  */
 function parseTimeToISO(timeString) {
-  if (!timeString) return "0M";
-  
+  if (!timeString) return '0M';
+
   const timeStr = timeString.toLowerCase().trim();
   let hours = 0;
   let minutes = 0;
@@ -109,7 +109,7 @@ function parseTimeToISO(timeString) {
   }
 
   // Convert to ISO 8601 duration format
-  let result = "";
+  let result = '';
   if (hours > 0) {
     result += `${hours}H`;
   }
@@ -117,7 +117,7 @@ function parseTimeToISO(timeString) {
     result += `${minutes}M`;
   }
 
-  return result || "0M";
+  return result || '0M';
 }
 
 describe('JSON-LD Conversion', () => {
@@ -141,41 +141,41 @@ describe('JSON-LD Conversion', () => {
     const jsonLd = convertToJsonLd(recipe);
 
     expect(jsonLd).toEqual({
-      "@context": "https://schema.org",
-      "@type": "Recipe",
-      "name": "Chocolate Chip Cookies",
-      "description": "Delicious homemade chocolate chip cookies",
-      "datePublished": "2024-01-15T10:30:00Z",
-      "author": {
-        "@type": "Organization",
-        "name": "AI Recipe Generator"
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      'name': 'Chocolate Chip Cookies',
+      'description': 'Delicious homemade chocolate chip cookies',
+      'datePublished': '2024-01-15T10:30:00Z',
+      'author': {
+        '@type': 'Organization',
+        'name': 'AI Recipe Generator'
       },
-      "recipeIngredient": ["2 cups flour", "1 cup sugar", "1/2 cup butter"],
-      "recipeInstructions": [
+      'recipeIngredient': ['2 cups flour', '1 cup sugar', '1/2 cup butter'],
+      'recipeInstructions': [
         {
-          "@type": "HowToStep",
-          "position": 1,
-          "text": "Mix ingredients"
+          '@type': 'HowToStep',
+          'position': 1,
+          'text': 'Mix ingredients'
         },
         {
-          "@type": "HowToStep",
-          "position": 2,
-          "text": "Bake at 350F"
+          '@type': 'HowToStep',
+          'position': 2,
+          'text': 'Bake at 350F'
         },
         {
-          "@type": "HowToStep",
-          "position": 3,
-          "text": "Cool and serve"
+          '@type': 'HowToStep',
+          'position': 3,
+          'text': 'Cool and serve'
         }
       ],
-      "prepTime": "PT15M",
-      "cookTime": "PT12M",
-      "totalTime": "PT27M",
-      "recipeYield": "24",
-      "recipeCuisine": "American",
-      "recipeCategory": "Easy",
-      "keywords": "vegetarian",
-      "comment": "Generated in 1500ms using AI recipe generation"
+      'prepTime': 'PT15M',
+      'cookTime': 'PT12M',
+      'totalTime': 'PT27M',
+      'recipeYield': '24',
+      'recipeCuisine': 'American',
+      'recipeCategory': 'Easy',
+      'keywords': 'vegetarian',
+      'comment': 'Generated in 1500ms using AI recipe generation'
     });
   });
 
@@ -228,14 +228,14 @@ describe('JSON-LD Conversion', () => {
     const jsonLd = convertToJsonLd(recipe);
 
     expect(jsonLd).toEqual({
-      "@context": "https://schema.org",
-      "@type": "Recipe",
-      "name": "Simple Recipe",
-      "description": "",
-      "datePublished": expect.any(String),
-      "author": {
-        "@type": "Organization",
-        "name": "AI Recipe Generator"
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      'name': 'Simple Recipe',
+      'description': '',
+      'datePublished': expect.any(String),
+      'author': {
+        '@type': 'Organization',
+        'name': 'AI Recipe Generator'
       }
     });
   });
@@ -254,7 +254,7 @@ describe('JSON-LD Conversion', () => {
     expect(jsonLd['@type']).toBe('Recipe');
     expect(jsonLd.name).toBeDefined();
     expect(jsonLd.author['@type']).toBe('Organization');
-    
+
     // Check instruction structure
     expect(jsonLd.recipeInstructions).toHaveLength(2);
     expect(jsonLd.recipeInstructions[0]['@type']).toBe('HowToStep');

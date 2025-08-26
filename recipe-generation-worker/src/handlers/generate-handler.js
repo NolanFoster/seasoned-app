@@ -1,3 +1,5 @@
+import { getRecipeFromKV } from '../../../shared/kv-storage.js';
+
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
  */
@@ -20,7 +22,7 @@ export async function handleGenerate(request, env, corsHeaders) {
     const requestBody = await request.json();
 
     // Validate required fields - either recipeName or ingredients must be provided
-    if (!requestBody.recipeName && 
+    if (!requestBody.recipeName &&
         (!requestBody.ingredients || !Array.isArray(requestBody.ingredients) || requestBody.ingredients.length === 0)) {
       return new Response(JSON.stringify({
         error: 'Either recipeName or ingredients field is required. ingredients must be a non-empty array if provided.'
@@ -104,7 +106,7 @@ export async function handleGenerate(request, env, corsHeaders) {
  */
 async function generateRecipeWithAI(requestData, env) {
   const startTime = Date.now();
-  
+
   try {
     // Step 1: Create query text from ingredients and preferences
     const queryText = buildQueryText(requestData);
@@ -122,7 +124,7 @@ async function generateRecipeWithAI(requestData, env) {
 
     // Step 4: Generate new recipe using LLaMA with context from similar recipes
     const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI);
-    
+
     const duration = Date.now() - startTime;
     console.log(`Recipe generation completed in ${duration}ms`);
 
@@ -262,8 +264,8 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, kvStorage) {
 async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding) {
   try {
     // Build context from similar recipes
-    const contexts = similarRecipes.length > 0 
-      ? buildRecipeContext(similarRecipes) 
+    const contexts = similarRecipes.length > 0
+      ? buildRecipeContext(similarRecipes)
       : [];
 
     // Create prompt for LLaMA
@@ -309,7 +311,7 @@ function buildRecipeContext(similarRecipes) {
   }
 
   const contexts = [];
-  
+
   similarRecipes.slice(0, 3).forEach((recipe) => {
     if (recipe.fullRecipe) {
       const recipeData = recipe.fullRecipe.data || recipe.fullRecipe;
@@ -331,17 +333,17 @@ function buildRecipeContext(similarRecipes) {
  */
 function formatFullRecipeContext(recipeData) {
   const parts = [];
-  
+
   // Recipe name
   if (recipeData.name || recipeData.title) {
     parts.push(`Recipe: ${recipeData.name || recipeData.title}`);
   }
-  
+
   // Description
   if (recipeData.description) {
     parts.push(`Description: ${recipeData.description}`);
   }
-  
+
   // Ingredients
   if (recipeData.ingredients && Array.isArray(recipeData.ingredients)) {
     const ingredients = recipeData.ingredients
@@ -353,7 +355,7 @@ function formatFullRecipeContext(recipeData) {
       parts.push(`Ingredients: ${ingredients}`);
     }
   }
-  
+
   // Instructions (first few steps)
   if (recipeData.instructions && Array.isArray(recipeData.instructions)) {
     const instructions = recipeData.instructions
@@ -365,14 +367,14 @@ function formatFullRecipeContext(recipeData) {
       parts.push(`Instructions: ${instructions}`);
     }
   }
-  
+
   // Times and servings
   if (recipeData.prepTime) parts.push(`Prep time: ${recipeData.prepTime}`);
   if (recipeData.cookTime) parts.push(`Cook time: ${recipeData.cookTime}`);
   if (recipeData.recipeYield || recipeData.yield) {
     parts.push(`Serves: ${recipeData.recipeYield || recipeData.yield}`);
   }
-  
+
   return parts.join('\n');
 }
 
@@ -381,12 +383,12 @@ function formatFullRecipeContext(recipeData) {
  */
 function buildLLaMAPrompt(requestData, contexts) {
   let prompt = '';
-  
+
   // Add context recipes if available
   if (contexts && contexts.length > 0) {
     prompt += `Based on these recipes:\n${contexts.join('\n\n')}\n\n`;
   }
-  
+
   // Generate recipe query
   let query = '';
   if (requestData.recipeName) {
@@ -405,9 +407,9 @@ function buildLLaMAPrompt(requestData, contexts) {
     }
     query = queryParts.join(' ') || 'recipe';
   }
-  
+
   prompt += `Generate a full recipe for: ${query}`;
-  
+
   // Add any specific requirements
   const requirements = [];
   if (requestData.dietary && requestData.dietary.length > 0) {
@@ -422,11 +424,11 @@ function buildLLaMAPrompt(requestData, contexts) {
   if (requestData.cookingMethod) {
     requirements.push(`cooking method: ${requestData.cookingMethod}`);
   }
-  
+
   if (requirements.length > 0) {
     prompt += `\n\nRequirements: ${requirements.join(', ')}`;
   }
-  
+
   return prompt;
 }
 
@@ -436,7 +438,7 @@ function buildLLaMAPrompt(requestData, contexts) {
 function parseGeneratedRecipe(recipeText, originalRequest) {
   // Basic parsing - this could be enhanced with more sophisticated NLP
   const lines = recipeText.split('\n').filter(line => line.trim());
-  
+
   const recipe = {
     name: 'Generated Recipe',
     description: '',
@@ -522,13 +524,13 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
   if (recipe.instructions.length === 0) {
     const remainingLines = lines.filter(line => {
       const lower = line.toLowerCase();
-      return !lower.includes('ingredient') && 
-             !lower.includes('instruction') && 
-             !lower.includes('time') && 
+      return !lower.includes('ingredient') &&
+             !lower.includes('instruction') &&
+             !lower.includes('time') &&
              !lower.includes('serves') &&
              line.trim().length > 10;
     });
-    
+
     remainingLines.forEach((line, index) => {
       recipe.instructions.push(`${index + 1}. ${line.trim()}`);
     });
@@ -558,14 +560,14 @@ function extractServings(text) {
  */
 function convertToJsonLd(recipe) {
   const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Recipe",
-    "name": recipe.name || "Generated Recipe",
-    "description": recipe.description || "",
-    "datePublished": recipe.generatedAt || new Date().toISOString(),
-    "author": {
-      "@type": "Organization",
-      "name": "AI Recipe Generator"
+    '@context': 'https://schema.org',
+    '@type': 'Recipe',
+    'name': recipe.name || 'Generated Recipe',
+    'description': recipe.description || '',
+    'datePublished': recipe.generatedAt || new Date().toISOString(),
+    'author': {
+      '@type': 'Organization',
+      'name': 'AI Recipe Generator'
     }
   };
 
@@ -583,9 +585,9 @@ function convertToJsonLd(recipe) {
       // Clean up instruction text and ensure proper format
       const cleanInstruction = instruction.replace(/^\d+\.\s*/, '').trim();
       return {
-        "@type": "HowToStep",
-        "position": index + 1,
-        "text": cleanInstruction
+        '@type': 'HowToStep',
+        'position': index + 1,
+        'text': cleanInstruction
       };
     });
   }
@@ -640,8 +642,8 @@ function convertToJsonLd(recipe) {
  * Converts "15 minutes", "1 hour", "1 hour 30 minutes" to "15M", "1H", "1H30M"
  */
 function parseTimeToISO(timeString) {
-  if (!timeString) return "0M";
-  
+  if (!timeString) return '0M';
+
   const timeStr = timeString.toLowerCase().trim();
   let hours = 0;
   let minutes = 0;
@@ -659,7 +661,7 @@ function parseTimeToISO(timeString) {
   }
 
   // Convert to ISO 8601 duration format
-  let result = "";
+  let result = '';
   if (hours > 0) {
     result += `${hours}H`;
   }
@@ -667,5 +669,5 @@ function parseTimeToISO(timeString) {
     result += `${minutes}M`;
   }
 
-  return result || "0M";
+  return result || '0M';
 }

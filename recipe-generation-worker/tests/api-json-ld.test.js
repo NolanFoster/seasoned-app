@@ -1,9 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { handleGenerate } from '../src/handlers/generate-handler.js';
 
 // Mock environment for testing
 const mockEnv = {
-  ENVIRONMENT: 'test',
+  ENVIRONMENT: 'test'
   // No AI binding to trigger mock mode
 };
 
