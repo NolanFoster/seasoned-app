@@ -64,7 +64,7 @@ describe('Embedding Handler', () => {
       list_complete: true
     });
 
-    // Mock vectorize query to return existing embeddings (bulk check)
+    // Mock vectorize query to return existing embeddings (individual check)
     env.RECIPE_VECTORS.query.mockResolvedValue({
       matches: [{ id: 'recipe-1' }],
       cursor: null
@@ -74,8 +74,10 @@ describe('Embedding Handler', () => {
     const data = await parseResponse(response);
 
     expect(response.status).toBe(200);
-    expect(data.message).toBe('All recipes already have embeddings. No new recipes to process.');
+    expect(data.message).toBe('Embedding generation completed');
     expect(data.processed).toBe(0);
+    expect(data.skipped).toBe(1);
+    expect(data.details[0].reason).toBe('already_has_embedding');
     expect(env.AI.run).not.toHaveBeenCalled();
   });
 
@@ -177,11 +179,10 @@ describe('Embedding Handler', () => {
     const response = await handleEmbedding(request, env, corsHeaders);
     const data = await parseResponse(response);
 
-    // The getRecipeKeys function catches KV errors and returns empty array
-    // So we get "No recipes found" response instead of an error
-    expect(response.status).toBe(200);
-    expect(data.message).toBe('No recipes found in storage');
-    expect(data.processed).toBe(0);
+    // The getRecipeKeys function now throws errors instead of returning empty array
+    expect(response.status).toBe(500);
+    expect(data.error).toBe('Failed to access recipe storage');
+    expect(data.details).toBe('KV error');
   });
 
   it('should include CORS headers', async () => {

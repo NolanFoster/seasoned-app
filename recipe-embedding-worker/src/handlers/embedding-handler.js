@@ -91,8 +91,25 @@ export async function handleEmbedding(request, env, corsHeaders) {
     console.log(`Starting embedding generation (${isScheduled ? 'scheduled' : 'manual'})`);
 
     // Get all recipe keys from KV storage
-    const recipeKeys = await getRecipeKeys(env.RECIPE_STORAGE);
-    console.log(`Found ${recipeKeys.length} recipes to process`);
+    let recipeKeys;
+    try {
+      recipeKeys = await getRecipeKeys(env.RECIPE_STORAGE);
+      console.log(`Found ${recipeKeys.length} recipes to process`);
+    } catch (error) {
+      console.error('Failed to get recipe keys:', error);
+      return new Response(JSON.stringify({
+        error: 'Failed to access recipe storage',
+        details: error.message,
+        environment: env.ENVIRONMENT || 'development',
+        availableBindings: Object.keys(env).filter(key => key !== 'ENVIRONMENT')
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
 
     if (recipeKeys.length === 0) {
       return new Response(JSON.stringify({
@@ -108,22 +125,8 @@ export async function handleEmbedding(request, env, corsHeaders) {
       });
     }
 
-    // Filter out recipes that already have embeddings
-    const newRecipes = await filterNewRecipes(recipeKeys, env.RECIPE_VECTORS);
-
-    if (newRecipes.length === 0) {
-      return new Response(JSON.stringify({
-        message: 'All recipes already have embeddings. No new recipes to process.',
-        processed: 0,
-        duration: Date.now() - startTime
-      }), {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
-    }
+    // Process recipes dynamically, checking for existing embeddings during processing
+    const recipesToProcess = [...recipeKeys]; // Start with all recipes
 
     // Process recipes in small batches to avoid subrequest limits
     // Cloudflare Workers limit: 50 subrequests per invocation
@@ -139,8 +142,9 @@ export async function handleEmbedding(request, env, corsHeaders) {
     // Track subrequests to avoid hitting Cloudflare's 50 subrequest limit
     let subrequestCount = 0;
     const maxSubrequests = isScheduled ? 48 : 45; // Conservative limits for 50 max
+    let currentIndex = 0;
 
-    for (let i = 0; i < newRecipes.length; i += batchSize) {
+    while (currentIndex < recipesToProcess.length && subrequestCount < maxSubrequests) {
       // Check if we're approaching the subrequest limit
       if (subrequestCount >= maxSubrequests) {
         console.log(`Stopping processing to avoid subrequest limit. Processed ${results.processed} recipes.`);
@@ -151,10 +155,11 @@ export async function handleEmbedding(request, env, corsHeaders) {
         break;
       }
 
-      const batch = newRecipes.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(newRecipes.length / batchSize)} (subrequests: ${subrequestCount}/${maxSubrequests})`);
+      // Get next batch of recipes to process
+      const batch = recipesToProcess.slice(currentIndex, currentIndex + batchSize);
+      console.log(`Processing batch starting at index ${currentIndex} (subrequests: ${subrequestCount}/${maxSubrequests})`);
 
-      const batchResults = await processBatch(batch, env);
+      const batchResults = await processBatchWithDynamicFiltering(batch, env, recipesToProcess, currentIndex);
       
       // Count subrequests used in this batch
       subrequestCount += batchResults.subrequestsUsed || 0;
@@ -164,8 +169,11 @@ export async function handleEmbedding(request, env, corsHeaders) {
       results.errors += batchResults.errors;
       results.details.push(...batchResults.details);
 
+      // Update current index based on how many recipes were actually processed
+      currentIndex += batchResults.processed + batchResults.skipped + batchResults.errors;
+
       // Add a longer delay between batches to prevent overwhelming the system
-      if (i + batchSize < newRecipes.length && subrequestCount < maxSubrequests) {
+      if (currentIndex < recipesToProcess.length && subrequestCount < maxSubrequests) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
@@ -207,6 +215,12 @@ export async function handleEmbedding(request, env, corsHeaders) {
  */
 async function getRecipeKeys(kvStorage) {
   try {
+    // Check if kvStorage is available
+    if (!kvStorage) {
+      console.error('KV storage binding is not available. Check wrangler.toml configuration.');
+      throw new Error('KV storage binding (RECIPE_STORAGE) is not available');
+    }
+
     const keys = [];
     let cursor = null;
 
@@ -219,7 +233,7 @@ async function getRecipeKeys(kvStorage) {
     return keys;
   } catch (error) {
     console.error('Error getting recipe keys:', error);
-    return [];
+    throw error; // Re-throw to provide better error handling upstream
   }
 }
 
@@ -287,7 +301,157 @@ async function filterNewRecipes(recipeKeys, vectorStorage) {
 }
 
 /**
- * Process a batch of recipes for embedding generation
+ * Process a batch of recipes for embedding generation with dynamic filtering
+ * If a recipe already has an embedding, it will try to grab another key from KV
+ */
+async function processBatchWithDynamicFiltering(recipeKeys, env, allRecipeKeys, currentIndex) {
+  const results = {
+    processed: 0,
+    skipped: 0,
+    errors: 0,
+    details: [],
+    subrequestsUsed: 0
+  };
+
+  let keyIndex = 0;
+  let additionalKeysChecked = 0;
+  const maxAdditionalChecks = 10; // Limit additional key checks to avoid infinite loops
+
+  while (keyIndex < recipeKeys.length && additionalKeysChecked < maxAdditionalChecks) {
+    const key = recipeKeys[keyIndex];
+
+    try {
+      // Check if this recipe already has an embedding in the vector database
+      const existingEmbedding = await checkExistingEmbedding(key, env.RECIPE_VECTORS);
+      results.subrequestsUsed++; // Count vectorize query as subrequest
+
+      if (existingEmbedding) {
+        results.skipped++;
+        results.details.push({ key, status: 'skipped', reason: 'already_has_embedding' });
+        
+        // Try to grab another key from KV that we haven't processed yet
+        const nextKey = await getNextUnprocessedKey(allRecipeKeys, currentIndex + keyIndex + 1, env.RECIPE_VECTORS);
+        if (nextKey) {
+          // Replace the current key with the new one
+          recipeKeys[keyIndex] = nextKey;
+          additionalKeysChecked++;
+          continue; // Process the new key instead
+        } else {
+          // No more keys available, skip this one
+          keyIndex++;
+          continue;
+        }
+      }
+
+      // Get recipe data from KV using shared library (handles compression)
+      const recipeResult = await getRecipeFromKV(env, key);
+      results.subrequestsUsed++; // Count KV get as subrequest
+
+      if (!recipeResult.success || !recipeResult.recipe) {
+        results.skipped++;
+        results.details.push({ key, status: 'skipped', reason: 'no_data' });
+        keyIndex++;
+        continue;
+      }
+
+      const recipeData = recipeResult.recipe;
+
+      // Generate embedding text from recipe data
+      const embeddingText = generateEmbeddingText(recipeData);
+
+      if (!embeddingText) {
+        results.skipped++;
+        results.details.push({ key, status: 'skipped', reason: 'no_text' });
+        keyIndex++;
+        continue;
+      }
+
+      // Generate embedding using Cloudflare AI
+      const embedding = await generateEmbedding(embeddingText, env.AI);
+      results.subrequestsUsed++; // Count AI call as subrequest
+
+      if (!embedding) {
+        results.errors++;
+        results.details.push({ key, status: 'error', reason: 'embedding_failed' });
+        keyIndex++;
+        continue;
+      }
+
+      // Store embedding in vectorize
+      await storeEmbedding(key, embedding, recipeData, env.RECIPE_VECTORS);
+      results.subrequestsUsed++; // Count Vectorize upsert as subrequest
+
+      results.processed++;
+      results.details.push({ key, status: 'processed' });
+      keyIndex++;
+
+    } catch (error) {
+      console.error(`Error processing recipe ${key}:`, error);
+      results.errors++;
+      results.details.push({ key, status: 'error', reason: error.message });
+      keyIndex++;
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Check if a recipe already has an embedding in the vector database
+ */
+async function checkExistingEmbedding(recipeId, vectorStorage) {
+  try {
+    // Try to get the embedding directly by ID first
+    try {
+      const existingEmbedding = await vectorStorage.getByIds([recipeId]);
+      if (existingEmbedding && existingEmbedding.length > 0) {
+        return true;
+      }
+    } catch (getError) {
+      // If getByIds fails, fall back to query method
+    }
+
+    // Use a dummy vector to query for the specific recipe ID
+    const dummyVector = new Array(384).fill(0);
+    const query = await vectorStorage.query(dummyVector, {
+      topK: 1000 // Query more results to find the specific ID
+    });
+    
+    if (query.matches) {
+      return query.matches.some(match => match.id === recipeId);
+    }
+    
+    return false;
+  } catch (error) {
+    console.error(`Error checking existing embedding for ${recipeId}:`, error);
+    return false; // Assume no existing embedding if we can't check
+  }
+}
+
+/**
+ * Get the next unprocessed key from the recipe keys list
+ */
+async function getNextUnprocessedKey(allRecipeKeys, startIndex, vectorStorage) {
+  try {
+    // Check keys starting from the given index
+    for (let i = startIndex; i < allRecipeKeys.length; i++) {
+      const key = allRecipeKeys[i];
+      const hasEmbedding = await checkExistingEmbedding(key, vectorStorage);
+      
+      if (!hasEmbedding) {
+        return key;
+      }
+    }
+    
+    return null; // No more unprocessed keys found
+  } catch (error) {
+    console.error('Error getting next unprocessed key:', error);
+    return null;
+  }
+}
+
+/**
+ * Process a batch of recipes for embedding generation (legacy function for backward compatibility)
  */
 async function processBatch(recipeKeys, env) {
   const results = {
