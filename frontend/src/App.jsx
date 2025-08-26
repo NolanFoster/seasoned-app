@@ -131,30 +131,282 @@ function App() {
       <div className="instruction-with-timers">
         <div className="instruction-text">{text}</div>
         <div className="timer-buttons-container">
-          {timers.map((timer, index) => (
-            <button 
-              key={`timer-${timer.index}`}
-              className="timer-button-inline"
-              title={`Set timer for ${timer.text}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // Timer functionality will be added later
-              }}
-            >
-              <img 
-                src="/timer.svg" 
-                alt="Timer" 
-                className="timer-icon-inline"
-              />
-              <span className="timer-text">Set timer for {timer.text}</span>
-            </button>
-          ))}
+                      {timers.map((timer, index) => {
+              const timerId = `timer-${timer.index}-${index}`;
+              const activeTimer = activeTimers.get(timerId);
+              const isFloatingActive = floatingTimer && floatingTimer.id === timerId;
+              
+              // Show disabled button when timer is active (either inline or floating)
+              return (
+                <button 
+                  key={timerId}
+                  className={`timer-button-inline ${activeTimer ? 'timer-button-disabled' : ''}`}
+                  title={activeTimer ? `Timer active: ${activeTimer.timeText}` : `Set timer for ${timer.text}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!activeTimer) {
+                      startNewTimer(timerId, timer.text);
+                    }
+                  }}
+                  disabled={activeTimer}
+                >
+                  <img 
+                    src="/timer.svg" 
+                    alt="Timer" 
+                    className="timer-icon-inline"
+                  />
+                  <span className="timer-text">
+                    {activeTimer ? `Timer: ${formatTime(activeTimer.remainingSeconds)}` : `Set timer for ${timer.text}`}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       </div>
     );
   };
-  
+
+  // Timer utility functions
+  const parseTimeString = (timeString) => {
+    // Handle ranges like "5-10 minutes" by taking the average
+    const rangeMatch = timeString.match(/(\d+)\s*[-–—]\s*(\d+)/);
+    if (rangeMatch) {
+      const min = parseInt(rangeMatch[1]);
+      const max = parseInt(rangeMatch[2]);
+      const avg = Math.round((min + max) / 2);
+      timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, avg.toString());
+    }
+    
+    // Handle "X to Y" format
+    const toMatch = timeString.match(/(\d+)\s+to\s+(\d+)/);
+    if (toMatch) {
+      const min = parseInt(toMatch[1]);
+      const max = parseInt(toMatch[2]);
+      const avg = Math.round((min + max) / 2);
+      timeString = timeString.replace(/\d+\s+to\s+\d+/, avg.toString());
+    }
+    
+    // Extract number and unit
+    const match = timeString.match(/(\d+)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?)/i);
+    if (!match) return 0;
+    
+    const number = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    
+    // Convert to seconds
+    if (unit.includes('hour') || unit.includes('hr')) {
+      return number * 60 * 60;
+    } else if (unit.includes('minute') || unit.includes('min')) {
+      return number * 60;
+    } else if (unit.includes('second') || unit.includes('sec')) {
+      return number;
+    }
+    
+    return 0;
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+  };
+
+  const startNewTimer = (timerId, timeText) => {
+    const totalSeconds = parseTimeString(timeText);
+    if (totalSeconds <= 0) return;
+    
+    const newTimer = {
+      id: timerId,
+      timeText: timeText,
+      totalSeconds: totalSeconds,
+      remainingSeconds: totalSeconds,
+      isRunning: true,
+      startTime: Date.now()
+    };
+    
+    setActiveTimers(prev => new Map(prev).set(timerId, newTimer));
+    setFloatingTimer(newTimer); // Set as floating timer
+    
+    // Start the interval
+    const interval = setInterval(() => {
+      setActiveTimers(prev => {
+        const currentTimer = prev.get(timerId);
+        if (!currentTimer) return prev;
+        
+        const elapsed = Math.floor((Date.now() - currentTimer.startTime) / 1000);
+        const remaining = Math.max(0, currentTimer.totalSeconds - elapsed);
+        
+        if (remaining <= 0) {
+          // Timer finished
+          clearInterval(interval);
+          setTimerIntervals(prev => {
+            const newIntervals = new Map(prev);
+            newIntervals.delete(timerId);
+            return newIntervals;
+          });
+          
+          // Show notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Timer Finished!', {
+              body: `Your timer for ${timeText} is complete!`,
+              icon: '/timer.svg'
+            });
+          }
+          
+          // Remove timer after a delay
+          setTimeout(() => {
+            setActiveTimers(prev => {
+              const newTimers = new Map(prev);
+              newTimers.delete(timerId);
+              return newTimers;
+            });
+            setFloatingTimer(null); // Clear floating timer
+          }, 3000);
+          
+          return prev;
+        }
+        
+        const updatedTimer = { ...currentTimer, remainingSeconds: remaining };
+        const newTimers = new Map(prev);
+        newTimers.set(timerId, updatedTimer);
+        
+        // Update floating timer if this is the active one
+        if (floatingTimer && floatingTimer.id === timerId) {
+          setFloatingTimer(updatedTimer);
+        }
+        
+        return newTimers;
+      });
+    }, 1000);
+    
+    setTimerIntervals(prev => new Map(prev).set(timerId, interval));
+  };
+
+  const startTimer = (timerId) => {
+    setActiveTimers(prev => {
+      const currentTimer = prev.get(timerId);
+      if (!currentTimer) return prev;
+      
+      const updatedTimer = { 
+        ...currentTimer, 
+        isRunning: true,
+        startTime: Date.now() - ((currentTimer.totalSeconds - currentTimer.remainingSeconds) * 1000)
+      };
+      
+      const newTimers = new Map(prev);
+      newTimers.set(timerId, updatedTimer);
+      return newTimers;
+    });
+    
+    // Restart the interval
+    const interval = setInterval(() => {
+      setActiveTimers(prev => {
+        const currentTimer = prev.get(timerId);
+        if (!currentTimer || !currentTimer.isRunning) return prev;
+        
+        const elapsed = Math.floor((Date.now() - currentTimer.startTime) / 1000);
+        const remaining = Math.max(0, currentTimer.totalSeconds - elapsed);
+        
+        if (remaining <= 0) {
+          // Timer finished
+          clearInterval(interval);
+          setTimerIntervals(prev => {
+            const newIntervals = new Map(prev);
+            newIntervals.delete(timerId);
+            return newIntervals;
+          });
+          
+          // Show notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Timer Finished!', {
+              body: `Your timer for ${currentTimer.timeText} is complete!`,
+              icon: '/timer.svg'
+            });
+          }
+          
+          // Remove timer after a delay
+          setTimeout(() => {
+            setActiveTimers(prev => {
+              const newTimers = new Map(prev);
+              newTimers.delete(timerId);
+              return newTimers;
+            });
+          }, 3000);
+          
+          return prev;
+        }
+        
+        const updatedTimer = { ...currentTimer, remainingSeconds: remaining };
+        const newTimers = new Map(prev);
+        newTimers.set(timerId, updatedTimer);
+        return newTimers;
+      });
+    }, 1000);
+    
+    setTimerIntervals(prev => new Map(prev).set(timerId, interval));
+  };
+
+  const pauseTimer = (timerId) => {
+    // Clear the interval
+    const interval = timerIntervals.get(timerId);
+    if (interval) {
+      clearInterval(interval);
+      setTimerIntervals(prev => {
+        const newIntervals = new Map(prev);
+        newIntervals.delete(timerId);
+        return newIntervals;
+      });
+    }
+    
+    setActiveTimers(prev => {
+      const currentTimer = prev.get(timerId);
+      if (!currentTimer) return prev;
+      
+      const updatedTimer = { ...currentTimer, isRunning: false };
+      const newTimers = new Map(prev);
+      newTimers.set(timerId, updatedTimer);
+      
+      // Update floating timer if this is the active one
+      if (floatingTimer && floatingTimer.id === timerId) {
+        setFloatingTimer(updatedTimer);
+      }
+      
+      return newTimers;
+    });
+  };
+
+  const stopTimer = (timerId) => {
+    // Clear interval
+    const interval = timerIntervals.get(timerId);
+    if (interval) {
+      clearInterval(interval);
+      setTimerIntervals(prev => {
+        const newIntervals = new Map(prev);
+        newIntervals.delete(timerId);
+        return newIntervals;
+      });
+    }
+    
+    // Remove timer
+    setActiveTimers(prev => {
+      const newTimers = new Map(prev);
+      newTimers.delete(timerId);
+      return newTimers;
+    });
+    
+    // Clear floating timer if this was the active one
+    if (floatingTimer && floatingTimer.id === timerId) {
+      setFloatingTimer(null);
+    }
+  };
+
   // Recipes are now populated by the recommendations system instead of direct API calls
   const [recipes, setRecipes] = useState([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false); // Loading state for recipes
@@ -199,12 +451,25 @@ function App() {
   const [recipesByCategory, setRecipesByCategory] = useState(new Map()); // Store recipes organized by category
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
+  
+  // Timer state management
+  const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
+  const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
+  const [floatingTimer, setFloatingTimer] = useState(null); // Currently active floating timer
+  
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
   const recipeFullscreenRef = useRef(null);
   const searchTimeoutRef = useRef(null); // Add ref for debounce timeout
   const recipeContentRef = useRef(null);
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      timerIntervals.forEach(interval => clearInterval(interval));
+    };
+  }, [timerIntervals]);
 
   // Helper function to add timeout to fetch calls
   function fetchWithTimeout(url, options = {}) {
@@ -379,6 +644,12 @@ function App() {
         console.log('✅ Initialization completed');
       }
     };
+    
+    // Request notification permission for timer notifications
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    
     initializeRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
@@ -2851,10 +3122,49 @@ function App() {
               <span className="back-arrow">←</span>
             </button>
             
+            {/* Timer FAB - integrated into header */}
+            {floatingTimer && (
+              <div className="header-timer-fab">
+                <div className="header-timer-display">
+                  <span className="header-timer-time">{formatTime(floatingTimer.remainingSeconds)}</span>
+                  <span className="header-timer-label">{floatingTimer.timeText}</span>
+                </div>
+                <div className="header-timer-controls">
+                  <button 
+                    className="header-timer-control-btn"
+                    onClick={() => {
+                      if (floatingTimer.isRunning) {
+                        pauseTimer(floatingTimer.id);
+                      } else {
+                        startTimer(floatingTimer.id);
+                      }
+                    }}
+                    title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
+                  >
+                    {floatingTimer.isRunning ? "⏸️" : "▶️"}
+                  </button>
+                  <button 
+                    className="header-timer-stop-btn"
+                    onClick={() => stopTimer(floatingTimer.id)}
+                    title="Stop timer"
+                  >
+                    ⏹️
+                  </button>
+                  <button 
+                    className="header-timer-dismiss"
+                    onClick={() => setFloatingTimer(null)}
+                    title="Dismiss timer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {/* Nutrition FAB - only show if nutrition data exists */}
             {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
               <button 
-                className="fab-nutrition-trigger"
+                className={`fab-nutrition-trigger ${floatingTimer ? 'nutrition-slide-right' : ''}`}
                 onClick={() => setShowNutrition(!showNutrition)}
                 title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
               >
@@ -3174,6 +3484,8 @@ function App() {
           onClose={() => setShowVideoPopup(false)} 
         />
       )}
+
+
       </div>
     </>
   );
