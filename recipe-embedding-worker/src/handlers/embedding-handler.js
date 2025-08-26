@@ -127,7 +127,8 @@ export async function handleEmbedding(request, env, corsHeaders) {
 
     // Process recipes in small batches to avoid subrequest limits
     // Cloudflare Workers limit: 50 subrequests per invocation
-    const batchSize = isScheduled ? 3 : 2; // Much smaller batches to stay under limits
+    // Each recipe uses 3 subrequests: KV get + AI embedding + Vectorize upsert
+    const batchSize = isScheduled ? 6 : 5; // Optimized for 50 subrequest limit
     const results = {
       processed: 0,
       skipped: 0,
@@ -137,7 +138,7 @@ export async function handleEmbedding(request, env, corsHeaders) {
 
     // Track subrequests to avoid hitting Cloudflare's 50 subrequest limit
     let subrequestCount = 0;
-    const maxSubrequests = isScheduled ? 40 : 20; // Conservative limits
+    const maxSubrequests = isScheduled ? 48 : 45; // Conservative limits for 50 max
 
     for (let i = 0; i < newRecipes.length; i += batchSize) {
       // Check if we're approaching the subrequest limit
@@ -301,6 +302,7 @@ async function processBatch(recipeKeys, env) {
     try {
       // Get recipe data from KV using shared library (handles compression)
       const recipeResult = await getRecipeFromKV(env, key);
+      results.subrequestsUsed++; // Count KV get as subrequest
 
       if (!recipeResult.success || !recipeResult.recipe) {
         results.skipped++;
