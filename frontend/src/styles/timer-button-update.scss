@@ -158,6 +158,14 @@
   -webkit-backdrop-filter: blur(10px);
 }
 
+/* Timer icon styling for white icons */
+.timer-icon {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1); /* Make the icon white */
+  display: block;
+}
+
 .header-timer-control-btn:hover,
 .header-timer-stop-btn:hover,
 .header-timer-dismiss:hover {
@@ -342,6 +350,11 @@
     font-size: 12px;
   }
   
+  .timer-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
   .nutrition-slide-right {
     transform: translateX(100px);
   }
@@ -390,5 +403,10 @@
   
   .nutrition-slide-right {
     transform: translateX(110px);
+  }
+  
+  .timer-icon {
+    width: 15px;
+    height: 15px;
   }
 }
