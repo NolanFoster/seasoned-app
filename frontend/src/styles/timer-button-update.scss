@@ -197,16 +197,6 @@
   border-color: rgba(255, 100, 100, 0.4);
 }
 
-/* Nutrition button slide animation */
-.nutrition-slide-right {
-  transform: translateX(120px);
-  transition: transform 0.3s ease-out;
-}
-
-.fab-nutrition-trigger {
-  transition: transform 0.3s ease-out;
-}
-
 /* Active Timer Styles */
 .timer-active {
   display: inline-flex;
@@ -282,19 +272,9 @@
 
 /* Mobile responsiveness */
 @media (max-width: 480px) {
-  .instruction-with-timers {
-    padding-bottom: 40px; /* Less space on mobile */
-  }
-  
   .timer-button-inline {
     padding: 4px 8px;
     font-size: 11px;
-  }
-  
-  .timer-text {
-    font-size: 11px;
-    margin-left: 2px;
-    color: white;
   }
   
   .timer-icon-inline {
@@ -303,7 +283,7 @@
   }
   
   .timer-buttons-container {
-    gap: 4px;
+    gap: 3px;
   }
   
   .timer-active {
@@ -357,9 +337,11 @@
     height: 14px;
   }
   
-  .nutrition-slide-right {
-    transform: translateX(100px);
+  .fab-nutrition-trigger {
+    transition: background 0.3s ease, box-shadow 0.3s ease;
   }
+  
+
 }
 
 /* Tablet responsiveness */
@@ -403,12 +385,13 @@
     font-size: 17px;
   }
   
-  .nutrition-slide-right {
-    transform: translateX(110px);
-  }
+
   
   .timer-icon {
     width: 15px;
     height: 15px;
   }
 }
+
+
+

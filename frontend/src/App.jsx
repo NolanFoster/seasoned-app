@@ -3200,7 +3200,7 @@ function App() {
             {/* Nutrition FAB - only show if nutrition data exists */}
             {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
               <button 
-                className={`fab-nutrition-trigger ${floatingTimer ? 'nutrition-slide-right' : ''}`}
+                className="fab-nutrition-trigger"
                 onClick={() => setShowNutrition(!showNutrition)}
                 title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
               >
