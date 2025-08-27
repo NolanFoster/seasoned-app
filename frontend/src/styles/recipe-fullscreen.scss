@@ -240,7 +240,7 @@
   border: none;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,6 +253,17 @@
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* When timer is active, prevent hover movement */
+.fab-nutrition-trigger.nutrition-slide-right:hover {
+  transform: translateX(80px) translateY(-2px);
+}
+
+/* Ensure nutrition button stays in place when timer is active - override any conflicting transforms */
+.fab-nutrition-trigger.nutrition-slide-right {
+  transform: translateX(80px) !important;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .nutrition-icon {
@@ -1263,6 +1274,17 @@ body.dark-mode {
   .nutrition-row {
     font-size: 0.9em;
   }
+  
+  /* Mobile hover fix for timer state */
+  .fab-nutrition-trigger.nutrition-slide-right:hover {
+    transform: translateX(110px) translateY(-2px);
+  }
+  
+  /* Ensure nutrition button stays in place on tablet when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(110px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1313,6 +1335,17 @@ body.dark-mode {
   .nutrition-note {
     font-size: 0.7em;
   }
+  
+  /* Mobile hover fix for timer state */
+  .fab-nutrition-trigger.nutrition-slide-right:hover {
+    transform: translateX(70px) translateY(-2px);
+  }
+  
+  /* Ensure nutrition button stays in place on mobile when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(70px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
 }
 
 @media (max-width: 360px) {
@@ -1327,6 +1360,17 @@ body.dark-mode {
     width: 16px;
     height: 16px;
   }
+  
+  /* Mobile hover fix for timer state */
+  .fab-nutrition-trigger.nutrition-slide-right:hover {
+    transform: translateX(60px) translateY(-2px);
+  }
+  
+  /* Ensure nutrition button stays in place on small mobile when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(60px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
 }
 
 @media (max-width: 320px) {
@@ -1340,5 +1384,16 @@ body.dark-mode {
   .nutrition-icon {
     width: 14px;
     height: 14px;
+  }
+  
+  /* Mobile hover fix for timer state */
+  .fab-nutrition-trigger.nutrition-slide-right:hover {
+    transform: translateX(50px) translateY(-2px);
+  }
+  
+  /* Ensure nutrition button stays in place on very small mobile when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(50px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
   }
 }

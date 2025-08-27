@@ -199,12 +199,18 @@
 
 /* Nutrition button slide animation */
 .nutrition-slide-right {
-  transform: translateX(120px);
+  transform: translateX(80px);
   transition: transform 0.3s ease-out;
 }
 
 .fab-nutrition-trigger {
   transition: transform 0.3s ease-out;
+}
+
+/* Ensure nutrition button stays in place when timer is active */
+.fab-nutrition-trigger.nutrition-slide-right {
+  transform: translateX(80px) !important;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Active Timer Styles */
@@ -350,6 +356,12 @@
   .nutrition-slide-right {
     transform: translateX(70px);
   }
+  
+  /* Ensure nutrition button stays in place on mobile when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(70px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
 }
 
 /* Tablet responsiveness */
@@ -397,6 +409,12 @@
     transform: translateX(110px);
   }
   
+  /* Ensure nutrition button stays in place on tablet when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(110px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  
   .timer-icon {
     width: 15px;
     height: 15px;
@@ -408,12 +426,24 @@
   .nutrition-slide-right {
     transform: translateX(60px);
   }
+  
+  /* Ensure nutrition button stays in place on small mobile when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(60px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
 }
 
 /* Very small mobile devices */
 @media (max-width: 320px) {
   .nutrition-slide-right {
     transform: translateX(50px);
+  }
+  
+  /* Ensure nutrition button stays in place on very small mobile when timer is active */
+  .fab-nutrition-trigger.nutrition-slide-right {
+    transform: translateX(50px) !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
   }
   
   .fab-nutrition-trigger {
