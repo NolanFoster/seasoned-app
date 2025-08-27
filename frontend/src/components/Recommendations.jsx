@@ -136,28 +136,74 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     }
   }, [recommendations, recipesByCategory]);
 
+  // Monitor location permission changes
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      const checkPermission = async () => {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          
+          // Listen for permission changes
+          permission.addEventListener('change', () => {
+            debugLogEmoji('🔒', 'Location permission changed to:', permission.state);
+            
+            if (permission.state === 'granted' && !userLocation) {
+              // Permission was granted, try to get location
+              fetchRecommendations();
+            } else if (permission.state === 'denied') {
+              // Permission was denied, show manual option
+              setShowLocationPrompt(true);
+            }
+          });
+        } catch (error) {
+          debugLogEmoji('⚠️', 'Could not monitor permission changes:', error.message);
+        }
+      };
+      
+      checkPermission();
+    }
+  }, [userLocation]);
+
+  // Fetch recommendations on component mount
+  useEffect(() => {
+    console.log('🔍 Component mounted, calling fetchRecommendations');
+    fetchRecommendations();
+  }, []); // Empty dependency array means this runs once on mount
+
   async function fetchRecommendations() {
+    console.log('🚀 fetchRecommendations called');
     try {
       setIsLoadingRecommendations(true);
+      console.log('📊 Setting loading state to true');
       
       let location = userLocation; // Start with cached user location
+      console.log('📍 Current userLocation:', userLocation);
       
       // Try to get user's location from browser if we don't have it cached
       if (!userLocation && navigator.geolocation) {
+        console.log('🔍 No cached location, trying geolocation');
         try {
           debugLogEmoji('📍', 'Requesting user location permission...');
           
-          // Check current permission state
-          if (navigator.permissions) {
-            const permission = await navigator.permissions.query({name: 'geolocation'});
-            debugLogEmoji('🔒', 'Geolocation permission state:', permission.state);
-            
-            if (permission.state === 'denied') {
-              debugLogEmoji('❌', 'Geolocation permission denied by user');
-              throw new Error('Geolocation permission denied');
+          // Check current permission state if supported
+          let permissionState = 'prompt'; // Default to prompt state
+          if (navigator.permissions && navigator.permissions.query) {
+            try {
+              const permission = await navigator.permissions.query({name: 'geolocation'});
+              permissionState = permission.state;
+              debugLogEmoji('🔒', 'Geolocation permission state:', permission.state);
+              
+              if (permission.state === 'denied') {
+                debugLogEmoji('❌', 'Geolocation permission denied by user');
+                throw new Error('Geolocation permission denied');
+              }
+            } catch (permissionError) {
+              debugLogEmoji('⚠️', 'Permission query failed, proceeding with geolocation request:', permissionError.message);
+              // Continue with geolocation request even if permission query fails
             }
           }
           
+          console.log('🔍 About to call getCurrentPosition');
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { 
               timeout: 10000,
@@ -165,6 +211,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               maximumAge: 300000 // Cache for 5 minutes
             });
           });
+          console.log('📍 Got position:', position);
           
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
@@ -203,10 +250,19 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           console.log('Could not get user location, will use no specific location');
           debugLogEmoji('❌', 'Geolocation failed:', geoError.message);
           
-          // If it's a permission issue, show location prompt
-          if (geoError.code === geoError.PERMISSION_DENIED || geoError.message.includes('denied')) {
+          // Better error handling for different geolocation error types
+          if (geoError.code === 1) { // PERMISSION_DENIED
             debugLogEmoji('💡', 'Location permission denied - showing manual location option');
             setShowLocationPrompt(true);
+          } else if (geoError.code === 2) { // POSITION_UNAVAILABLE
+            debugLogEmoji('⚠️', 'Location unavailable - using location-agnostic recommendations');
+          } else if (geoError.code === 3) { // TIMEOUT
+            debugLogEmoji('⏰', 'Location request timed out - using location-agnostic recommendations');
+          } else if (geoError.message && geoError.message.includes('denied')) {
+            debugLogEmoji('💡', 'Location permission denied - showing manual location option');
+            setShowLocationPrompt(true);
+          } else {
+            debugLogEmoji('❓', 'Unknown geolocation error - using location-agnostic recommendations');
           }
           
           // Don't set a default location - let the backend handle location-agnostic recommendations
@@ -222,9 +278,12 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
         debugLogEmoji('🌍', 'Using location-agnostic recommendations');
       }
       
+      console.log('🌍 Final location to use:', location);
+      
       const currentDate = new Date().toISOString().split('T')[0];
       debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
       
+      console.log('📡 About to make fetch call to:', `${RECOMMENDATION_API_URL}/recommendations`);
       const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
         mode: 'cors',
@@ -237,6 +296,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           date: currentDate
         })
       });
+      console.log('📡 Fetch response:', res);
       
       if (res.ok) {
         const data = await res.json();
@@ -354,6 +414,56 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     }
   }
 
+  // Handle manual location input
+  const handleManualLocationInput = (locationInput) => {
+    const trimmedLocation = locationInput.trim();
+    if (trimmedLocation) {
+      setUserLocation(trimmedLocation);
+      setShowLocationPrompt(false);
+      debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
+      fetchRecommendations();
+    }
+  };
+
+  // Clear user location
+  const clearUserLocation = () => {
+    setUserLocation(null);
+    debugLogEmoji('🗑️', 'User location cleared');
+    fetchRecommendations();
+  };
+
+  // Helper function to check if location permissions are available
+  const checkLocationPermissions = async () => {
+    if (!navigator.geolocation) {
+      return { available: false, reason: 'Geolocation not supported' };
+    }
+    
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        return { available: true, state: permission.state };
+      } catch (error) {
+        return { available: true, state: 'unknown' };
+      }
+    }
+    
+    return { available: true, state: 'unknown' };
+  };
+
+  // Helper function to search using smart search endpoint
+  async function searchWithSmartSearch(query, limit = 1) {
+    try {
+      const res = await fetch(`${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
+      if (res.ok) {
+        const result = await res.json();
+        return result.results || [];
+      }
+    } catch (e) {
+      console.error(`Error searching for query "${query}":`, e);
+    }
+    return [];
+  }
+
   async function requestLocationManually() {
     try {
       debugLogEmoji('📍', 'Manual location request initiated');
@@ -404,22 +514,23 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       }
     } catch (error) {
       debugLogEmoji('❌', 'Manual location request failed:', error.message);
-      setShowLocationPrompt(false);
-    }
-  }
-
-  // Helper function to search using smart search endpoint
-  async function searchWithSmartSearch(query, limit = 1) {
-    try {
-      const res = await fetch(`${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
-      if (res.ok) {
-        const result = await res.json();
-        return result.results || [];
+      
+      // Provide specific error messages based on error type
+      let errorMessage = 'Location request failed';
+      if (error.code === 1) {
+        errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+      } else if (error.code === 2) {
+        errorMessage = 'Location unavailable. Please try again later.';
+      } else if (error.code === 3) {
+        errorMessage = 'Location request timed out. Please try again.';
       }
-    } catch (e) {
-      console.error(`Error searching for query "${query}":`, e);
+      
+      // Show error message to user and re-show location prompt
+      setShowLocationPrompt(true);
+      
+      // You could also show a toast notification here if you have a notification system
+      console.error('Location request failed:', errorMessage);
     }
-    return [];
   }
 
   // If we have recipesByCategory, render them directly
@@ -554,46 +665,199 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     });
     return (
       <div className="recommendations-container">
+        {/* Location status indicator */}
+        {userLocation && (
+          <div style={{
+            background: '#e8f5e8',
+            border: '1px solid #c3e6c3',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            margin: '16px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>📍</span>
+              <span style={{ fontSize: '14px', color: '#2d5a2d' }}>
+                Location: <strong>{userLocation}</strong>
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setShowLocationPrompt(true)}
+                style={{
+                  background: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                Change
+              </button>
+              <button
+                onClick={clearUserLocation}
+                style={{
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Location button for users without location */}
+        {!userLocation && !showLocationPrompt && (
+          <div style={{
+            background: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            margin: '16px 0',
+            textAlign: 'center'
+          }}>
+            <button
+              onClick={() => setShowLocationPrompt(true)}
+              style={{
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '10px 20px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                margin: '0 auto'
+              }}
+            >
+              <span>📍</span>
+              Enable Location for Better Recommendations
+            </button>
+          </div>
+        )}
+
         {/* Location permission prompt */}
         {showLocationPrompt && (
           <div className="location-prompt" style={{
             background: '#f8f9fa',
             border: '1px solid #dee2e6',
             borderRadius: '8px',
-            padding: '16px',
+            padding: '20px',
             margin: '16px 0',
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
-            <p style={{ margin: '0 0 12px 0' }}>
-              📍 Get location-based recipe recommendations
-            </p>
-            <button 
-              onClick={requestLocationManually}
-              style={{
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '8px 16px',
-                cursor: 'pointer',
-                marginRight: '8px'
-              }}
-            >
-              Enable Location
-            </button>
-            <button 
-              onClick={() => setShowLocationPrompt(false)}
-              style={{
-                background: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '8px 16px',
-                cursor: 'pointer'
-              }}
-            >
-              Skip
-            </button>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>📍</div>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#333' }}>
+                Enable Location Access
+              </h3>
+              <p style={{ margin: '0 0 16px 0', color: '#666', fontSize: '14px', lineHeight: '1.4' }}>
+                Get personalized recipe recommendations based on your location, including seasonal ingredients and local specialties.
+              </p>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                type="text"
+                placeholder="Enter your city (e.g., San Francisco, CA)"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  marginBottom: '8px'
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    handleManualLocationInput(e.target.value);
+                  }
+                }}
+                id="manual-location-input"
+              />
+              <button
+                onClick={() => {
+                  const input = document.getElementById('manual-location-input');
+                  if (input && input.value.trim()) {
+                    handleManualLocationInput(input.value);
+                  }
+                }}
+                style={{
+                  background: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  marginBottom: '12px'
+                }}
+              >
+                Set Location
+              </button>
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+                Or use one of the options below
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button 
+                onClick={requestLocationManually}
+                style={{
+                  background: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '10px 20px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#0056b3'}
+                onMouseOut={(e) => e.target.style.background = '#007bff'}
+              >
+                Use GPS Location
+              </button>
+              <button 
+                onClick={() => setShowLocationPrompt(false)}
+                style={{
+                  background: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '10px 20px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#545b62'}
+                onMouseOut={(e) => e.target.style.background = '#6c757d'}
+              >
+                Skip for Now
+              </button>
+            </div>
+            
+            <div style={{ marginTop: '16px', fontSize: '12px', color: '#999' }}>
+              You can enable location access anytime in your browser settings
+            </div>
           </div>
         )}
         
