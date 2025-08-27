@@ -140,7 +140,7 @@
 }
 
 .header-timer-control-btn,
-.header-timer-stop-btn,
+.header-timer-reset-btn,
 .header-timer-dismiss {
   width: 32px;
   height: 32px;
@@ -167,32 +167,34 @@
 }
 
 .header-timer-control-btn:hover,
-.header-timer-stop-btn:hover,
+.header-timer-reset-btn:hover,
 .header-timer-dismiss:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
 }
 
 .header-timer-control-btn:active,
-.header-timer-stop-btn:active,
+.header-timer-reset-btn:active,
 .header-timer-dismiss:active {
   transform: scale(0.95);
 }
 
-.header-timer-stop-btn {
+.header-timer-reset-btn {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.header-timer-stop-btn:hover {
+.header-timer-reset-btn:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
 .header-timer-dismiss {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 100, 100, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.3);
 }
 
 .header-timer-dismiss:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.4);
 }
 
 /* Nutrition button slide animation */
@@ -343,7 +345,7 @@
   }
   
   .header-timer-control-btn,
-  .header-timer-stop-btn,
+  .header-timer-reset-btn,
   .header-timer-dismiss {
     width: 28px;
     height: 28px;
