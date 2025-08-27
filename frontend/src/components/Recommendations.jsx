@@ -135,8 +135,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           debugLogEmoji('❌', 'Geolocation failed:', error.message);
           if (error.code === 1) { // PERMISSION_DENIED
             setShowLocationPrompt(true);
+            // Don't resolve yet - let the timeout handle it
+          } else if (error.code === 2) { // POSITION_UNAVAILABLE
+            debugLogEmoji('⚠️', 'Position unavailable, will use timeout fallback');
+            // Don't resolve yet - let the timeout handle it
+          } else if (error.code === 3) { // TIMEOUT
+            debugLogEmoji('⏰', 'Geolocation timeout, will use timeout fallback');
+            // Don't resolve yet - let the timeout handle it
           }
-          // Don't resolve yet - let the timeout handle it
         },
         { timeout: 10000, enableHighAccuracy: true, maximumAge: 300000 }
       );
@@ -154,6 +160,51 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       clearInterval(countdownInterval);
     };
   }, []); // Empty dependency array means this runs once on mount
+
+  // Monitor location permission changes
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      const checkPermission = async () => {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          
+          permission.onchange = () => {
+            debugLogEmoji('🔄', 'Location permission changed:', permission.state);
+            
+            if (permission.state === 'granted' && !userLocation) {
+              // Permission was granted but we don't have location yet
+              // Automatically request location
+              debugLogEmoji('📍', 'Permission granted, automatically requesting location');
+              autoRequestLocationIfPermitted();
+            } else if (permission.state === 'denied') {
+              // Permission was denied, show manual input
+              debugLogEmoji('❌', 'Permission denied, showing manual input');
+              setShowLocationPrompt(true);
+            }
+          };
+          
+          // Also check initial permission state
+          if (permission.state === 'granted' && !userLocation) {
+            debugLogEmoji('🔍', 'Initial permission check: granted, requesting location');
+            autoRequestLocationIfPermitted();
+          }
+        } catch (error) {
+          debugLogEmoji('⚠️', 'Could not monitor permission changes:', error.message);
+        }
+      };
+      
+      checkPermission();
+    }
+  }, [userLocation]);
+
+  // Monitor userLocation changes
+  useEffect(() => {
+    if (userLocation) {
+      debugLogEmoji('📍', 'User location updated:', userLocation);
+    } else {
+      debugLogEmoji('🗑️', 'User location cleared');
+    }
+  }, [userLocation]);
 
   // Monitor changes to recipesByCategory
   useEffect(() => {
@@ -217,35 +268,6 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     }
   }, [recommendations, recipesByCategory]);
 
-  // Monitor location permission changes
-  useEffect(() => {
-    if (navigator.permissions && navigator.permissions.query) {
-      const checkPermission = async () => {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          
-          // Listen for permission changes
-          permission.addEventListener('change', () => {
-            debugLogEmoji('🔒', 'Location permission changed to:', permission.state);
-            
-            if (permission.state === 'granted' && !userLocation) {
-              // Permission was granted, but don't call fetchRecommendations here
-              // The timeout system will handle location resolution
-              debugLogEmoji('✅', 'Location permission granted, waiting for timeout system to resolve');
-            } else if (permission.state === 'denied') {
-              // Permission was denied, show manual option
-              setShowLocationPrompt(true);
-            }
-          });
-        } catch (error) {
-          debugLogEmoji('⚠️', 'Could not monitor permission changes:', error.message);
-        }
-      };
-      
-      checkPermission();
-    }
-  }, [userLocation]);
-
   // Fetch recommendations with a specific location (to avoid timing issues with state updates)
   async function fetchRecommendationsWithLocation(location) {
     try {
@@ -255,10 +277,19 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       if (!location) {
         location = '';
         debugLogEmoji('🌍', 'Using location-agnostic recommendations');
+      } else {
+        debugLogEmoji('📍', 'Fetching recommendations with location:', location);
       }
       
       const currentDate = new Date().toISOString().split('T')[0];
       debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
+      
+      const requestBody = {
+        location: location,
+        date: currentDate
+      };
+      
+      debugLogEmoji('📤', 'Sending request to recommendation worker:', requestBody);
       
       const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
@@ -267,10 +298,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          location: location,
-          date: currentDate
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (res.ok) {
@@ -515,7 +543,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       setShowLocationPrompt(false);
       setIsResolvingLocation(false); // Mark location as resolved
       debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
-      fetchRecommendations();
+      
+      // Immediately fetch recommendations with the new location to avoid race conditions
+      fetchRecommendationsWithLocation(trimmedLocation);
     }
   };
 
@@ -524,7 +554,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     setUserLocation(null);
     setIsResolvingLocation(false); // Ensure resolving state is false
     debugLogEmoji('🗑️', 'User location cleared');
-    fetchRecommendations();
+    
+    // Fetch location-agnostic recommendations immediately
+    fetchRecommendationsWithLocation('');
   };
 
   // Helper function to check if location permissions are available
@@ -543,6 +575,77 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     }
     
     return { available: true, state: 'unknown' };
+  };
+
+  // Function to automatically request location when permission is granted
+  const autoRequestLocationIfPermitted = async () => {
+    try {
+      const permissionInfo = await checkLocationPermissions();
+      
+      if (permissionInfo.available && permissionInfo.state === 'granted' && !userLocation) {
+        debugLogEmoji('🔍', 'Permission granted, automatically requesting location');
+        
+        // Use a shorter timeout for automatic requests
+        const position = await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error('Location request timeout'));
+          }, 5000);
+          
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              clearTimeout(timeoutId);
+              resolve(pos);
+            },
+            (error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            },
+            { timeout: 5000, enableHighAccuracy: false, maximumAge: 300000 }
+          );
+        });
+        
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        // Try to get city name using reverse geocoding
+        try {
+          const geocodeResponse = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+          );
+          
+          if (geocodeResponse.ok) {
+            const geocodeData = await geocodeResponse.json();
+            const city = geocodeData.city || geocodeData.locality;
+            const region = geocodeData.principalSubdivision || geocodeData.countryName;
+            
+            let location;
+            if (city && region) {
+              location = `${city}, ${region}`;
+            } else if (city) {
+              location = city;
+            } else {
+              location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+            }
+            
+            setUserLocation(location);
+            debugLogEmoji('📍', 'Auto-location set:', location);
+            
+            // Immediately fetch recommendations with the new location
+            await fetchRecommendationsWithLocation(location);
+          }
+        } catch (geocodeError) {
+          console.log('Reverse geocoding failed, using coordinates');
+          const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+          setUserLocation(location);
+          
+          // Immediately fetch recommendations with the new location
+          await fetchRecommendationsWithLocation(location);
+        }
+      }
+    } catch (error) {
+      debugLogEmoji('⚠️', 'Auto-location request failed:', error.message);
+      // Don't show error to user for automatic requests
+    }
   };
 
   // Helper function to search using smart search endpoint
@@ -599,14 +702,16 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           setUserLocation(location);
           debugLogEmoji('📍', 'Manual location set:', location);
           
-          // Refresh recommendations with new location
-          fetchRecommendations();
+          // Immediately fetch recommendations with the new location to avoid race conditions
+          await fetchRecommendationsWithLocation(location);
         }
       } catch (geocodeError) {
         console.log('Reverse geocoding failed, using coordinates');
         const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
         setUserLocation(location);
-        fetchRecommendations();
+        
+        // Immediately fetch recommendations with the new location to avoid race conditions
+        await fetchRecommendationsWithLocation(location);
       }
     } catch (error) {
       debugLogEmoji('❌', 'Manual location request failed:', error.message);
@@ -628,6 +733,47 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       console.error('Location request failed:', errorMessage);
     }
   }
+
+  // Test function to verify location is being sent (for debugging)
+  const testLocationSending = async () => {
+    const testLocation = 'Test City, Test State';
+    debugLogEmoji('🧪', 'Testing location sending with:', testLocation);
+    
+    try {
+      const currentDate = new Date().toISOString().split('T')[0];
+      const testRequest = {
+        location: testLocation,
+        date: currentDate
+      };
+      
+      debugLogEmoji('📤', 'Sending test request:', testRequest);
+      
+      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testRequest)
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        debugLogEmoji('✅', 'Test location request successful:', {
+          location: testLocation,
+          response: data
+        });
+        return true;
+      } else {
+        debugLogEmoji('❌', 'Test location request failed:', res.status);
+        return false;
+      }
+    } catch (error) {
+      debugLogEmoji('❌', 'Test location request error:', error.message);
+      return false;
+    }
+  };
 
   // If we have recipesByCategory, render them directly
   if (recipesByCategory && recipesByCategory.size > 0) {
@@ -969,6 +1115,24 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 Use GPS Location
               </button>
               <button 
+                onClick={autoRequestLocationIfPermitted}
+                style={{
+                  background: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '10px 20px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#1e7e34'}
+                onMouseOut={(e) => e.target.style.background = '#28a745'}
+              >
+                Check Permission & Get Location
+              </button>
+              <button 
                 onClick={() => setShowLocationPrompt(false)}
                 style={{
                   background: '#6c757d',
@@ -991,6 +1155,40 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
             <div style={{ marginTop: '16px', fontSize: '12px', color: '#999' }}>
               You can enable location access anytime in your browser settings
             </div>
+            
+            {/* Debug section - only show in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div style={{ 
+                marginTop: '16px', 
+                padding: '12px', 
+                background: '#f8f9fa', 
+                border: '1px solid #dee2e6', 
+                borderRadius: '4px',
+                fontSize: '12px'
+              }}>
+                <div style={{ marginBottom: '8px', fontWeight: 'bold', color: '#666' }}>
+                  🧪 Debug Tools (Development Only)
+                </div>
+                <button
+                  onClick={testLocationSending}
+                  style={{
+                    background: '#17a2b8',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    marginRight: '8px'
+                  }}
+                >
+                  Test Location API
+                </button>
+                <span style={{ color: '#999', fontSize: '11px' }}>
+                  Tests if location is being sent to recommendation worker
+                </span>
+              </div>
+            )}
           </div>
         )}
         

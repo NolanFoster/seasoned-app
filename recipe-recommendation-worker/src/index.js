@@ -253,9 +253,26 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
       requestId,
       hasLocation,
       location: hasLocation ? location : 'not_specified',
+      locationLength: hasLocation ? location.length : 0,
       date: recommendationDate,
       recipesPerCategory
     });
+
+    // Additional location-specific logging
+    if (hasLocation) {
+      log('info', 'Location-based recommendations requested', {
+        requestId,
+        location,
+        locationType: typeof location,
+        locationTrimmed: location.trim(),
+        locationLength: location.length
+      });
+    } else {
+      log('info', 'Location-agnostic recommendations requested', {
+        requestId,
+        reason: 'No location provided or empty location string'
+      });
+    }
 
     // Track recommendation request metrics
     metrics.increment('recommendations_requested', 1, {
@@ -540,6 +557,17 @@ async function getRecipeRecommendations(location, date, recipesPerCategory, env,
   const holidayContext = upcomingHoliday ? 
     `There's ${upcomingHoliday} coming up within a week. Consider festive and celebratory dishes.` : 
     `The weather is typical for ${season.toLowerCase()}.`;
+
+  // Log the prompt context for debugging
+  log('debug', 'AI prompt context created', {
+    requestId,
+    hasLocation,
+    location: location || 'not_specified',
+    locationContext,
+    promptContext: promptContext.substring(0, 100) + '...',
+    season,
+    upcomingHoliday: upcomingHoliday || 'none'
+  });
 
   const prompt = `${locationContext}, Date: ${date} (${month}, ${season})
 ${holidayContext} ${promptContext}
