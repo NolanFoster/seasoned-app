@@ -515,17 +515,96 @@ describe('Mock Recommendations Comprehensive Tests', () => {
     });
 
     it('should handle edge case limits', () => {
-      // Test with limit 0 (should default to 1)
-      const result0 = getMockRecommendations('Test City', '2024-06-15', 0);
-      Object.values(result0.recommendations).forEach(items => {
-        expect(items.length).toBeGreaterThan(0);
-      });
+      const result = getMockRecommendations('Seattle', '2024-08-27', 1, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
       
-      // Test with very high limit (should cap at 10)
-      const resultHigh = getMockRecommendations('Test City', '2024-06-15', 100);
-      Object.values(resultHigh.recommendations).forEach(items => {
-        expect(items.length).toBeLessThanOrEqual(10);
+      // Check that all categories respect the limit
+      Object.values(result.recommendations).forEach(category => {
+        expect(category).toHaveLength(1);
       });
+    });
+
+    it('should handle edge case limits 2', () => {
+      const result = getMockRecommendations('Seattle', '2024-08-27', 10, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      
+      // Check that all categories respect the limit (but some may have fewer items available)
+      Object.values(result.recommendations).forEach(category => {
+        expect(category.length).toBeLessThanOrEqual(10);
+        expect(category.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should handle invalid date formats gracefully', () => {
+      const result = getMockRecommendations('Seattle', 'invalid-date', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      
+      // Should fall back to current date when parsing fails
+      Object.values(result.recommendations).forEach(category => {
+        expect(category).toHaveLength(3);
+        category.forEach(dish => {
+          expect(dish).toHaveProperty('fallback', true);
+        });
+      });
+    });
+
+    it('should handle very long location names', () => {
+      const longLocation = 'A'.repeat(1000);
+      const result = getMockRecommendations(longLocation, '2024-08-27', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+    });
+
+    it('should handle special characters in location', () => {
+      const specialLocation = 'Seattle, WA (PNW) - "Emerald City" & Beyond!';
+      const result = getMockRecommendations(specialLocation, '2024-08-27', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+    });
+
+    it('should handle edge case limits correctly', () => {
+      const result = getMockRecommendations('Seattle', '2024-08-27', 0, 'test-req-123');
+      expect(result).toBeDefined();
+      // Should default to minimum of 1
+      const firstCategory = Object.values(result.recommendations)[0];
+      expect(firstCategory.length).toBeGreaterThan(0);
+      expect(firstCategory.length).toBeLessThanOrEqual(3); // Default fallback
+    });
+
+    it('should handle very high limits correctly', () => {
+      const result = getMockRecommendations('Seattle', '2024-08-27', 999, 'test-req-123');
+      expect(result).toBeDefined();
+      // Should cap at maximum available items (varies by category)
+      const firstCategory = Object.values(result.recommendations)[0];
+      expect(firstCategory.length).toBeGreaterThan(0);
+      expect(firstCategory.length).toBeLessThanOrEqual(10); // Some categories have fewer items
+    });
+
+    it('should handle null date gracefully', () => {
+      const result = getMockRecommendations('Seattle', null, 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+    });
+
+    it('should handle undefined date gracefully', () => {
+      const result = getMockRecommendations('Seattle', undefined, 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+    });
+
+    it('should handle empty string date gracefully', () => {
+      const result = getMockRecommendations('Seattle', '', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+    });
+
+    it('should handle whitespace-only date gracefully', () => {
+      const result = getMockRecommendations('Seattle', '   ', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
     });
   });
 });

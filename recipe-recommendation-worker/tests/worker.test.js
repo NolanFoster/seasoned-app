@@ -19,11 +19,12 @@ vi.mock('../../shared/metrics-collector.js', () => ({
 }));
 
 import { 
-  getRecipeRecommendations, 
   getSeason, 
-  getMockRecommendations,
+  getMockRecommendations, 
   enhanceRecommendationsWithRecipes,
-  searchRecipeByCategory
+  searchRecipeByCategory,
+  getRecipeRecommendations,
+  extractCookingTerms
 } from '../src/index.js';
 
 // Mock environment
@@ -420,6 +421,65 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes[0].fallback).toBe(true);
       expect(recipes[0].source).toBe('fallback');
     });
+
+    it('should handle recipe save worker search failure gracefully', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: null,
+        RECIPE_SAVE_WORKER_URL: 'https://invalid-url.workers.dev'
+      };
+
+      const recipes = await searchRecipeByCategory(
+        'Test Category',
+        ['test dish 1', 'test dish 2'],
+        2,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(2);
+      expect(recipes[0]).toHaveProperty('fallback', true);
+      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+    });
+
+    it('should handle complete search failure and return basic fallback', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: null,
+        RECIPE_SAVE_WORKER_URL: null
+      };
+
+      const recipes = await searchRecipeByCategory(
+        'Test Category',
+        ['test dish 1', 'test dish 2'],
+        2,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(2);
+      expect(recipes[0]).toHaveProperty('fallback', true);
+      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+    });
+
+    it('should handle search with no meaningful cooking terms extracted', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: 'https://recipe-search-db.nolanfoster.workers.dev',
+        RECIPE_SAVE_WORKER_URL: null
+      };
+
+      // Test with dish names that don't contain any predefined cooking terms
+      const recipes = await searchRecipeByCategory(
+        'Very Creative Category',
+        ['xyzzy dish', 'qwerty food', 'abracadabra meal'],
+        2,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(2);
+      // The search database may not find recipes for these terms, so it falls back
+      expect(recipes[0]).toHaveProperty('fallback', true);
+      expect(recipes[0]).toHaveProperty('source', 'fallback');
+    });
   });
 
   describe('getRecipeRecommendations integration', () => {
@@ -482,5 +542,49 @@ describe('Recipe Recommendation Worker', () => {
         expect(recipes.length).toBeLessThanOrEqual(3);
       });
     });
+  });
+});
+
+describe('extractCookingTerms edge cases', () => {
+  it('should handle empty dish names array', () => {
+    const terms = extractCookingTerms('Test Category', []);
+    expect(terms).toEqual([]);
+  });
+
+  it('should handle dish names with only stop words', () => {
+    const terms = extractCookingTerms('Test Category', ['with and the for']);
+    // The function falls back to returning the dish name when no meaningful terms found
+    expect(terms).toEqual(['with and the for']);
+  });
+
+  it('should handle dish names with very short words', () => {
+    const terms = extractCookingTerms('Test Category', ['a b c d']);
+    // The function falls back to returning the dish name when no meaningful terms found
+    expect(terms).toEqual(['a b c d']);
+  });
+
+  it('should handle dish names with special characters', () => {
+    const terms = extractCookingTerms('Test Category', ['dish@name#123', 'food&drink%special']);
+    // The function processes words individually and extracts meaningful terms
+    expect(terms).toContain('name');
+    expect(terms).toContain('special');
+    expect(terms).toContain('drink');
+  });
+
+  it('should handle category names with special characters', () => {
+    const terms = extractCookingTerms('Test@Category#123', ['simple dish']);
+    // The function processes words individually
+    expect(terms).toContain('simple');
+  });
+
+  it('should handle dish names with numbers and symbols', () => {
+    const terms = extractCookingTerms('Test Category', ['dish-123', 'food_456', 'meal+789']);
+    // The function only returns meaningful terms from its predefined list
+    expect(terms).toContain('meal');
+    // 'dish' and 'food' may not be in the predefined meaningful terms list
+    expect(terms).not.toContain('dish');
+    expect(terms).not.toContain('food');
+    // Check that we get some meaningful terms
+    expect(terms.length).toBeGreaterThan(0);
   });
 });
