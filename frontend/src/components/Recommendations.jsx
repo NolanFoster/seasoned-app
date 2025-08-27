@@ -5,7 +5,7 @@ import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
 
-function Recommendations({ onRecipeSelect, recipesByCategory }) {
+function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick }) {
   // Debug flag - set to true to enable detailed logging
   const DEBUG_MODE = false;
   
@@ -656,7 +656,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                   <h2 className="category-title">{categoryName}</h2>
                   <SwipeableRecipeGrid>
                     {sortedRecipes.map((recipe, index) => (
-                      <div key={`${categoryName}-${recipe.id}-${index}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                      <div 
+                        key={`${categoryName}-${recipe.id}-${index}`} 
+                        className={`recipe-card ${(recipe.source === 'ai_generated' || recipe.fallback) ? 'ai-card' : ''} ${(recipe.source === 'ai_generated' || recipe.fallback) && aiCardLoadingStates.has(recipe.id || recipe.name) ? 'loading' : ''}`}
+                        onClick={() => {
+                          if (recipe.source === 'ai_generated' || recipe.fallback) {
+                            onAiCardClick(recipe);
+                          } else {
+                            onRecipeSelect(recipe);
+                          }
+                        }}
+                      >
                         <div className="recipe-card-image">
                           {/* Main image display */}
                           {(recipe.image || recipe.image_url) ? (
@@ -730,10 +740,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                               )}
                             </>
                           )}
-                          {/* Show "Generate with AI" for AI-generated recipes */}
+                                                    {/* Show "Generate with AI" for AI-generated recipes */}
                           {(recipe.source === 'ai_generated' || recipe.fallback) && (
                             <div className="ai-generated-indicator">
-                              <span className="ai-generated-text">Generate with AI</span>
+                              {aiCardLoadingStates.has(`${recipe.id || recipe.name}`) ? (
+                                <div className="ai-loading-state">
+                                  <div className="ai-loading-spinner"></div>
+                                  <span className="ai-loading-text">Generating Recipe...</span>
+                                </div>
+                              ) : (
+                                <span className="ai-generated-text">Generate with AI</span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -808,25 +825,25 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
             margin: '16px 0',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>📍</span>
-              <span style={{ fontSize: '14px', color: '#2d5a2d' }}>
-                Location: <strong>{userLocation}</strong>
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setShowLocationPrompt(true)}
-                style={{
-                  background: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '8px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '16px' }}>📍</span>
+                              <span style={{ fontSize: '14px', color: '#2d5a2d' }}>
+                                Location: <strong>{userLocation}</strong>
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => setShowLocationPrompt(true)}
+                                style={{
+                                  background: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '6px 12px',
                   cursor: 'pointer',
                   fontSize: '12px'
                 }}
@@ -1056,7 +1073,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                   <h2 className="category-title">{categoryName}</h2>
                   <SwipeableRecipeGrid>
                     {sortedRecipes.map((recipe, index) => (
-                      <div key={`${categoryName}-${recipe.id}-${index}`} className="recipe-card" onClick={() => onRecipeSelect(recipe)}>
+                      <div 
+                        key={`${categoryName}-${recipe.id}-${index}`} 
+                        className={`recipe-card ${(recipe.source === 'ai_generated' || recipe.fallback) ? 'ai-card' : ''} ${(recipe.source === 'ai_generated' || recipe.fallback) && aiCardLoadingStates.has(recipe.id || recipe.name) ? 'loading' : ''}`}
+                        onClick={() => {
+                          if (recipe.source === 'ai_generated' || recipe.fallback) {
+                            onAiCardClick(recipe);
+                          } else {
+                            onRecipeSelect(recipe);
+                          }
+                        }}
+                      >
                         <div className="recipe-card-image">
                           {/* Main image display */}
                           {(recipe.image || recipe.image_url) ? (
@@ -1138,7 +1165,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                           {/* Show "Generate with AI" for AI-generated recipes */}
                           {(recipe.source === 'ai_generated' || recipe.fallback) && (
                             <div className="ai-generated-indicator">
-                              <span className="ai-generated-text">Generate with AI</span>
+                              {aiCardLoadingStates.has(`${recipe.id || recipe.name}`) ? (
+                                <div className="ai-loading-state">
+                                  <div className="ai-loading-spinner"></div>
+                                  <span className="ai-loading-text">Generating Recipe...</span>
+                                </div>
+                              ) : (
+                                <span className="ai-generated-text">Generate with AI</span>
+                              )}
                             </div>
                           )}
                         </div>

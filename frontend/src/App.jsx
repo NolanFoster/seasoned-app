@@ -9,6 +9,7 @@ const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL; // Search database worker
 const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL; // Recipe save worker
 const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL; // Recipe view worker for shareable pages
+const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL; // Recipe generation worker for AI cards
 
 
 
@@ -481,6 +482,7 @@ function App() {
   const [recipesByCategory, setRecipesByCategory] = useState(new Map()); // Store recipes organized by category
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
+  const [aiCardLoadingStates, setAiCardLoadingStates] = useState(new Map()); // Track loading state for AI cards
   
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
@@ -1820,7 +1822,92 @@ function App() {
     setEditablePreview(null);
   }
 
+  // Handle AI card recipe generation
+  async function handleAiCardRecipeGeneration(recipe) {
+    // Check if this is an AI card
+    if (!(recipe.source === 'ai_generated' || recipe.fallback)) {
+      return false; // Not an AI card, proceed normally
+    }
+
+    // Set loading state for this specific card
+    const cardId = recipe.id || recipe.name;
+    setAiCardLoadingStates(prev => new Map(prev).set(cardId, true));
+
+    try {
+      // Call the recipe generation worker
+      const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeName: recipe.name,
+          ingredients: recipe.ingredients || [],
+          servings: recipe.servings || '4',
+          cuisine: recipe.cuisine || 'General',
+          dietary: recipe.dietary || []
+        }),
+        timeout: 30000 // 30 second timeout for AI generation
+      });
+
+      if (!response.ok) {
+        throw new Error(`Recipe generation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.recipe) {
+        // Create a complete recipe object from the generated data
+        const generatedRecipe = {
+          ...recipe,
+          name: result.recipe.name,
+          description: result.recipe.description,
+          ingredients: result.recipe.ingredients,
+          instructions: result.recipe.instructions,
+          prep_time: result.recipe.prepTime,
+          cook_time: result.recipe.cookTime,
+          recipe_yield: result.recipe.servings,
+          source: 'ai_generated',
+          generatedAt: result.recipe.generatedAt,
+          mockMode: result.recipe.mockMode || false
+        };
+
+        // Clear loading state and open the generated recipe
+        setAiCardLoadingStates(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(cardId);
+          return newMap;
+        });
+
+        // Open the generated recipe in fullscreen view
+        openRecipeView(generatedRecipe);
+        return true; // Recipe was generated and opened
+      } else {
+        throw new Error(result.error || 'Failed to generate recipe');
+      }
+    } catch (error) {
+      console.error('Error generating AI recipe:', error);
+      
+      // Clear loading state
+      setAiCardLoadingStates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(cardId);
+        return newMap;
+      });
+
+      // Show error message to user
+      alert(`Failed to generate recipe: ${error.message}. Please try again.`);
+      return false;
+    }
+  }
+
   function openRecipeView(recipe) {
+    // Check if this is an AI card that needs recipe generation
+    if (recipe.source === 'ai_generated' || recipe.fallback) {
+      // For AI cards, generate the recipe first
+      handleAiCardRecipeGeneration(recipe);
+      return;
+    }
+
+    // For regular recipes, open immediately
     setSelectedRecipe(recipe);
     // Push state to browser history when opening a recipe
     window.history.pushState({ recipeView: true }, '', window.location.href);
@@ -2359,6 +2446,8 @@ function App() {
                   <Recommendations 
                     onRecipeSelect={openRecipeView} 
                     recipesByCategory={recipesByCategory}
+                    aiCardLoadingStates={aiCardLoadingStates}
+                    onAiCardClick={handleAiCardRecipeGeneration}
                   />
                 ) : (
                   <div className="no-recipes-found">

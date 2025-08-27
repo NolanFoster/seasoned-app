@@ -908,6 +908,82 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* AI Card Loading State */
+.ai-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: ai-spin 1s linear infinite;
+}
+
+.ai-loading-text {
+  color: white;
+  font-size: 0.7em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* AI Card Glow and Pulsate Animation */
+.recipe-card.ai-card {
+  transition: all 0.3s ease;
+}
+
+.recipe-card.ai-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 32px rgba(102, 126, 234, 0.3),
+    0 4px 16px rgba(118, 75, 162, 0.2);
+}
+
+.recipe-card.ai-card.loading {
+  animation: ai-card-pulsate 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 0 20px rgba(102, 126, 234, 0.6),
+    0 0 40px rgba(118, 75, 162, 0.4),
+    0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+/* AI Card Loading Animation Keyframes */
+@keyframes ai-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes ai-card-pulsate {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(102, 126, 234, 0.6),
+      0 0 40px rgba(118, 75, 162, 0.4),
+      0 8px 32px rgba(102, 126, 234, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(102, 126, 234, 0.8),
+      0 0 60px rgba(118, 75, 162, 0.6),
+      0 12px 40px rgba(102, 126, 234, 0.4);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 
+      0 0 20px rgba(102, 126, 234, 0.6),
+      0 0 40px rgba(118, 75, 162, 0.4),
+      0 8px 32px rgba(102, 126, 234, 0.3);
+    transform: scale(1);
+  }
+}
+
 /* Dark mode overrides for recipe cards */
 @media (prefers-color-scheme: dark) {
   .recipe-card {
