@@ -282,19 +282,9 @@
 
 /* Mobile responsiveness */
 @media (max-width: 480px) {
-  .instruction-with-timers {
-    padding-bottom: 40px; /* Less space on mobile */
-  }
-  
   .timer-button-inline {
     padding: 4px 8px;
     font-size: 11px;
-  }
-  
-  .timer-text {
-    font-size: 11px;
-    margin-left: 2px;
-    color: white;
   }
   
   .timer-icon-inline {
@@ -303,7 +293,7 @@
   }
   
   .timer-buttons-container {
-    gap: 4px;
+    gap: 3px;
   }
   
   .timer-active {
@@ -358,7 +348,7 @@
   }
   
   .nutrition-slide-right {
-    transform: translateX(100px);
+    transform: translateX(70px);
   }
 }
 
@@ -410,5 +400,23 @@
   .timer-icon {
     width: 15px;
     height: 15px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 360px) {
+  .nutrition-slide-right {
+    transform: translateX(60px);
+  }
+}
+
+/* Very small mobile devices */
+@media (max-width: 320px) {
+  .nutrition-slide-right {
+    transform: translateX(50px);
+  }
+  
+  .fab-nutrition-trigger {
+    margin-right: 3px;
   }
 }

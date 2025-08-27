@@ -1023,6 +1023,38 @@
   }
 }
 
+@media (max-width: 360px) {
+  .recipe-top-header {
+    padding: 6px 12px;
+  }
+  
+  .recipe-fullscreen-actions {
+    gap: 6px;
+  }
+  
+  .back-btn {
+    width: 32px;
+    height: 30px;
+    font-size: 0.9em;
+  }
+}
+
+@media (max-width: 320px) {
+  .recipe-top-header {
+    padding: 5px 10px;
+  }
+  
+  .recipe-fullscreen-actions {
+    gap: 5px;
+  }
+  
+  .back-btn {
+    width: 30px;
+    height: 28px;
+    font-size: 0.85em;
+  }
+}
+
 /* Nutrition Panel Specific Styles */
 
 .nutrition-facts-label {
@@ -1280,5 +1312,33 @@ body.dark-mode {
 
   .nutrition-note {
     font-size: 0.7em;
+  }
+}
+
+@media (max-width: 360px) {
+  .fab-nutrition-trigger {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9em;
+    margin-right: 4px;
+  }
+
+  .nutrition-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 320px) {
+  .fab-nutrition-trigger {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85em;
+    margin-right: 3px;
+  }
+
+  .nutrition-icon {
+    width: 14px;
+    height: 14px;
   }
 }
