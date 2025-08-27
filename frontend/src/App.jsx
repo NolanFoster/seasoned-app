@@ -278,9 +278,12 @@ function App() {
         newTimers.set(timerId, updatedTimer);
         
         // Update floating timer if this is the active one
-        if (floatingTimer && floatingTimer.id === timerId) {
-          setFloatingTimer(updatedTimer);
-        }
+        setFloatingTimer(prevFloating => {
+          if (prevFloating && prevFloating.id === timerId) {
+            return updatedTimer;
+          }
+          return prevFloating;
+        });
         
         return newTimers;
       });
@@ -290,6 +293,17 @@ function App() {
   };
 
   const startTimer = (timerId) => {
+    // Clear any existing interval first
+    const existingInterval = timerIntervals.get(timerId);
+    if (existingInterval) {
+      clearInterval(existingInterval);
+      setTimerIntervals(prev => {
+        const newIntervals = new Map(prev);
+        newIntervals.delete(timerId);
+        return newIntervals;
+      });
+    }
+    
     setActiveTimers(prev => {
       const currentTimer = prev.get(timerId);
       if (!currentTimer) return prev;
@@ -302,10 +316,16 @@ function App() {
       
       const newTimers = new Map(prev);
       newTimers.set(timerId, updatedTimer);
+      
+      // Update floating timer if this is the active one
+      if (floatingTimer && floatingTimer.id === timerId) {
+        setFloatingTimer(updatedTimer);
+      }
+      
       return newTimers;
     });
     
-    // Restart the interval
+    // Start the interval
     const interval = setInterval(() => {
       setActiveTimers(prev => {
         const currentTimer = prev.get(timerId);
@@ -346,6 +366,15 @@ function App() {
         const updatedTimer = { ...currentTimer, remainingSeconds: remaining };
         const newTimers = new Map(prev);
         newTimers.set(timerId, updatedTimer);
+        
+        // Update floating timer if this is the active one
+        setFloatingTimer(prevFloating => {
+          if (prevFloating && prevFloating.id === timerId) {
+            return updatedTimer;
+          }
+          return prevFloating;
+        });
+        
         return newTimers;
       });
     }, 1000);
@@ -374,9 +403,12 @@ function App() {
       newTimers.set(timerId, updatedTimer);
       
       // Update floating timer if this is the active one
-      if (floatingTimer && floatingTimer.id === timerId) {
-        setFloatingTimer(updatedTimer);
-      }
+      setFloatingTimer(prevFloating => {
+        if (prevFloating && prevFloating.id === timerId) {
+          return updatedTimer;
+        }
+        return prevFloating;
+      });
       
       return newTimers;
     });
