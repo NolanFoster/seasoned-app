@@ -1146,7 +1146,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          location: 'San Francisco, CA', // Default location
+          location: '', // No default location - let the recommendation worker provide general recommendations
           date: new Date().toISOString().split('T')[0]
         }),
         timeout: 15000 // 15 second timeout for recommendations
@@ -1201,7 +1201,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          location: 'San Francisco, CA', // Default location
+          location: '', // No default location - let the recommendation worker provide general recommendations
           date: new Date().toISOString().split('T')[0]
         }),
         timeout: 15000 // 15 second timeout for recommendations

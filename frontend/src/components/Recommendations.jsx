@@ -71,15 +71,15 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       if (isLocationResolved) return;
       isLocationResolved = true;
       
-      debugLogEmoji('⏰', 'Location permission timeout - using default location');
+      debugLogEmoji('⏰', 'Location permission timeout - showing location prompt');
       
-      // Set a default location after timeout
-      setUserLocation('San Francisco, CA');
+      // Instead of defaulting to San Francisco, show the location prompt
+      setShowLocationPrompt(true);
       setLocationTimeout(null);
       setIsResolvingLocation(false);
       
-      // Fetch recommendations with default location - pass the location directly to avoid timing issues
-      fetchRecommendationsWithLocation('San Francisco, CA');
+      // Don't fetch recommendations yet - let user choose location
+      debugLogEmoji('👤', 'Waiting for user to provide location');
     };
 
     // Set timeout for location permission
@@ -147,9 +147,13 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
         { timeout: 10000, enableHighAccuracy: true, maximumAge: 300000 }
       );
     } else {
-      // Geolocation not supported, use default location immediately
-      setUserLocation('San Francisco, CA');
-      resolveLocationAndFetch('San Francisco, CA');
+      // Geolocation not supported, show location prompt
+      debugLogEmoji('❌', 'Geolocation not supported by browser - showing location prompt');
+      setShowLocationPrompt(true);
+      setIsResolvingLocation(false);
+      
+      // Don't fetch recommendations yet - let user choose location
+      debugLogEmoji('👤', 'Waiting for user to provide location');
     }
 
     // Cleanup function
@@ -734,6 +738,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
     }
   }
 
+  // Function to get general recommendations without location
+  const getGeneralRecommendations = async () => {
+    debugLogEmoji('🌍', 'Getting general recommendations without location');
+    setShowLocationPrompt(false);
+    setIsResolvingLocation(false);
+    setUserLocation(null); // Clear any existing location
+    
+    // Get location-agnostic recommendations
+    await fetchRecommendationsWithLocation('');
+  };
+
   // Test function to verify location is being sent (for debugging)
   const testLocationSending = async () => {
     const testLocation = 'Test City, Test State';
@@ -1049,12 +1064,27 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               <p style={{ margin: '0 0 16px 0', color: '#666', fontSize: '14px', lineHeight: '1.4' }}>
                 Get personalized recipe recommendations based on your location, including seasonal ingredients and local specialties.
               </p>
+              
+              <div style={{ 
+                background: '#e3f2fd', 
+                border: '1px solid #2196f3', 
+                borderRadius: '6px', 
+                padding: '12px', 
+                marginBottom: '16px',
+                fontSize: '13px',
+                color: '#1565c0'
+              }}>
+                <strong>💡 What you'll get:</strong><br/>
+                • <strong>Location-based:</strong> Local specialties, regional ingredients, and area-specific cuisine<br/>
+                • <strong>General:</strong> Seasonal recipes that work anywhere, practical meal ideas<br/>
+                • <strong>GPS:</strong> Automatic location detection using your device's GPS
+              </div>
             </div>
             
             <div style={{ marginBottom: '16px' }}>
               <input
                 type="text"
-                placeholder="Enter your city (e.g., San Francisco, CA)"
+                placeholder="Enter your city (e.g., New York, NY or London, UK)"
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -1133,7 +1163,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 Check Permission & Get Location
               </button>
               <button 
-                onClick={() => setShowLocationPrompt(false)}
+                onClick={getGeneralRecommendations}
                 style={{
                   background: '#6c757d',
                   color: 'white',
@@ -1148,12 +1178,35 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
                 onMouseOver={(e) => e.target.style.background = '#545b62'}
                 onMouseOut={(e) => e.target.style.background = '#6c757d'}
               >
+                Get General Recommendations
+              </button>
+              <button 
+                onClick={() => setShowLocationPrompt(false)}
+                style={{
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '10px 20px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#c82333'}
+                onMouseOut={(e) => e.target.style.background = '#dc3545'}
+              >
                 Skip for Now
               </button>
             </div>
             
             <div style={{ marginTop: '16px', fontSize: '12px', color: '#999' }}>
               You can enable location access anytime in your browser settings
+            </div>
+            
+            <div style={{ marginTop: '12px', fontSize: '12px', color: '#666', textAlign: 'center' }}>
+              💡 <strong>General Recommendations</strong> provide seasonal and practical recipes that work anywhere, 
+              while <strong>Location-Based</strong> recommendations include local specialties and regional ingredients.
             </div>
             
             {/* Debug section - only show in development */}
