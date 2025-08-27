@@ -193,12 +193,21 @@
 
 /* Recipe Fullscreen Actions */
 .recipe-fullscreen-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto auto;
   gap: 15px;
+  align-items: center;
+  justify-content: end;
 }
 
-/* Share FAB Trigger Button */
-.fab-share-trigger {
+/* When timer is active, adjust grid to accommodate it */
+.recipe-fullscreen-actions:has(.header-timer-fab) {
+  grid-template-columns: auto auto auto auto;
+  gap: 12px;
+}
+
+/* Nutrition button positioning - dynamic based on timer presence */
+.fab-nutrition-trigger {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -208,16 +217,19 @@
   border: none;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.5em;
-  font-weight: bold;
+  font-size: 1.3em;
+  /* Remove fixed margin-right - let grid handle spacing */
+  margin-right: 0;
+  /* Ensure proper grid positioning */
+  grid-column: auto;
 }
 
-.fab-share-trigger:hover {
+.fab-nutrition-trigger:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -230,41 +242,13 @@
 }
 
 /* Nutrition FAB */
-.fab-nutrition-trigger {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: none;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.3em;
-  margin-right: 10px;
-}
-
 .fab-nutrition-trigger:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* When timer is active, prevent hover movement */
-.fab-nutrition-trigger.nutrition-slide-right:hover {
-  transform: translateX(80px) translateY(-2px);
-}
 
-/* Ensure nutrition button stays in place when timer is active - override any conflicting transforms */
-.fab-nutrition-trigger.nutrition-slide-right {
-  transform: translateX(80px) !important;
-  transition: background 0.3s ease, box-shadow 0.3s ease;
-}
 
 .nutrition-icon {
   display: inline-block;
@@ -797,12 +781,26 @@
   
   .recipe-fullscreen-actions {
     gap: 10px;
+    /* Ensure grid works on tablets */
+    grid-template-columns: auto auto auto auto;
   }
   
   .fab-share-trigger {
     width: 48px;
     height: 48px;
     font-size: 1.2em;
+  }
+  
+  .back-btn {
+    width: 40px;
+    height: 36px;
+    font-size: 1.2em;
+    padding: 0;
+  }
+  
+  .header-timer-fab {
+    padding: 7px 14px;
+    gap: 10px;
   }
   
   .share-panel {
@@ -1041,6 +1039,26 @@
   
   .recipe-fullscreen-actions {
     gap: 6px;
+    /* Ensure grid works on small mobile */
+    grid-template-columns: auto auto auto auto;
+  }
+  
+  .fab-nutrition-trigger {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9em;
+    margin-right: 0; /* Remove margin since grid handles spacing */
+  }
+  
+  .fab-share-trigger {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9em;
+  }
+  
+  .header-timer-fab {
+    padding: 5px 10px;
+    gap: 6px;
   }
   
   .back-btn {
@@ -1057,12 +1075,32 @@
   
   .recipe-fullscreen-actions {
     gap: 5px;
+    /* Ensure grid works on very small mobile */
+    grid-template-columns: auto auto auto auto;
+  }
+  
+  .fab-nutrition-trigger {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85em;
+    margin-right: 0; /* Remove margin since grid handles spacing */
+  }
+  
+  .fab-share-trigger {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85em;
   }
   
   .back-btn {
     width: 30px;
     height: 28px;
     font-size: 0.85em;
+  }
+  
+  .header-timer-fab {
+    padding: 4px 8px;
+    gap: 5px;
   }
 }
 
@@ -1246,7 +1284,18 @@ body.dark-mode {
     width: 48px;
     height: 48px;
     font-size: 1.1em;
-    margin-right: 8px;
+    margin-right: 0; /* Remove margin since grid handles spacing */
+  }
+  
+  .fab-share-trigger {
+    width: 48px;
+    height: 48px;
+    font-size: 1.2em;
+  }
+  
+  .header-timer-fab {
+    padding: 7px 14px;
+    gap: 10px;
   }
 
   .nutrition-icon {
@@ -1275,16 +1324,7 @@ body.dark-mode {
     font-size: 0.9em;
   }
   
-  /* Mobile hover fix for timer state */
-  .fab-nutrition-trigger.nutrition-slide-right:hover {
-    transform: translateX(110px) translateY(-2px);
-  }
-  
-  /* Ensure nutrition button stays in place on tablet when timer is active */
-  .fab-nutrition-trigger.nutrition-slide-right {
-    transform: translateX(110px) !important;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
+
 }
 
 @media (max-width: 480px) {
@@ -1292,7 +1332,24 @@ body.dark-mode {
     width: 44px;
     height: 44px;
     font-size: 1em;
-    margin-right: 6px;
+    margin-right: 0; /* Remove margin since grid handles spacing */
+  }
+  
+  .fab-share-trigger {
+    width: 44px;
+    height: 44px;
+    font-size: 1em;
+  }
+  
+  .header-timer-fab {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  
+  .back-btn {
+    width: 35px;
+    height: 32px;
+    font-size: 1em;
   }
 
   .nutrition-icon {
@@ -1336,16 +1393,7 @@ body.dark-mode {
     font-size: 0.7em;
   }
   
-  /* Mobile hover fix for timer state */
-  .fab-nutrition-trigger.nutrition-slide-right:hover {
-    transform: translateX(70px) translateY(-2px);
-  }
-  
-  /* Ensure nutrition button stays in place on mobile when timer is active */
-  .fab-nutrition-trigger.nutrition-slide-right {
-    transform: translateX(70px) !important;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
+
 }
 
 @media (max-width: 360px) {
@@ -1361,16 +1409,7 @@ body.dark-mode {
     height: 16px;
   }
   
-  /* Mobile hover fix for timer state */
-  .fab-nutrition-trigger.nutrition-slide-right:hover {
-    transform: translateX(60px) translateY(-2px);
-  }
-  
-  /* Ensure nutrition button stays in place on small mobile when timer is active */
-  .fab-nutrition-trigger.nutrition-slide-right {
-    transform: translateX(60px) !important;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
+
 }
 
 @media (max-width: 320px) {
@@ -1386,14 +1425,40 @@ body.dark-mode {
     height: 14px;
   }
   
-  /* Mobile hover fix for timer state */
-  .fab-nutrition-trigger.nutrition-slide-right:hover {
-    transform: translateX(50px) translateY(-2px);
-  }
-  
-  /* Ensure nutrition button stays in place on very small mobile when timer is active */
-  .fab-nutrition-trigger.nutrition-slide-right {
-    transform: translateX(50px) !important;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
+
+}
+
+/* Share FAB Trigger Button */
+.fab-share-trigger {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: none;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.fab-share-trigger:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Timer FAB styles for the dynamic layout */
+.header-timer-fab {
+  /* Ensure timer fits properly in the grid */
+  grid-column: auto;
+  /* Remove any fixed positioning that might interfere */
+  position: static;
+  margin: 0;
 }
