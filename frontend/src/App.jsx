@@ -3180,11 +3180,11 @@ function App() {
                     )}
                   </button>
                   <button 
-                    className="header-timer-stop-btn"
+                    className="header-timer-reset-btn"
                     onClick={() => stopTimer(floatingTimer.id)}
-                    title="Stop timer"
+                    title="Reset timer"
                   >
-                    <img src="/stop.svg" alt="Stop" className="timer-icon" />
+                    <img src="/stop.svg" alt="Reset" className="timer-icon" />
                   </button>
                   <button 
                     className="header-timer-dismiss"
