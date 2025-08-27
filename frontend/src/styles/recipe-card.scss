@@ -17,6 +17,13 @@
   margin-left: calc(-1 * #{$spacing-md}); /* Negative margin to extend to edge */
   margin-right: calc(-1 * #{$spacing-md});
   overflow: visible; /* Ensure cards aren't clipped */
+  
+  /* Mobile adjustments for consistent edge spacing */
+  @media (max-width: 768px) {
+    width: 100%; /* Full width on mobile */
+    margin-left: 0; /* No negative margin on mobile */
+    margin-right: 0; /* No negative margin on mobile */
+  }
 }
 
 /* Carousel Layout - Works on both mobile and desktop */
@@ -59,6 +66,63 @@
     
     &:last-child {
       margin-right: $spacing-md !important;
+    }
+  }
+  
+  /* Ensure consistent mobile padding for both loading and loaded states */
+  @media (max-width: 768px) {
+    padding: 0 10px 10px 10px !important; /* Add horizontal padding on mobile for consistent edge spacing */
+    
+    .recipe-card {
+      flex: 0 0 280px !important;
+      min-width: 280px !important;
+      max-width: 280px !important;
+      
+      /* Adjust first and last card margins for mobile */
+      &:first-child {
+        margin-left: $spacing-sm !important; /* Reduced from 30px to 10px on mobile */
+      }
+      
+      &:last-child {
+        margin-right: $spacing-sm !important; /* Consistent right margin */
+      }
+    }
+  }
+  
+  /* Additional mobile breakpoints for consistent spacing */
+  @media (max-width: 640px) {
+    padding: 0 8px 8px 8px !important; /* Slightly reduced padding for smaller screens */
+    
+    .recipe-card {
+      flex: 0 0 260px !important;
+      min-width: 260px !important;
+      max-width: 260px !important;
+      
+      &:first-child {
+        margin-left: 8px !important;
+      }
+      
+      &:last-child {
+        margin-right: 8px !important;
+      }
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 6px 6px 6px !important; /* Minimal padding for very small screens */
+    
+    .recipe-card {
+      flex: 0 0 240px !important;
+      min-width: 240px !important;
+      max-width: 240px !important;
+      
+      &:first-child {
+        margin-left: 6px !important;
+      }
+      
+      &:last-child {
+        margin-right: 6px !important;
+      }
     }
   }
 }
@@ -110,7 +174,7 @@
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .recipe-grid.carousel-layout {
-    padding: 10px 0 !important; /* Remove horizontal padding on mobile */
+    padding: 0 10px 10px 10px !important; /* Add horizontal padding on mobile for consistent edge spacing */
     
     .recipe-card {
       flex: 0 0 280px !important;
@@ -119,11 +183,11 @@
       
       /* Add padding to first and last cards on mobile */
       &:first-child {
-        margin-left: $spacing-md !important; /* Increased padding from 10px to 20px for better spacing */
+        margin-left: $spacing-sm !important; /* Consistent left margin */
       }
       
       &:last-child {
-        margin-right: 10px !important; /* Small margin for visual padding */
+        margin-right: $spacing-sm !important; /* Consistent right margin */
       }
     }
   }
@@ -146,7 +210,7 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   gap: $spacing-md !important;
-  padding: 10px 0 !important; /* Remove horizontal padding */
+  padding: 0 10px 10px 10px !important; /* Add horizontal padding for consistent edge spacing */
   
   /* Simple, performant touch handling */
   touch-action: pan-x !important;
@@ -169,11 +233,48 @@
     
     /* Add padding to first and last cards */
     &:first-child {
-      margin-left: $spacing-md !important; /* Increased padding from 10px to 20px */
+      margin-left: $spacing-sm !important; /* Consistent left margin */
     }
     
     &:last-child {
-      margin-right: $spacing-sm !important;
+      margin-right: $spacing-sm !important; /* Consistent right margin */
+    }
+  }
+  
+  /* Additional mobile breakpoints for consistent spacing */
+  @media (max-width: 640px) {
+    padding: 0 8px 8px 8px !important;
+    
+    .recipe-card {
+      flex: 0 0 260px !important;
+      min-width: 260px !important;
+      max-width: 260px !important;
+      
+      &:first-child {
+        margin-left: 8px !important;
+      }
+      
+      &:last-child {
+        margin-right: 8px !important;
+      }
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 6px 6px 6px !important;
+    
+    .recipe-card {
+      flex: 0 0 240px !important;
+      min-width: 240px !important;
+      max-width: 240px !important;
+      
+      &:first-child {
+        margin-left: 6px !important;
+      }
+      
+      &:last-child {
+        margin-right: 6px !important;
+      }
     }
   }
 }
