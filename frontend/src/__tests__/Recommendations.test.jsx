@@ -79,17 +79,24 @@ describe('Recommendations Component', () => {
 
     render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
 
+    // Wait for a fetch call with the correct location (after timeout resolves)
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalled();
-    });
+      const recommendationsCall = fetch.mock.calls.find(call => 
+        call[0].includes('/recommendations') && 
+        call[1].body.includes('San Francisco, CA')
+      );
+      expect(recommendationsCall).toBeDefined();
+    }, { timeout: 5000 }); // Wait up to 5 seconds for the 2-second timeout
 
+    // Verify the fetch call details
     const recommendationsCall = fetch.mock.calls.find(call => 
-      call[0].includes('/recommendations')
+      call[0].includes('/recommendations') && 
+      call[1].body.includes('San Francisco, CA')
     );
     expect(recommendationsCall).toBeDefined();
     expect(recommendationsCall[1].method).toBe('POST');
-    // With improved location handling, empty location is used when geolocation fails
-    expect(recommendationsCall[1].body).toContain('"location":""');
+    // With improved location handling, default location is used after timeout
+    expect(recommendationsCall[1].body).toContain('San Francisco, CA');
   });
 
   it('handles geolocation when available', async () => {
@@ -117,19 +124,40 @@ describe('Recommendations Component', () => {
           json: async () => mockRecommendations
         });
       }
+      if (url.includes('reverse-geocode-client')) {
+        // Mock reverse geocoding response
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            city: 'San Francisco',
+            locality: 'San Francisco',
+            principalSubdivision: 'CA',
+            countryName: 'United States'
+          })
+        });
+      }
       return Promise.resolve({ ok: false });
     });
 
     render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
 
+    // Wait for the location to be resolved and fetch to be called with the correct location
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/recommendations'),
-        expect.objectContaining({
-          body: expect.stringContaining('37.77°N, -122.42°W')
-        })
+      const recommendationsCall = fetch.mock.calls.find(call => 
+        call[0].includes('/recommendations') && 
+        call[1].body.includes('San Francisco, CA')
       );
-    });
+      expect(recommendationsCall).toBeDefined();
+    }, { timeout: 10000 }); // Wait up to 10 seconds for the 2-second timeout
+
+    // Verify the fetch call details
+    const recommendationsCall = fetch.mock.calls.find(call => 
+      call[0].includes('/recommendations') && 
+      call[1].body.includes('San Francisco, CA')
+    );
+    expect(recommendationsCall).toBeDefined();
+    expect(recommendationsCall[1].method).toBe('POST');
+    expect(recommendationsCall[1].body).toContain('San Francisco, CA');
   });
 
   it('handles geolocation errors gracefully', async () => {
@@ -155,14 +183,23 @@ describe('Recommendations Component', () => {
 
     render(<Recommendations onRecipeSelect={mockOnRecipeSelect} />);
 
+    // Wait for the timeout to resolve and fetch to be called with the default location
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/recommendations'),
-        expect.objectContaining({
-          body: expect.stringContaining('"location":""')
-        })
+      const recommendationsCall = fetch.mock.calls.find(call => 
+        call[0].includes('/recommendations') && 
+        call[1].body.includes('San Francisco, CA')
       );
-    });
+      expect(recommendationsCall).toBeDefined();
+    }, { timeout: 5000 }); // Wait up to 5 seconds for the 2-second timeout
+
+    // Verify the fetch call details
+    const recommendationsCall = fetch.mock.calls.find(call => 
+      call[0].includes('/recommendations') && 
+      call[1].body.includes('San Francisco, CA')
+    );
+    expect(recommendationsCall).toBeDefined();
+    expect(recommendationsCall[1].method).toBe('POST');
+    expect(recommendationsCall[1].body).toContain('San Francisco, CA');
   });
 
   it('filters seasonal recommendations appropriately', async () => {
