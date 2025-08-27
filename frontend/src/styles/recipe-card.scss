@@ -8,6 +8,26 @@
   gap: $spacing-lg - 5px;
   margin-top: $spacing-xl + $spacing-lg; /* Increased top margin to avoid overlap with title and FABs */
   transition: opacity $transition-normal;
+  
+  /* Responsive grid adjustments */
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: $spacing-md;
+  }
+  
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: $spacing-sm;
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: $spacing-sm - 5px;
+  }
 }
 
 /* Carousel Container */
@@ -86,6 +106,17 @@
       &:last-child {
         margin-right: $spacing-sm !important; /* Consistent right margin */
       }
+      
+      /* Ensure title fits in larger carousel cards */
+      .recipe-card-title {
+        font-size: 1.6em !important;
+        padding: 10px 14px 14px 14px !important;
+        line-height: 1.15 !important;
+      }
+      
+      .recipe-card-title-overlay {
+        padding: 0 14px !important;
+      }
     }
   }
   
@@ -105,6 +136,17 @@
       &:last-child {
         margin-right: 8px !important;
       }
+      
+      /* Ensure title fits in medium carousel cards */
+      .recipe-card-title {
+        font-size: 1.4em !important;
+        padding: 8px 12px 12px 12px !important;
+        line-height: 1.15 !important;
+      }
+      
+      .recipe-card-title-overlay {
+        padding: 0 12px !important;
+      }
     }
   }
   
@@ -122,6 +164,17 @@
       
       &:last-child {
         margin-right: 6px !important;
+      }
+      
+      /* Ensure title fits in smaller carousel cards */
+      .recipe-card-title {
+        font-size: 1.2em !important;
+        padding: 6px 10px 10px 10px !important;
+        line-height: 1.1 !important;
+      }
+      
+      .recipe-card-title-overlay {
+        padding: 0 10px !important;
       }
     }
   }
@@ -411,6 +464,20 @@
   opacity: 1;
   z-index: 10;
   margin-bottom: 0;
+  padding: 0 20px;
+  
+  /* Ensure overlay has enough space for title */
+  @media (max-width: 768px) {
+    padding: 0 16px;
+  }
+  
+  @media (max-width: 640px) {
+    padding: 0 14px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 12px;
+  }
 }
 
 .recipe-card:hover .recipe-card-overlay {
@@ -492,7 +559,31 @@
   display: block;
   margin-right: 20px;
   margin-bottom: 0;
-  max-width: 80%;
+  max-width: 100%;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  overflow-wrap: break-word;
+  
+  /* Responsive font sizing to prevent text cutoff */
+  @media (max-width: 1200px) {
+    font-size: 2em;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.8em;
+    padding: 12px 16px 16px 16px;
+  }
+  
+  @media (max-width: 640px) {
+    font-size: 1.6em;
+    padding: 10px 14px 14px 14px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.4em;
+    padding: 8px 12px 12px 12px;
+  }
 }
 
 .recipe-card-description {
