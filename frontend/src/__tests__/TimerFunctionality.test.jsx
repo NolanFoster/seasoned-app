@@ -16,22 +16,22 @@ describe('Timer Functionality', () => {
     it('should parse time strings correctly', () => {
       // Test parseTimeString function
       const parseTimeString = (timeString) => {
-        // Handle ranges like "5-10 minutes" by taking the average
+        // Handle ranges like "5-10 minutes" by taking the smaller time
         const rangeMatch = timeString.match(/(\d+)\s*[-–—]\s*(\d+)/);
         if (rangeMatch) {
           const min = parseInt(rangeMatch[1]);
           const max = parseInt(rangeMatch[2]);
-          const avg = Math.round((min + max) / 2);
-          timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, avg.toString());
+          const smaller = Math.min(min, max);
+          timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, smaller.toString());
         }
         
-        // Handle "X to Y" format
+        // Handle "X to Y" format by taking the smaller time
         const toMatch = timeString.match(/(\d+)\s+to\s+(\d+)/);
         if (toMatch) {
           const min = parseInt(toMatch[1]);
           const max = parseInt(toMatch[2]);
-          const avg = Math.round((min + max) / 2);
-          timeString = timeString.replace(/\d+\s+to\s+\d+/, avg.toString());
+          const smaller = Math.min(min, max);
+          timeString = timeString.replace(/\d+\s+to\s+\d+/, smaller.toString());
         }
         
         // Extract number and unit
@@ -69,8 +69,8 @@ describe('Timer Functionality', () => {
       expect(parseTimeString('5 minutes')).toBe(300); // 5 minutes = 300 seconds
       expect(parseTimeString('1 hour')).toBe(3600); // 1 hour = 3600 seconds
       expect(parseTimeString('30 seconds')).toBe(30); // 30 seconds = 30 seconds
-      expect(parseTimeString('5-10 minutes')).toBe(480); // Average of 5-10 = 7.5 minutes = 480 seconds (7.5 * 60 = 450, but the function rounds to 8 minutes = 480)
-      expect(parseTimeString('1 to 2 hours')).toBe(7200); // Average of 1-2 = 1.5 hours = 7200 seconds (1.5 * 3600 = 5400, but the function rounds to 2 hours = 7200)
+      expect(parseTimeString('5-10 minutes')).toBe(300); // Smaller of 5-10 = 5 minutes = 300 seconds
+      expect(parseTimeString('1 to 2 hours')).toBe(3600); // Smaller of 1-2 = 1 hour = 3600 seconds
       
       // Test time formatting
       expect(formatTime(65)).toBe('1:05'); // 1 minute 5 seconds

@@ -126,42 +126,36 @@ function App() {
       return text;
     }
     
-    // Return the full text followed by timer buttons
+    // Only take the first timer if multiple are found
+    const firstTimer = timers[0];
+    
+    // Return the full text followed by timer button
     return (
       <div className="instruction-with-timers">
         <div className="instruction-text">{text}</div>
         <div className="timer-buttons-container">
-                      {timers.map((timer, index) => {
-              const timerId = `timer-${timer.index}-${index}`;
-              const activeTimer = activeTimers.get(timerId);
-              const isFloatingActive = floatingTimer && floatingTimer.id === timerId;
-              
-              // Show disabled button when timer is active (either inline or floating)
-              return (
-                <button 
-                  key={timerId}
-                  className={`timer-button-inline ${activeTimer ? 'timer-button-disabled' : ''}`}
-                  title={activeTimer ? `Timer active: ${activeTimer.timeText}` : `Set timer for ${timer.text}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!activeTimer) {
-                      startNewTimer(timerId, timer.text);
-                    }
-                  }}
-                  disabled={activeTimer}
-                >
-                  <img 
-                    src="/timer.svg" 
-                    alt="Timer" 
-                    className="timer-icon-inline"
-                  />
-                  <span className="timer-text">
-                    {activeTimer ? `Timer: ${formatTime(activeTimer.remainingSeconds)}` : `Set timer for ${timer.text}`}
-                  </span>
-                </button>
-              );
-            })}
+          <button 
+            key={`timer-${firstTimer.index}-0`}
+            className={`timer-button-inline ${activeTimers.get(`timer-${firstTimer.index}-0`) ? 'timer-button-disabled' : ''}`}
+            title={activeTimers.get(`timer-${firstTimer.index}-0`) ? `Timer active: ${activeTimers.get(`timer-${firstTimer.index}-0`).timeText}` : `Set timer for ${firstTimer.text}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!activeTimers.get(`timer-${firstTimer.index}-0`)) {
+                startNewTimer(`timer-${firstTimer.index}-0`, firstTimer.text);
+              }
+            }}
+            disabled={activeTimers.get(`timer-${firstTimer.index}-0`)}
+          >
+            <img 
+              src="/timer.svg" 
+              alt="Timer" 
+              className="timer-icon-inline"
+            />
+            <span className="timer-text">
+              {activeTimers.get(`timer-${firstTimer.index}-0`) ? `Timer: ${formatTime(activeTimers.get(`timer-${firstTimer.index}-0`).remainingSeconds)}` : `Set timer for ${firstTimer.text}`}
+            </span>
+          </button>
         </div>
       </div>
     );
@@ -169,22 +163,22 @@ function App() {
 
   // Timer utility functions
   const parseTimeString = (timeString) => {
-    // Handle ranges like "5-10 minutes" by taking the average
+    // Handle ranges like "5-10 minutes" by taking the smaller time
     const rangeMatch = timeString.match(/(\d+)\s*[-–—]\s*(\d+)/);
     if (rangeMatch) {
       const min = parseInt(rangeMatch[1]);
       const max = parseInt(rangeMatch[2]);
-      const avg = Math.round((min + max) / 2);
-      timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, avg.toString());
+      const smaller = Math.min(min, max);
+      timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, smaller.toString());
     }
     
-    // Handle "X to Y" format
+    // Handle "X to Y" format by taking the smaller time
     const toMatch = timeString.match(/(\d+)\s+to\s+(\d+)/);
     if (toMatch) {
       const min = parseInt(toMatch[1]);
       const max = parseInt(toMatch[2]);
-      const avg = Math.round((min + max) / 2);
-      timeString = timeString.replace(/\d+\s+to\s+\d+/, avg.toString());
+      const smaller = Math.min(min, max);
+      timeString = timeString.replace(/\d+\s+to\s+\d+/, smaller.toString());
     }
     
     // Extract number and unit
