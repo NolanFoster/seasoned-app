@@ -166,22 +166,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
 
   // Fetch recommendations on component mount
   useEffect(() => {
-    console.log('🔍 Component mounted, calling fetchRecommendations');
     fetchRecommendations();
   }, []); // Empty dependency array means this runs once on mount
 
   async function fetchRecommendations() {
-    console.log('🚀 fetchRecommendations called');
     try {
       setIsLoadingRecommendations(true);
-      console.log('📊 Setting loading state to true');
       
       let location = userLocation; // Start with cached user location
-      console.log('📍 Current userLocation:', userLocation);
       
       // Try to get user's location from browser if we don't have it cached
       if (!userLocation && navigator.geolocation) {
-        console.log('🔍 No cached location, trying geolocation');
         try {
           debugLogEmoji('📍', 'Requesting user location permission...');
           
@@ -203,7 +198,6 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
             }
           }
           
-          console.log('🔍 About to call getCurrentPosition');
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { 
               timeout: 10000,
@@ -211,7 +205,6 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               maximumAge: 300000 // Cache for 5 minutes
             });
           });
-          console.log('📍 Got position:', position);
           
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
@@ -278,12 +271,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
         debugLogEmoji('🌍', 'Using location-agnostic recommendations');
       }
       
-      console.log('🌍 Final location to use:', location);
-      
       const currentDate = new Date().toISOString().split('T')[0];
       debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
       
-      console.log('📡 About to make fetch call to:', `${RECOMMENDATION_API_URL}/recommendations`);
       const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
         mode: 'cors',
@@ -296,7 +286,6 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
           date: currentDate
         })
       });
-      console.log('📡 Fetch response:', res);
       
       if (res.ok) {
         const data = await res.json();
@@ -413,17 +402,6 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       return [];
     }
   }
-
-  // Handle manual location input
-  const handleManualLocationInput = (locationInput) => {
-    const trimmedLocation = locationInput.trim();
-    if (trimmedLocation) {
-      setUserLocation(trimmedLocation);
-      setShowLocationPrompt(false);
-      debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
-      fetchRecommendations();
-    }
-  };
 
   // Clear user location
   const clearUserLocation = () => {
@@ -770,50 +748,6 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
               <p style={{ margin: '0 0 16px 0', color: '#666', fontSize: '14px', lineHeight: '1.4' }}>
                 Get personalized recipe recommendations based on your location, including seasonal ingredients and local specialties.
               </p>
-            </div>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                type="text"
-                placeholder="Enter your city (e.g., San Francisco, CA)"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  marginBottom: '8px'
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    handleManualLocationInput(e.target.value);
-                  }
-                }}
-                id="manual-location-input"
-              />
-              <button
-                onClick={() => {
-                  const input = document.getElementById('manual-location-input');
-                  if (input && input.value.trim()) {
-                    handleManualLocationInput(input.value);
-                  }
-                }}
-                style={{
-                  background: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  marginBottom: '12px'
-                }}
-              >
-                Set Location
-              </button>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
-                Or use one of the options below
-              </div>
             </div>
             
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
