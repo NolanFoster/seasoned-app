@@ -103,7 +103,7 @@ function App() {
   };
   
   // Function to parse time mentions in text and render with timer buttons at the end
-  const renderInstructionWithTimers = (text) => {
+  const renderInstructionWithTimers = (text, stepNumber) => {
     // Regex to match various time formats:
     // - X minute(s), X min(s), X hour(s), X hr(s), X second(s), X sec(s)
     // - X-Y minutes, X to Y minutes, etc.
@@ -132,7 +132,7 @@ function App() {
         <div className="instruction-text">{text}</div>
         <div className="timer-buttons-container">
                       {timers.map((timer, index) => {
-              const timerId = `timer-${timer.index}-${index}`;
+              const timerId = `timer-${stepNumber}-${timer.index}-${index}`;
               const activeTimer = activeTimers.get(timerId);
               const isFloatingActive = floatingTimer && floatingTimer.id === timerId;
               
@@ -141,12 +141,12 @@ function App() {
                 <button 
                   key={timerId}
                   className={`timer-button-inline ${activeTimer ? 'timer-button-disabled' : ''}`}
-                  title={activeTimer ? `Timer active: ${activeTimer.timeText}` : `Set timer for ${timer.text}`}
+                  title={activeTimer ? `Timer active: Step ${stepNumber + 1}` : `Set timer for Step ${stepNumber + 1}`}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     if (!activeTimer) {
-                      startNewTimer(timerId, timer.text);
+                      startNewTimer(timerId, `Step ${stepNumber + 1}`);
                     }
                   }}
                   disabled={activeTimer}
@@ -157,7 +157,7 @@ function App() {
                     className="timer-icon-inline"
                   />
                   <span className="timer-text">
-                    {activeTimer ? `Timer: ${formatTime(activeTimer.remainingSeconds)}` : `Set timer for ${timer.text}`}
+                    {activeTimer ? `Timer: ${formatTime(activeTimer.remainingSeconds)}` : `Set timer for Step ${stepNumber + 1}`}
                   </span>
                 </button>
               );
@@ -252,8 +252,10 @@ function App() {
           
           // Show notification
           if ('Notification' in window && Notification.permission === 'granted') {
+            // Extract step number from timer ID (format: timer-{stepNumber}-{index}-{timerIndex})
+            const stepNumber = parseInt(timerId.split('-')[1]) + 1;
             new Notification('Timer Finished!', {
-              body: `Your timer for ${timeText} is complete!`,
+              body: `Your timer for Step ${stepNumber} is complete!`,
               icon: '/timer.svg'
             });
           }
@@ -343,8 +345,10 @@ function App() {
           
           // Show notification
           if ('Notification' in window && Notification.permission === 'granted') {
+            // Extract step number from timer ID (format: timer-{stepNumber}-{index}-{timerIndex})
+            const stepNumber = parseInt(timerId.split('-')[1]) + 1;
             new Notification('Timer Finished!', {
-              body: `Your timer for ${currentTimer.timeText} is complete!`,
+              body: `Your timer for Step ${stepNumber} is complete!`,
               icon: '/timer.svg'
             });
           }
@@ -3493,7 +3497,7 @@ function App() {
                   <ol className="instructions-list">
                     {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
                       <li key={index}>
-                        {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
+                        {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '', index)}
                       </li>
                     ))}
                   </ol>
