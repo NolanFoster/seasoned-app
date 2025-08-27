@@ -858,18 +858,18 @@ function extractCookingTerms(categoryName, dishNames) {
   
   // Basic ingredient keywords that are likely to be in recipes
   const basicIngredients = [
-    'tomato', 'tomatoes', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp',
+    'tomato', 'tomatoes', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp', 'crab', 'seafood',
     'pasta', 'rice', 'quinoa', 'bread', 'cheese', 'egg', 'eggs',
-    'onion', 'garlic', 'basil', 'oregano', 'thyme', 'rosemary',
-    'lemon', 'lime', 'apple', 'berry', 'strawberry', 'blueberry',
-    'mushroom', 'spinach', 'lettuce', 'carrot', 'potato', 'sweet',
-    'oil', 'butter', 'cream', 'milk', 'yogurt'
+    'onion', 'garlic', 'basil', 'oregano', 'thyme', 'rosemary', 'mint', 'parsley', 'sage',
+    'lemon', 'lime', 'apple', 'berry', 'berries', 'strawberry', 'blueberry', 'cranberry',
+    'mushroom', 'spinach', 'lettuce', 'carrot', 'potato', 'sweet', 'leek', 'celery',
+    'oil', 'butter', 'cream', 'milk', 'yogurt', 'avocado', 'corn', 'pepper', 'nut'
   ];
   
   // Cooking methods and terms
   const cookingTerms = [
     'grilled', 'roasted', 'baked', 'fried', 'steamed', 'sauteed', 'braised',
-    'salad', 'soup', 'stew', 'pasta', 'pizza', 'sandwich', 'wrap'
+    'salad', 'soup', 'stew', 'pasta', 'pizza', 'sandwich', 'wrap', 'risotto', 'casserole'
   ];
   
   // Combine all search terms
@@ -907,15 +907,29 @@ function extractCookingTerms(categoryName, dishNames) {
       const dishWords = dishName.toLowerCase()
         .replace(/[^\w\s]/g, ' ')
         .split(/\s+/)
-        .filter(word => word.length > 3);
+        .filter(word => word.length > 2);
         
       // Take the longest words as they're likely to be ingredient names
       const longestWords = dishWords
-        .filter(word => !['with', 'and', 'the', 'for', 'recipe', 'dish', 'food', 'sauce', 'glaze'].includes(word))
+        .filter(word => !['with', 'and', 'the', 'for', 'recipe', 'dish', 'food', 'sauce', 'glaze', 'fresh', 'perfect', 'delicious'].includes(word))
         .sort((a, b) => b.length - a.length)
-        .slice(0, 2);
+        .slice(0, 3);
         
       longestWords.forEach(word => meaningfulTerms.add(word));
+    });
+  }
+  
+  // If still no terms, use the first few dish names as search terms
+  if (meaningfulTerms.size === 0) {
+    dishNames.slice(0, 2).forEach(dishName => {
+      const cleanName = dishName.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\b(grilled|roasted|baked|fried|steamed|sauteed|braised|fresh|perfect|delicious)\b/g, '')
+        .trim();
+      
+      if (cleanName.length > 3) {
+        meaningfulTerms.add(cleanName);
+      }
     });
   }
   
@@ -947,7 +961,7 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
         limit
       });
       
-      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(searchTerms))}&type=RECIPE&limit=${limit}`;
+      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(searchTerms))}&type=recipe&limit=${limit}`;
       
       log('debug', 'Smart-search query details', {
         requestId,
@@ -972,12 +986,12 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
         if (searchResults.results && searchResults.results.length > 0) {
           const recipes = searchResults.results.slice(0, limit).map(node => ({
             id: node.id,
-            name: node.properties.name || 'Unknown Recipe',
+            name: node.properties.name || node.properties.title || 'Unknown Recipe',
             description: node.properties.description || '',
             ingredients: node.properties.ingredients || [],
             instructions: node.properties.instructions || [],
-            image_url: node.properties.image_url || null,
-            source_url: node.properties.source_url || null,
+            image_url: node.properties.image_url || node.properties.image || null,
+            source_url: node.properties.source_url || node.properties.url || null,
             type: 'recipe',
             source: 'smart_search_database'
           }));

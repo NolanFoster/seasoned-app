@@ -136,8 +136,22 @@ async function processRecipe(key, env) {
     }
     
     // Create category/tag nodes and relationships
+    // Extract tags from recipe data or generate from category/cuisine
+    let tags = [];
     if (recipe.recipe.tags && Array.isArray(recipe.recipe.tags)) {
-      await createCategoryNodes(env, recipeNode.nodeId, recipe.recipe.tags);
+      tags = recipe.recipe.tags;
+    } else {
+      // Generate tags from available data
+      if (recipe.recipe.recipeCategory) tags.push(recipe.recipe.recipeCategory);
+      if (recipe.recipe.recipeCuisine) tags.push(recipe.recipe.recipeCuisine);
+      if (recipe.recipe.keywords) {
+        const keywordTags = recipe.recipe.keywords.split(',').map(k => k.trim()).filter(k => k);
+        tags = [...tags, ...keywordTags];
+      }
+    }
+    
+    if (tags.length > 0) {
+      await createCategoryNodes(env, recipeNode.nodeId, tags);
     }
     
     // Create cooking method relationships
@@ -160,18 +174,26 @@ async function createRecipeNode(env, recipeId, recipeData) {
     id: recipeId,
     type: 'RECIPE',
     properties: {
-      title: recipeData.title || 'Untitled Recipe',
+      name: recipeData.name || recipeData.title || 'Untitled Recipe',
+      title: recipeData.name || recipeData.title || 'Untitled Recipe', // Keep both for compatibility
       description: recipeData.description || '',
       ingredients: recipeData.ingredients || [],
       instructions: recipeData.instructions || [],
-      url: recipeData.url || '',
-      scrapedAt: recipeData.scrapedAt || new Date().toISOString(),
+      image_url: recipeData.image || recipeData.imageUrl || null,
+      source_url: recipeData.url || '',
+      scrapedAt: recipeData.scrapedAt || recipeData.createdAt || new Date().toISOString(),
       prepTime: recipeData.prepTime || null,
       cookTime: recipeData.cookTime || null,
-      servings: recipeData.servings || null,
+      totalTime: recipeData.totalTime || null,
+      servings: recipeData.recipeYield || recipeData.servings || null,
       difficulty: recipeData.difficulty || null,
-      cuisine: recipeData.cuisine || null,
-      tags: recipeData.tags || []
+      cuisine: recipeData.recipeCuisine || recipeData.cuisine || null,
+      category: recipeData.recipeCategory || null,
+      tags: recipeData.tags || recipeData.keywords ? recipeData.keywords.split(',').map(k => k.trim()).filter(k => k) : [],
+      author: recipeData.author || null,
+      datePublished: recipeData.datePublished || null,
+      nutrition: recipeData.nutrition || null,
+      aggregateRating: recipeData.aggregateRating || null
     }
   };
   
@@ -388,9 +410,11 @@ function delay(ms) {
 function normalizeIngredientName(ingredient) {
   // Remove quantities, units, and extra text to get the core ingredient name
   return ingredient
-    .replace(/^\d+\/\d+|\d+\.?\d*\s*(cup|tbsp|tsp|oz|lb|g|kg|ml|l|pound|ounce|gram|kilogram|milliliter|liter)s?\.?\s*/gi, '')
+    .replace(/^\d+\/\d+|\d+\.?\d*\s*(cup|tbsp|tsp|oz|lb|g|kg|ml|l|pound|ounce|gram|kilogram|milliliter|liter|lb\.?|oz\.?|tbsp\.?|tsp\.?)s?\.?\s*/gi, '')
     .replace(/^\d+\s*/, '')
     .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*,\s*chopped|\s*,\s*sliced|\s*,\s*diced|\s*,\s*minced/gi, '')
+    .replace(/\s*-\s*peeled|\s*-\s*cored|\s*-\s*thinly\s*sliced/gi, '')
     .trim()
     .toLowerCase();
 }
@@ -412,12 +436,14 @@ function getIngredientAliases(ingredientName) {
 function categorizeIngredient(ingredientName) {
   // Categorize ingredients for better organization
   const categories = {
-    'vegetables': ['tomato', 'onion', 'garlic', 'carrot', 'celery', 'bell pepper', 'mushroom', 'spinach', 'lettuce'],
-    'fruits': ['apple', 'banana', 'orange', 'lemon', 'lime', 'strawberry', 'blueberry'],
-    'proteins': ['chicken', 'beef', 'pork', 'fish', 'shrimp', 'tofu', 'egg', 'beans'],
-    'dairy': ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'sour cream'],
-    'grains': ['rice', 'pasta', 'bread', 'flour', 'quinoa', 'oats'],
-    'herbs_spices': ['basil', 'oregano', 'thyme', 'rosemary', 'cumin', 'paprika', 'cinnamon']
+    'vegetables': ['tomato', 'onion', 'garlic', 'carrot', 'celery', 'bell pepper', 'mushroom', 'spinach', 'lettuce', 'leek', 'potato', 'parsley', 'sage'],
+    'fruits': ['apple', 'banana', 'orange', 'lemon', 'lime', 'strawberry', 'blueberry', 'cranberry'],
+    'proteins': ['chicken', 'beef', 'pork', 'fish', 'shrimp', 'tofu', 'egg', 'beans', 'salmon', 'turkey', 'lamb', 'crab'],
+    'dairy': ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'sour cream', 'ricotta', 'parmigiano', 'burrata'],
+    'grains': ['rice', 'pasta', 'bread', 'flour', 'quinoa', 'oats', 'tortelloni', 'ciabatta'],
+    'herbs_spices': ['basil', 'oregano', 'thyme', 'rosemary', 'cumin', 'paprika', 'cinnamon', 'nutmeg', 'parsley', 'sage'],
+    'nuts_seeds': ['nut', 'seed', 'almond', 'walnut', 'pecan', 'sunflower', 'pumpkin'],
+    'oils_fats': ['oil', 'butter', 'olive', 'vegetable', 'canola', 'sesame']
   };
   
   for (const [category, ingredients] of Object.entries(categories)) {
