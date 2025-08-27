@@ -169,13 +169,12 @@ function App() {
 
   // Timer utility functions
   const parseTimeString = (timeString) => {
-    // Handle ranges like "5-10 minutes" by taking the average
+    // Handle ranges like "5-10 minutes" by using the lower value
     const rangeMatch = timeString.match(/(\d+)\s*[-–—]\s*(\d+)/);
     if (rangeMatch) {
       const min = parseInt(rangeMatch[1]);
       const max = parseInt(rangeMatch[2]);
-      const avg = Math.round((min + max) / 2);
-      timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, avg.toString());
+      timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, min.toString());
     }
     
     // Handle "X to Y" format
@@ -183,8 +182,7 @@ function App() {
     if (toMatch) {
       const min = parseInt(toMatch[1]);
       const max = parseInt(toMatch[2]);
-      const avg = Math.round((min + max) / 2);
-      timeString = timeString.replace(/\d+\s+to\s+\d+/, avg.toString());
+      timeString = timeString.replace(/\d+\s+to\s+\d+/, min.toString());
     }
     
     // Extract number and unit
