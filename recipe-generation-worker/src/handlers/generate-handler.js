@@ -98,68 +98,89 @@ export async function handleGenerate(request, env, corsHeaders) {
 }
 
 /**
- * Generate recipe using AI - tries Opik first if healthy, otherwise uses LLaMA
+ * Generate recipe using AI - original LLaMA implementation with Opik tracing
  */
 async function generateRecipeWithAI(requestData, env) {
   const startTime = Date.now();
 
+  // Create Opik trace for the entire recipe generation process
+  let trace = null;
+  if (env.OPIK_API_KEY && opikClient.isHealthy()) {
+    opikClient.setApiKey(env.OPIK_API_KEY);
+    trace = opikClient.createTrace('Recipe Generation', {
+      requestData: requestData,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   try {
-    // Step 1: Try Opik AI first if client is healthy
-    let opikRecipe = null;
-
-    try {
-      // Check if Opik client is healthy (has API key and AI binding)
-      if (env.OPIK_API_KEY && env.AI) {
-        console.log('Attempting recipe generation with Opik AI...');
-        opikClient.setApiKey(env.OPIK_API_KEY);
-
-        opikRecipe = await opikClient.generateRecipe(requestData, env);
-
-        if (opikRecipe && opikRecipe.name && opikRecipe.ingredients.length > 0) {
-          const duration = Date.now() - startTime;
-          console.log(`Opik AI recipe generation completed in ${duration}ms`);
-
-          return {
-            ...opikRecipe,
-            generationTime: duration,
-            similarRecipesFound: 0,
-            generationMethod: 'opik-ai'
-          };
-        }
-      }
-    } catch (error) {
-      console.log('Opik AI failed, proceeding with LLaMA implementation:', error.message);
-    }
-
-    // Step 2: Create query text from ingredients and preferences
+    // Step 1: Create query text from ingredients and preferences
     const queryText = buildQueryText(requestData);
     console.log('Generated query text:', queryText.substring(0, 200) + '...');
 
-    // Step 3: Generate embedding for the query
-    const queryEmbedding = await generateQueryEmbedding(queryText, env.AI);
+    // Create span for query text generation
+    const querySpan = trace ? opikClient.createSpan(trace, 'Query Text Generation', 'text-processing', {
+      queryText: queryText,
+      requestData: requestData
+    }) : null;
+
+    // Step 2: Generate embedding for the query
+    const queryEmbedding = await generateQueryEmbedding(queryText, env.AI, trace);
     if (!queryEmbedding) {
       throw new Error('Failed to generate query embedding');
     }
 
-    // Step 4: Search for similar recipes using vectorize and fetch full data
+    // End query span
+    if (querySpan) {
+      opikClient.endSpan(querySpan, { queryText, queryEmbedding });
+    }
+
+    // Step 3: Search for similar recipes using vectorize and fetch full data
     const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env.RECIPE_STORAGE);
     console.log(`Found ${similarRecipes.length} similar recipes`);
 
-    // Step 5: Generate new recipe using LLaMA with context from similar recipes
-    const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI);
+    // Create span for similarity search
+    const searchSpan = trace ? opikClient.createSpan(trace, 'Similarity Search', 'vector-search', {
+      queryEmbedding: queryEmbedding,
+      similarRecipesCount: similarRecipes.length
+    }) : null;
+
+    // End search span
+    if (searchSpan) {
+      opikClient.endSpan(searchSpan, { similarRecipesCount: similarRecipes.length });
+    }
+
+    // Step 4: Generate new recipe using LLaMA with context from similar recipes
+    const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI, trace);
 
     const duration = Date.now() - startTime;
     console.log(`Recipe generation completed in ${duration}ms`);
+
+    // End the main trace
+    if (trace) {
+      opikClient.endTrace(trace, {
+        recipe: generatedRecipe,
+        generationTime: duration,
+        similarRecipesFound: similarRecipes.length,
+        generationMethod: 'llama-ai'
+      });
+    }
 
     return {
       ...generatedRecipe,
       generationTime: duration,
       similarRecipesFound: similarRecipes.length,
-      generationMethod: 'llama-fallback'
+      generationMethod: 'llama-ai'
     };
 
   } catch (error) {
     console.error('Error in generateRecipeWithAI:', error);
+
+    // End trace with error if tracing is enabled
+    if (trace) {
+      opikClient.endTrace(trace, null, error);
+    }
+
     throw error;
   }
 }
@@ -217,20 +238,51 @@ function buildQueryText(requestData) {
 /**
  * Generate embedding for query text
  */
-async function generateQueryEmbedding(text, aiBinding) {
+async function generateQueryEmbedding(text, aiBinding, trace = null) {
   try {
+    // Create span for embedding generation if tracing is enabled
+    const embeddingSpan = trace ? opikClient.createSpan(trace, 'Query Embedding Generation', 'embedding', {
+      text: text,
+      model: '@cf/baai/bge-base-en-v1.5'
+    }) : null;
+
     const response = await aiBinding.run('@cf/baai/bge-base-en-v1.5', {
       text: text
     });
 
     if (response && response.data && Array.isArray(response.data[0])) {
+      // End embedding span with success
+      if (embeddingSpan) {
+        opikClient.endSpan(embeddingSpan, {
+          embedding: response.data[0],
+          model: '@cf/baai/bge-base-en-v1.5'
+        });
+      }
       return response.data[0];
     }
 
     console.error('Invalid embedding response:', response);
+
+    // End embedding span with error
+    if (embeddingSpan) {
+      opikClient.endSpan(embeddingSpan, null, new Error('Invalid embedding response format'));
+    }
+
     return null;
   } catch (error) {
     console.error('Error generating query embedding:', error);
+
+    // End embedding span with error if tracing is enabled
+    if (trace) {
+      const errorSpan = opikClient.createSpan(trace, 'Query Embedding Generation', 'embedding', {
+        text: text,
+        model: '@cf/baai/bge-base-en-v1.5'
+      });
+      if (errorSpan) {
+        opikClient.endSpan(errorSpan, null, error);
+      }
+    }
+
     return null;
   }
 }
@@ -300,7 +352,7 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
 /**
  * Generate recipe using LLaMA model with context from similar recipes
  */
-async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding) {
+async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, trace) {
   try {
     // Build context from similar recipes
     const contexts = similarRecipes.length > 0
@@ -309,6 +361,13 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding) {
 
     // Create prompt for LLaMA
     const prompt = buildLLaMAPrompt(requestData, contexts);
+
+    // Create span for LLaMA generation if tracing is enabled
+    const llmSpan = trace ? opikClient.createSpan(trace, 'LLaMA Recipe Generation', 'llm', {
+      prompt: prompt,
+      model: '@cf/meta/llama-3-8b-instruct',
+      similarRecipesCount: similarRecipes.length
+    }) : null;
 
     // Generate recipe using LLaMA
     const response = await aiBinding.run('@cf/meta/llama-3-8b-instruct', {
@@ -330,6 +389,14 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding) {
       throw new Error('Invalid response from LLaMA model');
     }
 
+    // End LLaMA span with success
+    if (llmSpan) {
+      opikClient.endSpan(llmSpan, {
+        response: response.response,
+        model: '@cf/meta/llama-3-8b-instruct'
+      });
+    }
+
     // Parse and structure the generated recipe
     const structuredRecipe = parseGeneratedRecipe(response.response, requestData);
 
@@ -337,6 +404,19 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding) {
 
   } catch (error) {
     console.error('Error generating recipe with LLaMA:', error);
+
+    // End LLaMA span with error if tracing is enabled
+    if (trace) {
+      const errorSpan = opikClient.createSpan(trace, 'LLaMA Recipe Generation', 'llm', {
+        prompt: buildLLaMAPrompt(requestData, similarRecipes.length > 0 ? buildRecipeContext(similarRecipes) : []),
+        model: '@cf/meta/llama-3-8b-instruct',
+        similarRecipesCount: similarRecipes.length
+      });
+      if (errorSpan) {
+        opikClient.endSpan(errorSpan, null, error);
+      }
+    }
+
     throw error;
   }
 }
