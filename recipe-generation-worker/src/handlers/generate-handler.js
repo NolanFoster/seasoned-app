@@ -68,8 +68,8 @@ export async function handleGenerate(request, env, corsHeaders) {
       });
     }
 
-    // Generate recipe using Opik AI first, fallback to existing LLaMA implementation
-    const generatedRecipe = await generateRecipeWithOpikOrFallback(requestBody, env);
+    // Generate recipe using AI (Opik if available, otherwise LLaMA)
+    const generatedRecipe = await generateRecipeWithAI(requestBody, env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -98,27 +98,54 @@ export async function handleGenerate(request, env, corsHeaders) {
 }
 
 /**
- * Generate recipe using embedding similarity search and LLaMA model
+ * Generate recipe using AI - tries Opik first if healthy, otherwise uses LLaMA
  */
 async function generateRecipeWithAI(requestData, env) {
   const startTime = Date.now();
 
   try {
-    // Step 1: Create query text from ingredients and preferences
+    // Step 1: Try Opik AI first if client is healthy
+    let opikRecipe = null;
+
+    try {
+      // Check if Opik client is healthy (has API key and AI binding)
+      if (env.OPIK_API_KEY && env.AI) {
+        console.log('Attempting recipe generation with Opik AI...');
+        opikClient.setApiKey(env.OPIK_API_KEY);
+
+        opikRecipe = await opikClient.generateRecipe(requestData, env);
+
+        if (opikRecipe && opikRecipe.name && opikRecipe.ingredients.length > 0) {
+          const duration = Date.now() - startTime;
+          console.log(`Opik AI recipe generation completed in ${duration}ms`);
+
+          return {
+            ...opikRecipe,
+            generationTime: duration,
+            similarRecipesFound: 0,
+            generationMethod: 'opik-ai'
+          };
+        }
+      }
+    } catch (error) {
+      console.log('Opik AI failed, proceeding with LLaMA implementation:', error.message);
+    }
+
+    // Step 2: Create query text from ingredients and preferences
     const queryText = buildQueryText(requestData);
     console.log('Generated query text:', queryText.substring(0, 200) + '...');
 
-    // Step 2: Generate embedding for the query
+    // Step 3: Generate embedding for the query
     const queryEmbedding = await generateQueryEmbedding(queryText, env.AI);
     if (!queryEmbedding) {
       throw new Error('Failed to generate query embedding');
     }
 
-    // Step 3: Search for similar recipes using vectorize and fetch full data
+    // Step 4: Search for similar recipes using vectorize and fetch full data
     const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env.RECIPE_STORAGE);
     console.log(`Found ${similarRecipes.length} similar recipes`);
 
-    // Step 4: Generate new recipe using LLaMA with context from similar recipes
+    // Step 5: Generate new recipe using LLaMA with context from similar recipes
     const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI);
 
     const duration = Date.now() - startTime;
@@ -127,54 +154,13 @@ async function generateRecipeWithAI(requestData, env) {
     return {
       ...generatedRecipe,
       generationTime: duration,
-      similarRecipesFound: similarRecipes.length
+      similarRecipesFound: similarRecipes.length,
+      generationMethod: 'llama-fallback'
     };
 
   } catch (error) {
     console.error('Error in generateRecipeWithAI:', error);
     throw error;
-  }
-}
-
-/**
- * Generate recipe using Opik AI first, fallback to existing LLaMA implementation
- */
-async function generateRecipeWithOpikOrFallback(requestData, env) {
-  const startTime = Date.now();
-
-  try {
-    console.log('Attempting recipe generation with Opik AI...');
-
-    // Set API key from environment
-    opikClient.setApiKey(env.OPIK_API_KEY);
-
-    // Try Opik AI first
-    const opikRecipe = await opikClient.generateRecipe(requestData, env);
-
-    if (opikRecipe && opikRecipe.name && opikRecipe.ingredients.length > 0) {
-      const duration = Date.now() - startTime;
-      console.log(`Opik AI recipe generation completed in ${duration}ms`);
-
-      return {
-        ...opikRecipe,
-        generationTime: duration,
-        similarRecipesFound: 0,
-        generationMethod: 'opik-ai'
-      };
-    }
-
-    throw new Error('Opik AI returned invalid recipe, falling back to LLaMA');
-
-  } catch (opikError) {
-    console.log('Opik AI failed, falling back to LLaMA implementation:', opikError.message);
-
-    try {
-      // Fallback to existing LLaMA implementation
-      return await generateRecipeWithAI(requestData, env);
-    } catch (llamaError) {
-      console.error('Both Opik AI and LLaMA failed:', llamaError.message);
-      throw new Error(`Recipe generation failed: Opik AI error: ${opikError.message}, LLaMA error: ${llamaError.message}`);
-    }
   }
 }
 
