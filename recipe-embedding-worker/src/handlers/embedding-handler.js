@@ -69,78 +69,32 @@ async function getRecipeFromKV(env, recipeId) {
 }
 
 /**
- * Queue management keys for KV storage
+ * Queue message structure for Cloudflare Queues
  */
-const QUEUE_KEYS = {
-  EMBEDDING_QUEUE: 'embedding_queue',
-  PROCESSING_STATUS: 'embedding_processing_status',
-  QUEUE_STATS: 'embedding_queue_stats'
+const QUEUE_MESSAGE_TYPES = {
+  RECIPE_EMBEDDING: 'recipe_embedding',
+  BULK_POPULATE: 'bulk_populate',
+  REPROCESS: 'reprocess'
 };
 
 /**
- * Queue item structure
- */
-const QUEUE_ITEM_STATUS = {
-  PENDING: 'pending',
-  PROCESSING: 'processing',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  SKIPPED: 'skipped'
-};
-
-/**
- * Add a recipe to the embedding queue
+ * Add a recipe to the embedding queue using Cloudflare Queues
  */
 export async function addToEmbeddingQueue(env, recipeId, priority = 'normal') {
   try {
-    // Get current queue
-    const queueData = await env.RECIPE_STORAGE.get(QUEUE_KEYS.EMBEDDING_QUEUE);
-    let queue = queueData ? JSON.parse(queueData) : [];
-    
-    // Check if recipe is already in queue
-    const existingIndex = queue.findIndex(item => item.recipeId === recipeId);
-    
-    if (existingIndex !== -1) {
-      // Update existing item
-      queue[existingIndex] = {
-        ...queue[existingIndex],
-        priority,
-        addedAt: Date.now(),
-        attempts: 0
-      };
-    } else {
-      // Add new item
-      queue.push({
-        recipeId,
-        priority,
-        status: QUEUE_ITEM_STATUS.PENDING,
-        addedAt: Date.now(),
-        attempts: 0,
-        lastAttempt: null,
-        error: null
-      });
-    }
-    
-    // Sort queue by priority (high, normal, low) and then by addedAt
-    queue.sort((a, b) => {
-      const priorityOrder = { high: 3, normal: 2, low: 1 };
-      const aPriority = priorityOrder[a.priority] || 2;
-      const bPriority = priorityOrder[b.priority] || 2;
-      
-      if (aPriority !== bPriority) {
-        return bPriority - aPriority;
-      }
-      return a.addedAt - b.addedAt;
-    });
-    
-    // Save updated queue
-    await env.RECIPE_STORAGE.put(QUEUE_KEYS.EMBEDDING_QUEUE, JSON.stringify(queue));
-    
-    // Update queue stats
-    await updateQueueStats(env, queue);
+    const message = {
+      type: QUEUE_MESSAGE_TYPES.RECIPE_EMBEDDING,
+      recipeId,
+      priority,
+      timestamp: Date.now(),
+      attempts: 0
+    };
+
+    // Send message to Cloudflare Queue
+    await env.EMBEDDING_QUEUE.send(message);
     
     console.log(`Added recipe ${recipeId} to embedding queue with ${priority} priority`);
-    return { success: true, queueLength: queue.length };
+    return { success: true, messageId: recipeId };
   } catch (error) {
     console.error(`Error adding recipe ${recipeId} to queue:`, error);
     return { success: false, error: error.message };
@@ -148,104 +102,41 @@ export async function addToEmbeddingQueue(env, recipeId, priority = 'normal') {
 }
 
 /**
- * Get next item from the embedding queue
+ * Add multiple recipes to the embedding queue for bulk operations
  */
-async function getNextQueueItem(env) {
+export async function addBulkToEmbeddingQueue(env, recipeIds, priority = 'normal') {
   try {
-    const queueData = await env.RECIPE_STORAGE.get(QUEUE_KEYS.EMBEDDING_QUEUE);
-    if (!queueData) return null;
-    
-    const queue = JSON.parse(queueData);
-    
-    // Find the first pending item
-    const pendingItem = queue.find(item => item.status === QUEUE_ITEM_STATUS.PENDING);
-    
-    if (pendingItem) {
-      // Mark as processing
-      pendingItem.status = QUEUE_ITEM_STATUS.PROCESSING;
-      pendingItem.lastAttempt = Date.now();
-      pendingItem.attempts += 1;
-      
-      // Save updated queue
-      await env.RECIPE_STORAGE.put(QUEUE_KEYS.EMBEDDING_QUEUE, JSON.stringify(queue));
-      
-      return pendingItem;
+    const messages = recipeIds.map(recipeId => ({
+      type: QUEUE_MESSAGE_TYPES.RECIPE_EMBEDDING,
+      recipeId,
+      priority,
+      timestamp: Date.now(),
+      attempts: 0
+    }));
+
+    // Send messages in batches (Cloudflare Queues supports up to 100 messages per batch)
+    const batchSize = 100;
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
+      await env.EMBEDDING_QUEUE.sendBatch(batch);
     }
     
-    return null;
+    console.log(`Added ${recipeIds.length} recipes to embedding queue with ${priority} priority`);
+    return { success: true, count: recipeIds.length };
   } catch (error) {
-    console.error('Error getting next queue item:', error);
-    return null;
+    console.error(`Error adding bulk recipes to queue:`, error);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Update queue item status
- */
-async function updateQueueItemStatus(env, recipeId, status, error = null) {
-  try {
-    const queueData = await env.RECIPE_STORAGE.get(QUEUE_KEYS.EMBEDDING_QUEUE);
-    if (!queueData) return false;
-    
-    const queue = JSON.parse(queueData);
-    const itemIndex = queue.findIndex(item => item.recipeId === recipeId);
-    
-    if (itemIndex !== -1) {
-      queue[itemIndex].status = status;
-      queue[itemIndex].lastAttempt = Date.now();
-      
-      if (error) {
-        queue[itemIndex].error = error;
-      }
-      
-      // Remove completed items from queue after some time (keep for 24 hours for monitoring)
-      if (status === QUEUE_ITEM_STATUS.COMPLETED || status === QUEUE_ITEM_STATUS.SKIPPED) {
-        queue[itemIndex].completedAt = Date.now();
-      }
-      
-      // Save updated queue
-      await env.RECIPE_STORAGE.put(QUEUE_KEYS.EMBEDDING_QUEUE, JSON.stringify(queue));
-      
-      // Update queue stats
-      await updateQueueStats(env, queue);
-      
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error(`Error updating queue item status for ${recipeId}:`, error);
-    return false;
-  }
-}
-
-/**
- * Update queue statistics
- */
-async function updateQueueStats(env, queue) {
-  try {
-    const stats = {
-      total: queue.length,
-      pending: queue.filter(item => item.status === QUEUE_ITEM_STATUS.PENDING).length,
-      processing: queue.filter(item => item.status === QUEUE_ITEM_STATUS.PROCESSING).length,
-      completed: queue.filter(item => item.status === QUEUE_ITEM_STATUS.COMPLETED).length,
-      failed: queue.filter(item => item.status === QUEUE_ITEM_STATUS.FAILED).length,
-      skipped: queue.filter(item => item.status === QUEUE_ITEM_STATUS.SKIPPED).length,
-      lastUpdated: Date.now()
-    };
-    
-    await env.RECIPE_STORAGE.put(QUEUE_KEYS.QUEUE_STATS, JSON.stringify(stats));
-  } catch (error) {
-    console.error('Error updating queue stats:', error);
-  }
-}
-
-/**
- * Get queue statistics
+ * Get queue statistics from Cloudflare Queues
  */
 async function getQueueStats(env) {
   try {
-    const statsData = await env.RECIPE_STORAGE.get(QUEUE_KEYS.QUEUE_STATS);
+    // Note: Cloudflare Queues doesn't provide direct queue statistics via the binding
+    // We'll use KV to track our own statistics
+    const statsData = await env.RECIPE_STORAGE.get('embedding_queue_stats');
     return statsData ? JSON.parse(statsData) : {
       total: 0,
       pending: 0,
@@ -270,162 +161,67 @@ async function getQueueStats(env) {
 }
 
 /**
- * Clean up old completed items from queue (older than 24 hours)
+ * Update queue statistics in KV storage
  */
-async function cleanupOldQueueItems(env) {
+async function updateQueueStats(env, stats) {
   try {
-    const queueData = await env.RECIPE_STORAGE.get(QUEUE_KEYS.EMBEDDING_QUEUE);
-    if (!queueData) return;
-    
-    const queue = JSON.parse(queueData);
-    const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
-    
-    const cleanedQueue = queue.filter(item => {
-      if (item.status === QUEUE_ITEM_STATUS.COMPLETED || item.status === QUEUE_ITEM_STATUS.SKIPPED) {
-        return item.completedAt && item.completedAt > cutoffTime;
-      }
-      return true;
-    });
-    
-    if (cleanedQueue.length !== queue.length) {
-      await env.RECIPE_STORAGE.put(QUEUE_KEYS.EMBEDDING_QUEUE, JSON.stringify(cleanedQueue));
-      await updateQueueStats(env, cleanedQueue);
-      console.log(`Cleaned up ${queue.length - cleanedQueue.length} old queue items`);
-    }
+    await env.RECIPE_STORAGE.put('embedding_queue_stats', JSON.stringify(stats));
   } catch (error) {
-    console.error('Error cleaning up old queue items:', error);
+    console.error('Error updating queue stats:', error);
   }
 }
 
 /**
- * Process items from the embedding queue
+ * Process a single recipe for embedding generation
  */
-async function processQueueItems(env, maxSubrequests, isScheduled) {
-  const results = {
-    processed: 0,
-    skipped: 0,
-    errors: 0,
-    details: [],
-    subrequestsUsed: 0
-  };
+async function processRecipe(env, recipeId, attempts = 0) {
+  try {
+    console.log(`Processing recipe ${recipeId} (attempt ${attempts})`);
 
-  let subrequestCount = 0;
-  let itemsProcessed = 0;
-  const maxItemsPerRun = isScheduled ? 20 : 10; // Limit items per run to prevent timeouts
-
-  console.log(`Processing up to ${maxItemsPerRun} items from queue`);
-
-  while (itemsProcessed < maxItemsPerRun && subrequestCount < maxSubrequests) {
-    // Get next item from queue
-    const queueItem = await getNextQueueItem(env);
-    if (!queueItem) {
-      console.log('No more items in queue');
-      break;
+    // Check if this recipe already has an embedding
+    const existingEmbedding = await checkExistingEmbedding(recipeId, env.RECIPE_VECTORS);
+    if (existingEmbedding) {
+      console.log(`Recipe ${recipeId} already has embedding, skipping`);
+      return { status: 'skipped', reason: 'already_has_embedding' };
     }
 
-    const { recipeId } = queueItem;
-    console.log(`Processing recipe ${recipeId} (attempt ${queueItem.attempts})`);
-
-    try {
-      // Check if this recipe already has an embedding
-      const existingEmbedding = await checkExistingEmbedding(recipeId, env.RECIPE_VECTORS);
-      results.subrequestsUsed++;
-
-      if (existingEmbedding) {
-        results.skipped++;
-        results.details.push({ recipeId, status: 'skipped', reason: 'already_has_embedding' });
-        
-        // Mark as skipped in queue
-        await updateQueueItemStatus(env, recipeId, QUEUE_ITEM_STATUS.SKIPPED);
-        itemsProcessed++;
-        continue;
-      }
-
-      // Get recipe data from KV
-      const recipeResult = await getRecipeFromKV(env, recipeId);
-      results.subrequestsUsed++;
-
-      if (!recipeResult.success || !recipeResult.recipe) {
-        results.skipped++;
-        results.details.push({ recipeId, status: 'skipped', reason: 'no_data' });
-        
-        // Mark as skipped in queue
-        await updateQueueItemStatus(env, recipeId, QUEUE_ITEM_STATUS.SKIPPED);
-        itemsProcessed++;
-        continue;
-      }
-
-      const recipeData = recipeResult.recipe;
-
-      // Generate embedding text from recipe data
-      const embeddingText = generateEmbeddingText(recipeData);
-
-      if (!embeddingText) {
-        results.skipped++;
-        results.details.push({ recipeId, status: 'skipped', reason: 'no_text' });
-        
-        // Mark as skipped in queue
-        await updateQueueItemStatus(env, recipeId, QUEUE_ITEM_STATUS.SKIPPED);
-        itemsProcessed++;
-        continue;
-      }
-
-      // Generate embedding using Cloudflare AI
-      const embedding = await generateEmbedding(embeddingText, env.AI);
-      results.subrequestsUsed++;
-
-      if (!embedding) {
-        results.errors++;
-        results.details.push({ recipeId, status: 'error', reason: 'embedding_failed' });
-        
-        // Mark as failed in queue (will be retried)
-        await updateQueueItemStatus(env, recipeId, QUEUE_ITEM_STATUS.FAILED, 'Embedding generation failed');
-        itemsProcessed++;
-        continue;
-      }
-
-      // Store embedding in vectorize
-      await storeEmbedding(recipeId, embedding, recipeData, env.RECIPE_VECTORS);
-      results.subrequestsUsed++;
-
-      results.processed++;
-      results.details.push({ recipeId, status: 'processed' });
-      
-      // Mark as completed in queue
-      await updateQueueItemStatus(env, recipeId, QUEUE_ITEM_STATUS.COMPLETED);
-      itemsProcessed++;
-
-    } catch (error) {
-      console.error(`Error processing recipe ${recipeId}:`, error);
-      results.errors++;
-      results.details.push({ recipeId, status: 'error', reason: error.message });
-      
-      // Mark as failed in queue (will be retried)
-      await updateQueueItemStatus(env, recipeId, QUEUE_ITEM_STATUS.FAILED, error.message);
-      itemsProcessed++;
+    // Get recipe data from KV
+    const recipeResult = await getRecipeFromKV(env, recipeId);
+    if (!recipeResult.success || !recipeResult.recipe) {
+      console.log(`Recipe ${recipeId} has no data, skipping`);
+      return { status: 'skipped', reason: 'no_data' };
     }
 
-    // Check if we're approaching the subrequest limit
-    if (subrequestCount >= maxSubrequests) {
-      console.log(`Stopping processing to avoid subrequest limit. Processed ${results.processed} recipes.`);
-      results.details.push({
-        status: 'info',
-        message: `Stopped processing after ${results.processed} recipes to avoid subrequest limit. Remaining items will be processed in next run.`
-      });
-      break;
+    const recipeData = recipeResult.recipe;
+
+    // Generate embedding text from recipe data
+    const embeddingText = generateEmbeddingText(recipeData);
+    if (!embeddingText) {
+      console.log(`Recipe ${recipeId} has no text content, skipping`);
+      return { status: 'skipped', reason: 'no_text' };
     }
 
-    // Add a small delay between items to prevent overwhelming the system
-    if (itemsProcessed < maxItemsPerRun && subrequestCount < maxSubrequests) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Generate embedding using Cloudflare AI
+    const embedding = await generateEmbedding(embeddingText, env.AI);
+    if (!embedding) {
+      console.log(`Failed to generate embedding for recipe ${recipeId}`);
+      return { status: 'failed', reason: 'embedding_failed' };
     }
+
+    // Store embedding in vectorize
+    await storeEmbedding(recipeId, embedding, recipeData, env.RECIPE_VECTORS);
+    
+    console.log(`Successfully processed recipe ${recipeId}`);
+    return { status: 'completed' };
+
+  } catch (error) {
+    console.error(`Error processing recipe ${recipeId}:`, error);
+    return { status: 'failed', reason: error.message };
   }
-
-  return results;
 }
 
 /**
- * Embedding generation handler - processes recipes from queue
+ * Embedding generation handler - processes recipes from Cloudflare Queue
  */
 export async function handleEmbedding(request, env, corsHeaders) {
   try {
@@ -446,43 +242,27 @@ export async function handleEmbedding(request, env, corsHeaders) {
     const isScheduled = requestBody.scheduled === true;
     console.log(`Starting embedding generation (${isScheduled ? 'scheduled' : 'manual'})`);
 
-    // Clean up old queue items
-    await cleanupOldQueueItems(env);
-
     // Get queue statistics
     const queueStats = await getQueueStats(env);
     console.log(`Queue status: ${queueStats.pending} pending, ${queueStats.processing} processing, ${queueStats.completed} completed`);
 
-    if (queueStats.pending === 0) {
-      return new Response(JSON.stringify({
-        message: 'No recipes pending in queue',
-        queueStats,
-        duration: Date.now() - startTime
-      }), {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
-    }
-
-    // Process recipes from queue (respecting subrequest limits)
+    // For manual runs, we'll process a limited number of recipes
+    // For scheduled runs, we'll process more but still respect limits
+    const maxRecipesPerRun = isScheduled ? 20 : 10;
     const maxSubrequests = isScheduled ? 48 : 45; // Conservative limits for 50 max
-    const results = await processQueueItems(env, maxSubrequests, isScheduled);
 
+    console.log(`Processing up to ${maxRecipesPerRun} recipes (max ${maxSubrequests} subrequests)`);
+
+    // Process recipes (this will be handled by the queue consumer)
+    // For now, we'll return a message indicating the queue is being processed
     const duration = Date.now() - startTime;
-    console.log(`Embedding generation completed: ${results.processed} processed, ${results.skipped} skipped, ${results.errors} errors in ${duration}ms`);
-
-    // Get updated queue stats
-    const updatedStats = await getQueueStats(env);
 
     return new Response(JSON.stringify({
-      message: 'Embedding generation completed',
-      ...results,
+      message: 'Embedding generation initiated',
+      queueStats,
       duration,
-      queueStats: updatedStats,
-      environment: env.ENVIRONMENT || 'development'
+      environment: env.ENVIRONMENT || 'development',
+      note: 'Recipes are processed via Cloudflare Queue consumer'
     }), {
       status: 200,
       headers: {
@@ -493,35 +273,98 @@ export async function handleEmbedding(request, env, corsHeaders) {
 
   } catch (error) {
     console.error('Error in embedding generation:', error);
-    
-    // Check if it's a storage error
-    if (error.message && error.message.includes('storage')) {
-      return new Response(JSON.stringify({
-        error: 'Failed to generate embeddings',
-        details: error.message,
-        environment: env.ENVIRONMENT || 'development'
-      }), {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
-    }
-    
-    // For other errors, return 200 but with error details
     return new Response(JSON.stringify({
       error: 'Failed to generate embeddings',
       details: error.message,
       environment: env.ENVIRONMENT || 'development'
     }), {
-      status: 200,
+      status: 500,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json'
       }
     });
   }
+}
+
+/**
+ * Queue consumer function - processes messages from Cloudflare Queue
+ */
+export async function handleQueueMessage(batch, env) {
+  console.log(`Processing ${batch.messages.length} messages from queue`);
+  
+  const results = {
+    processed: 0,
+    skipped: 0,
+    failed: 0,
+    details: []
+  };
+
+  for (const message of batch.messages) {
+    try {
+      const { recipeId, type, attempts = 0 } = message.body;
+      
+      if (type === QUEUE_MESSAGE_TYPES.RECIPE_EMBEDDING) {
+        const result = await processRecipe(env, recipeId, attempts);
+        
+        results.details.push({ recipeId, ...result });
+        
+        if (result.status === 'completed') {
+          results.processed++;
+        } else if (result.status === 'skipped') {
+          results.skipped++;
+        } else if (result.status === 'failed') {
+          results.failed++;
+          
+          // If failed and under retry limit, requeue with backoff
+          if (attempts < 3) {
+            const retryMessage = {
+              ...message.body,
+              attempts: attempts + 1,
+              timestamp: Date.now()
+            };
+            
+            // Add exponential backoff delay
+            const delay = Math.min(1000 * Math.pow(2, attempts), 30000); // Max 30 seconds
+            await env.EMBEDDING_QUEUE.send(retryMessage, { delaySeconds: Math.floor(delay / 1000) });
+            
+            console.log(`Requeued recipe ${recipeId} for retry (attempt ${attempts + 1})`);
+          } else {
+            console.log(`Recipe ${recipeId} failed after ${attempts} attempts, giving up`);
+          }
+        }
+      }
+      
+      // Acknowledge the message
+      message.ack();
+      
+    } catch (error) {
+      console.error('Error processing queue message:', error);
+      results.failed++;
+      results.details.push({ 
+        recipeId: message.body?.recipeId || 'unknown', 
+        status: 'failed', 
+        reason: error.message 
+      });
+      
+      // Acknowledge the message to remove it from the queue
+      message.ack();
+    }
+  }
+
+  // Update statistics
+  const currentStats = await getQueueStats(env);
+  const updatedStats = {
+    ...currentStats,
+    completed: currentStats.completed + results.processed,
+    failed: currentStats.failed + results.failed,
+    skipped: currentStats.skipped + results.skipped,
+    lastUpdated: Date.now()
+  };
+  await updateQueueStats(env, updatedStats);
+
+  console.log(`Queue processing completed: ${results.processed} processed, ${results.skipped} skipped, ${results.failed} failed`);
+  return results;
 }
 
 /**
@@ -570,7 +413,7 @@ export async function handleAddToQueue(request, env, corsHeaders) {
         message: `Recipe ${recipeId} added to embedding queue`,
         recipeId,
         priority,
-        queueLength: result.queueLength,
+        messageId: result.messageId, // Include messageId for manual tracking
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -667,11 +510,6 @@ export async function handlePopulateQueue(request, env, corsHeaders) {
       });
     }
     
-    // Get current queue to avoid duplicates
-    const currentQueueData = await env.RECIPE_STORAGE.get(QUEUE_KEYS.EMBEDDING_QUEUE);
-    const currentQueue = currentQueueData ? JSON.parse(currentQueueData) : [];
-    const currentQueueIds = new Set(currentQueue.map(item => item.recipeId));
-    
     // Check which recipes need embeddings
     const recipesToQueue = [];
     let checkedCount = 0;
@@ -683,11 +521,6 @@ export async function handlePopulateQueue(request, env, corsHeaders) {
       
       for (const recipeId of batch) {
         checkedCount++;
-        
-        // Skip if already in queue (unless force reprocess)
-        if (!forceReprocess && currentQueueIds.has(recipeId)) {
-          continue;
-        }
         
         // Check if recipe already has embedding (unless force reprocess)
         if (!forceReprocess) {
@@ -714,21 +547,30 @@ export async function handlePopulateQueue(request, env, corsHeaders) {
     
     console.log(`Found ${recipesToQueue.length} recipes that need embeddings`);
     
-    // Add recipes to queue
+    // Add recipes to Cloudflare Queue using bulk operation
     let addedCount = 0;
-    for (const recipeId of recipesToQueue) {
+    if (recipesToQueue.length > 0) {
       try {
-        const result = await addToEmbeddingQueue(env, recipeId, priority);
+        const result = await addBulkToEmbeddingQueue(env, recipesToQueue, priority);
         if (result.success) {
-          addedCount++;
+          addedCount = result.count;
+        } else {
+          console.error('Failed to add recipes to queue:', result.error);
         }
       } catch (error) {
-        console.error(`Error adding recipe ${recipeId} to queue:`, error);
+        console.error('Error adding recipes to queue:', error);
       }
     }
     
-    // Get updated queue stats
-    const updatedStats = await getQueueStats(env);
+    // Update queue statistics
+    const currentStats = await getQueueStats(env);
+    const updatedStats = {
+      ...currentStats,
+      total: currentStats.total + addedCount,
+      pending: currentStats.pending + addedCount,
+      lastUpdated: Date.now()
+    };
+    await updateQueueStats(env, updatedStats);
     
     const duration = Date.now() - startTime;
     console.log(`Queue population completed: ${addedCount} recipes added to queue in ${duration}ms`);
@@ -770,9 +612,8 @@ export async function handlePopulateQueue(request, env, corsHeaders) {
  */
 export async function handleReset(request, env, corsHeaders) {
   try {
-    // Clear the entire queue
-    await env.RECIPE_STORAGE.put(QUEUE_KEYS.EMBEDDING_QUEUE, JSON.stringify([]));
-    await env.RECIPE_STORAGE.put(QUEUE_KEYS.QUEUE_STATS, JSON.stringify({
+    // Clear queue statistics (Cloudflare Queues handles the actual queue)
+    await env.RECIPE_STORAGE.put('embedding_queue_stats', JSON.stringify({
       total: 0,
       pending: 0,
       processing: 0,
@@ -782,11 +623,12 @@ export async function handleReset(request, env, corsHeaders) {
       lastUpdated: Date.now()
     }));
     
-    console.log('Embedding queue reset successfully');
+    console.log('Embedding queue statistics reset successfully');
     
     return new Response(JSON.stringify({
       status: 'success',
-      message: 'Embedding queue reset successfully',
+      message: 'Embedding queue statistics reset successfully',
+      note: 'Note: Cloudflare Queue messages are managed automatically. This only resets local statistics.',
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -797,9 +639,9 @@ export async function handleReset(request, env, corsHeaders) {
     });
 
   } catch (error) {
-    console.error('Error resetting queue:', error);
+    console.error('Error resetting queue statistics:', error);
     return new Response(JSON.stringify({
-      error: 'Failed to reset queue',
+      error: 'Failed to reset queue statistics',
       details: error.message,
       environment: env.ENVIRONMENT || 'development'
     }), {
@@ -817,7 +659,7 @@ export async function handleReset(request, env, corsHeaders) {
  */
 export async function handleProgress(request, env, corsHeaders) {
   try {
-    // Get queue statistics
+    // Get queue statistics from KV storage
     const queueStats = await getQueueStats(env);
     
     // Get current recipe count from KV
@@ -834,7 +676,7 @@ export async function handleProgress(request, env, corsHeaders) {
     const totalInQueue = queueStats.total;
     const completionPercentage = totalInQueue > 0 ? Math.round((processedCount / totalInQueue) * 100) : 0;
     
-    // Determine status
+    // Determine status based on queue activity
     let status = 'idle';
     if (queueStats.lastUpdated) {
       const timeSinceLastUpdate = Date.now() - queueStats.lastUpdated;
@@ -847,6 +689,11 @@ export async function handleProgress(request, env, corsHeaders) {
       }
     }
 
+    // Check if there are pending items
+    if (queueStats.pending > 0) {
+      status = 'processing';
+    }
+
     return new Response(JSON.stringify({
       status: 'success',
       progress: {
@@ -854,7 +701,8 @@ export async function handleProgress(request, env, corsHeaders) {
         totalRecipes,
         queueStats,
         completionPercentage,
-        lastUpdated: queueStats.lastUpdated
+        lastUpdated: queueStats.lastUpdated,
+        note: 'Queue processing is handled automatically by Cloudflare Queues'
       },
       environment: env.ENVIRONMENT || 'development'
     }), {

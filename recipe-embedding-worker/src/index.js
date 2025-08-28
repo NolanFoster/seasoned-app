@@ -5,6 +5,7 @@ import { handleProgress } from './handlers/embedding-handler.js';
 import { handleReset } from './handlers/embedding-handler.js';
 import { handlePopulateQueue } from './handlers/embedding-handler.js';
 import { handleAddToQueue } from './handlers/embedding-handler.js';
+import { handleQueueMessage } from './handlers/embedding-handler.js';
 
 export default {
   // Handle HTTP requests
@@ -93,6 +94,26 @@ export default {
       }
     } catch (error) {
       console.error('Error in scheduled embedding generation:', error);
+    }
+  },
+
+  // Handle Cloudflare Queue messages
+  async queue(batch, env, ctx) {
+    console.log(`Received ${batch.messages.length} messages from queue`);
+    
+    try {
+      const results = await handleQueueMessage(batch, env);
+      console.log('Queue processing results:', results);
+      return results;
+    } catch (error) {
+      console.error('Error processing queue messages:', error);
+      
+      // Acknowledge all messages to prevent infinite retries
+      for (const message of batch.messages) {
+        message.ack();
+      }
+      
+      throw error;
     }
   }
 };

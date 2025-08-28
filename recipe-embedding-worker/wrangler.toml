@@ -18,6 +18,11 @@ crons = ["0 2 * * *"]
 [ai]
 binding = "AI"
 
+# Cloudflare Queues for embedding processing
+[[queues]]
+binding = "EMBEDDING_QUEUE"
+name = "recipe-embedding-queue"
+
 # Preview environment (for PR previews)
 [env.preview]
 name = "recipe-embedding-worker-preview"
@@ -29,6 +34,10 @@ enabled = true
 
 [env.preview.ai]
 binding = "AI"
+
+[[env.preview.queues]]
+binding = "EMBEDDING_QUEUE"
+name = "recipe-embedding-queue-preview"
 
 [[env.preview.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -53,6 +62,10 @@ crons = ["0 2 * * *"]
 [env.staging.ai]
 binding = "AI"
 
+[[env.staging.queues]]
+binding = "EMBEDDING_QUEUE"
+name = "recipe-embedding-queue-staging"
+
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "3f8a3b17db9e4f8ea3eae83d864ad518"
@@ -75,6 +88,10 @@ crons = ["0 2 * * *"]
 
 [env.production.ai]
 binding = "AI"
+
+[[env.production.queues]]
+binding = "EMBEDDING_QUEUE"
+name = "recipe-embedding-queue-production"
 
 [[env.production.kv_namespaces]]
 binding = "RECIPE_STORAGE"

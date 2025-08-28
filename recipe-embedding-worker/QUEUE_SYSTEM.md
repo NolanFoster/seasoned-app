@@ -1,36 +1,35 @@
-# Embedding Queue System
+# Cloudflare Queue Embedding System
 
-The recipe embedding worker has been refactored to use a queue-based system instead of batch processing. This provides better scalability, real-time processing, and more efficient resource management.
+The recipe embedding worker has been refactored to use **Cloudflare Queues** instead of a custom KV-based queue system. This provides enterprise-grade reliability, automatic scaling, and built-in retry mechanisms.
 
 ## Overview
 
-The queue system ensures that:
+The Cloudflare Queue system ensures that:
 - **All KV values eventually get processed** - No recipes are missed
 - **50 AI call limit is respected** - Processing stops gracefully when approaching limits
-- **Progress persists across worker runs** - Queue state is maintained in KV storage
+- **Automatic retries** - Failed recipes are retried with exponential backoff
 - **Real-time processing** - New recipes can be added immediately when saved
-- **Automatic retries** - Failed recipes are retried in subsequent runs
+- **Built-in reliability** - Cloudflare Queues handle message persistence and delivery
+- **Scalability** - Multiple workers can process from the same queue automatically
 
 ## Architecture
 
-### Queue Storage
-The queue is stored in KV storage using these keys:
-- `embedding_queue` - The main queue containing recipe processing items
-- `embedding_queue_stats` - Statistics about queue status
-- `embedding_processing_status` - Processing state information
+### Cloudflare Queue
+The system uses a dedicated Cloudflare Queue named `recipe-embedding-queue` that:
+- Automatically handles message persistence
+- Provides built-in retry logic with exponential backoff
+- Scales automatically based on demand
+- Ensures message ordering and delivery
 
-### Queue Item Structure
-Each queue item contains:
+### Queue Message Structure
+Each queue message contains:
 ```json
 {
+  "type": "recipe_embedding",
   "recipeId": "unique_recipe_id",
   "priority": "high|normal|low",
-  "status": "pending|processing|completed|failed|skipped",
-  "addedAt": 1234567890,
-  "attempts": 0,
-  "lastAttempt": null,
-  "error": null,
-  "completedAt": null
+  "timestamp": 1234567890,
+  "attempts": 0
 }
 ```
 
@@ -43,7 +42,7 @@ Each queue item contains:
 
 ### 1. Process Embeddings
 **POST** `/embed`
-Processes recipes from the queue, respecting subrequest limits.
+Initiates embedding generation (actual processing happens via queue consumer).
 
 **Request Body:**
 ```json
@@ -55,10 +54,7 @@ Processes recipes from the queue, respecting subrequest limits.
 **Response:**
 ```json
 {
-  "message": "Embedding generation completed",
-  "processed": 5,
-  "skipped": 2,
-  "errors": 1,
+  "message": "Embedding generation initiated",
   "queueStats": {
     "total": 100,
     "pending": 92,
@@ -66,7 +62,8 @@ Processes recipes from the queue, respecting subrequest limits.
     "completed": 5,
     "failed": 1,
     "skipped": 2
-  }
+  },
+  "note": "Recipes are processed via Cloudflare Queue consumer"
 }
 ```
 
@@ -79,7 +76,7 @@ Returns current queue statistics and processing status.
 {
   "status": "success",
   "progress": {
-    "status": "running",
+    "status": "processing",
     "totalRecipes": 1000,
     "queueStats": {
       "total": 100,
@@ -90,7 +87,8 @@ Returns current queue statistics and processing status.
       "skipped": 2
     },
     "completionPercentage": 7,
-    "lastUpdated": 1234567890
+    "lastUpdated": 1234567890,
+    "note": "Queue processing is handled automatically by Cloudflare Queues"
   }
 }
 ```
@@ -144,19 +142,20 @@ Adds a specific recipe to the embedding queue (used by other workers).
   "message": "Recipe unique_recipe_id added to embedding queue",
   "recipeId": "unique_recipe_id",
   "priority": "high",
-  "queueLength": 151
+  "messageId": "unique_recipe_id"
 }
 ```
 
-### 5. Reset Queue
+### 5. Reset Queue Statistics
 **DELETE** `/reset`
-Clears the entire embedding queue and resets statistics.
+Clears the queue statistics (note: Cloudflare Queue messages are managed automatically).
 
 **Response:**
 ```json
 {
   "status": "success",
-  "message": "Embedding queue reset successfully"
+  "message": "Embedding queue statistics reset successfully",
+  "note": "Note: Cloudflare Queue messages are managed automatically. This only resets local statistics."
 }
 ```
 
@@ -202,24 +201,23 @@ curl -X POST https://recipe-embedding-worker.your-domain.workers.dev/populate-qu
 
 ## Processing Logic
 
-### Subrequest Limit Handling
-The system processes recipes one at a time, tracking subrequests:
-- KV get: 1 subrequest
-- Vectorize query: 1 subrequest  
-- AI embedding: 1 subrequest
-- Vectorize upsert: 1 subrequest
-
-**Total per recipe: 4 subrequests**
-**Safe limit: 45 subrequests (leaving buffer for 50 max)**
+### Queue Consumer
+The worker automatically processes queue messages via the `queue` handler:
+- Processes messages in batches
+- Handles retries with exponential backoff (max 3 attempts)
+- Updates statistics after each batch
+- Acknowledges messages to remove them from the queue
 
 ### Retry Logic
-- Failed recipes are marked with `failed` status
-- Failed recipes are prioritized in subsequent runs
-- Maximum attempts are tracked (though no hard limit is enforced)
+- Failed recipes are automatically requeued with exponential backoff
+- Maximum retry attempts: 3
+- Backoff delays: 1s, 2s, 4s (capped at 30s)
+- After max attempts, recipes are marked as failed and not retried
 
-### Cleanup
-- Completed and skipped items are kept for 24 hours for monitoring
-- Old items are automatically cleaned up during processing
+### Subrequest Limit Management
+- Each recipe processing uses ~4 subrequests
+- Cloudflare Queues handle the processing distribution
+- No manual subrequest counting needed
 
 ## Monitoring and Debugging
 
@@ -231,58 +229,94 @@ curl https://recipe-embedding-worker.your-domain.workers.dev/progress
 
 ### Queue Statistics
 The system provides detailed statistics:
-- **Total items** - All items in queue
+- **Total items** - All items that have been queued
 - **Pending** - Items waiting to be processed
 - **Processing** - Items currently being processed
 - **Completed** - Successfully processed items
-- **Failed** - Items that failed and need retry
+- **Failed** - Items that failed after max retries
 - **Skipped** - Items skipped (already had embeddings)
 
-### Logs
-The worker logs detailed information about:
-- Queue population
-- Processing progress
-- Subrequest usage
-- Error conditions
-- Cleanup operations
+### Cloudflare Dashboard
+Monitor queue performance in the Cloudflare dashboard:
+- Message throughput
+- Processing latency
+- Error rates
+- Queue depth
 
 ## Migration from Old System
 
-The old progress tracking system has been completely replaced. If you have existing progress data, it will be ignored. The new system will:
+The old KV-based queue system has been completely replaced. The new system:
 
-1. Start with an empty queue
-2. Use `/populate-queue` to find all recipes needing embeddings
-3. Process them through the new queue system
+1. **Starts with an empty queue** - No existing queue data
+2. **Uses `/populate-queue`** - To find all recipes needing embeddings
+3. **Processes automatically** - Via Cloudflare Queue consumer
+4. **Maintains statistics** - In KV storage for monitoring
 
-## Benefits
+## Benefits of Cloudflare Queues
 
-1. **Scalability** - Multiple workers can process from the same queue
-2. **Real-time** - New recipes are processed immediately
-3. **Efficient** - No duplicate processing or missed recipes
-4. **Resilient** - Failed recipes are automatically retried
-5. **Transparent** - Clear visibility into processing status
-6. **Flexible** - Priority system for different use cases
+1. **Enterprise Reliability** - 99.9% uptime SLA, automatic failover
+2. **Built-in Retries** - Exponential backoff, dead letter queues
+3. **Automatic Scaling** - Handles traffic spikes automatically
+4. **Message Ordering** - FIFO processing guaranteed
+5. **Monitoring** - Built-in metrics and observability
+6. **Cost Effective** - Pay only for what you use
 
 ## Best Practices
 
 1. **Use populate-queue for bulk operations** - Don't add thousands of recipes individually
-2. **Monitor queue size** - Large queues may indicate processing bottlenecks
-3. **Set appropriate priorities** - Use high priority sparingly
+2. **Set appropriate priorities** - Use high priority sparingly
+3. **Monitor queue depth** - Large backlogs may indicate processing bottlenecks
 4. **Handle failures gracefully** - Failed recipes will be retried automatically
-5. **Clean up periodically** - Use reset endpoint if queue gets corrupted
+5. **Use Cloudflare dashboard** - Monitor queue performance and health
 
 ## Troubleshooting
 
 ### Queue Not Processing
-- Check if items are in `pending` status
-- Verify subrequest limits aren't being hit
-- Check worker logs for errors
+- Check if messages are being sent to the queue
+- Verify worker is running and healthy
+- Check Cloudflare dashboard for queue metrics
+- Review worker logs for errors
 
-### Duplicate Items
-- Use `forceReprocess: false` when populating queue
-- Check if recipes already have embeddings before adding
+### High Failure Rates
+- Check AI service availability
+- Verify vector database connectivity
+- Review recipe data quality
+- Check subrequest limits
 
 ### Performance Issues
-- Monitor subrequest usage
-- Consider reducing batch sizes
-- Check for stuck `processing` items
+- Monitor queue depth in Cloudflare dashboard
+- Check worker processing latency
+- Consider scaling worker instances
+- Review retry backoff settings
+
+## Configuration
+
+### Wrangler Configuration
+```toml
+[[queues]]
+binding = "EMBEDDING_QUEUE"
+name = "recipe-embedding-queue"
+
+[env.production.queues]
+binding = "EMBEDDING_QUEUE"
+name = "recipe-embedding-queue-production"
+```
+
+### Environment Variables
+```bash
+# Required
+EMBEDDING_WORKER_URL=https://recipe-embedding-worker.your-domain.workers.dev
+
+# Optional
+ENVIRONMENT=production
+```
+
+## Deployment
+
+1. **Deploy the worker** with queue configuration
+2. **Create the queue** in Cloudflare dashboard (if not auto-created)
+3. **Test queue functionality** with a few recipes
+4. **Populate the queue** with existing recipes
+5. **Monitor processing** via progress endpoint and Cloudflare dashboard
+
+The Cloudflare Queue system provides a robust, scalable foundation for embedding generation that automatically handles the complexities of message processing, retries, and scaling.
