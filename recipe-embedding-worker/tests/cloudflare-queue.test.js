@@ -1,14 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { 
-  handleEmbedding, 
+  handleEmbedding
+} from '../src/handlers/recipe-handler.js';
+import { 
   handleProgress, 
-  handleReset, 
-  handlePopulateQueue,
+  handleReset
+} from '../src/handlers/progress-handler.js';
+import { 
+  handlePopulateQueue
+} from '../src/handlers/populate-handler.js';
+import { 
   handleAddToQueue,
   addToEmbeddingQueue,
   addBulkToEmbeddingQueue,
   handleQueueMessage
-} from '../src/handlers/embedding-handler.js';
+} from '../src/handlers/queue-handler.js';
 
 // Mock environment
 const createMockEnv = () => ({
@@ -130,8 +136,9 @@ describe('Cloudflare Queue Embedding System', () => {
 
       // Mock recipe data
       mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify({
-        id: 'recipe1',
-        data: { name: 'Test Recipe', ingredients: ['ingredient1'] }
+        name: 'Test Recipe',
+        ingredients: ['ingredient1'],
+        instructions: ['Mix ingredients together']
       }));
 
       // Mock existing embedding check
@@ -149,8 +156,9 @@ describe('Cloudflare Queue Embedding System', () => {
       // Mock queue stats
       mockEnv.RECIPE_STORAGE.get
         .mockResolvedValueOnce(JSON.stringify({
-          id: 'recipe1',
-          data: { name: 'Test Recipe', ingredients: ['ingredient1'] }
+          name: 'Test Recipe',
+          ingredients: ['ingredient1'],
+          instructions: ['Mix ingredients together']
         }))
         .mockResolvedValueOnce(JSON.stringify({
           total: 1,
@@ -190,8 +198,9 @@ describe('Cloudflare Queue Embedding System', () => {
 
       // Mock recipe data
       mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify({
-        id: 'recipe1',
-        data: { name: 'Test Recipe', ingredients: ['ingredient1'] }
+        name: 'Test Recipe',
+        ingredients: ['ingredient1'],
+        instructions: ['Mix ingredients together']
       }));
 
       // Mock existing embedding check
@@ -201,8 +210,9 @@ describe('Cloudflare Queue Embedding System', () => {
       // Mock queue stats
       mockEnv.RECIPE_STORAGE.get
         .mockResolvedValueOnce(JSON.stringify({
-          id: 'recipe1',
-          data: { name: 'Test Recipe', ingredients: ['ingredient1'] }
+          name: 'Test Recipe',
+          ingredients: ['ingredient1'],
+          instructions: ['Mix ingredients together']
         }))
         .mockResolvedValueOnce(JSON.stringify({
           total: 1,

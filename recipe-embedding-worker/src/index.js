@@ -1,14 +1,14 @@
 import { handleRoot } from './handlers/root-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
-import { handleEmbedding } from './handlers/embedding-handler.js';
-import { handleProgress } from './handlers/embedding-handler.js';
-import { handleReset } from './handlers/embedding-handler.js';
-import { handlePopulateQueue } from './handlers/embedding-handler.js';
-import { handleAddToQueue } from './handlers/embedding-handler.js';
-import { handleQueueMessage } from './handlers/embedding-handler.js';
+import { handleEmbedding } from './handlers/recipe-handler.js';
+import { handleProgress } from './handlers/progress-handler.js';
+import { handleReset } from './handlers/progress-handler.js';
+import { handlePopulateQueue } from './handlers/populate-handler.js';
+import { handleAddToQueue } from './handlers/queue-handler.js';
+import { handleQueueMessage } from './handlers/queue-handler.js';
 
 export default {
-  // Handle HTTP requests
+  // Handle HTTP requests (minimal API for monitoring and manual operations)
   async fetch(request, env) {
     const url = new URL(request.url);
 
@@ -34,7 +34,7 @@ export default {
       return handleHealth(request, env, corsHeaders);
     }
 
-    // Manual embedding generation endpoint
+    // Manual embedding generation endpoint (for testing/monitoring)
     if (url.pathname === '/embed' && request.method === 'POST') {
       return handleEmbedding(request, env, corsHeaders);
     }
@@ -49,12 +49,12 @@ export default {
       return handleReset(request, env, corsHeaders);
     }
 
-    // Populate queue endpoint
+    // Populate queue endpoint (for initial setup and bulk operations)
     if (url.pathname === '/populate-queue' && request.method === 'POST') {
       return handlePopulateQueue(request, env, corsHeaders);
     }
 
-    // Add to queue endpoint
+    // Add to queue endpoint (for other workers)
     if (url.pathname === '/queue/add' && request.method === 'POST') {
       return handleAddToQueue(request, env, corsHeaders);
     }
@@ -72,32 +72,23 @@ export default {
     });
   },
 
-  // Handle scheduled events (cron jobs)
+  // Handle scheduled events (cron jobs) - minimal for monitoring
   async scheduled(controller, env, _ctx) {
-    console.log('Starting scheduled embedding generation task');
+    console.log('Starting scheduled monitoring task');
 
     try {
-      // Create a fake request object for the embedding handler
-      const fakeRequest = new Request('https://example.com/embed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scheduled: true })
-      });
-
-      // Use the same handler but in scheduled mode
-      const result = await handleEmbedding(fakeRequest, env, {});
-
-      if (result.status === 200) {
-        console.log('Scheduled embedding generation completed successfully');
-      } else {
-        console.error('Scheduled embedding generation failed:', await result.text());
-      }
+      // Just log the current queue status for monitoring
+      const queueStats = await getQueueStats(env);
+      console.log('Current queue status:', queueStats);
+      
+      // No actual processing - this worker is a pure consumer
+      console.log('Scheduled monitoring completed - worker is a pure queue consumer');
     } catch (error) {
-      console.error('Error in scheduled embedding generation:', error);
+      console.error('Error in scheduled monitoring:', error);
     }
   },
 
-  // Handle Cloudflare Queue messages
+  // Handle Cloudflare Queue messages - PRIMARY FUNCTION
   async queue(batch, env, ctx) {
     console.log(`Received ${batch.messages.length} messages from queue`);
     
@@ -117,3 +108,6 @@ export default {
     }
   }
 };
+
+// Import required function
+import { getQueueStats } from './handlers/queue-handler.js';

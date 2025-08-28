@@ -1,165 +1,232 @@
 # Recipe Embedding Worker
 
-A Cloudflare Worker that generates embeddings for recipes using AI models. This worker runs on a scheduled basis (daily at 2 AM UTC) to process all recipes stored in KV storage and generate vector embeddings for semantic search capabilities.
-
-## Features
-
-- **Scheduled Processing**: Automatically runs daily to process new and updated recipes
-- **AI-Powered Embeddings**: Uses Cloudflare's `@cf/baai/bge-small-en-v1.5` model for high-quality embeddings
-- **Batch Processing**: Processes recipes in batches to handle large datasets efficiently
-- **Duplicate Detection**: Skips recipes that already have embeddings to avoid unnecessary processing
-- **Manual Triggering**: Provides HTTP endpoint for manual embedding generation
-- **Comprehensive Monitoring**: Includes health checks and detailed processing metrics
+A **pure Cloudflare Queue consumer worker** for processing recipe embeddings automatically. This worker is designed to consume messages from a Cloudflare Queue and generate embeddings for recipes using Cloudflare AI.
 
 ## Architecture
 
-### Bindings
+This worker follows a **pure consumer pattern** where:
 
-- **RECIPE_STORAGE**: KV namespace containing recipe data
-- **RECIPE_VECTORS**: Vectorize index for storing embeddings
-- **AI**: Cloudflare AI binding for embedding generation
+- **Primary Function**: Processes messages from Cloudflare Queue
+- **Secondary Function**: Provides minimal HTTP API for monitoring and manual operations
+- **No Batch Processing**: All processing is driven by queue messages
 
-### Scheduled Events
+## Handler Structure
 
-The worker is configured to run daily at 2 AM UTC using cron triggers:
-```
-crons = ["0 2 * * *"]
-```
+The worker is organized into focused, single-responsibility handlers:
 
-## API Endpoints
+### 📁 `src/handlers/`
 
-### GET /
-Returns worker information and available endpoints.
+- **`queue-handler.js`** - Core queue operations and message processing
+- **`recipe-handler.js`** - Recipe processing and embedding generation
+- **`embedding-utils.js`** - AI embedding generation and vector storage
+- **`progress-handler.js`** - Progress tracking and statistics
+- **`populate-handler.js`** - Bulk queue population operations
+- **`kv-utils.js`** - KV storage utilities and data handling
+- **`root-handler.js`** - Root endpoint and basic info
+- **`health-handler.js`** - Health check endpoint
 
-### GET /health
-Health check endpoint that verifies:
-- KV storage connectivity
-- AI binding availability
-- Overall service status
+## Key Features
 
-### POST /embed
-Manual embedding generation endpoint. Processes all recipes in storage.
+### 🚀 **Pure Queue Consumer**
+- Automatically processes messages from Cloudflare Queue
+- No manual batch processing or scheduling
+- Built-in retry logic with exponential backoff
+- Automatic message acknowledgment
 
-Request body (optional):
+### 🔄 **Message Processing**
+- Processes `recipe_embedding` message types
+- Handles recipe data retrieval and validation
+- Generates embeddings using Cloudflare AI
+- Stores results in Vectorize database
+- Updates processing statistics
+
+### 📊 **Monitoring & Control**
+- `/progress` - Queue statistics and status
+- `/reset` - Reset queue statistics
+- `/populate-queue` - Bulk queue population
+- `/queue/add` - Add individual recipes to queue
+- `/embed` - Manual processing trigger (for testing)
+
+### 🛡️ **Error Handling**
+- Graceful error handling at multiple levels
+- Automatic retry with exponential backoff
+- Failed message acknowledgment
+- Comprehensive error logging
+
+## Queue Message Format
+
 ```json
 {
-  "scheduled": false
+  "type": "recipe_embedding",
+  "recipeId": "unique_recipe_id",
+  "priority": "high|normal|low",
+  "timestamp": 1234567890,
+  "attempts": 0
 }
 ```
 
-Response:
-```json
-{
-  "message": "Embedding generation completed",
-  "processed": 25,
-  "skipped": 5,
-  "errors": 0,
-  "duration": 12500,
-  "details": [...]
-}
-```
+## Processing Flow
 
-## Embedding Process
+1. **Message Reception** - Worker receives messages from Cloudflare Queue
+2. **Recipe Retrieval** - Fetches recipe data from KV storage
+3. **Embedding Check** - Verifies if embedding already exists
+4. **Text Generation** - Creates embedding text from recipe data
+5. **AI Processing** - Generates embedding using Cloudflare AI
+6. **Storage** - Stores embedding in Vectorize database
+7. **Statistics Update** - Updates processing statistics
+8. **Message Acknowledgment** - Removes message from queue
 
-1. **Recipe Retrieval**: Fetches all recipe keys from KV storage
-2. **Duplicate Check**: Queries Vectorize to check for existing embeddings
-3. **Text Generation**: Creates comprehensive text from recipe data including:
-   - Recipe name/title
-   - Description
-   - Ingredients list
-   - Instructions
-   - Metadata (yield, cook time, keywords)
-4. **AI Processing**: Generates embeddings using BGE model
-5. **Storage**: Stores embeddings in Vectorize with rich metadata
+## Environment Configuration
 
-## Development
-
-### Prerequisites
-- Node.js 18+
-- Wrangler CLI
-- Access to Cloudflare Workers with AI and Vectorize
-
-### Setup
-```bash
-npm install
-```
-
-### Testing
-```bash
-# Run all tests
-npm test
-
-# Run with coverage
-npm run test:coverage
-
-# Run specific test suites
-npm run test:unit
-npm run test:integration
-```
-
-### Development Server
-```bash
-npm run dev
-```
-
-### Deployment
-```bash
-# Deploy to production
-npm run deploy
-
-# Deploy to specific environment
-wrangler publish --env staging
-```
-
-## Configuration
+### Required Bindings
+- **`AI`** - Cloudflare AI binding for embedding generation
+- **`EMBEDDING_QUEUE`** - Cloudflare Queue for message processing
+- **`RECIPE_STORAGE`** - KV namespace for recipe data
+- **`RECIPE_VECTORS`** - Vectorize index for embeddings
 
 ### Environment Variables
-- `ENVIRONMENT`: Current deployment environment (development/staging/production)
+- **`ENVIRONMENT`** - Deployment environment (development/staging/production)
+- **`WORKER_TYPE`** - Set to "queue-consumer"
 
-### Wrangler Configuration
-The worker is configured for multiple environments:
-- **Preview**: For PR testing
-- **Staging**: For pre-production testing  
-- **Production**: For live deployment
+## Deployment
 
-Each environment has appropriate KV and Vectorize bindings configured.
+### 1. Deploy Worker
+```bash
+wrangler deploy
+```
+
+### 2. Create Queue (if not auto-created)
+The Cloudflare Queue will be created automatically on first deployment.
+
+### 3. Test Functionality
+```bash
+# Test health endpoint
+curl https://your-worker.workers.dev/health
+
+# Test queue population
+curl -X POST https://your-worker.workers.dev/populate-queue \
+  -H "Content-Type: application/json" \
+  -d '{"priority": "normal"}'
+```
+
+### 4. Monitor Processing
+```bash
+# Check progress
+curl https://your-worker.workers.dev/progress
+```
+
+## Integration
+
+### Adding Recipes to Queue
+Other workers can add recipes to the embedding queue:
+
+```javascript
+import { addRecipeToEmbeddingQueue } from '../shared/kv-storage.js';
+
+// After saving a recipe
+await addRecipeToEmbeddingQueue(env, recipeId, 'normal');
+```
+
+### Queue Population
+For bulk operations or initial setup:
+
+```bash
+curl -X POST https://your-worker.workers.dev/populate-queue \
+  -H "Content-Type: application/json" \
+  -d '{"forceReprocess": false, "priority": "normal"}'
+```
 
 ## Monitoring
 
+### Cloudflare Dashboard
+- Monitor queue depth and processing rates
+- View error rates and retry statistics
+- Track worker performance metrics
+
+### Worker Logs
+- Detailed processing logs for each recipe
+- Error tracking and debugging information
+- Performance metrics and timing data
+
 ### Health Checks
-The `/health` endpoint provides comprehensive service monitoring:
-- KV storage connectivity
-- AI binding availability
-- Service uptime information
+- `/health` endpoint for basic worker status
+- `/progress` endpoint for queue statistics
+- Automatic monitoring via scheduled cron jobs
 
-### Logging
-The worker logs detailed information about:
-- Processing progress and batch completion
-- Error conditions and recovery
-- Performance metrics and timing
-- Scheduling and execution status
+## Best Practices
 
-### Error Handling
-- Graceful handling of AI service failures
-- Retry logic for transient errors
-- Detailed error reporting and logging
-- Continued processing despite individual recipe failures
+### 1. **Queue Management**
+- Use appropriate priorities (high for user requests, normal for bulk)
+- Monitor queue depth to prevent backlogs
+- Use bulk population for large datasets
 
-## Performance
+### 2. **Error Handling**
+- Failed recipes are automatically retried
+- Maximum 3 retry attempts with exponential backoff
+- Monitor failure rates for system health
 
-### Batch Processing
-- Configurable batch sizes (5 for manual, 10 for scheduled)
-- Delay between batches to prevent overwhelming services
-- Memory-efficient processing of large recipe collections
+### 3. **Performance**
+- Worker automatically scales based on queue depth
+- No manual subrequest counting needed
+- Cloudflare Queues handle message distribution
 
-### Optimization
-- Text truncation to reasonable limits (8000 characters)
-- Duplicate detection to avoid reprocessing
-- Minimal metadata storage for faster queries
+### 4. **Monitoring**
+- Regular health checks via `/health`
+- Monitor queue statistics via `/progress`
+- Use Cloudflare dashboard for detailed metrics
 
-## Security
+## Troubleshooting
 
-- CORS headers configured for cross-origin requests
-- Input validation and sanitization
-- Error message sanitization to prevent information disclosure
-- Secure handling of environment variables and bindings
+### Common Issues
+
+1. **Queue Not Processing**
+   - Check if messages are being sent to queue
+   - Verify worker is running and healthy
+   - Check Cloudflare dashboard for queue metrics
+
+2. **High Failure Rates**
+   - Check AI service availability
+   - Verify vector database connectivity
+   - Review recipe data quality
+
+3. **Performance Issues**
+   - Monitor queue depth in Cloudflare dashboard
+   - Check worker processing latency
+   - Consider scaling worker instances
+
+### Debug Endpoints
+
+- **`/health`** - Basic worker status
+- **`/progress`** - Current queue statistics
+- **`/embed`** - Manual processing trigger (for testing)
+
+## Development
+
+### Running Tests
+```bash
+npm test
+```
+
+### Local Development
+```bash
+wrangler dev
+```
+
+### Testing Queue Processing
+```bash
+# Add test recipe to queue
+curl -X POST https://your-worker.workers.dev/queue/add \
+  -H "Content-Type: application/json" \
+  -d '{"recipeId": "test-recipe", "priority": "high"}'
+```
+
+## Architecture Benefits
+
+1. **Separation of Concerns** - Each handler has a single responsibility
+2. **Maintainability** - Easy to modify individual components
+3. **Testability** - Each handler can be tested independently
+4. **Scalability** - Pure consumer pattern scales automatically
+5. **Reliability** - Cloudflare Queues provide enterprise-grade reliability
+6. **Monitoring** - Built-in observability and metrics
+
+This worker represents a modern, scalable approach to embedding generation that leverages Cloudflare's infrastructure for optimal performance and reliability.

@@ -1,4 +1,5 @@
 # Recipe Embedding Worker Configuration
+# This worker is a pure Cloudflare Queue consumer for processing recipe embeddings
 name = "recipe-embedding-worker"
 main = "src/index.js"
 compatibility_date = "2024-01-10"
@@ -6,11 +7,12 @@ compatibility_date = "2024-01-10"
 # Default configuration
 [vars]
 ENVIRONMENT = "development"
+WORKER_TYPE = "queue-consumer"
 
 [observability]
 enabled = true
 
-# Scheduled events - run daily at 2 AM UTC
+# Scheduled events - run daily at 2 AM UTC for monitoring only
 [triggers]
 crons = ["0 2 * * *"]
 
@@ -28,6 +30,7 @@ name = "recipe-embedding-queue"
 name = "recipe-embedding-worker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
+WORKER_TYPE = "queue-consumer"
 
 [env.preview.observability]
 enabled = true
@@ -52,6 +55,7 @@ index_name = "recipe-vectors-384"
 name = "recipe-embedding-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
+WORKER_TYPE = "queue-consumer"
 
 [env.staging.observability]
 enabled = true
@@ -79,6 +83,7 @@ index_name = "recipe-vectors-384"
 name = "recipe-embedding-worker"
 [env.production.vars]
 ENVIRONMENT = "production"
+WORKER_TYPE = "queue-consumer"
 
 [env.production.observability]
 enabled = true
