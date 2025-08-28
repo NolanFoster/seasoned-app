@@ -133,7 +133,48 @@ export async function deleteRecipeFromKV(env, recipeId) {
   throw new Error('Direct KV delete is deprecated. Use recipe-save-worker API instead: DELETE https://recipe-save-worker.nolanfoster.workers.dev/recipe/delete');
 }
 
-// Check if recipe exists in KV storage
+/**
+ * Add recipe to embedding queue automatically when saved
+ * This function should be called by the recipe-save-worker after successfully saving a recipe
+ */
+export async function addRecipeToEmbeddingQueue(env, recipeId, priority = 'normal') {
+  try {
+    // Check if we have access to the embedding worker
+    if (!env.EMBEDDING_WORKER_URL) {
+      console.warn('EMBEDDING_WORKER_URL not configured, cannot add recipe to embedding queue');
+      return { success: false, error: 'Embedding worker URL not configured' };
+    }
+    
+    // Add recipe to embedding queue via API call
+    const response = await fetch(`${env.EMBEDDING_WORKER_URL}/queue/add`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        recipeId,
+        priority
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`Recipe ${recipeId} added to embedding queue:`, result);
+      return { success: true, ...result };
+    } else {
+      const errorText = await response.text();
+      console.error(`Failed to add recipe ${recipeId} to embedding queue:`, errorText);
+      return { success: false, error: errorText };
+    }
+  } catch (error) {
+    console.error(`Error adding recipe ${recipeId} to embedding queue:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Check if recipe exists in KV storage
+ */
 export async function recipeExistsInKV(env, recipeId) {
   try {
     const recipeData = await env.RECIPE_STORAGE.get(recipeId);

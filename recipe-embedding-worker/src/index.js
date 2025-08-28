@@ -3,6 +3,8 @@ import { handleHealth } from './handlers/health-handler.js';
 import { handleEmbedding } from './handlers/embedding-handler.js';
 import { handleProgress } from './handlers/embedding-handler.js';
 import { handleReset } from './handlers/embedding-handler.js';
+import { handlePopulateQueue } from './handlers/embedding-handler.js';
+import { handleAddToQueue } from './handlers/embedding-handler.js';
 
 export default {
   // Handle HTTP requests
@@ -44,6 +46,16 @@ export default {
     // Reset progress endpoint
     if (url.pathname === '/reset' && request.method === 'DELETE') {
       return handleReset(request, env, corsHeaders);
+    }
+
+    // Populate queue endpoint
+    if (url.pathname === '/populate-queue' && request.method === 'POST') {
+      return handlePopulateQueue(request, env, corsHeaders);
+    }
+
+    // Add to queue endpoint
+    if (url.pathname === '/queue/add' && request.method === 'POST') {
+      return handleAddToQueue(request, env, corsHeaders);
     }
 
     // 404 for unknown routes
