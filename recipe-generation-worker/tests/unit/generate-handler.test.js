@@ -31,9 +31,9 @@ describe('Generate Handler - Unit Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Default mock responses
-    mockAI.run.mockImplementation((model, params) => {
+    mockAI.run.mockImplementation((model, _params) => {
       if (model === '@cf/baai/bge-base-en-v1.5') {
         return Promise.resolve({
           data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
@@ -374,13 +374,13 @@ Serves: 4`
     it('should use development environment when ENVIRONMENT is not set', async () => {
       const requestBody = { ingredients: ['chicken'] };
       const request = createPostRequest('/generate', requestBody);
-      
+
       const envWithoutEnvironment = {
         AI: mockAI,
         RECIPE_VECTORS: mockVectors,
         RECIPE_STORAGE: mockKVStorage
       };
-      
+
       const response = await handleGenerate(request, envWithoutEnvironment, corsHeaders);
 
       const data = await response.json();
