@@ -1,4 +1,4 @@
-import { optikClient } from '../optik-client.js';
+import { opikClient } from '../opik-client.js';
 
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
@@ -68,8 +68,8 @@ export async function handleGenerate(request, env, corsHeaders) {
       });
     }
 
-    // Generate recipe using Optik AI first, fallback to existing LLaMA implementation
-    const generatedRecipe = await generateRecipeWithOptikOrFallback(requestBody, env);
+    // Generate recipe using Opik AI first, fallback to existing LLaMA implementation
+    const generatedRecipe = await generateRecipeWithOpikOrFallback(requestBody, env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -137,44 +137,44 @@ async function generateRecipeWithAI(requestData, env) {
 }
 
 /**
- * Generate recipe using Optik AI first, fallback to existing LLaMA implementation
+ * Generate recipe using Opik AI first, fallback to existing LLaMA implementation
  */
-async function generateRecipeWithOptikOrFallback(requestData, env) {
+async function generateRecipeWithOpikOrFallback(requestData, env) {
   const startTime = Date.now();
   
   try {
-    console.log('Attempting recipe generation with Optik AI...');
+    console.log('Attempting recipe generation with Opik AI...');
     
     // Set API key from environment
-    optikClient.setApiKey(env.OPTIK_API_KEY);
+    opikClient.setApiKey(env.OPIK_API_KEY);
     
-    // Try Optik AI first
-    const optikRecipe = await optikClient.generateRecipe(requestData, env);
+    // Try Opik AI first
+    const opikRecipe = await opikClient.generateRecipe(requestData, env);
     
-    if (optikRecipe && optikRecipe.name && optikRecipe.ingredients.length > 0) {
-      const duration = Date.now() - startTime;
-      console.log(`Optik AI recipe generation completed in ${duration}ms`);
+          if (opikRecipe && opikRecipe.name && opikRecipe.ingredients.length > 0) {
+        const duration = Date.now() - startTime;
+        console.log(`Opik AI recipe generation completed in ${duration}ms`);
+        
+        return {
+          ...opikRecipe,
+          generationTime: duration,
+          similarRecipesFound: 0,
+          generationMethod: 'opik-ai'
+        };
+      }
       
-      return {
-        ...optikRecipe,
-        generationTime: duration,
-        similarRecipesFound: 0,
-        generationMethod: 'optik-ai'
-      };
-    }
-    
-    throw new Error('Optik AI returned invalid recipe, falling back to LLaMA');
-    
-  } catch (optikError) {
-    console.log('Optik AI failed, falling back to LLaMA implementation:', optikError.message);
+      throw new Error('Opik AI returned invalid recipe, falling back to LLaMA');
+      
+    } catch (opikError) {
+      console.log('Opik AI failed, falling back to LLaMA implementation:', opikError.message);
     
     try {
       // Fallback to existing LLaMA implementation
       return await generateRecipeWithAI(requestData, env);
-    } catch (llamaError) {
-      console.error('Both Optik AI and LLaMA failed:', llamaError.message);
-      throw new Error(`Recipe generation failed: Optik AI error: ${optikError.message}, LLaMA error: ${llamaError.message}`);
-    }
+          } catch (llamaError) {
+        console.error('Both Opik AI and LLaMA failed:', llamaError.message);
+        throw new Error(`Recipe generation failed: Opik AI error: ${opikError.message}, LLaMA error: ${llamaError.message}`);
+      }
   }
 }
 

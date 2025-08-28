@@ -10,7 +10,7 @@ compatibility_flags = [
 # Default configuration
 [vars]
 ENVIRONMENT = "development"
-OPTIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
 
 [observability]
 enabled = true
@@ -29,7 +29,7 @@ index_name = "recipe-vectors"
 name = "recipe-generation-worker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
-OPTIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
 
 [env.preview.observability]
 enabled = true
@@ -47,7 +47,7 @@ id = "dd001c20659a4d6982f6d650abcac880"
 name = "recipe-generation-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
-OPTIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
 
 [env.staging.observability]
 enabled = true
@@ -68,7 +68,7 @@ id = "dd001c20659a4d6982f6d650abcac880"
 name = "recipe-generation-worker"
 [env.production.vars]
 ENVIRONMENT = "production"
-OPTIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
 
 [env.production.observability]
 enabled = true

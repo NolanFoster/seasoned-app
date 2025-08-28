@@ -13,7 +13,7 @@ vi.mock('opik', () => ({
   }))
 }));
 
-import { OptikClient, createOptikClient, optikClient } from '../../src/optik-client.js';
+import { OpikClient, createOpikClient, opikClient } from '../../src/opik-client.js';
 
 // Mock Cloudflare Workers AI environment
 const mockEnv = {
@@ -22,12 +22,12 @@ const mockEnv = {
   }
 };
 
-describe('Optik Client - Unit Tests', () => {
+describe('Opik Client - Unit Tests', () => {
   let client;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = new OptikClient('test-api-key');
+    client = new OpikClient('test-api-key');
   });
 
   describe('Constructor and Configuration', () => {
@@ -38,29 +38,29 @@ describe('Optik Client - Unit Tests', () => {
     });
 
     it('should create client without API key', () => {
-      const noKeyClient = new OptikClient();
+      const noKeyClient = new OpikClient();
       expect(noKeyClient.apiKey).toBeNull();
       expect(noKeyClient.client).toBeNull();
     });
 
     it('should set API key from environment', () => {
-      const noKeyClient = new OptikClient();
+      const noKeyClient = new OpikClient();
       noKeyClient.setApiKey('new-api-key');
       expect(noKeyClient.apiKey).toBe('new-api-key');
       expect(noKeyClient.client).toBeDefined();
     });
 
     it('should throw error when initializing without API key', () => {
-      const noKeyClient = new OptikClient();
+      const noKeyClient = new OpikClient();
       expect(() => noKeyClient.initializeClient()).toThrow('API key is required to initialize Opik client');
     });
   });
 
   describe('Recipe Generation', () => {
     it('should throw error when client is not initialized', async () => {
-      const noKeyClient = new OptikClient();
+      const noKeyClient = new OpikClient();
       await expect(noKeyClient.generateRecipe({ ingredients: ['chicken'] }, mockEnv))
-        .rejects.toThrow('Optik client not initialized. Please set API key first.');
+        .rejects.toThrow('Opik client not initialized. Please set API key first.');
     });
 
     it('should throw error when AI binding is not available', async () => {
@@ -135,7 +135,7 @@ Dietary: High Protein`;
       mockEnv.AI.run.mockRejectedValue(new Error('AI service unavailable'));
 
       await expect(client.generateRecipe({ ingredients: ['chicken'] }, mockEnv))
-        .rejects.toThrow('Failed to generate recipe with Optik: AI service unavailable');
+        .rejects.toThrow('Failed to generate recipe with Opik: AI service unavailable');
     });
   });
 
@@ -274,14 +274,14 @@ Dietary: Vegetarian, Gluten-Free`;
   });
 
   describe('Factory Functions', () => {
-    it('should create client with createOptikClient', () => {
-      const customClient = createOptikClient('custom-key', 'custom-workspace');
+    it('should create client with createOpikClient', () => {
+      const customClient = createOpikClient('custom-key', 'custom-workspace');
       expect(customClient.apiKey).toBe('custom-key');
       expect(customClient.workspaceName).toBe('custom-workspace');
     });
 
     it('should provide default client instance', () => {
-      expect(optikClient).toBeInstanceOf(OptikClient);
+      expect(opikClient).toBeInstanceOf(OpikClient);
     });
   });
 

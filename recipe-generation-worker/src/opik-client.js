@@ -1,6 +1,6 @@
 /**
- * Optik AI Client for Recipe Generation
- * Integrates with Optik AI service using the official Opik SDK
+ * Opik AI Client for Recipe Generation
+ * Integrates with Opik AI service using the official Opik SDK
  */
 
 import { Opik } from 'opik';
@@ -8,7 +8,7 @@ import { Opik } from 'opik';
 /**
  * Optik AI Client class using the official Opik SDK
  */
-export class OptikClient {
+export class OpikClient {
   constructor(apiKey = null, workspaceName = 'recipe-generation-worker') {
     this.apiKey = apiKey;
     this.workspaceName = workspaceName;
@@ -62,7 +62,7 @@ export class OptikClient {
   async generateRecipe(requestData, env) {
     try {
       if (!this.client) {
-        throw new Error('Optik client not initialized. Please set API key first.');
+        throw new Error('Opik client not initialized. Please set API key first.');
       }
 
       if (!env.AI) {
@@ -125,8 +125,8 @@ export class OptikClient {
       return parsedRecipe;
 
     } catch (error) {
-      console.error('Error generating recipe with Optik:', error);
-      throw new Error(`Failed to generate recipe with Optik: ${error.message}`);
+      console.error('Error generating recipe with Opik:', error);
+      throw new Error(`Failed to generate recipe with Opik: ${error.message}`);
     }
   }
 
@@ -328,16 +328,16 @@ Make sure the recipe is:
 }
 
 /**
- * Create and configure Optik client
+ * Create and configure Opik client
  * @param {string} apiKey - Optional API key override
  * @param {string} workspaceName - Optional workspace name
- * @returns {OptikClient} Configured Optik client
+ * @returns {OpikClient} Configured Opik client
  */
-export function createOptikClient(apiKey = null, workspaceName = 'recipe-generation-worker') {
-  return new OptikClient(apiKey, workspaceName);
+export function createOpikClient(apiKey = null, workspaceName = 'recipe-generation-worker') {
+  return new OpikClient(apiKey, workspaceName);
 }
 
 /**
- * Default Optik client instance
+ * Default Opik client instance
  */
-export const optikClient = createOptikClient();
+export const opikClient = createOpikClient();
