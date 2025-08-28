@@ -16,7 +16,7 @@ describe('Recipe Generation Worker - Integration Tests', () => {
       assertCorsHeaders(response);
     });
 
-    it('should handle CORS preflight requests', async () => {
+    it('should handle CORS preflight requests with OPTIONS method', async () => {
       const response = await worker.fetch(new Request('https://example.com/generate', {
         method: 'OPTIONS'
       }));
@@ -43,6 +43,26 @@ describe('Recipe Generation Worker - Integration Tests', () => {
     it('should return 404 for POST to unknown routes', async () => {
       const request = createPostRequest('/unknown', { test: 'data' });
       const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Not Found');
+    });
+
+    it('should return 404 for PUT to unknown routes', async () => {
+      const response = await worker.fetch(new Request('https://example.com/unknown', {
+        method: 'PUT'
+      }));
+
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Not Found');
+    });
+
+    it('should return 404 for DELETE to unknown routes', async () => {
+      const response = await worker.fetch(new Request('https://example.com/unknown', {
+        method: 'DELETE'
+      }));
 
       expect(response.status).toBe(404);
       const data = await response.json();

@@ -225,5 +225,55 @@ describe('Opik Client - Unit Tests', () => {
       expect(factoryClient.workspaceName).toBe('recipe-generation-worker');
     });
   });
+
+  describe('Error Handling Branches', () => {
+    it('should handle client initialization with empty string API key', () => {
+      const client = new OpikClient('');
+      expect(client.apiKey).toBe('');
+      expect(client.client).toBeNull(); // Constructor treats empty string as falsy
+    });
+
+    it('should handle client initialization with whitespace-only API key', () => {
+      const client = new OpikClient('   ');
+      expect(client.apiKey).toBe('   ');
+      expect(client.client).not.toBeNull(); // Constructor treats whitespace as truthy
+    });
+
+    it('should handle setApiKey with whitespace-only string', () => {
+      client.setApiKey('   ');
+      expect(client.apiKey).toBeNull();
+      expect(client.client).toBeNull();
+    });
+
+    it('should handle setApiKey with undefined', () => {
+      client.setApiKey(undefined);
+      expect(client.apiKey).toBeNull();
+      expect(client.client).toBeNull();
+    });
+
+    it('should handle setApiKey with null', () => {
+      client.setApiKey(null);
+      expect(client.apiKey).toBeNull();
+      expect(client.client).toBeNull();
+    });
+
+    it('should handle setApiKey with empty string', () => {
+      client.setApiKey('');
+      expect(client.apiKey).toBeNull();
+      expect(client.client).toBeNull();
+    });
+
+    it('should handle setApiKey with zero', () => {
+      client.setApiKey(0);
+      expect(client.apiKey).toBeNull();
+      expect(client.client).toBeNull();
+    });
+
+    it('should handle setApiKey with false', () => {
+      client.setApiKey(false);
+      expect(client.apiKey).toBeNull();
+      expect(client.client).toBeNull();
+    });
+  });
 });
 
