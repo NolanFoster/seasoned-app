@@ -1,3 +1,5 @@
+import { optikClient } from '../optik-client.js';
+
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
  */
@@ -66,8 +68,8 @@ export async function handleGenerate(request, env, corsHeaders) {
       });
     }
 
-    // Generate recipe using embedding similarity search and LLaMA
-    const generatedRecipe = await generateRecipeWithAI(requestBody, env);
+    // Generate recipe using Optik AI first, fallback to existing LLaMA implementation
+    const generatedRecipe = await generateRecipeWithOptikOrFallback(requestBody, env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -131,6 +133,48 @@ async function generateRecipeWithAI(requestData, env) {
   } catch (error) {
     console.error('Error in generateRecipeWithAI:', error);
     throw error;
+  }
+}
+
+/**
+ * Generate recipe using Optik AI first, fallback to existing LLaMA implementation
+ */
+async function generateRecipeWithOptikOrFallback(requestData, env) {
+  const startTime = Date.now();
+  
+  try {
+    console.log('Attempting recipe generation with Optik AI...');
+    
+    // Set API key from environment
+    optikClient.setApiKey(env.OPTIK_API_KEY);
+    
+    // Try Optik AI first
+    const optikRecipe = await optikClient.generateRecipe(requestData, env);
+    
+    if (optikRecipe && optikRecipe.name && optikRecipe.ingredients.length > 0) {
+      const duration = Date.now() - startTime;
+      console.log(`Optik AI recipe generation completed in ${duration}ms`);
+      
+      return {
+        ...optikRecipe,
+        generationTime: duration,
+        similarRecipesFound: 0,
+        generationMethod: 'optik-ai'
+      };
+    }
+    
+    throw new Error('Optik AI returned invalid recipe, falling back to LLaMA');
+    
+  } catch (optikError) {
+    console.log('Optik AI failed, falling back to LLaMA implementation:', optikError.message);
+    
+    try {
+      // Fallback to existing LLaMA implementation
+      return await generateRecipeWithAI(requestData, env);
+    } catch (llamaError) {
+      console.error('Both Optik AI and LLaMA failed:', llamaError.message);
+      throw new Error(`Recipe generation failed: Optik AI error: ${optikError.message}, LLaMA error: ${llamaError.message}`);
+    }
   }
 }
 
