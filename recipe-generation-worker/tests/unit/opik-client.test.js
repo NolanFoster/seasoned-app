@@ -222,7 +222,7 @@ describe('Opik Client - Unit Tests', () => {
 
     it('should create client with default workspace when not specified', () => {
       const factoryClient = createOpikClient('factory-key');
-      expect(factoryClient.workspaceName).toBe('recipe-generation-worker');
+      expect(factoryClient.workspaceName).toBe('recipe-generation');
     });
   });
 

@@ -30,7 +30,7 @@ export class OpikClient {
     this.client = new Opik({
       apiKey: this.apiKey,
       apiUrl: 'https://www.comet.com/opik/api',
-      projectName: 'recipe-generation-worker',
+      projectName: 'recipe-generation',
       workspaceName: this.workspaceName
     });
   }
@@ -156,12 +156,12 @@ export class OpikClient {
  * @param {string} workspaceName - Workspace name for the client
  * @returns {OpikClient} New Opik client instance
  */
-export function createOpikClient(apiKey = null, workspaceName = 'recipe-generation-worker') {
+export function createOpikClient(apiKey = null, workspaceName = 'recipe-generation') {
   return new OpikClient(apiKey, workspaceName);
 }
 
 /**
  * Default Opik client instance
  */
-export const opikClient = new OpikClient();
+export const opikClient = new OpikClient(null, 'recipe-generation');
 
