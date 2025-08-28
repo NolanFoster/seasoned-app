@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import worker from '../../src/index.js';
-import { mockEnv, mockEnvWithoutEnvironment, createMockRequest, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
+import { mockEnv, mockEnvWithoutEnvironment, createMockRequest, createPostRequest, assertCorsHeaders } from '../setup.js';
 
 describe('Recipe Generation Worker - Integration Tests', () => {
   beforeEach(() => {

@@ -9,14 +9,13 @@ import { OpikClient, createOpikClient, opikClient } from '../../src/opik-client.
 
 describe('Opik Client - Unit Tests', () => {
   let client;
-  let mockOpikSDK;
   let mockTrace;
   let mockSpan;
 
   beforeEach(() => {
     // Create a client without API key for testing
     client = new OpikClient();
-    
+
     // Mock the Opik SDK for testing with API key
     mockSpan = {
       end: vi.fn(),
@@ -27,11 +26,6 @@ describe('Opik Client - Unit Tests', () => {
       span: vi.fn().mockReturnValue(mockSpan),
       end: vi.fn(),
       error: vi.fn()
-    };
-
-    mockOpikSDK = {
-      trace: vi.fn().mockReturnValue(mockTrace),
-      flush: vi.fn()
     };
   });
 
@@ -159,7 +153,7 @@ describe('Opik Client - Unit Tests', () => {
           throw new Error('Span creation failed');
         })
       };
-      
+
       const span = client.createSpan(errorTrace, 'Test Span', 'test-type');
       expect(span).toBeNull();
     });
@@ -171,7 +165,7 @@ describe('Opik Client - Unit Tests', () => {
           throw new Error('Span ending failed');
         })
       };
-      
+
       // Should not throw
       expect(() => client.endSpan(errorSpan, { result: 'success' })).not.toThrow();
     });
@@ -183,7 +177,7 @@ describe('Opik Client - Unit Tests', () => {
           throw new Error('Span error failed');
         })
       };
-      
+
       // Should not throw
       expect(() => client.endSpan(errorSpan, null, new Error('Test error'))).not.toThrow();
     });
@@ -195,7 +189,7 @@ describe('Opik Client - Unit Tests', () => {
           throw new Error('Trace ending failed');
         })
       };
-      
+
       // Should not throw
       expect(() => client.endTrace(errorTrace, { result: 'success' })).not.toThrow();
     });
@@ -207,7 +201,7 @@ describe('Opik Client - Unit Tests', () => {
           throw new Error('Trace error failed');
         })
       };
-      
+
       // Should not throw
       expect(() => client.endTrace(errorTrace, null, new Error('Test error'))).not.toThrow();
     });
@@ -216,7 +210,7 @@ describe('Opik Client - Unit Tests', () => {
   describe('Factory Functions', () => {
     it('should create client using factory function', () => {
       const factoryClient = createOpikClient('factory-key', 'factory-workspace');
-      
+
       expect(factoryClient).toBeInstanceOf(OpikClient);
       expect(factoryClient.apiKey).toBe('factory-key');
       expect(factoryClient.workspaceName).toBe('factory-workspace');

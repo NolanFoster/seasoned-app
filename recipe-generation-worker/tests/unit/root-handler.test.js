@@ -88,7 +88,7 @@ describe('Root Handler - Unit Tests', () => {
       const request = createMockRequest('/');
       const env = { ENVIRONMENT: 'production' };
       const response = await handleRoot(request, env, corsHeaders);
-      
+
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.environment).toBe('production');
@@ -98,7 +98,7 @@ describe('Root Handler - Unit Tests', () => {
       const request = createMockRequest('/');
       const env = {};
       const response = await handleRoot(request, env, corsHeaders);
-      
+
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.environment).toBe('development');
