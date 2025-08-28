@@ -64,336 +64,65 @@ async function getRecipeFromKV(env, recipeId) {
     return { success: true, recipe };
   } catch (error) {
     console.error('Error retrieving recipe from KV:', error);
-    return { success: false, error: error.message };
+    // Throw the error for critical failures so it can be caught by the queue error handler
+    throw error;
   }
 }
 
 /**
- * Embedding generation handler - processes recipes for embedding generation
+ * Process a single recipe ID for embedding generation
  */
-export async function handleEmbedding(request, env, corsHeaders) {
+export async function processEmbeddingMessage(recipeId, env) {
   try {
-    const startTime = Date.now();
-
-    // Parse request body to check if this is a scheduled run
-    const contentType = request.headers.get('content-type') || '';
-    let requestBody = {};
-
-    if (contentType.includes('application/json')) {
-      try {
-        requestBody = await request.json();
-      } catch (error) {
-        console.warn('Failed to parse request body:', error);
-      }
+    // Validate recipe ID
+    if (!recipeId || recipeId.trim() === '') {
+      console.log('Empty or invalid recipe ID provided');
+      return { success: false, reason: 'invalid_recipe_id' };
     }
 
-    const isScheduled = requestBody.scheduled === true;
-    console.log(`Starting embedding generation (${isScheduled ? 'scheduled' : 'manual'})`);
+    console.log(`Processing recipe: ${recipeId}`);
 
-    // Get all recipe keys from KV storage
-    let recipeKeys;
-    try {
-      recipeKeys = await getRecipeKeys(env.RECIPE_STORAGE);
-      console.log(`Found ${recipeKeys.length} recipes to process`);
-    } catch (error) {
-      console.error('Failed to get recipe keys:', error);
-      return new Response(JSON.stringify({
-        error: 'Failed to access recipe storage',
-        details: error.message,
-        environment: env.ENVIRONMENT || 'development',
-        availableBindings: Object.keys(env).filter(key => key !== 'ENVIRONMENT')
-      }), {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
+    // Check if this recipe already has an embedding
+    const existingEmbedding = await checkExistingEmbedding(recipeId, env.RECIPE_VECTORS);
+    if (existingEmbedding) {
+      console.log(`Recipe ${recipeId} already has embedding, skipping`);
+      return { success: false, reason: 'already_has_embedding' };
     }
 
-    if (recipeKeys.length === 0) {
-      return new Response(JSON.stringify({
-        message: 'No recipes found in storage',
-        processed: 0,
-        duration: Date.now() - startTime
-      }), {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
+    // Get recipe data from KV
+    const recipeResult = await getRecipeFromKV(env, recipeId);
+    if (!recipeResult.success || !recipeResult.recipe) {
+      console.error(`Failed to get recipe ${recipeId} from KV:`, recipeResult.error);
+      return { success: false, reason: 'recipe_not_found' };
     }
 
-    // Process recipes dynamically, checking for existing embeddings during processing
-    const recipesToProcess = [...recipeKeys]; // Start with all recipes
+    const recipeData = recipeResult.recipe;
 
-    // Process recipes in small batches to avoid subrequest limits
-    // Cloudflare Workers limit: 50 subrequests per invocation
-    // Each recipe uses 3 subrequests: KV get + AI embedding + Vectorize upsert
-    const batchSize = isScheduled ? 6 : 5; // Optimized for 50 subrequest limit
-    const results = {
-      processed: 0,
-      skipped: 0,
-      errors: 0,
-      details: []
-    };
-
-    // Track subrequests to avoid hitting Cloudflare's 50 subrequest limit
-    let subrequestCount = 0;
-    const maxSubrequests = isScheduled ? 48 : 45; // Conservative limits for 50 max
-    let currentIndex = 0;
-
-    while (currentIndex < recipesToProcess.length && subrequestCount < maxSubrequests) {
-      // Check if we're approaching the subrequest limit
-      if (subrequestCount >= maxSubrequests) {
-        console.log(`Stopping processing to avoid subrequest limit. Processed ${results.processed} recipes.`);
-        results.details.push({
-          status: 'info',
-          message: `Stopped processing after ${results.processed} recipes to avoid subrequest limit. Remaining recipes will be processed in next run.`
-        });
-        break;
-      }
-
-      // Get next batch of recipes to process
-      const batch = recipesToProcess.slice(currentIndex, currentIndex + batchSize);
-      console.log(`Processing batch starting at index ${currentIndex} (subrequests: ${subrequestCount}/${maxSubrequests})`);
-
-      const batchResults = await processBatchWithDynamicFiltering(batch, env, recipesToProcess, currentIndex);
-      
-      // Count subrequests used in this batch
-      subrequestCount += batchResults.subrequestsUsed || 0;
-
-      results.processed += batchResults.processed;
-      results.skipped += batchResults.skipped;
-      results.errors += batchResults.errors;
-      results.details.push(...batchResults.details);
-
-      // Update current index based on how many recipes were actually processed
-      currentIndex += batchResults.processed + batchResults.skipped + batchResults.errors;
-
-      // Add a longer delay between batches to prevent overwhelming the system
-      if (currentIndex < recipesToProcess.length && subrequestCount < maxSubrequests) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+    // Generate embedding text from recipe data
+    const embeddingText = generateEmbeddingText(recipeData);
+    if (!embeddingText) {
+      console.error(`No embedding text generated for recipe ${recipeId}`);
+      return { success: false, reason: 'no_embedding_text' };
     }
 
-    const duration = Date.now() - startTime;
-    console.log(`Embedding generation completed: ${results.processed} processed, ${results.skipped} skipped, ${results.errors} errors in ${duration}ms`);
+    // Generate embedding using Cloudflare AI
+    const embedding = await generateEmbedding(embeddingText, env.AI);
+    if (!embedding) {
+      console.error(`Failed to generate embedding for recipe ${recipeId}`);
+      return { success: false, reason: 'embedding_generation_failed' };
+    }
 
-    return new Response(JSON.stringify({
-      message: 'Embedding generation completed',
-      ...results,
-      duration,
-      environment: env.ENVIRONMENT || 'development'
-    }), {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    // Store embedding in vectorize
+    await storeEmbedding(recipeId, embedding, recipeData, env.RECIPE_VECTORS);
+    
+    console.log(`Successfully processed recipe ${recipeId}`);
+    return { success: true, recipeId };
 
   } catch (error) {
-    console.error('Error in embedding generation:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to generate embeddings',
-      details: error.message,
-      environment: env.ENVIRONMENT || 'development'
-    }), {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    console.error(`Error processing recipe ${recipeId}:`, error);
+    // Re-throw the error so it can be caught by the queue error handler
+    throw error;
   }
-}
-
-/**
- * Get all recipe keys from KV storage
- */
-async function getRecipeKeys(kvStorage) {
-  try {
-    // Check if kvStorage is available
-    if (!kvStorage) {
-      console.error('KV storage binding is not available. Check wrangler.toml configuration.');
-      throw new Error('KV storage binding (RECIPE_STORAGE) is not available');
-    }
-
-    const keys = [];
-    let cursor = null;
-
-    do {
-      const listResult = await kvStorage.list({ cursor, limit: 1000 });
-      keys.push(...listResult.keys.map(key => key.name));
-      cursor = listResult.list_complete ? null : listResult.cursor;
-    } while (cursor);
-
-    return keys;
-  } catch (error) {
-    console.error('Error getting recipe keys:', error);
-    throw error; // Re-throw to provide better error handling upstream
-  }
-}
-
-/**
- * Get all existing vector IDs from vectorize storage
- */
-async function getExistingVectorIds(vectorStorage) {
-  try {
-    const existingIds = new Set();
-    
-    // Query with a dummy vector to get all records, using a large topK
-    // We'll use a zero vector since we just want to get the IDs
-    const dummyVector = new Array(384).fill(0); // Assuming 384-dimensional vectors
-    
-    // Get all existing vectors in batches
-    let cursor = null;
-    const batchSize = 1000;
-    
-    do {
-      const query = await vectorStorage.query(dummyVector, {
-        topK: batchSize,
-        cursor: cursor
-      });
-      
-      if (query.matches) {
-        query.matches.forEach(match => {
-          if (match.id) {
-            existingIds.add(match.id);
-          }
-        });
-      }
-      
-      cursor = query.cursor || null;
-    } while (cursor);
-    
-    console.log(`Found ${existingIds.size} existing vectors in database`);
-    return existingIds;
-  } catch (error) {
-    console.error('Error getting existing vector IDs:', error);
-    return new Set(); // Return empty set if we can't check
-  }
-}
-
-/**
- * Filter out recipe keys that already have embeddings
- */
-async function filterNewRecipes(recipeKeys, vectorStorage) {
-  try {
-    console.log(`Checking for existing embeddings among ${recipeKeys.length} recipes...`);
-    
-    // Get all existing vector IDs
-    const existingIds = await getExistingVectorIds(vectorStorage);
-    
-    // Filter out recipes that already have embeddings
-    const newRecipes = recipeKeys.filter(key => !existingIds.has(key));
-    
-    console.log(`Found ${recipeKeys.length - newRecipes.length} existing embeddings, ${newRecipes.length} new recipes to process`);
-    
-    return newRecipes;
-  } catch (error) {
-    console.error('Error filtering new recipes:', error);
-    // If we can't check existing embeddings, process all recipes
-    return recipeKeys;
-  }
-}
-
-/**
- * Process a batch of recipes for embedding generation with dynamic filtering
- * If a recipe already has an embedding, it will try to grab another key from KV
- */
-async function processBatchWithDynamicFiltering(recipeKeys, env, allRecipeKeys, currentIndex) {
-  const results = {
-    processed: 0,
-    skipped: 0,
-    errors: 0,
-    details: [],
-    subrequestsUsed: 0
-  };
-
-  let keyIndex = 0;
-  let additionalKeysChecked = 0;
-  const maxAdditionalChecks = 10; // Limit additional key checks to avoid infinite loops
-
-  while (keyIndex < recipeKeys.length && additionalKeysChecked < maxAdditionalChecks) {
-    const key = recipeKeys[keyIndex];
-
-    try {
-      // Check if this recipe already has an embedding in the vector database
-      const existingEmbedding = await checkExistingEmbedding(key, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count vectorize query as subrequest
-
-      if (existingEmbedding) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'already_has_embedding' });
-        
-        // Try to grab another key from KV that we haven't processed yet
-        const nextKey = await getNextUnprocessedKey(allRecipeKeys, currentIndex + keyIndex + 1, env.RECIPE_VECTORS);
-        if (nextKey) {
-          // Replace the current key with the new one
-          recipeKeys[keyIndex] = nextKey;
-          additionalKeysChecked++;
-          continue; // Process the new key instead
-        } else {
-          // No more keys available, skip this one
-          keyIndex++;
-          continue;
-        }
-      }
-
-      // Get recipe data from KV using shared library (handles compression)
-      const recipeResult = await getRecipeFromKV(env, key);
-      results.subrequestsUsed++; // Count KV get as subrequest
-
-      if (!recipeResult.success || !recipeResult.recipe) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_data' });
-        keyIndex++;
-        continue;
-      }
-
-      const recipeData = recipeResult.recipe;
-
-      // Generate embedding text from recipe data
-      const embeddingText = generateEmbeddingText(recipeData);
-
-      if (!embeddingText) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_text' });
-        keyIndex++;
-        continue;
-      }
-
-      // Generate embedding using Cloudflare AI
-      const embedding = await generateEmbedding(embeddingText, env.AI);
-      results.subrequestsUsed++; // Count AI call as subrequest
-
-      if (!embedding) {
-        results.errors++;
-        results.details.push({ key, status: 'error', reason: 'embedding_failed' });
-        keyIndex++;
-        continue;
-      }
-
-      // Store embedding in vectorize
-      await storeEmbedding(key, embedding, recipeData, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count Vectorize upsert as subrequest
-
-      results.processed++;
-      results.details.push({ key, status: 'processed' });
-      keyIndex++;
-
-    } catch (error) {
-      console.error(`Error processing recipe ${key}:`, error);
-      results.errors++;
-      results.details.push({ key, status: 'error', reason: error.message });
-      keyIndex++;
-    }
-  }
-
-  return results;
 }
 
 /**
@@ -426,90 +155,6 @@ async function checkExistingEmbedding(recipeId, vectorStorage) {
     console.error(`Error checking existing embedding for ${recipeId}:`, error);
     return false; // Assume no existing embedding if we can't check
   }
-}
-
-/**
- * Get the next unprocessed key from the recipe keys list
- */
-async function getNextUnprocessedKey(allRecipeKeys, startIndex, vectorStorage) {
-  try {
-    // Check keys starting from the given index
-    for (let i = startIndex; i < allRecipeKeys.length; i++) {
-      const key = allRecipeKeys[i];
-      const hasEmbedding = await checkExistingEmbedding(key, vectorStorage);
-      
-      if (!hasEmbedding) {
-        return key;
-      }
-    }
-    
-    return null; // No more unprocessed keys found
-  } catch (error) {
-    console.error('Error getting next unprocessed key:', error);
-    return null;
-  }
-}
-
-/**
- * Process a batch of recipes for embedding generation (legacy function for backward compatibility)
- */
-async function processBatch(recipeKeys, env) {
-  const results = {
-    processed: 0,
-    skipped: 0,
-    errors: 0,
-    details: [],
-    subrequestsUsed: 0
-  };
-
-  for (const key of recipeKeys) {
-    try {
-      // Get recipe data from KV using shared library (handles compression)
-      const recipeResult = await getRecipeFromKV(env, key);
-      results.subrequestsUsed++; // Count KV get as subrequest
-
-      if (!recipeResult.success || !recipeResult.recipe) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_data' });
-        continue;
-      }
-
-      const recipeData = recipeResult.recipe;
-
-      // Generate embedding text from recipe data
-      const embeddingText = generateEmbeddingText(recipeData);
-
-      if (!embeddingText) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_text' });
-        continue;
-      }
-
-      // Generate embedding using Cloudflare AI
-      const embedding = await generateEmbedding(embeddingText, env.AI);
-      results.subrequestsUsed++; // Count AI call as subrequest
-
-      if (!embedding) {
-        results.errors++;
-        results.details.push({ key, status: 'error', reason: 'embedding_failed' });
-        continue;
-      }
-
-      // Store embedding in vectorize
-      await storeEmbedding(key, embedding, recipeData, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count Vectorize upsert as subrequest
-
-      results.processed++;
-      results.details.push({ key, status: 'processed' });
-
-    } catch (error) {
-      console.error(`Error processing recipe ${key}:`, error);
-      results.errors++;
-      results.details.push({ key, status: 'error', reason: error.message });
-    }
-  }
-
-  return results;
 }
 
 /**

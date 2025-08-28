@@ -1,0 +1,231 @@
+name: Recipe Embedding Worker Tests
+
+on:
+  push:
+    branches: [ main, staging ]
+    paths:
+      - 'recipe-embedding-worker/**'
+      - '.github/workflows/recipe-embedding-worker-tests.yml'
+      - 'shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [ main, staging ]
+    paths:
+      - 'recipe-embedding-worker/**'
+      - '.github/workflows/recipe-embedding-worker-tests.yml'
+      - 'shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  test-worker:
+    name: Recipe Embedding Worker Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: recipe-embedding-worker/package-lock.json
+    
+    - name: Install Worker Dependencies
+      working-directory: ./recipe-embedding-worker
+      run: npm ci
+    
+    - name: Run Worker Tests with Coverage
+      working-directory: ./recipe-embedding-worker
+      run: |
+        echo "Running tests with coverage..."
+        npm run test:coverage
+        echo "✅ Tests passed successfully!"
+    
+    - name: Check Coverage Thresholds
+      id: coverage-check
+      working-directory: ./recipe-embedding-worker
+      run: |
+        echo "### Recipe Embedding Worker Coverage Results" >> $GITHUB_STEP_SUMMARY
+        
+        # Extract coverage data from lcov.info
+        if [ -f "coverage/lcov.info" ]; then
+          # Parse lcov.info for coverage percentages
+          TOTAL_LINES=$(grep -E "^LF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          COVERED_LINES=$(grep -E "^LH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          
+          TOTAL_FUNCTIONS=$(grep -E "^FNF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          COVERED_FUNCTIONS=$(grep -E "^FNH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          
+          TOTAL_BRANCHES=$(grep -E "^BRF:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          COVERED_BRANCHES=$(grep -E "^BRH:" coverage/lcov.info | awk -F: '{sum += $2} END {print sum}')
+          
+          # Calculate percentages
+          if [ "$TOTAL_LINES" -gt 0 ]; then
+            LINES=$(awk "BEGIN {printf \"%.2f\", ($COVERED_LINES / $TOTAL_LINES) * 100}")
+          else
+            LINES=0
+          fi
+          
+          if [ "$TOTAL_FUNCTIONS" -gt 0 ]; then
+            FUNCTIONS=$(awk "BEGIN {printf \"%.2f\", ($COVERED_FUNCTIONS / $TOTAL_FUNCTIONS) * 100}")
+          else
+            FUNCTIONS=0
+          fi
+          
+          if [ "$TOTAL_BRANCHES" -gt 0 ]; then
+            BRANCHES=$(awk "BEGIN {printf \"%.2f\", ($COVERED_BRANCHES / $TOTAL_BRANCHES) * 100}")
+          else
+            BRANCHES=0
+          fi
+          
+          # Statements coverage is usually similar to lines
+          STATEMENTS=$LINES
+        else
+          echo "❌ Coverage file not found!"
+          exit 1
+        fi
+        
+        # Set coverage thresholds (85% as defined in vitest config)
+        THRESHOLD_STATEMENTS=85
+        THRESHOLD_BRANCHES=80
+        THRESHOLD_FUNCTIONS=85
+        
+        # Check if coverage meets thresholds
+        STATEMENTS_PASS=false
+        BRANCHES_PASS=false
+        FUNCTIONS_PASS=false
+        
+        if (( $(echo "$STATEMENTS >= $THRESHOLD_STATEMENTS" | bc -l) )); then
+          STATEMENTS_PASS=true
+        fi
+        
+        if (( $(echo "$BRANCHES >= $THRESHOLD_BRANCHES" | bc -l) )); then
+          BRANCHES_PASS=true
+        fi
+        
+        if (( $(echo "$FUNCTIONS >= $THRESHOLD_FUNCTIONS" | bc -l) )); then
+          FUNCTIONS_PASS=true
+        fi
+        
+        # Display coverage results
+        echo "## 📊 Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Coverage | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|----------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$STATEMENTS_PASS" = true ]; then
+          echo "| Statements | $STATEMENTS% | $THRESHOLD_STATEMENTS% | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Statements | $STATEMENTS% | $THRESHOLD_STATEMENTS% | ❌ FAIL |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "$BRANCHES_PASS" = true ]; then
+          echo "| Branches | $BRANCHES% | $THRESHOLD_BRANCHES% | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Branches | $BRANCHES% | $THRESHOLD_BRANCHES% | ❌ FAIL |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "$FUNCTIONS_PASS" = true ]; then
+          echo "| Functions | $FUNCTIONS% | $THRESHOLD_FUNCTIONS% | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Functions | $FUNCTIONS% | $THRESHOLD_FUNCTIONS% | ❌ FAIL |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Total Lines:** $COVERED_LINES / $TOTAL_LINES" >> $GITHUB_STEP_SUMMARY
+        echo "**Total Functions:** $COVERED_FUNCTIONS / $TOTAL_FUNCTIONS" >> $GITHUB_STEP_SUMMARY
+        echo "**Total Branches:** $COVERED_BRANCHES / $TOTAL_BRANCHES" >> $GITHUB_STEP_SUMMARY
+        
+        # Set output variables for other steps
+        echo "statements=$STATEMENTS" >> $GITHUB_OUTPUT
+        echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+        echo "functions=$FUNCTIONS" >> $GITHUB_OUTPUT
+        echo "statements-pass=$STATEMENTS_PASS" >> $GITHUB_OUTPUT
+        echo "branches-pass=$BRANCHES_PASS" >> $GITHUB_OUTPUT
+        echo "functions-pass=$FUNCTIONS_PASS" >> $GITHUB_OUTPUT
+        
+        # Fail if any coverage threshold is not met
+        if [ "$STATEMENTS_PASS" = false ] || [ "$BRANCHES_PASS" = false ] || [ "$FUNCTIONS_PASS" = false ]; then
+          echo "❌ Coverage thresholds not met!"
+          exit 1
+        else
+          echo "✅ All coverage thresholds met!"
+        fi
+    
+    - name: Upload Coverage Reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./recipe-embedding-worker/coverage/lcov.info
+        flags: recipe-embedding-worker
+        name: recipe-embedding-worker-coverage
+        fail_ci_if_error: false
+    
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          // Check if we already commented
+          const existingComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Recipe Embedding Worker Tests')
+          );
+          
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: `## 🧪 Recipe Embedding Worker Tests - ${context.sha.substring(0, 7)}
+              
+          ✅ **All tests passed successfully!**
+          
+          **Coverage Results:**
+          - Statements: ${steps.coverage-check.outputs.statements}%
+          - Branches: ${steps.coverage-check.outputs.branches}%
+          - Functions: ${steps.coverage-check.outputs.functions}%
+          
+          **Commit:** ${context.sha.substring(0, 7)}
+          **Branch:** ${context.ref.replace('refs/heads/', '')}
+          **Triggered by:** ${context.actor}
+          
+          ---
+          *This comment was automatically generated by GitHub Actions*`
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🧪 Recipe Embedding Worker Tests - ${context.sha.substring(0, 7)}
+              
+          ✅ **All tests passed successfully!**
+          
+          **Coverage Results:**
+          - Statements: ${steps.coverage-check.outputs.statements}%
+          - Branches: ${steps.coverage-check.outputs.branches}%
+          - Functions: ${steps.coverage-check.outputs.functions}%
+          
+          **Commit:** ${context.sha.substring(0, 7)}
+          **Branch:** ${context.ref.replace('refs/heads/', '')}
+          **Triggered by:** ${context.actor}
+          
+          ---
+          *This comment was automatically generated by GitHub Actions*`
+            });
+          }
