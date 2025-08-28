@@ -1,6 +1,8 @@
 import { handleRoot } from './handlers/root-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
 import { handleEmbedding } from './handlers/embedding-handler.js';
+import { handleProgress } from './handlers/embedding-handler.js';
+import { handleReset } from './handlers/embedding-handler.js';
 
 export default {
   // Handle HTTP requests
@@ -10,7 +12,7 @@ export default {
     // CORS headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
       'Access-Control-Allow-Headers': 'Content-Type'
     };
 
@@ -32,6 +34,16 @@ export default {
     // Manual embedding generation endpoint
     if (url.pathname === '/embed' && request.method === 'POST') {
       return handleEmbedding(request, env, corsHeaders);
+    }
+
+    // Progress check endpoint
+    if (url.pathname === '/progress' && request.method === 'GET') {
+      return handleProgress(request, env, corsHeaders);
+    }
+
+    // Reset progress endpoint
+    if (url.pathname === '/reset' && request.method === 'DELETE') {
+      return handleReset(request, env, corsHeaders);
     }
 
     // 404 for unknown routes

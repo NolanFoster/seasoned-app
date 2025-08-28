@@ -69,6 +69,136 @@ async function getRecipeFromKV(env, recipeId) {
 }
 
 /**
+ * Progress tracking keys for KV storage
+ */
+const PROGRESS_KEYS = {
+  LAST_PROCESSED_INDEX: 'embedding_progress_last_index',
+  TOTAL_RECIPES: 'embedding_progress_total_count',
+  LAST_RUN_TIMESTAMP: 'embedding_progress_last_run',
+  PROCESSED_RECIPE_IDS: 'embedding_progress_processed_ids',
+  FAILED_RECIPE_IDS: 'embedding_progress_failed_ids',
+  CURRENT_BATCH_START: 'embedding_progress_batch_start'
+};
+
+/**
+ * Reset progress tracking data
+ */
+async function resetProgress(env) {
+  try {
+    const resetData = {
+      lastProcessedIndex: 0,
+      totalRecipes: 0,
+      lastRunTimestamp: null,
+      processedRecipeIds: [],
+      failedRecipeIds: [],
+      currentBatchStart: 0
+    };
+
+    await env.RECIPE_STORAGE.put(PROGRESS_KEYS.LAST_PROCESSED_INDEX, JSON.stringify(resetData));
+    console.log('Progress tracking reset successfully');
+    return true;
+  } catch (error) {
+    console.error('Error resetting progress:', error);
+    return false;
+  }
+}
+
+/**
+ * Get progress tracking data from KV
+ */
+async function getProgressData(env) {
+  try {
+    const progressData = await env.RECIPE_STORAGE.get(PROGRESS_KEYS.LAST_PROCESSED_INDEX);
+    if (!progressData) {
+      return {
+        lastProcessedIndex: 0,
+        totalRecipes: 0,
+        lastRunTimestamp: null,
+        processedRecipeIds: new Set(),
+        failedRecipeIds: new Set(),
+        currentBatchStart: 0
+      };
+    }
+
+    const data = JSON.parse(progressData);
+    
+    // Validate and sanitize the data
+    const sanitizedData = {
+      lastProcessedIndex: Math.max(0, parseInt(data.lastProcessedIndex) || 0),
+      totalRecipes: Math.max(0, parseInt(data.totalRecipes) || 0),
+      lastRunTimestamp: data.lastRunTimestamp ? parseInt(data.lastRunTimestamp) : null,
+      processedRecipeIds: new Set(Array.isArray(data.processedRecipeIds) ? data.processedRecipeIds : []),
+      failedRecipeIds: new Set(Array.isArray(data.failedRecipeIds) ? data.failedRecipeIds : []),
+      currentBatchStart: Math.max(0, parseInt(data.currentBatchStart) || 0)
+    };
+
+    // If timestamp is too old (more than 7 days), reset progress
+    if (sanitizedData.lastRunTimestamp && (Date.now() - sanitizedData.lastRunTimestamp) > 7 * 24 * 60 * 60 * 1000) {
+      console.log('Progress data is too old, resetting...');
+      await resetProgress(env);
+      return {
+        lastProcessedIndex: 0,
+        totalRecipes: 0,
+        lastRunTimestamp: null,
+        processedRecipeIds: new Set(),
+        failedRecipeIds: new Set(),
+        currentBatchStart: 0
+      };
+    }
+
+    return sanitizedData;
+  } catch (error) {
+    console.error('Error getting progress data:', error);
+    // If there's an error parsing the data, reset it
+    await resetProgress(env);
+    return {
+      lastProcessedIndex: 0,
+      totalRecipes: 0,
+      lastRunTimestamp: null,
+      processedRecipeIds: new Set(),
+      failedRecipeIds: new Set(),
+      currentBatchStart: 0
+    };
+  }
+}
+
+/**
+ * Save progress tracking data to KV
+ */
+async function saveProgressData(env, progressData) {
+  try {
+    const dataToSave = {
+      lastProcessedIndex: progressData.lastProcessedIndex,
+      totalRecipes: progressData.totalRecipes,
+      lastRunTimestamp: progressData.lastRunTimestamp,
+      processedRecipeIds: Array.from(progressData.processedRecipeIds),
+      failedRecipeIds: Array.from(progressData.failedRecipeIds),
+      currentBatchStart: progressData.currentBatchStart
+    };
+
+    await env.RECIPE_STORAGE.put(PROGRESS_KEYS.LAST_PROCESSED_INDEX, JSON.stringify(dataToSave));
+  } catch (error) {
+    console.error('Error saving progress data:', error);
+  }
+}
+
+/**
+ * Update progress tracking for a specific recipe
+ */
+async function updateRecipeProgress(env, recipeId, status, progressData) {
+  if (status === 'processed') {
+    progressData.processedRecipeIds.add(recipeId);
+    progressData.failedRecipeIds.delete(recipeId); // Remove from failed if it was there
+  } else if (status === 'failed') {
+    progressData.failedRecipeIds.add(recipeId);
+    progressData.processedRecipeIds.delete(recipeId); // Remove from processed if it was there
+  }
+
+  // Save progress after each recipe to ensure persistence
+  await saveProgressData(env, progressData);
+}
+
+/**
  * Embedding generation handler - processes recipes for embedding generation
  */
 export async function handleEmbedding(request, env, corsHeaders) {
@@ -90,11 +220,21 @@ export async function handleEmbedding(request, env, corsHeaders) {
     const isScheduled = requestBody.scheduled === true;
     console.log(`Starting embedding generation (${isScheduled ? 'scheduled' : 'manual'})`);
 
+    // Get progress data from previous runs
+    const progressData = await getProgressData(env);
+    console.log(`Progress from last run: ${progressData.lastProcessedIndex}/${progressData.totalRecipes} recipes processed`);
+
     // Get all recipe keys from KV storage
     let recipeKeys;
     try {
       recipeKeys = await getRecipeKeys(env.RECIPE_STORAGE);
       console.log(`Found ${recipeKeys.length} recipes to process`);
+      
+      // Update total count if it changed
+      if (progressData.totalRecipes !== recipeKeys.length) {
+        progressData.totalRecipes = recipeKeys.length;
+        await saveProgressData(env, progressData);
+      }
     } catch (error) {
       console.error('Failed to get recipe keys:', error);
       return new Response(JSON.stringify({
@@ -125,58 +265,37 @@ export async function handleEmbedding(request, env, corsHeaders) {
       });
     }
 
-    // Process recipes dynamically, checking for existing embeddings during processing
-    const recipesToProcess = [...recipeKeys]; // Start with all recipes
-
-    // Process recipes in small batches to avoid subrequest limits
-    // Cloudflare Workers limit: 50 subrequests per invocation
-    // Each recipe uses 3 subrequests: KV get + AI embedding + Vectorize upsert
-    const batchSize = isScheduled ? 6 : 5; // Optimized for 50 subrequest limit
-    const results = {
-      processed: 0,
-      skipped: 0,
-      errors: 0,
-      details: []
-    };
-
-    // Track subrequests to avoid hitting Cloudflare's 50 subrequest limit
-    let subrequestCount = 0;
-    const maxSubrequests = isScheduled ? 48 : 45; // Conservative limits for 50 max
-    let currentIndex = 0;
-
-    while (currentIndex < recipesToProcess.length && subrequestCount < maxSubrequests) {
-      // Check if we're approaching the subrequest limit
-      if (subrequestCount >= maxSubrequests) {
-        console.log(`Stopping processing to avoid subrequest limit. Processed ${results.processed} recipes.`);
-        results.details.push({
-          status: 'info',
-          message: `Stopped processing after ${results.processed} recipes to avoid subrequest limit. Remaining recipes will be processed in next run.`
-        });
-        break;
-      }
-
-      // Get next batch of recipes to process
-      const batch = recipesToProcess.slice(currentIndex, currentIndex + batchSize);
-      console.log(`Processing batch starting at index ${currentIndex} (subrequests: ${subrequestCount}/${maxSubrequests})`);
-
-      const batchResults = await processBatchWithDynamicFiltering(batch, env, recipesToProcess, currentIndex);
-      
-      // Count subrequests used in this batch
-      subrequestCount += batchResults.subrequestsUsed || 0;
-
-      results.processed += batchResults.processed;
-      results.skipped += batchResults.skipped;
-      results.errors += batchResults.errors;
-      results.details.push(...batchResults.details);
-
-      // Update current index based on how many recipes were actually processed
-      currentIndex += batchResults.processed + batchResults.skipped + batchResults.errors;
-
-      // Add a longer delay between batches to prevent overwhelming the system
-      if (currentIndex < recipesToProcess.length && subrequestCount < maxSubrequests) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+    // Start processing from where we left off
+    let currentIndex = progressData.lastProcessedIndex;
+    let currentBatchStart = progressData.currentBatchStart;
+    
+    // If we're starting fresh or the batch was interrupted, start from the beginning
+    if (currentIndex === 0 || (Date.now() - (progressData.lastRunTimestamp || 0)) > 24 * 60 * 60 * 1000) {
+      currentIndex = 0;
+      currentBatchStart = 0;
+      progressData.processedRecipeIds.clear();
+      progressData.failedRecipeIds.clear();
+      console.log('Starting fresh processing run');
+    } else if (progressData.failedRecipeIds.size > 0) {
+      // If we have failed recipes, prioritize retrying them first
+      console.log(`Found ${progressData.failedRecipeIds.size} failed recipes to retry`);
+      // We'll process failed recipes first in the processing loop
     }
+
+    // Update run timestamp
+    progressData.lastRunTimestamp = Date.now();
+    progressData.currentBatchStart = currentBatchStart;
+    await saveProgressData(env, progressData);
+
+    // Process recipes with progress tracking
+    const results = await processRecipesWithProgress(
+      recipeKeys, 
+      env, 
+      progressData, 
+      currentIndex, 
+      currentBatchStart,
+      isScheduled
+    );
 
     const duration = Date.now() - startTime;
     console.log(`Embedding generation completed: ${results.processed} processed, ${results.skipped} skipped, ${results.errors} errors in ${duration}ms`);
@@ -185,7 +304,14 @@ export async function handleEmbedding(request, env, corsHeaders) {
       message: 'Embedding generation completed',
       ...results,
       duration,
-      environment: env.ENVIRONMENT || 'development'
+      environment: env.ENVIRONMENT || 'development',
+      progress: {
+        currentIndex: progressData.lastProcessedIndex,
+        totalRecipes: progressData.totalRecipes,
+        processedCount: progressData.processedRecipeIds.size,
+        failedCount: progressData.failedRecipeIds.size,
+        completionPercentage: Math.round((progressData.processedRecipeIds.size / progressData.totalRecipes) * 100)
+      }
     }), {
       status: 200,
       headers: {
@@ -198,6 +324,128 @@ export async function handleEmbedding(request, env, corsHeaders) {
     console.error('Error in embedding generation:', error);
     return new Response(JSON.stringify({
       error: 'Failed to generate embeddings',
+      details: error.message,
+      environment: env.ENVIRONMENT || 'development'
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+}
+
+/**
+ * Reset progress handler - manually resets embedding generation progress
+ */
+export async function handleReset(request, env, corsHeaders) {
+  try {
+    // Reset progress tracking
+    const resetSuccess = await resetProgress(env);
+    
+    if (resetSuccess) {
+      return new Response(JSON.stringify({
+        status: 'success',
+        message: 'Progress tracking reset successfully',
+        environment: env.ENVIRONMENT || 'development'
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    } else {
+      return new Response(JSON.stringify({
+        error: 'Failed to reset progress',
+        environment: env.ENVIRONMENT || 'development'
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('Error resetting progress:', error);
+    return new Response(JSON.stringify({
+      error: 'Failed to reset progress',
+      details: error.message,
+      environment: env.ENVIRONMENT || 'development'
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+}
+
+/**
+ * Progress check handler - returns current embedding generation progress
+ */
+export async function handleProgress(request, env, corsHeaders) {
+  try {
+    // Get progress data from KV
+    const progressData = await getProgressData(env);
+    
+    // Get current recipe count
+    let currentRecipeCount = 0;
+    try {
+      const recipeKeys = await getRecipeKeys(env.RECIPE_STORAGE);
+      currentRecipeCount = recipeKeys.length;
+    } catch (error) {
+      console.error('Failed to get current recipe count:', error);
+    }
+
+    // Calculate completion statistics
+    const processedCount = progressData.processedRecipeIds.size;
+    const failedCount = progressData.failedRecipeIds.size;
+    const totalRecipes = Math.max(progressData.totalRecipes, currentRecipeCount);
+    const completionPercentage = totalRecipes > 0 ? Math.round((processedCount / totalRecipes) * 100) : 0;
+    
+    // Determine status
+    let status = 'idle';
+    if (progressData.lastRunTimestamp) {
+      const timeSinceLastRun = Date.now() - progressData.lastRunTimestamp;
+      if (timeSinceLastRun < 5 * 60 * 1000) { // 5 minutes
+        status = 'running';
+      } else if (timeSinceLastRun < 60 * 60 * 1000) { // 1 hour
+        status = 'recent';
+      } else {
+        status = 'stale';
+      }
+    }
+
+    return new Response(JSON.stringify({
+      status: 'success',
+      progress: {
+        status,
+        currentIndex: progressData.lastProcessedIndex,
+        totalRecipes,
+        processedCount,
+        failedCount,
+        completionPercentage,
+        lastRunTimestamp: progressData.lastRunTimestamp,
+        currentBatchStart: progressData.currentBatchStart
+      },
+      environment: env.ENVIRONMENT || 'development'
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting progress:', error);
+    return new Response(JSON.stringify({
+      error: 'Failed to get progress',
       details: error.message,
       environment: env.ENVIRONMENT || 'development'
     }), {
@@ -237,74 +485,12 @@ async function getRecipeKeys(kvStorage) {
   }
 }
 
-/**
- * Get all existing vector IDs from vectorize storage
- */
-async function getExistingVectorIds(vectorStorage) {
-  try {
-    const existingIds = new Set();
-    
-    // Query with a dummy vector to get all records, using a large topK
-    // We'll use a zero vector since we just want to get the IDs
-    const dummyVector = new Array(384).fill(0); // Assuming 384-dimensional vectors
-    
-    // Get all existing vectors in batches
-    let cursor = null;
-    const batchSize = 1000;
-    
-    do {
-      const query = await vectorStorage.query(dummyVector, {
-        topK: batchSize,
-        cursor: cursor
-      });
-      
-      if (query.matches) {
-        query.matches.forEach(match => {
-          if (match.id) {
-            existingIds.add(match.id);
-          }
-        });
-      }
-      
-      cursor = query.cursor || null;
-    } while (cursor);
-    
-    console.log(`Found ${existingIds.size} existing vectors in database`);
-    return existingIds;
-  } catch (error) {
-    console.error('Error getting existing vector IDs:', error);
-    return new Set(); // Return empty set if we can't check
-  }
-}
+
 
 /**
- * Filter out recipe keys that already have embeddings
+ * Process recipes with progress tracking and checkpointing
  */
-async function filterNewRecipes(recipeKeys, vectorStorage) {
-  try {
-    console.log(`Checking for existing embeddings among ${recipeKeys.length} recipes...`);
-    
-    // Get all existing vector IDs
-    const existingIds = await getExistingVectorIds(vectorStorage);
-    
-    // Filter out recipes that already have embeddings
-    const newRecipes = recipeKeys.filter(key => !existingIds.has(key));
-    
-    console.log(`Found ${recipeKeys.length - newRecipes.length} existing embeddings, ${newRecipes.length} new recipes to process`);
-    
-    return newRecipes;
-  } catch (error) {
-    console.error('Error filtering new recipes:', error);
-    // If we can't check existing embeddings, process all recipes
-    return recipeKeys;
-  }
-}
-
-/**
- * Process a batch of recipes for embedding generation with dynamic filtering
- * If a recipe already has an embedding, it will try to grab another key from KV
- */
-async function processBatchWithDynamicFiltering(recipeKeys, env, allRecipeKeys, currentIndex) {
+async function processRecipesWithProgress(recipeKeys, env, progressData, startIndex, batchStart, isScheduled) {
   const results = {
     processed: 0,
     skipped: 0,
@@ -313,44 +499,66 @@ async function processBatchWithDynamicFiltering(recipeKeys, env, allRecipeKeys, 
     subrequestsUsed: 0
   };
 
-  let keyIndex = 0;
-  let additionalKeysChecked = 0;
-  const maxAdditionalChecks = 10; // Limit additional key checks to avoid infinite loops
+  let currentIndex = startIndex;
+  let subrequestCount = 0;
+  const maxSubrequests = isScheduled ? 48 : 45; // Conservative limits for 50 max
+  
+  console.log(`Starting processing from index ${currentIndex} (batch start: ${batchStart})`);
 
-  while (keyIndex < recipeKeys.length && additionalKeysChecked < maxAdditionalChecks) {
-    const key = recipeKeys[keyIndex];
-
+  // Create a priority queue: failed recipes first, then new recipes
+  const priorityRecipeIds = [];
+  
+  // Add failed recipes first (for retry)
+  if (progressData.failedRecipeIds.size > 0) {
+    priorityRecipeIds.push(...Array.from(progressData.failedRecipeIds));
+  }
+  
+  // Add remaining recipes that haven't been processed
+  for (let i = currentIndex; i < recipeKeys.length; i++) {
+    const recipeId = recipeKeys[i];
+    if (!progressData.processedRecipeIds.has(recipeId) && !progressData.failedRecipeIds.has(recipeId)) {
+      priorityRecipeIds.push(recipeId);
+    }
+  }
+  
+  console.log(`Processing ${priorityRecipeIds.length} recipes (${progressData.failedRecipeIds.size} retries, ${priorityRecipeIds.length - progressData.failedRecipeIds.size} new)`);
+  
+  let priorityIndex = 0;
+  while (priorityIndex < priorityRecipeIds.length && subrequestCount < maxSubrequests) {
+    const recipeId = priorityRecipeIds[priorityIndex];
+    
     try {
+      // Check if we already processed this recipe successfully (double-check)
+      if (progressData.processedRecipeIds.has(recipeId)) {
+        results.skipped++;
+        results.details.push({ recipeId, status: 'skipped', reason: 'already_processed' });
+        priorityIndex++;
+        continue;
+      }
+
       // Check if this recipe already has an embedding in the vector database
-      const existingEmbedding = await checkExistingEmbedding(key, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count vectorize query as subrequest
+      const existingEmbedding = await checkExistingEmbedding(recipeId, env.RECIPE_VECTORS);
+      results.subrequestsUsed++;
 
       if (existingEmbedding) {
         results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'already_has_embedding' });
+        results.details.push({ recipeId, status: 'skipped', reason: 'already_has_embedding' });
         
-        // Try to grab another key from KV that we haven't processed yet
-        const nextKey = await getNextUnprocessedKey(allRecipeKeys, currentIndex + keyIndex + 1, env.RECIPE_VECTORS);
-        if (nextKey) {
-          // Replace the current key with the new one
-          recipeKeys[keyIndex] = nextKey;
-          additionalKeysChecked++;
-          continue; // Process the new key instead
-        } else {
-          // No more keys available, skip this one
-          keyIndex++;
-          continue;
-        }
+        // Mark as processed since it already has an embedding
+        await updateRecipeProgress(env, recipeId, 'processed', progressData);
+        progressData.processedRecipeIds.add(recipeId);
+        priorityIndex++;
+        continue;
       }
 
-      // Get recipe data from KV using shared library (handles compression)
-      const recipeResult = await getRecipeFromKV(env, key);
-      results.subrequestsUsed++; // Count KV get as subrequest
+      // Get recipe data from KV
+      const recipeResult = await getRecipeFromKV(env, recipeId);
+      results.subrequestsUsed++;
 
       if (!recipeResult.success || !recipeResult.recipe) {
         results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_data' });
-        keyIndex++;
+        results.details.push({ recipeId, status: 'skipped', reason: 'no_data' });
+        priorityIndex++;
         continue;
       }
 
@@ -361,37 +569,84 @@ async function processBatchWithDynamicFiltering(recipeKeys, env, allRecipeKeys, 
 
       if (!embeddingText) {
         results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_text' });
-        keyIndex++;
+        results.details.push({ recipeId, status: 'skipped', reason: 'no_text' });
+        priorityIndex++;
         continue;
       }
 
       // Generate embedding using Cloudflare AI
       const embedding = await generateEmbedding(embeddingText, env.AI);
-      results.subrequestsUsed++; // Count AI call as subrequest
+      results.subrequestsUsed++;
 
       if (!embedding) {
         results.errors++;
-        results.details.push({ key, status: 'error', reason: 'embedding_failed' });
-        keyIndex++;
+        results.details.push({ recipeId, status: 'error', reason: 'embedding_failed' });
+        
+        // Mark as failed for retry in next run
+        await updateRecipeProgress(env, recipeId, 'failed', progressData);
+        progressData.failedRecipeIds.add(recipeId);
+        priorityIndex++;
         continue;
       }
 
       // Store embedding in vectorize
-      await storeEmbedding(key, embedding, recipeData, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count Vectorize upsert as subrequest
+      await storeEmbedding(recipeId, embedding, recipeData, env.RECIPE_VECTORS);
+      results.subrequestsUsed++;
 
       results.processed++;
-      results.details.push({ key, status: 'processed' });
-      keyIndex++;
+      results.details.push({ recipeId, status: 'processed' });
+      
+      // Mark as successfully processed
+      await updateRecipeProgress(env, recipeId, 'processed', progressData);
+      progressData.processedRecipeIds.add(recipeId);
+      
+      // Update progress checkpoint - track the original index in recipeKeys
+      const originalIndex = recipeKeys.indexOf(recipeId);
+      if (originalIndex !== -1) {
+        progressData.lastProcessedIndex = Math.max(progressData.lastProcessedIndex, originalIndex);
+      }
+      progressData.currentBatchStart = batchStart;
+      await saveProgressData(env, progressData);
+      
+      priorityIndex++;
 
     } catch (error) {
-      console.error(`Error processing recipe ${key}:`, error);
+      console.error(`Error processing recipe ${recipeId}:`, error);
       results.errors++;
-      results.details.push({ key, status: 'error', reason: error.message });
-      keyIndex++;
+      results.details.push({ recipeId, status: 'error', reason: error.message });
+      
+      // Mark as failed for retry in next run
+      await updateRecipeProgress(env, recipeId, 'failed', progressData);
+      progressData.failedRecipeIds.add(recipeId);
+      priorityIndex++;
+    }
+
+    // Check if we're approaching the subrequest limit
+    if (subrequestCount >= maxSubrequests) {
+      console.log(`Stopping processing to avoid subrequest limit. Processed ${results.processed} recipes.`);
+      results.details.push({
+        status: 'info',
+        message: `Stopped processing after ${results.processed} recipes to avoid subrequest limit. Remaining recipes will be processed in next run.`
+      });
+      break;
+    }
+
+    // Add a small delay between recipes to prevent overwhelming the system
+    if (priorityIndex < priorityRecipeIds.length && subrequestCount < maxSubrequests) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
+
+  // Final progress update - ensure we've processed as far as possible
+  if (priorityRecipeIds.length > 0) {
+    const lastProcessedRecipeId = priorityRecipeIds[priorityIndex - 1];
+    const lastOriginalIndex = recipeKeys.indexOf(lastProcessedRecipeId);
+    if (lastOriginalIndex !== -1) {
+      progressData.lastProcessedIndex = Math.max(progressData.lastProcessedIndex, lastOriginalIndex);
+    }
+  }
+  progressData.currentBatchStart = batchStart;
+  await saveProgressData(env, progressData);
 
   return results;
 }
@@ -428,89 +683,7 @@ async function checkExistingEmbedding(recipeId, vectorStorage) {
   }
 }
 
-/**
- * Get the next unprocessed key from the recipe keys list
- */
-async function getNextUnprocessedKey(allRecipeKeys, startIndex, vectorStorage) {
-  try {
-    // Check keys starting from the given index
-    for (let i = startIndex; i < allRecipeKeys.length; i++) {
-      const key = allRecipeKeys[i];
-      const hasEmbedding = await checkExistingEmbedding(key, vectorStorage);
-      
-      if (!hasEmbedding) {
-        return key;
-      }
-    }
-    
-    return null; // No more unprocessed keys found
-  } catch (error) {
-    console.error('Error getting next unprocessed key:', error);
-    return null;
-  }
-}
 
-/**
- * Process a batch of recipes for embedding generation (legacy function for backward compatibility)
- */
-async function processBatch(recipeKeys, env) {
-  const results = {
-    processed: 0,
-    skipped: 0,
-    errors: 0,
-    details: [],
-    subrequestsUsed: 0
-  };
-
-  for (const key of recipeKeys) {
-    try {
-      // Get recipe data from KV using shared library (handles compression)
-      const recipeResult = await getRecipeFromKV(env, key);
-      results.subrequestsUsed++; // Count KV get as subrequest
-
-      if (!recipeResult.success || !recipeResult.recipe) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_data' });
-        continue;
-      }
-
-      const recipeData = recipeResult.recipe;
-
-      // Generate embedding text from recipe data
-      const embeddingText = generateEmbeddingText(recipeData);
-
-      if (!embeddingText) {
-        results.skipped++;
-        results.details.push({ key, status: 'skipped', reason: 'no_text' });
-        continue;
-      }
-
-      // Generate embedding using Cloudflare AI
-      const embedding = await generateEmbedding(embeddingText, env.AI);
-      results.subrequestsUsed++; // Count AI call as subrequest
-
-      if (!embedding) {
-        results.errors++;
-        results.details.push({ key, status: 'error', reason: 'embedding_failed' });
-        continue;
-      }
-
-      // Store embedding in vectorize
-      await storeEmbedding(key, embedding, recipeData, env.RECIPE_VECTORS);
-      results.subrequestsUsed++; // Count Vectorize upsert as subrequest
-
-      results.processed++;
-      results.details.push({ key, status: 'processed' });
-
-    } catch (error) {
-      console.error(`Error processing recipe ${key}:`, error);
-      results.errors++;
-      results.details.push({ key, status: 'error', reason: error.message });
-    }
-  }
-
-  return results;
-}
 
 /**
  * Generate text for embedding from recipe data
