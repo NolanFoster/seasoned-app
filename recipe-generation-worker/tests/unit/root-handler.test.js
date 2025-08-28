@@ -83,5 +83,25 @@ describe('Root Handler - Unit Tests', () => {
       expect(generateEndpoint.requestBody.schema.dietary).toBe('Array of dietary restrictions (optional)');
       expect(generateEndpoint.requestBody.schema.servings).toBe('Number of servings (optional)');
     });
+
+    it('should handle request with environment variable set', async () => {
+      const request = createMockRequest('/');
+      const env = { ENVIRONMENT: 'production' };
+      const response = await handleRoot(request, env, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.environment).toBe('production');
+    });
+
+    it('should handle request without environment variable set', async () => {
+      const request = createMockRequest('/');
+      const env = {};
+      const response = await handleRoot(request, env, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.environment).toBe('development');
+    });
   });
 });

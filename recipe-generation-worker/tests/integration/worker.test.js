@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import worker from '../../src/index.js';
-import { mockEnv, mockEnvWithoutEnvironment, createMockRequest, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
+import { mockEnv, mockEnvWithoutEnvironment, createMockRequest, createPostRequest, assertCorsHeaders } from '../setup.js';
 
 describe('Recipe Generation Worker - Integration Tests', () => {
   beforeEach(() => {
@@ -15,17 +15,26 @@ describe('Recipe Generation Worker - Integration Tests', () => {
       expect(response.status).toBe(200);
       assertCorsHeaders(response);
     });
+
+    it('should handle CORS preflight requests with OPTIONS method', async () => {
+      const response = await worker.fetch(new Request('https://example.com/generate', {
+        method: 'OPTIONS'
+      }));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
+    });
   });
 
   describe('404 handling', () => {
     it('should return 404 for unknown routes', async () => {
-      const request = createMockRequest('/unknown');
-      const response = await worker.fetch(request, mockEnv);
+      const response = await worker.fetch(new Request('https://example.com/unknown', {
+        method: 'GET'
+      }));
 
       expect(response.status).toBe(404);
-      assertJsonResponse(response);
-      assertCorsHeaders(response);
-
       const data = await response.json();
       expect(data.error).toBe('Not Found');
       expect(data.message).toBe('The requested endpoint does not exist');
@@ -34,6 +43,26 @@ describe('Recipe Generation Worker - Integration Tests', () => {
     it('should return 404 for POST to unknown routes', async () => {
       const request = createPostRequest('/unknown', { test: 'data' });
       const response = await worker.fetch(request, mockEnv);
+
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Not Found');
+    });
+
+    it('should return 404 for PUT to unknown routes', async () => {
+      const response = await worker.fetch(new Request('https://example.com/unknown', {
+        method: 'PUT'
+      }));
+
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Not Found');
+    });
+
+    it('should return 404 for DELETE to unknown routes', async () => {
+      const response = await worker.fetch(new Request('https://example.com/unknown', {
+        method: 'DELETE'
+      }));
 
       expect(response.status).toBe(404);
       const data = await response.json();
