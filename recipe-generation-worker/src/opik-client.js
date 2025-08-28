@@ -40,9 +40,12 @@ export class OpikClient {
    * @param {string} envApiKey - API key from environment
    */
   setApiKey(envApiKey) {
-    if (envApiKey) {
+    if (envApiKey && envApiKey.trim() !== '') {
       this.apiKey = envApiKey;
       this.initializeClient();
+    } else {
+      this.apiKey = null;
+      this.client = null;
     }
   }
 

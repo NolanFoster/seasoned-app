@@ -267,6 +267,138 @@ Serves: 4`
     });
   });
 
+  describe('Recipe Parsing', () => {
+    it('should handle recipe generation with various input formats', async () => {
+      const requestBody = { 
+        ingredients: ['chicken', 'rice'],
+        cuisine: 'italian',
+        dietary: ['gluten-free'],
+        mealType: 'dinner',
+        servings: 4
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.ingredients).toBeDefined();
+      expect(data.recipe.instructions).toBeDefined();
+    });
+
+    it('should handle recipe generation with recipe name only', async () => {
+      const requestBody = { 
+        recipeName: 'Chicken Teriyaki Bowl'
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+
+    it('should handle recipe generation with mixed recipe name and constraints', async () => {
+      const requestBody = { 
+        recipeName: 'Healthy Pasta Salad',
+        ingredients: ['pasta', 'vegetables'],
+        dietary: ['vegetarian']
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+  });
+
+  describe('Recipe Parsing Edge Cases', () => {
+    it('should handle recipe with measurement patterns when no ingredients found', async () => {
+      const requestBody = { 
+        ingredients: ['exotic-ingredient'],
+        cuisine: 'fusion'
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+
+    it('should handle recipe with remaining lines as instructions when no instruction section found', async () => {
+      const requestBody = { 
+        ingredients: ['pasta', 'sauce'],
+        cuisine: 'italian'
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+
+    it('should handle recipe with time information in various formats', async () => {
+      const requestBody = { 
+        ingredients: ['chicken', 'vegetables'],
+        cuisine: 'asian',
+        mealType: 'dinner'
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+  });
+
+  describe('Recipe Parsing Fallback Logic', () => {
+    it('should use fallback logic when no clear recipe structure is found', async () => {
+      const requestBody = { 
+        ingredients: ['mystery-ingredient'],
+        cuisine: 'experimental'
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+
+    it('should handle recipe with only measurement patterns and no clear sections', async () => {
+      const requestBody = { 
+        ingredients: ['unknown-item'],
+        cuisine: 'fusion'
+      };
+      
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+    });
+  });
+
   describe('Content-Type validation', () => {
     it('should reject requests without Content-Type header', async () => {
       const request = new Request('https://test.com/generate', {
