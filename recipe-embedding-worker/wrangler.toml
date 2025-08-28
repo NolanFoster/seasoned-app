@@ -10,9 +10,11 @@ ENVIRONMENT = "development"
 [observability]
 enabled = true
 
-# Scheduled events - run daily at 2 AM UTC
-[triggers]
-crons = ["0 2 * * *"]
+# Queue consumer configuration
+[[queues.consumers]]
+queue = "recipe-embedding-queue"
+max_batch_size = 50
+max_batch_timeout = 30
 
 # AI binding for embeddings
 [ai]
@@ -38,6 +40,11 @@ id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 binding = "RECIPE_VECTORS"
 index_name = "recipe-vectors-384"
 
+[[env.preview.queues.consumers]]
+queue = "recipe-embedding-queue"
+max_batch_size = 50
+max_batch_timeout = 30
+
 # Staging environment
 [env.staging]
 name = "recipe-embedding-worker-staging"
@@ -46,9 +53,6 @@ ENVIRONMENT = "staging"
 
 [env.staging.observability]
 enabled = true
-
-[env.staging.triggers]
-crons = ["0 2 * * *"]
 
 [env.staging.ai]
 binding = "AI"
@@ -61,6 +65,11 @@ id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 binding = "RECIPE_VECTORS"
 index_name = "recipe-vectors-384"
 
+[[env.staging.queues.consumers]]
+queue = "recipe-embedding-queue"
+max_batch_size = 50
+max_batch_timeout = 30
+
 # Production environment
 [env.production]
 name = "recipe-embedding-worker"
@@ -69,9 +78,6 @@ ENVIRONMENT = "production"
 
 [env.production.observability]
 enabled = true
-
-[env.production.triggers]
-crons = ["0 2 * * *"]
 
 [env.production.ai]
 binding = "AI"
@@ -83,3 +89,8 @@ id = "dd001c20659a4d6982f6d650abcac880"
 [[env.production.vectorize]]
 binding = "RECIPE_VECTORS"
 index_name = "recipe-vectors-384"
+
+[[env.production.queues.consumers]]
+queue = "recipe-embedding-queue"
+max_batch_size = 50
+max_batch_timeout = 30

@@ -34,32 +34,15 @@ global.getMockEnv = () => ({
   }
 });
 
-// Mock CORS headers
-global.getMockCorsHeaders = () => ({
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
+// Helper to create mock queue messages (recipe IDs only)
+global.createMockQueueMessage = (recipeId, messageId = 'test-message-id') => ({
+  id: messageId,
+  body: recipeId, // Just the recipe ID, not JSON
+  ack: vi.fn(),
+  retry: vi.fn()
 });
 
-// Helper to create mock requests
-global.createMockRequest = (path = '/', method = 'GET', body = null) => {
-  const url = `https://example.com${path}`;
-  const init = { method };
-
-  if (body) {
-    init.body = JSON.stringify(body);
-    init.headers = { 'Content-Type': 'application/json' };
-  }
-
-  return new Request(url, init);
-};
-
-// Helper to parse response
-global.parseResponse = async (response) => {
-  const text = await response.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-};
+// Helper to create mock queue batch
+global.createMockQueueBatch = (messages) => ({
+  messages
+});

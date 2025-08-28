@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { handleEmbedding } from '../../src/handlers/embedding-handler.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { processEmbeddingMessage } from '../../src/handlers/embedding-handler.js';
 
-describe('Embedding Handler', () => {
+describe('Embedding Handler - Queue Processing', () => {
   const mockRecipe = {
     id: 'test-recipe-id',
     url: 'https://example.com/recipe',
@@ -16,189 +16,179 @@ describe('Embedding Handler', () => {
     }
   };
 
-  it('should process recipes and generate embeddings', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
+  let mockEnv;
 
-    // Mock KV list response
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [{ name: 'recipe-1' }, { name: 'recipe-2' }],
-      list_complete: true
-    });
+  beforeEach(() => {
+    mockEnv = getMockEnv();
+  });
 
+  it('should successfully process a valid recipe ID', async () => {
     // Mock recipe data retrieval
-    env.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
 
     // Mock vectorize query (no existing embeddings)
-    env.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
 
     // Mock AI embedding generation
-    env.AI.run.mockResolvedValue({
+    mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
 
     // Mock vectorize upsert
-    env.RECIPE_VECTORS.upsert.mockResolvedValue(true);
+    mockEnv.RECIPE_VECTORS.upsert.mockResolvedValue(true);
 
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
-    expect(response.status).toBe(200);
-    expect(data.message).toBe('Embedding generation completed');
-    expect(data.processed).toBe(2);
-    expect(data.errors).toBe(0);
-    expect(env.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
+    expect(result.success).toBe(true);
+    expect(result.recipeId).toBe('test-recipe-id');
+    expect(mockEnv.RECIPE_STORAGE.get).toHaveBeenCalledWith('test-recipe-id');
+    expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Test Recipe')
     });
+    expect(mockEnv.RECIPE_VECTORS.upsert).toHaveBeenCalled();
   });
 
   it('should skip recipes that already have embeddings', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
-
-    // Mock KV list response
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [{ name: 'recipe-1' }],
-      list_complete: true
+    // Mock vectorize query to return existing embeddings
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({
+      matches: [{ id: 'test-recipe-id' }]
     });
 
-    // Mock vectorize query to return existing embeddings (individual check)
-    env.RECIPE_VECTORS.query.mockResolvedValue({
-      matches: [{ id: 'recipe-1' }],
-      cursor: null
-    });
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
-
-    expect(response.status).toBe(200);
-    expect(data.message).toBe('Embedding generation completed');
-    expect(data.processed).toBe(0);
-    expect(data.skipped).toBe(1);
-    expect(data.details[0].reason).toBe('already_has_embedding');
-    expect(env.AI.run).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('already_has_embedding');
+    expect(mockEnv.RECIPE_STORAGE.get).not.toHaveBeenCalled();
+    expect(mockEnv.AI.run).not.toHaveBeenCalled();
   });
 
-  it('should handle empty recipe storage', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
+  it('should handle empty recipe ID', async () => {
+    const result = await processEmbeddingMessage('', mockEnv);
 
-    // Mock empty KV list response
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [],
-      list_complete: true
-    });
-
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
-
-    expect(response.status).toBe(200);
-    expect(data.message).toBe('No recipes found in storage');
-    expect(data.processed).toBe(0);
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('invalid_recipe_id');
+    expect(mockEnv.RECIPE_STORAGE.get).not.toHaveBeenCalled();
   });
 
-  it('should handle scheduled requests', async () => {
-    const request = createMockRequest('/embed', 'POST', { scheduled: true });
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
+  it('should handle null recipe ID', async () => {
+    const result = await processEmbeddingMessage(null, mockEnv);
 
-    // Mock empty KV list response for simplicity
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [],
-      list_complete: true
-    });
-
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
-
-    expect(response.status).toBe(200);
-    expect(data.message).toBe('No recipes found in storage');
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('invalid_recipe_id');
+    expect(mockEnv.RECIPE_STORAGE.get).not.toHaveBeenCalled();
   });
 
-  it('should handle AI embedding generation failures', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
+  it('should handle recipe not found in KV storage', async () => {
+    // Mock KV storage to return null (recipe not found)
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(null);
 
-    // Mock KV list response
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [{ name: 'recipe-1' }],
-      list_complete: true
-    });
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
-    // Mock recipe data retrieval
-    env.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-
-    // Mock vectorize query (no existing embeddings)
-    env.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-
-    // Mock AI failure
-    env.AI.run.mockRejectedValue(new Error('AI service unavailable'));
-
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
-
-    expect(response.status).toBe(200);
-    expect(data.processed).toBe(0);
-    expect(data.errors).toBe(1);
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('recipe_not_found');
+    expect(mockEnv.AI.run).not.toHaveBeenCalled();
   });
 
-  it('should handle malformed recipe data', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
+  it('should handle recipe with no embedding text', async () => {
+    const emptyRecipe = {
+      data: {
+        // Missing all text fields
+      }
+    };
 
-    // Mock KV list response
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [{ name: 'recipe-1' }],
-      list_complete: true
-    });
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(emptyRecipe));
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
 
-    // Mock recipe data retrieval with null data
-    env.RECIPE_STORAGE.get.mockResolvedValue(null);
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
-
-    expect(response.status).toBe(200);
-    expect(data.processed).toBe(0);
-    expect(data.skipped).toBe(1);
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('no_embedding_text');
+    expect(mockEnv.AI.run).not.toHaveBeenCalled();
   });
 
-  it('should handle errors gracefully', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
+  it('should handle AI embedding generation failure', async () => {
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.AI.run.mockResolvedValue(null); // AI returns null
 
-    // Mock KV list to throw error
-    env.RECIPE_STORAGE.list.mockRejectedValue(new Error('KV error'));
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
-    const response = await handleEmbedding(request, env, corsHeaders);
-    const data = await parseResponse(response);
-
-    // The getRecipeKeys function now throws errors instead of returning empty array
-    expect(response.status).toBe(500);
-    expect(data.error).toBe('Failed to access recipe storage');
-    expect(data.details).toBe('KV error');
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('embedding_generation_failed');
+    expect(mockEnv.RECIPE_VECTORS.upsert).not.toHaveBeenCalled();
   });
 
-  it('should include CORS headers', async () => {
-    const request = createMockRequest('/embed', 'POST', {});
-    const env = getMockEnv();
-    const corsHeaders = getMockCorsHeaders();
-
-    // Mock empty KV list response
-    env.RECIPE_STORAGE.list.mockResolvedValue({
-      keys: [],
-      list_complete: true
+  it('should handle vectorize storage errors gracefully', async () => {
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.AI.run.mockResolvedValue({
+      data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
+    mockEnv.RECIPE_VECTORS.upsert.mockRejectedValue(new Error('Vectorize error'));
 
-    const response = await handleEmbedding(request, env, corsHeaders);
+    await expect(processEmbeddingMessage('test-recipe-id', mockEnv)).rejects.toThrow('Vectorize error');
+  });
 
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-    expect(response.headers.get('Content-Type')).toBe('application/json');
+  it('should generate proper embedding text from recipe data', async () => {
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.AI.run.mockResolvedValue({
+      data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+    });
+    mockEnv.RECIPE_VECTORS.upsert.mockResolvedValue(true);
+
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
+
+    expect(result.success).toBe(true);
+    expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
+      text: expect.stringContaining('Test Recipe')
+    });
+    
+    // Verify the embedding text contains key recipe information
+    const callArgs = mockEnv.AI.run.mock.calls[0][1];
+    expect(callArgs.text).toContain('Test Recipe');
+    expect(callArgs.text).toContain('A delicious test recipe');
+    expect(callArgs.text).toContain('1 cup flour, 2 eggs');
+    expect(callArgs.text).toContain('Mix ingredients Bake for 30 minutes');
+    expect(callArgs.text).toContain('Serves: 4 servings');
+    expect(callArgs.text).toContain('Cook time: 45 minutes');
+  });
+
+  it('should handle recipe data with nested structure', async () => {
+    const nestedRecipe = {
+      url: 'https://example.com/recipe',
+      scrapedAt: '2024-01-01T00:00:00Z',
+      data: {
+        name: 'Nested Recipe',
+        description: 'Recipe with nested data structure',
+        ingredients: [
+          { text: '1 cup flour' },
+          { text: '2 eggs' }
+        ],
+        instructions: [
+          { text: 'Mix ingredients' },
+          { text: 'Bake for 30 minutes' }
+        ]
+      }
+    };
+
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(nestedRecipe));
+    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.AI.run.mockResolvedValue({
+      data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+    });
+    mockEnv.RECIPE_VECTORS.upsert.mockResolvedValue(true);
+
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
+
+    expect(result.success).toBe(true);
+    expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
+      text: expect.stringContaining('Nested Recipe')
+    });
+    
+    // Verify nested structure is handled correctly
+    const callArgs = mockEnv.AI.run.mock.calls[0][1];
+    expect(callArgs.text).toContain('1 cup flour, 2 eggs');
+    expect(callArgs.text).toContain('Mix ingredients Bake for 30 minutes');
   });
 });
