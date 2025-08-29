@@ -38,7 +38,7 @@ export async function handleGenerate(request, env, corsHeaders) {
 
     // Check if we're in a local development environment without AI access
     if (!env.AI || !env.RECIPE_VECTORS) {
-      console.log('Running in local dev mode - returning mock response');
+      // Running in local dev mode - returning mock response
       return new Response(JSON.stringify({
         success: true,
         recipe: {
@@ -84,7 +84,7 @@ export async function handleGenerate(request, env, corsHeaders) {
       }
     });
   } catch (error) {
-    console.error('Error processing recipe generation request:', error);
+    // Error processing recipe generation request
     return new Response(JSON.stringify({
       error: 'Failed to process recipe generation request',
       details: error.message
@@ -129,14 +129,14 @@ async function generateRecipeWithAI(requestData, env) {
   };
 
   try {
-    console.log('Starting recipe generation with AI');
-    
+    // Starting recipe generation with AI
+
     // Step 1: Create query text from ingredients and preferences
     operationData.queryStartTime = new Date().toISOString();
     const queryText = buildQueryText(requestData);
     operationData.queryText = queryText;
     operationData.queryEndTime = new Date().toISOString();
-    console.log('Generated query text:', queryText.substring(0, 200) + '...');
+    // Generated query text: ${queryText.substring(0, 200)}...
 
     // Step 2: Generate embedding for the query
     operationData.embeddingStartTime = new Date().toISOString();
@@ -149,8 +149,8 @@ async function generateRecipeWithAI(requestData, env) {
 
     // Step 3: Search for similar recipes using vectorize and fetch full data
     operationData.searchStartTime = new Date().toISOString();
-    const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env.RECIPE_STORAGE);
-    console.log(`Found ${similarRecipes.length} similar recipes`);
+    const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env);
+    // Found ${similarRecipes.length} similar recipes
     operationData.similarRecipes = similarRecipes;
     operationData.searchEndTime = new Date().toISOString();
 
@@ -160,16 +160,16 @@ async function generateRecipeWithAI(requestData, env) {
     operationData.llmEndTime = new Date().toISOString();
 
     const duration = Date.now() - startTime;
-    console.log(`Recipe generation completed in ${duration}ms`);
+    // Recipe generation completed in ${duration}ms
 
     // Create Opik trace and spans with complete data
     if (env.OPIK_API_KEY && opikClient.isHealthy()) {
-      console.log('Creating Opik trace with complete operation data');
-      
+      // Creating Opik trace with complete operation data
+
       // Create main trace with actual timing
-      const trace = opikClient.createTrace('Recipe Generation', 
+      const trace = opikClient.createTrace('Recipe Generation',
         { requestData: requestData },
-        { 
+        {
           recipe: generatedRecipe,
           generationTime: duration,
           generationMethod: 'llama-ai'
@@ -195,8 +195,8 @@ async function generateRecipeWithAI(requestData, env) {
         const querySpan = opikClient.createSpan(trace, 'Query Text Generation', 'tool',
           { requestData: requestData },
           { queryText: queryText, embedding: queryEmbedding },
-          { 
-            metadata: { 
+          {
+            metadata: {
               queryLength: queryText.length,
               embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
             },
@@ -211,8 +211,8 @@ async function generateRecipeWithAI(requestData, env) {
         const embeddingSpan = opikClient.createSpan(trace, 'Query Embedding Generation', 'tool',
           { text: queryText },
           { embedding: queryEmbedding },
-          { 
-            model: 'bge-small-en-v1.5', 
+          {
+            model: 'bge-small-en-v1.5',
             provider: 'cloudflare',
             metadata: {
               textLength: queryText.length,
@@ -246,7 +246,7 @@ async function generateRecipeWithAI(requestData, env) {
           const llmSpan = opikClient.createSpan(trace, 'LLaMA Recipe Generation', 'llm',
             { prompt: operationData.prompt },
             { response: operationData.llmResponse, structuredRecipe: generatedRecipe },
-            { 
+            {
               model: 'llama-3-8b-instruct',
               provider: 'cloudflare',
               metadata: {
@@ -276,14 +276,14 @@ async function generateRecipeWithAI(requestData, env) {
     };
 
   } catch (error) {
-    console.error('Error in generateRecipeWithAI:', error);
+    // Error in generateRecipeWithAI
 
     // Create error trace if tracing is enabled
     if (env.OPIK_API_KEY && opikClient.isHealthy()) {
-      const errorTrace = opikClient.createTrace('Recipe Generation Error', 
+      const errorTrace = opikClient.createTrace('Recipe Generation Error',
         { requestData: requestData },
         { error: error.message },
-        { 
+        {
           errorType: error.name || 'Error',
           timestamp: new Date().toISOString()
         }
@@ -361,10 +361,10 @@ async function generateQueryEmbedding(text, aiBinding) {
       return response.data[0];
     }
 
-    console.error('Invalid embedding response:', response);
+    // Invalid embedding response
     return null;
-  } catch (error) {
-    console.error('Error generating query embedding:', error);
+  } catch {
+    // Error generating query embedding
     return null;
   }
 }
@@ -372,7 +372,7 @@ async function generateQueryEmbedding(text, aiBinding) {
 /**
  * Find similar recipes using vectorize similarity search and fetch full recipe data
  */
-async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
+async function findSimilarRecipes(queryEmbedding, vectorStorage, env) {
   try {
     const result = await vectorStorage.query(queryEmbedding, {
       topK: 7,
@@ -388,7 +388,7 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
     for (const match of result.matches) {
       try {
         // Get full recipe data from KV storage using the recipe ID
-        const recipeResult = await getRecipeFromKV(_kvStorage, match.id);
+        const recipeResult = await getRecipeFromKV(env, match.id);
 
         if (recipeResult.success && recipeResult.recipe) {
           fullRecipes.push({
@@ -398,8 +398,8 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
             fullRecipe: recipeResult.recipe
           });
         }
-      } catch (error) {
-        console.warn(`Failed to fetch full recipe for ${match.id}:`, error);
+      } catch {
+        // Failed to fetch full recipe for ${match.id}
         // Still include the match with metadata only
         fullRecipes.push({
           id: match.id,
@@ -412,8 +412,8 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
 
     return fullRecipes;
 
-  } catch (error) {
-    console.error('Error finding similar recipes:', error);
+  } catch {
+    // Error finding similar recipes
     return [];
   }
 }
@@ -423,48 +423,42 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
  */
 
 async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, operationData) {
-  try {
-    // Build context from similar recipes
-    const contexts = similarRecipes.length > 0
-      ? buildRecipeContext(similarRecipes)
-      : [];
+  // Build context from similar recipes
+  const contexts = similarRecipes.length > 0
+    ? buildRecipeContext(similarRecipes)
+    : [];
 
-    // Create prompt for LLaMA
-    const prompt = buildLLaMAPrompt(requestData, contexts);
-    operationData.prompt = prompt;
+  // Create prompt for LLaMA
+  const prompt = buildLLaMAPrompt(requestData, contexts);
+  operationData.prompt = prompt;
 
-    // Generate recipe using LLaMA
-    const response = await aiBinding.run('@cf/meta/llama-3.1-8b-instruct', {
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a professional chef and recipe developer. Create detailed, practical recipes that are easy to follow. Always include ingredients with measurements, step-by-step instructions and cooking times. Format your response as a structured recipe with inspiring descriptions and a touch of creativity.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 1024,
-      temperature: 0.65
-    });
+  // Generate recipe using LLaMA
+  const response = await aiBinding.run('@cf/meta/llama-3.1-8b-instruct', {
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a professional chef and recipe developer. Create detailed, practical recipes that are easy to follow. Always include ingredients with measurements, step-by-step instructions and cooking times. Format your response as a structured recipe with inspiring descriptions and a touch of creativity.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    max_tokens: 1024,
+    temperature: 0.65
+  });
 
-    if (!response || !response.response) {
-      throw new Error('Invalid response from LLaMA model');
-    }
-
-    // Store LLM response for tracing
-    operationData.llmResponse = response.response;
-
-    // Parse and structure the generated recipe
-    const structuredRecipe = parseGeneratedRecipe(response.response, requestData);
-
-    return structuredRecipe;
-
-  } catch (error) {
-    console.error('Error generating recipe with LLaMA:', error);
-    throw error;
+  if (!response || !response.response) {
+    throw new Error('Invalid response from LLaMA model');
   }
+
+  // Store LLM response for tracing
+  operationData.llmResponse = response.response;
+
+  // Parse and structure the generated recipe
+  const structuredRecipe = parseGeneratedRecipe(response.response, requestData);
+
+  return structuredRecipe;
 }
 
 /**
@@ -621,7 +615,7 @@ Total Time: [Prep + Cook time]`;
 
 /**
  * Parse generated recipe text into structured format
- * 
+ *
  * Expected template format:
  * Name: [Recipe name]
  * Description: [Description]
@@ -665,17 +659,17 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
     // Parse recipe name according to template format
     if (lowerLine.startsWith('name:') && recipe.name === 'Generated Recipe') {
       let extractedName = trimmedLine.replace(/^name:\s*/i, '').trim();
-      
+
       // Limit name length and clean it up
       if (extractedName.length > 100) {
         // If first sentence or first 50 characters
         const firstSentence = extractedName.split('.')[0];
         extractedName = firstSentence.length <= 50 ? firstSentence : extractedName.substring(0, 50);
       }
-      
+
       // Remove quotes and extra formatting
       extractedName = extractedName.replace(/^["']|["']$/g, '').trim();
-      
+
       // Only use if it looks like a reasonable recipe name (not empty, not too generic)
       if (extractedName && extractedName.length > 3 && !extractedName.toLowerCase().includes('recipe for')) {
         recipe.name = extractedName;
@@ -756,10 +750,10 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
 
   // Handle recipe name logic with prompt fallback
   const promptedName = originalRequest.recipeName;
-  
+
   // Check if extracted name looks like a description (very long, multiple sentences, or starts with descriptive phrases)
   const extractedNameLooksLikeDescription = recipe.name !== 'Generated Recipe' && (
-    recipe.name.length > 120 || 
+    recipe.name.length > 120 ||
     (recipe.name.includes('.') && recipe.name.length > 60) || // Only if long AND has periods
     recipe.name.toLowerCase().startsWith('this ') ||
     recipe.name.toLowerCase().startsWith('a delicious ') ||
@@ -767,7 +761,7 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
     recipe.name.toLowerCase().startsWith('the perfect ') ||
     (recipe.name.includes(' and ') && recipe.name.includes(' with ') && recipe.name.length > 50) // Complex descriptive phrases
   );
-  
+
   if (extractedNameLooksLikeDescription) {
     // Move the extracted "name" to description if no description is set
     if (!recipe.description) {
@@ -783,8 +777,8 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
       // Final fallback: use first meaningful line that doesn't match template headers
       for (const line of lines.slice(0, 3)) {
         const trimmedLine = line.trim();
-        if (trimmedLine.length > 5 && 
-            trimmedLine.length <= 60 && 
+        if (trimmedLine.length > 5 &&
+            trimmedLine.length <= 60 &&
             !trimmedLine.toLowerCase().startsWith('name:') &&
             !trimmedLine.toLowerCase().startsWith('description:') &&
             !trimmedLine.toLowerCase().startsWith('ingredients:') &&
@@ -799,7 +793,7 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
       }
     }
   }
-  
+
   // If we still have default name and there's a prompted name, use it
   if (recipe.name === 'Generated Recipe' && promptedName) {
     recipe.name = promptedName;
@@ -816,10 +810,4 @@ function extractTime(text) {
   return timeMatch ? `${timeMatch[1]} ${timeMatch[2]}` : '';
 }
 
-/**
- * Extract servings from text (e.g., "Serves 4 people" -> "4")
- */
-function extractServings(text) {
-  const servingMatch = text.match(/(\d+)/);
-  return servingMatch ? servingMatch[1] : '';
-}
+

@@ -110,7 +110,7 @@ export class OpikClient {
         ...(output && { end_time: endTime || new Date().toISOString() }),
         ...(metadata && { metadata: metadata })
       };
-      
+
       //console.log('Creating trace with payload:', JSON.stringify(tracePayload, null, 2));
       const trace = this.client.trace(tracePayload);
       //console.log('Trace created successfully:', trace ? 'success' : 'failed');
@@ -157,7 +157,7 @@ export class OpikClient {
         ...(options.provider && { provider: options.provider }),
         ...(options.tags && { tags: options.tags })
       };
-      
+
       //console.log(`Creating span "${spanName}" with payload:`, JSON.stringify(spanPayload, null, 2));
       const span = trace.span(spanPayload);
       //console.log('Span created successfully:', span ? 'success' : 'failed');
