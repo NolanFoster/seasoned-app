@@ -11,6 +11,12 @@ export const mockEnv = {
 // Mock environment without ENVIRONMENT variable
 export const mockEnvWithoutEnvironment = {};
 
+// Mock environment with Opik API key for testing tracing
+export const mockEnvWithOpik = {
+  ENVIRONMENT: 'test',
+  OPIK_API_KEY: 'test-opik-api-key-for-testing'
+};
+
 // Base test URLs
 export const TEST_BASE_URL = 'https://test.com';
 

@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * Tests for the Opik tracing client that provides observability around recipe generation
  */
 
-import { OpikClient, createOpikClient, opikClient } from '../../src/opik-client.js';
+import { OpikClient, createOpikClient } from '../../src/opik-client.js';
 
 describe('Opik Client - Unit Tests', () => {
   let client;
@@ -33,7 +33,7 @@ describe('Opik Client - Unit Tests', () => {
     it('should create client with API key', () => {
       const keyClient = new OpikClient('test-api-key');
       expect(keyClient.apiKey).toBe('test-api-key');
-      expect(keyClient.workspaceName).toBe('recipe-generation-worker');
+      expect(keyClient.workspaceName).toBe('recipe-generation');
     });
 
     it('should create client without API key', () => {
@@ -91,6 +91,29 @@ describe('Opik Client - Unit Tests', () => {
       // so we just verify the API key was set
       expect(keyClient.apiKey).toBe('test-key');
     });
+
+    it('should return detailed health status', () => {
+      const status = client.getHealthStatus();
+      expect(status).toEqual({
+        isHealthy: false,
+        hasApiKey: false,
+        apiKeyLength: 0,
+        hasClient: false,
+        workspaceName: 'recipe-generation'
+      });
+    });
+
+    it('should return detailed health status for client with API key', () => {
+      const keyClient = new OpikClient('test-api-key');
+      const status = keyClient.getHealthStatus();
+      expect(status).toEqual({
+        isHealthy: true,
+        hasApiKey: true,
+        apiKeyLength: 12,
+        hasClient: true,
+        workspaceName: 'recipe-generation'
+      });
+    });
   });
 
   describe('Tracing Operations', () => {
@@ -120,29 +143,30 @@ describe('Opik Client - Unit Tests', () => {
       expect(mockTrace.span).toHaveBeenCalledWith({
         name: 'Test Span',
         type: 'test-type',
-        input: { test: 'data' }
+        input: { test: 'data' },
+        start_time: expect.any(String)
       });
     });
 
-    it('should end span with output successfully', () => {
-      client.endSpan(mockSpan, { result: 'success' });
-      expect(mockSpan.end).toHaveBeenCalledWith({ result: 'success' });
+    it('should end span successfully', () => {
+      client.endSpan(mockSpan);
+      expect(mockSpan.end).toHaveBeenCalled();
     });
 
     it('should end span with error successfully', () => {
       const error = new Error('Test error');
-      client.endSpan(mockSpan, null, error);
+      client.endSpan(mockSpan, error);
       expect(mockSpan.error).toHaveBeenCalledWith(error);
     });
 
-    it('should end trace with output successfully', () => {
-      client.endTrace(mockTrace, { result: 'success' });
-      expect(mockTrace.end).toHaveBeenCalledWith({ result: 'success' });
+    it('should end trace successfully', () => {
+      client.endTrace(mockTrace);
+      expect(mockTrace.end).toHaveBeenCalled();
     });
 
     it('should end trace with error successfully', () => {
       const error = new Error('Test error');
-      client.endTrace(mockTrace, null, error);
+      client.endTrace(mockTrace, error);
       expect(mockTrace.error).toHaveBeenCalledWith(error);
     });
 
@@ -217,7 +241,8 @@ describe('Opik Client - Unit Tests', () => {
     });
 
     it('should create default client instance', () => {
-      expect(opikClient).toBeInstanceOf(OpikClient);
+      const defaultClient = createOpikClient();
+      expect(defaultClient).toBeInstanceOf(OpikClient);
     });
 
     it('should create client with default workspace when not specified', () => {

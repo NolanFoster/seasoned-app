@@ -920,8 +920,6 @@ function App() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
-      console.log('Initializing custom seasoning background...');
-      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
       
       // Create seasoning data
       const seasoningParticles = [];
@@ -962,9 +960,6 @@ function App() {
           twinkleSpeed: Math.random() * 0.01 + 0.005 // Twinkle speed
         });
       }
-      
-      console.log('Created', seasoningParticles.length, 'seasoning particles');
-      console.log('Sample particle:', seasoningParticles[0]);
       
       // Animation function
       const animate = () => {
@@ -1064,7 +1059,7 @@ function App() {
       // Start animation
       animate();
       
-      console.log('Custom seasoning background initialized successfully');
+      console.log('Seasoning the background...');
     } catch (error) {
       console.error('Failed to initialize seasoning background:', error);
       seasoningRef.current = null;

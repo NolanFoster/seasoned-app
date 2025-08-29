@@ -18,7 +18,7 @@ describe('Worker - Queue Processing', () => {
       createMockQueueMessage('recipe-1', 'msg-1'),
       createMockQueueMessage('recipe-2', 'msg-2')
     ]);
-    
+
     // Reset mocks
     vi.clearAllMocks();
   });
@@ -160,7 +160,7 @@ describe('Worker - Queue Processing', () => {
 
   it('should log processing progress', async () => {
     const consoleSpy = vi.spyOn(console, 'log');
-    
+
     processEmbeddingMessage.mockResolvedValue({ success: true, recipeId: 'recipe-1' });
 
     await worker.queue(mockBatch, mockEnv, {});
@@ -173,7 +173,7 @@ describe('Worker - Queue Processing', () => {
 
   it('should log error details', async () => {
     const consoleSpy = vi.spyOn(console, 'error');
-    
+
     processEmbeddingMessage.mockRejectedValue(new Error('Test error'));
 
     await worker.queue(mockBatch, mockEnv, {});
@@ -182,3 +182,4 @@ describe('Worker - Queue Processing', () => {
     expect(consoleSpy).toHaveBeenCalledWith('Error processing message msg-2:', expect.any(Error));
   });
 });
+

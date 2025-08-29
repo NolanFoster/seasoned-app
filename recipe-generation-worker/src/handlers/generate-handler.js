@@ -1,4 +1,5 @@
-import { opikClient } from '../opik-client.js';
+import { OpikClient } from '../opik-client.js';
+import { getRecipeFromKV } from '../../../shared/kv-storage.js';
 
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
@@ -37,7 +38,7 @@ export async function handleGenerate(request, env, corsHeaders) {
 
     // Check if we're in a local development environment without AI access
     if (!env.AI || !env.RECIPE_VECTORS) {
-      console.log('Running in local dev mode - returning mock response');
+      // Running in local dev mode - returning mock response
       return new Response(JSON.stringify({
         success: true,
         recipe: {
@@ -83,7 +84,7 @@ export async function handleGenerate(request, env, corsHeaders) {
       }
     });
   } catch (error) {
-    console.error('Error processing recipe generation request:', error);
+    // Error processing recipe generation request
     return new Response(JSON.stringify({
       error: 'Failed to process recipe generation request',
       details: error.message
@@ -103,67 +104,168 @@ export async function handleGenerate(request, env, corsHeaders) {
 async function generateRecipeWithAI(requestData, env) {
   const startTime = Date.now();
 
-  // Create Opik trace for the entire recipe generation process
-  let trace = null;
-  if (env.OPIK_API_KEY && opikClient.isHealthy()) {
-    opikClient.setApiKey(env.OPIK_API_KEY);
-    trace = opikClient.createTrace('Recipe Generation', {
-      requestData: requestData,
-      timestamp: new Date().toISOString()
-    });
-  }
+  // Create Opik client with API key from environment
+  const opikClient = new OpikClient(env.OPIK_API_KEY, 'recipe-generation');
+
+  // Data collection for tracing
+  const operationData = {
+    input: { requestData: requestData },
+    queryText: null,
+    queryEmbedding: null,
+    similarRecipes: null,
+    generatedRecipe: null,
+    llmResponse: null,
+    prompt: null,
+    // Timing data
+    traceStartTime: new Date().toISOString(),
+    queryStartTime: null,
+    queryEndTime: null,
+    embeddingStartTime: null,
+    embeddingEndTime: null,
+    searchStartTime: null,
+    searchEndTime: null,
+    llmStartTime: null,
+    llmEndTime: null
+  };
 
   try {
-    // Step 1: Create query text from ingredients and preferences
-    const queryText = buildQueryText(requestData);
-    console.log('Generated query text:', queryText.substring(0, 200) + '...');
+    // Starting recipe generation with AI
 
-    // Create span for query text generation
-    const querySpan = trace ? opikClient.createSpan(trace, 'Query Text Generation', 'text-processing', {
-      queryText: queryText,
-      requestData: requestData
-    }) : null;
+    // Step 1: Create query text from ingredients and preferences
+    operationData.queryStartTime = new Date().toISOString();
+    const queryText = buildQueryText(requestData);
+    operationData.queryText = queryText;
+    operationData.queryEndTime = new Date().toISOString();
+    // Generated query text: ${queryText.substring(0, 200)}...
 
     // Step 2: Generate embedding for the query
-    const queryEmbedding = await generateQueryEmbedding(queryText, env.AI, trace);
+    operationData.embeddingStartTime = new Date().toISOString();
+    const queryEmbedding = await generateQueryEmbedding(queryText, env.AI);
     if (!queryEmbedding) {
       throw new Error('Failed to generate query embedding');
     }
-
-    // End query span
-    if (querySpan) {
-      opikClient.endSpan(querySpan, { queryText, queryEmbedding });
-    }
+    operationData.queryEmbedding = queryEmbedding;
+    operationData.embeddingEndTime = new Date().toISOString();
 
     // Step 3: Search for similar recipes using vectorize and fetch full data
-    const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env.RECIPE_STORAGE);
-    console.log(`Found ${similarRecipes.length} similar recipes`);
-
-    // Create span for similarity search
-    const searchSpan = trace ? opikClient.createSpan(trace, 'Similarity Search', 'vector-search', {
-      queryEmbedding: queryEmbedding,
-      similarRecipesCount: similarRecipes.length
-    }) : null;
-
-    // End search span
-    if (searchSpan) {
-      opikClient.endSpan(searchSpan, { similarRecipesCount: similarRecipes.length });
-    }
+    operationData.searchStartTime = new Date().toISOString();
+    const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env);
+    // Found ${similarRecipes.length} similar recipes
+    operationData.similarRecipes = similarRecipes;
+    operationData.searchEndTime = new Date().toISOString();
 
     // Step 4: Generate new recipe using LLaMA with context from similar recipes
-    const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI, trace);
+    operationData.llmStartTime = new Date().toISOString();
+    const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI, operationData);
+    operationData.llmEndTime = new Date().toISOString();
 
     const duration = Date.now() - startTime;
-    console.log(`Recipe generation completed in ${duration}ms`);
+    // Recipe generation completed in ${duration}ms
 
-    // End the main trace
-    if (trace) {
-      opikClient.endTrace(trace, {
-        recipe: generatedRecipe,
-        generationTime: duration,
-        similarRecipesFound: similarRecipes.length,
-        generationMethod: 'llama-ai'
-      });
+    // Create Opik trace and spans with complete data
+    if (env.OPIK_API_KEY && opikClient.isHealthy()) {
+      // Creating Opik trace with complete operation data
+
+      // Create main trace with actual timing
+      const trace = opikClient.createTrace('Recipe Generation',
+        { requestData: requestData },
+        {
+          recipe: generatedRecipe,
+          generationTime: duration,
+          generationMethod: 'llama-ai'
+        },
+        {
+          similarRecipesFound: similarRecipes.length,
+          queryTextLength: queryText.length,
+          embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
+          duration: duration
+        },
+        operationData.traceStartTime,
+        new Date().toISOString()
+      );
+
+      if (trace) {
+        // Helper function to calculate duration between timestamps
+        const calculateDuration = (startTime, endTime) => {
+          return new Date(endTime) - new Date(startTime);
+        };
+
+        // Create spans for each operation with actual timing
+        const queryDuration = calculateDuration(operationData.queryStartTime, operationData.queryEndTime);
+        const querySpan = opikClient.createSpan(trace, 'Query Text Generation', 'tool',
+          { requestData: requestData },
+          { queryText: queryText, embedding: queryEmbedding },
+          {
+            metadata: {
+              queryLength: queryText.length,
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
+            },
+            duration: queryDuration
+          },
+          operationData.queryStartTime,
+          operationData.queryEndTime
+        );
+        if (querySpan) opikClient.endSpan(querySpan);
+
+        const embeddingDuration = calculateDuration(operationData.embeddingStartTime, operationData.embeddingEndTime);
+        const embeddingSpan = opikClient.createSpan(trace, 'Query Embedding Generation', 'tool',
+          { text: queryText },
+          { embedding: queryEmbedding },
+          {
+            model: 'bge-small-en-v1.5',
+            provider: 'cloudflare',
+            metadata: {
+              textLength: queryText.length,
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
+            },
+            duration: embeddingDuration
+          },
+          operationData.embeddingStartTime,
+          operationData.embeddingEndTime
+        );
+        if (embeddingSpan) opikClient.endSpan(embeddingSpan);
+
+        const searchDuration = calculateDuration(operationData.searchStartTime, operationData.searchEndTime);
+        const searchSpan = opikClient.createSpan(trace, 'Similarity Search', 'tool',
+          { queryEmbedding: queryEmbedding },
+          { similarRecipes: similarRecipes, count: similarRecipes.length },
+          {
+            metadata: {
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
+              resultsFound: similarRecipes.length
+            },
+            duration: searchDuration
+          },
+          operationData.searchStartTime,
+          operationData.searchEndTime
+        );
+        if (searchSpan) opikClient.endSpan(searchSpan);
+
+        if (operationData.llmResponse && operationData.prompt) {
+          const llmDuration = calculateDuration(operationData.llmStartTime, operationData.llmEndTime);
+          const llmSpan = opikClient.createSpan(trace, 'LLaMA Recipe Generation', 'llm',
+            { prompt: operationData.prompt },
+            { response: operationData.llmResponse, structuredRecipe: generatedRecipe },
+            {
+              model: 'llama-3-8b-instruct',
+              provider: 'cloudflare',
+              metadata: {
+                similarRecipesCount: similarRecipes.length,
+                promptLength: operationData.prompt.length,
+                responseLength: operationData.llmResponse.length
+              },
+              duration: llmDuration
+            },
+            operationData.llmStartTime,
+            operationData.llmEndTime
+          );
+          if (llmSpan) opikClient.endSpan(llmSpan);
+        }
+
+        // End trace and flush
+        opikClient.endTrace(trace);
+        await opikClient.flush();
+      }
     }
 
     return {
@@ -174,11 +276,22 @@ async function generateRecipeWithAI(requestData, env) {
     };
 
   } catch (error) {
-    console.error('Error in generateRecipeWithAI:', error);
+    // Error in generateRecipeWithAI
 
-    // End trace with error if tracing is enabled
-    if (trace) {
-      opikClient.endTrace(trace, null, error);
+    // Create error trace if tracing is enabled
+    if (env.OPIK_API_KEY && opikClient.isHealthy()) {
+      const errorTrace = opikClient.createTrace('Recipe Generation Error',
+        { requestData: requestData },
+        { error: error.message },
+        {
+          errorType: error.name || 'Error',
+          timestamp: new Date().toISOString()
+        }
+      );
+      if (errorTrace) {
+        opikClient.endTrace(errorTrace, error);
+        await opikClient.flush();
+      }
     }
 
     throw error;
@@ -238,51 +351,20 @@ function buildQueryText(requestData) {
 /**
  * Generate embedding for query text
  */
-async function generateQueryEmbedding(text, aiBinding, trace = null) {
+async function generateQueryEmbedding(text, aiBinding) {
   try {
-    // Create span for embedding generation if tracing is enabled
-    const embeddingSpan = trace ? opikClient.createSpan(trace, 'Query Embedding Generation', 'embedding', {
-      text: text,
-      model: '@cf/baai/bge-base-en-v1.5'
-    }) : null;
-
-    const response = await aiBinding.run('@cf/baai/bge-base-en-v1.5', {
+    const response = await aiBinding.run('@cf/baai/bge-small-en-v1.5', {
       text: text
     });
 
     if (response && response.data && Array.isArray(response.data[0])) {
-      // End embedding span with success
-      if (embeddingSpan) {
-        opikClient.endSpan(embeddingSpan, {
-          embedding: response.data[0],
-          model: '@cf/baai/bge-base-en-v1.5'
-        });
-      }
       return response.data[0];
     }
 
-    console.error('Invalid embedding response:', response);
-
-    // End embedding span with error
-    if (embeddingSpan) {
-      opikClient.endSpan(embeddingSpan, null, new Error('Invalid embedding response format'));
-    }
-
+    // Invalid embedding response
     return null;
-  } catch (error) {
-    console.error('Error generating query embedding:', error);
-
-    // End embedding span with error if tracing is enabled
-    if (trace) {
-      const errorSpan = opikClient.createSpan(trace, 'Query Embedding Generation', 'embedding', {
-        text: text,
-        model: '@cf/baai/bge-base-en-v1.5'
-      });
-      if (errorSpan) {
-        opikClient.endSpan(errorSpan, null, error);
-      }
-    }
-
+  } catch {
+    // Error generating query embedding
     return null;
   }
 }
@@ -290,10 +372,10 @@ async function generateQueryEmbedding(text, aiBinding, trace = null) {
 /**
  * Find similar recipes using vectorize similarity search and fetch full recipe data
  */
-async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
+async function findSimilarRecipes(queryEmbedding, vectorStorage, env) {
   try {
     const result = await vectorStorage.query(queryEmbedding, {
-      topK: 5, // Get top 5 most similar recipes
+      topK: 7,
       returnMetadata: true
     });
 
@@ -305,21 +387,8 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
     const fullRecipes = [];
     for (const match of result.matches) {
       try {
-        // Mock implementation for testing - in production this would use getRecipeFromKV
-        const recipeResult = {
-          success: true,
-          recipe: {
-            data: {
-              name: match.metadata?.title || 'Mock Recipe',
-              description: match.metadata?.description || 'A test recipe',
-              ingredients: ['1 lb mock ingredient'],
-              instructions: ['Mock instruction'],
-              prepTime: '10 minutes',
-              cookTime: '20 minutes',
-              recipeYield: '4'
-            }
-          }
-        };
+        // Get full recipe data from KV storage using the recipe ID
+        const recipeResult = await getRecipeFromKV(env, match.id);
 
         if (recipeResult.success && recipeResult.recipe) {
           fullRecipes.push({
@@ -329,8 +398,8 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
             fullRecipe: recipeResult.recipe
           });
         }
-      } catch (error) {
-        console.warn(`Failed to fetch full recipe for ${match.id}:`, error);
+      } catch {
+        // Failed to fetch full recipe for ${match.id}
         // Still include the match with metadata only
         fullRecipes.push({
           id: match.id,
@@ -343,8 +412,8 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
 
     return fullRecipes;
 
-  } catch (error) {
-    console.error('Error finding similar recipes:', error);
+  } catch {
+    // Error finding similar recipes
     return [];
   }
 }
@@ -352,73 +421,44 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, _kvStorage) {
 /**
  * Generate recipe using LLaMA model with context from similar recipes
  */
-async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, trace) {
-  try {
-    // Build context from similar recipes
-    const contexts = similarRecipes.length > 0
-      ? buildRecipeContext(similarRecipes)
-      : [];
 
-    // Create prompt for LLaMA
-    const prompt = buildLLaMAPrompt(requestData, contexts);
+async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, operationData) {
+  // Build context from similar recipes
+  const contexts = similarRecipes.length > 0
+    ? buildRecipeContext(similarRecipes)
+    : [];
 
-    // Create span for LLaMA generation if tracing is enabled
-    const llmSpan = trace ? opikClient.createSpan(trace, 'LLaMA Recipe Generation', 'llm', {
-      prompt: prompt,
-      model: '@cf/meta/llama-3-8b-instruct',
-      similarRecipesCount: similarRecipes.length
-    }) : null;
+  // Create prompt for LLaMA
+  const prompt = buildLLaMAPrompt(requestData, contexts);
+  operationData.prompt = prompt;
 
-    // Generate recipe using LLaMA
-    const response = await aiBinding.run('@cf/meta/llama-3-8b-instruct', {
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a professional chef and recipe developer. Create detailed, practical recipes that are easy to follow. Always include ingredients with measurements, step-by-step instructions, cooking times, and serving information. Format your response as a structured recipe.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 1024,
-      temperature: 0.7
-    });
-
-    if (!response || !response.response) {
-      throw new Error('Invalid response from LLaMA model');
-    }
-
-    // End LLaMA span with success
-    if (llmSpan) {
-      opikClient.endSpan(llmSpan, {
-        response: response.response,
-        model: '@cf/meta/llama-3-8b-instruct'
-      });
-    }
-
-    // Parse and structure the generated recipe
-    const structuredRecipe = parseGeneratedRecipe(response.response, requestData);
-
-    return structuredRecipe;
-
-  } catch (error) {
-    console.error('Error generating recipe with LLaMA:', error);
-
-    // End LLaMA span with error if tracing is enabled
-    if (trace) {
-      const errorSpan = opikClient.createSpan(trace, 'LLaMA Recipe Generation', 'llm', {
-        prompt: buildLLaMAPrompt(requestData, similarRecipes.length > 0 ? buildRecipeContext(similarRecipes) : []),
-        model: '@cf/meta/llama-3-8b-instruct',
-        similarRecipesCount: similarRecipes.length
-      });
-      if (errorSpan) {
-        opikClient.endSpan(errorSpan, null, error);
+  // Generate recipe using LLaMA
+  const response = await aiBinding.run('@cf/meta/llama-3.1-8b-instruct', {
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a professional chef and recipe developer. Create detailed, practical recipes that are easy to follow. Always include ingredients with measurements, step-by-step instructions and cooking times. Format your response as a structured recipe with inspiring descriptions and a touch of creativity.'
+      },
+      {
+        role: 'user',
+        content: prompt
       }
-    }
+    ],
+    max_tokens: 1024,
+    temperature: 0.65
+  });
 
-    throw error;
+  if (!response || !response.response) {
+    throw new Error('Invalid response from LLaMA model');
   }
+
+  // Store LLM response for tracing
+  operationData.llmResponse = response.response;
+
+  // Parse and structure the generated recipe
+  const structuredRecipe = parseGeneratedRecipe(response.response, requestData);
+
+  return structuredRecipe;
 }
 
 /**
@@ -548,14 +588,49 @@ function buildLLaMAPrompt(requestData, contexts) {
     prompt += `\n\nRequirements: ${requirements.join(', ')}`;
   }
 
+  // Add recipe template structure
+  prompt += `\n\nPlease format your response using this exact structure:
+
+Name: [Creative and descriptive recipe name]
+
+Description: [Brief description of the dish, its flavors, and what makes it special]
+
+Ingredients:
+- [Ingredient 1 with quantity]
+- [Ingredient 2 with quantity]
+- [Continue with all ingredients]
+
+Instructions:
+1. [Step 1 - clear and specific]
+2. [Step 2 - clear and specific]
+3. [Continue with numbered steps]
+
+Prep Time: [X minutes]
+Cook Time: [X minutes]
+
+Total Time: [Prep + Cook time]`;
+
   return prompt;
 }
 
 /**
  * Parse generated recipe text into structured format
+ *
+ * Expected template format:
+ * Name: [Recipe name]
+ * Description: [Description]
+ * Ingredients:
+ * - [Ingredient 1]
+ * - [Ingredient 2]
+ * Instructions:
+ * 1. [Step 1]
+ * 2. [Step 2]
+ * Prep Time: [X minutes]
+ * Cook Time: [X minutes]
+ * Total Time: [X minutes]
  */
 function parseGeneratedRecipe(recipeText, originalRequest) {
-  // Basic parsing - this could be enhanced with more sophisticated NLP
+  // Parse according to the defined template structure
   const lines = recipeText.split('\n').filter(line => line.trim());
 
   const recipe = {
@@ -581,50 +656,65 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
     const trimmedLine = line.trim();
     const lowerLine = trimmedLine.toLowerCase();
 
-    // Try to identify the recipe name (usually first line or contains 'recipe' or title indicators)
-    if ((lowerLine.includes('recipe') || lowerLine.includes('title')) && recipe.name === 'Generated Recipe') {
-      recipe.name = trimmedLine.replace(/^(recipe:?|title:?|name:?)/i, '').trim();
+    // Parse recipe name according to template format
+    if (lowerLine.startsWith('name:') && recipe.name === 'Generated Recipe') {
+      let extractedName = trimmedLine.replace(/^name:\s*/i, '').trim();
+
+      // Limit name length and clean it up
+      if (extractedName.length > 100) {
+        // If first sentence or first 50 characters
+        const firstSentence = extractedName.split('.')[0];
+        extractedName = firstSentence.length <= 50 ? firstSentence : extractedName.substring(0, 50);
+      }
+
+      // Remove quotes and extra formatting
+      extractedName = extractedName.replace(/^["']|["']$/g, '').trim();
+
+      // Only use if it looks like a reasonable recipe name (not empty, not too generic)
+      if (extractedName && extractedName.length > 3 && !extractedName.toLowerCase().includes('recipe for')) {
+        recipe.name = extractedName;
+      }
       continue;
     }
 
-    // Identify sections
-    if (lowerLine.includes('ingredient')) {
+    // Parse description according to template format
+    if (lowerLine.startsWith('description:') && !recipe.description) {
+      recipe.description = trimmedLine.replace(/^description:\s*/i, '').trim();
+      continue;
+    }
+
+    // Identify sections according to template format
+    if (lowerLine.startsWith('ingredients:')) {
       currentSection = 'ingredients';
       continue;
-    } else if (lowerLine.includes('instruction') || lowerLine.includes('method') || lowerLine.includes('steps')) {
+    } else if (lowerLine.startsWith('instructions:')) {
       currentSection = 'instructions';
       continue;
-    } else if (lowerLine.includes('prep time') || lowerLine.includes('preparation')) {
+    } else if (lowerLine.startsWith('prep time:') || lowerLine.startsWith('preparation time:')) {
       recipe.prepTime = extractTime(trimmedLine);
       continue;
-    } else if (lowerLine.includes('cook time') || lowerLine.includes('cooking time')) {
+    } else if (lowerLine.startsWith('cook time:') || lowerLine.startsWith('cooking time:')) {
       recipe.cookTime = extractTime(trimmedLine);
       continue;
-    } else if (lowerLine.includes('total time')) {
+    } else if (lowerLine.startsWith('total time:')) {
       recipe.totalTime = extractTime(trimmedLine);
-      continue;
-    } else if (lowerLine.includes('serves') || lowerLine.includes('serving')) {
-      recipe.servings = extractServings(trimmedLine);
       continue;
     }
 
-    // Add content to current section
-    if (currentSection === 'ingredients' && trimmedLine && !lowerLine.includes('ingredient')) {
-      // Clean up ingredient line
+    // Add content to current section according to template format
+    if (currentSection === 'ingredients' && trimmedLine && !lowerLine.startsWith('ingredients:')) {
+      // Clean up ingredient line - expect format: "- [Ingredient with quantity]"
       const ingredient = trimmedLine.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '');
-      if (ingredient) {
+      if (ingredient && !lowerLine.includes('ingredient')) {
         recipe.ingredients.push(ingredient);
       }
-    } else if (currentSection === 'instructions' && trimmedLine && !lowerLine.includes('instruction')) {
-      // Clean up instruction line
+    } else if (currentSection === 'instructions' && trimmedLine && !lowerLine.startsWith('instructions:')) {
+      // Clean up instruction line - expect format: "1. [Step description]"
       const instruction = trimmedLine.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '');
-      if (instruction) {
+      if (instruction && !lowerLine.includes('instruction')) {
         recipe.instructions.push(`${instructionStep}. ${instruction}`);
         instructionStep++;
       }
-    } else if (currentSection === 'unknown' && trimmedLine && !recipe.description) {
-      // Use first substantial line as description if no section identified yet
-      recipe.description = trimmedLine;
     }
   }
 
@@ -643,16 +733,70 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
   if (recipe.instructions.length === 0) {
     const remainingLines = lines.filter(line => {
       const lower = line.toLowerCase();
-      return !lower.includes('ingredient') &&
-             !lower.includes('instruction') &&
-             !lower.includes('time') &&
-             !lower.includes('serves') &&
+      return !lower.startsWith('name:') &&
+             !lower.startsWith('description:') &&
+             !lower.startsWith('ingredients:') &&
+             !lower.startsWith('instructions:') &&
+             !lower.startsWith('prep time:') &&
+             !lower.startsWith('cook time:') &&
+             !lower.startsWith('total time:') &&
              line.trim().length > 10;
     });
 
     remainingLines.forEach((line, index) => {
       recipe.instructions.push(`${index + 1}. ${line.trim()}`);
     });
+  }
+
+  // Handle recipe name logic with prompt fallback
+  const promptedName = originalRequest.recipeName;
+
+  // Check if extracted name looks like a description (very long, multiple sentences, or starts with descriptive phrases)
+  const extractedNameLooksLikeDescription = recipe.name !== 'Generated Recipe' && (
+    recipe.name.length > 120 ||
+    (recipe.name.includes('.') && recipe.name.length > 60) || // Only if long AND has periods
+    recipe.name.toLowerCase().startsWith('this ') ||
+    recipe.name.toLowerCase().startsWith('a delicious ') ||
+    recipe.name.toLowerCase().startsWith('an amazing ') ||
+    recipe.name.toLowerCase().startsWith('the perfect ') ||
+    (recipe.name.includes(' and ') && recipe.name.includes(' with ') && recipe.name.length > 50) // Complex descriptive phrases
+  );
+
+  if (extractedNameLooksLikeDescription) {
+    // Move the extracted "name" to description if no description is set
+    if (!recipe.description) {
+      recipe.description = recipe.name;
+    }
+    // Use prompted name or fallback
+    recipe.name = promptedName || 'Generated Recipe';
+  } else if (recipe.name === 'Generated Recipe') {
+    // No good name extracted, try prompted name first
+    if (promptedName) {
+      recipe.name = promptedName;
+    } else {
+      // Final fallback: use first meaningful line that doesn't match template headers
+      for (const line of lines.slice(0, 3)) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.length > 5 &&
+            trimmedLine.length <= 60 &&
+            !trimmedLine.toLowerCase().startsWith('name:') &&
+            !trimmedLine.toLowerCase().startsWith('description:') &&
+            !trimmedLine.toLowerCase().startsWith('ingredients:') &&
+            !trimmedLine.toLowerCase().startsWith('instructions:') &&
+            !trimmedLine.toLowerCase().startsWith('prep time:') &&
+            !trimmedLine.toLowerCase().startsWith('cook time:') &&
+            !trimmedLine.toLowerCase().startsWith('total time:') &&
+            !trimmedLine.includes(':')) {
+          recipe.name = trimmedLine;
+          break;
+        }
+      }
+    }
+  }
+
+  // If we still have default name and there's a prompted name, use it
+  if (recipe.name === 'Generated Recipe' && promptedName) {
+    recipe.name = promptedName;
   }
 
   return recipe;
@@ -666,10 +810,4 @@ function extractTime(text) {
   return timeMatch ? `${timeMatch[1]} ${timeMatch[2]}` : '';
 }
 
-/**
- * Extract servings from text (e.g., "Serves 4 people" -> "4")
- */
-function extractServings(text) {
-  const servingMatch = text.match(/(\d+)/);
-  return servingMatch ? servingMatch[1] : '';
-}
+

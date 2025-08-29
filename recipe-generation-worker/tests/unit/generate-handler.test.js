@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handleGenerate } from '../../src/handlers/generate-handler.js';
-import { mockEnv, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
+import { mockEnv, mockEnvWithOpik, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
 
 describe('Generate Handler - Unit Tests', () => {
   const corsHeaders = {
@@ -34,11 +34,11 @@ describe('Generate Handler - Unit Tests', () => {
 
     // Default mock responses
     mockAI.run.mockImplementation((model, _params) => {
-      if (model === '@cf/baai/bge-base-en-v1.5') {
+      if (model === '@cf/baai/bge-small-en-v1.5') {
         return Promise.resolve({
           data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
         });
-      } else if (model === '@cf/meta/llama-3-8b-instruct') {
+      } else if (model === '@cf/meta/llama-3.1-8b-instruct') {
         return Promise.resolve({
           response: `Chicken Rice Bowl
 
@@ -112,8 +112,8 @@ Serves: 4`
       expect(data.environment).toBe('test');
 
       // Verify AI calls were made
-      expect(mockAI.run).toHaveBeenCalledWith('@cf/baai/bge-base-en-v1.5', expect.any(Object));
-      expect(mockAI.run).toHaveBeenCalledWith('@cf/meta/llama-3-8b-instruct', expect.any(Object));
+      expect(mockAI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', expect.any(Object));
+      expect(mockAI.run).toHaveBeenCalledWith('@cf/meta/llama-3.1-8b-instruct', expect.any(Object));
       expect(mockVectors.query).toHaveBeenCalled();
     });
 
@@ -181,7 +181,7 @@ Serves: 4`
 
     it('should handle AI embedding failure gracefully', async () => {
       mockAI.run.mockImplementation((model) => {
-        if (model === '@cf/baai/bge-base-en-v1.5') {
+        if (model === 'bge-small-en-v1.5') {
           return Promise.resolve(null); // Simulate embedding failure
         }
         return Promise.resolve({ response: 'Default recipe' });
@@ -201,7 +201,7 @@ Serves: 4`
 
     it('should handle LLaMA failure gracefully', async () => {
       mockAI.run.mockImplementation((model) => {
-        if (model === '@cf/baai/bge-base-en-v1.5') {
+        if (model === 'bge-small-en-v1.5') {
           return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
         }
         return Promise.reject(new Error('LLaMA failed'));
@@ -587,9 +587,7 @@ Serves: 4`
       expect(data.error).toBe('Either recipeName or ingredients field is required. ingredients must be a non-empty array if provided.');
     });
 
-    it('should log errors to console', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
+    it('should handle errors gracefully and return proper error response', async () => {
       const request = new Request('https://test.com/generate', {
         method: 'POST',
         headers: {
@@ -598,14 +596,12 @@ Serves: 4`
         body: 'invalid json'
       });
 
-      await handleGenerate(request, mockEnv, corsHeaders);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Error processing recipe generation request:',
-        expect.any(Error)
-      );
-
-      consoleSpy.mockRestore();
+      expect(response.status).toBe(500);
+      const data = await response.json();
+      expect(data.error).toBe('Failed to process recipe generation request');
+      expect(data.details).toBeDefined();
     });
   });
 
@@ -633,6 +629,53 @@ Serves: 4`
 
       const data = await response.json();
       expect(data.environment).toBe('test');
+    });
+  });
+
+  describe('Opik Tracing Integration', () => {
+    it('should attempt to enable Opik tracing when API key is provided', async () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+
+      const envWithOpik = {
+        ...enhancedMockEnv,
+        ...mockEnvWithOpik
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, envWithOpik, corsHeaders);
+
+      expect(response.status).toBe(200);
+
+      // Check that Opik tracing was attempted (even if it fails due to missing SDK in test env)
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Opik')
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should gracefully handle Opik tracing disabled when no API key', async () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+
+      // Should not attempt to create Opik traces when no API key
+      expect(consoleSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('Creating Opik trace')
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });

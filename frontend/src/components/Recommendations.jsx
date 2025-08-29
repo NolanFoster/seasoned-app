@@ -633,7 +633,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
   if (recipesByCategory && recipesByCategory.size > 0) {
     debugLogEmoji('✅', 'Using recipesByCategory for rendering');
     return (
-      <div className="recommendations-container">
+      <div className="recommendations-container" data-testid="recommendations-container">
         {(() => {
           try {
             const entries = Array.from(recipesByCategory.entries());
@@ -760,7 +760,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory }) {
       hasRecommendationsData: Boolean(recommendations?.recommendations)
     });
     return (
-      <div className="recommendations-container">
+      <div className="recommendations-container" data-testid="recommendations-container">
         {/* Location resolution loading indicator */}
         {isResolvingLocation && (
           <div style={{

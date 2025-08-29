@@ -1,11 +1,9 @@
 # Recipe Generation Worker Configuration
 name = "recipe-generation-worker"
 main = "src/index.js"
-compatibility_date = "2024-09-23"
 
-compatibility_flags = [
-  "nodejs_compat"
-]
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 
 # Default configuration
 [vars]
@@ -19,10 +17,14 @@ enabled = true
 [ai]
 binding = "AI"
 
+[[kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
 # Vectorize binding for recipe embeddings
 [[vectorize]]
 binding = "RECIPE_VECTORS"
-index_name = "recipe-vectors"
+index_name = "recipe-vectors-384"
 
 # Preview environment (for PR previews)
 [env.preview]
@@ -36,7 +38,7 @@ enabled = true
 
 [[env.preview.vectorize]]
 binding = "RECIPE_VECTORS"
-index_name = "recipe-vectors"
+index_name = "recipe-vectors-384"
 
 [[env.preview.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -57,7 +59,7 @@ binding = "AI"
 
 [[env.staging.vectorize]]
 binding = "RECIPE_VECTORS"
-index_name = "recipe-vectors"
+index_name = "recipe-vectors-384"
 
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -73,10 +75,35 @@ OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
 [env.production.observability]
 enabled = true
 
+[env.production.ai]
+binding = "AI"
+
 [[env.production.vectorize]]
 binding = "RECIPE_VECTORS"
-index_name = "recipe-vectors"
+index_name = "recipe-vectors-384"
 
 [[env.production.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
+
+# development environment
+[env.development]
+name = "recipe-generation-worker"
+[env.development.vars]
+ENVIRONMENT = "development"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+
+[env.development.observability]
+enabled = true
+
+[env.development.ai]
+binding = "AI"
+
+[[env.development.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors-384"
+
+[[env.development.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"

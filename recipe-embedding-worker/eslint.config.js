@@ -58,7 +58,9 @@ export default [
         getMockEnv: 'readonly',
         getMockCorsHeaders: 'readonly',
         createMockRequest: 'readonly',
-        parseResponse: 'readonly'
+        parseResponse: 'readonly',
+        createMockQueueMessage: 'readonly',
+        createMockQueueBatch: 'readonly'
       }
     },
     rules: {

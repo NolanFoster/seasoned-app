@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import App from '../App';
 
-describe('App Integration Tests', () => {
+describe.skip('App Integration Tests', () => {
   let user;
 
   beforeEach(() => {

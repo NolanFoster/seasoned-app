@@ -114,7 +114,7 @@ export async function processEmbeddingMessage(recipeId, env) {
 
     // Store embedding in vectorize
     await storeEmbedding(recipeId, embedding, recipeData, env.RECIPE_VECTORS);
-    
+
     console.log(`Successfully processed recipe ${recipeId}`);
     return { success: true, recipeId };
 
@@ -136,7 +136,7 @@ async function checkExistingEmbedding(recipeId, vectorStorage) {
       if (existingEmbedding && existingEmbedding.length > 0) {
         return true;
       }
-    } catch (getError) {
+    } catch {
       // If getByIds fails, fall back to query method
     }
 
@@ -145,11 +145,11 @@ async function checkExistingEmbedding(recipeId, vectorStorage) {
     const query = await vectorStorage.query(dummyVector, {
       topK: 1000 // Query more results to find the specific ID
     });
-    
+
     if (query.matches) {
       return query.matches.some(match => match.id === recipeId);
     }
-    
+
     return false;
   } catch (error) {
     console.error(`Error checking existing embedding for ${recipeId}:`, error);

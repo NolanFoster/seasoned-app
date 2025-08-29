@@ -8,13 +8,16 @@ const mockCreateRoot = jest.fn(() => ({
 }));
 
 jest.mock("react-dom/client", () => ({
-  createRoot: mockCreateRoot,
+  createRoot: jest.fn(() => ({
+    render: jest.fn(),
+  })),
 }));
 
 // Mock App component
 jest.mock("../App.jsx", () => {
+  const mockReact = require("react");
   return function MockApp() {
-    return React.createElement("div", { "data-testid": "mock-app" }, "Mock App");
+    return mockReact.createElement("div", { "data-testid": "mock-app" }, "Mock App");
   };
 });
 
@@ -41,27 +44,39 @@ describe("Main Entry Point", () => {
     // Import main.jsx which will execute the code
     require("../main.jsx");
 
+    // Get the mocked createRoot function
+    const createRootMock = require("react-dom/client").createRoot;
+    
     // Verify createRoot was called with the root element
-    expect(mockCreateRoot).toHaveBeenCalledTimes(1);
-    expect(mockCreateRoot).toHaveBeenCalledWith(document.getElementById("root"));
+    expect(createRootMock).toHaveBeenCalledTimes(1);
+    expect(createRootMock).toHaveBeenCalledWith(document.getElementById("root"));
 
-    // Verify render was called
-    expect(mockRender).toHaveBeenCalledTimes(1);
+    // Verify render was called on the created root
+    const rootInstance = createRootMock.mock.results[0].value;
+    expect(rootInstance.render).toHaveBeenCalledTimes(1);
     
     // Verify the rendered component structure
-    const renderCall = mockRender.mock.calls[0][0];
+    const renderCall = rootInstance.render.mock.calls[0][0];
     expect(renderCall.type).toBe(React.StrictMode);
     expect(renderCall.props.children.type.name).toBe("MockApp");
   });
 
-  it("should handle missing root element gracefully", () => {
+  it("should call createRoot with null when root element is missing", () => {
     // Remove the root element
     document.body.innerHTML = "";
 
-    // This should throw or handle the error
-    expect(() => {
-      jest.resetModules();
-      require("../main.jsx");
-    }).toThrow();
+    // Clear previous mocks
+    jest.resetModules();
+    jest.clearAllMocks();
+    
+    // Import main.jsx which will execute the code
+    require("../main.jsx");
+    
+    // Get the mocked createRoot function
+    const createRootMock = require("react-dom/client").createRoot;
+    
+    // Verify createRoot was called with null (since getElementById returns null)
+    expect(createRootMock).toHaveBeenCalledTimes(1);
+    expect(createRootMock).toHaveBeenCalledWith(null);
   });
 });

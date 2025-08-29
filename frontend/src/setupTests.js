@@ -37,6 +37,18 @@ HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
 if (!global.alert) global.alert = jest.fn();
 if (!global.confirm) global.confirm = jest.fn();
 
+// Global fetch mock - ensures fetch always returns a proper Promise
+if (!global.fetch) {
+  global.fetch = jest.fn(() => 
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({}),
+      text: () => Promise.resolve(''),
+    })
+  );
+}
+
 beforeEach(() => {
   global.alert && global.alert.mockClear && global.alert.mockClear();
   global.confirm && global.confirm.mockClear && global.confirm.mockClear();

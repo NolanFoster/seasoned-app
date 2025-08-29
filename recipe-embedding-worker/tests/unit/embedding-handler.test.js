@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { processEmbeddingMessage } from '../../src/handlers/embedding-handler.js';
 
 describe('Embedding Handler - Queue Processing', () => {
@@ -143,7 +143,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Test Recipe')
     });
-    
+
     // Verify the embedding text contains key recipe information
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Test Recipe');
@@ -185,7 +185,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Nested Recipe')
     });
-    
+
     // Verify nested structure is handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('1 cup flour, 2 eggs');
@@ -235,7 +235,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(validRecipe));
     mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-    
+
     // Mock AI binding to throw an error
     mockEnv.AI.run.mockRejectedValue(new Error('AI service unavailable'));
 
@@ -248,7 +248,7 @@ describe('Embedding Handler - Queue Processing', () => {
   it('should handle AI response with invalid data structure', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-    
+
     // Mock AI response with invalid structure
     mockEnv.AI.run.mockResolvedValue({
       data: 'invalid-data' // Should be an array
@@ -263,7 +263,7 @@ describe('Embedding Handler - Queue Processing', () => {
   it('should handle AI response with empty data array', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-    
+
     // Mock AI response with empty data array
     mockEnv.AI.run.mockResolvedValue({
       data: []
@@ -278,7 +278,7 @@ describe('Embedding Handler - Queue Processing', () => {
   it('should handle AI response with null data', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-    
+
     // Mock AI response with null data
     mockEnv.AI.run.mockResolvedValue({
       data: null
@@ -293,7 +293,7 @@ describe('Embedding Handler - Queue Processing', () => {
   it('should handle AI response with undefined data', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-    
+
     // Mock AI response with undefined data
     mockEnv.AI.run.mockResolvedValue({
       data: undefined
@@ -308,7 +308,7 @@ describe('Embedding Handler - Queue Processing', () => {
   it('should handle AI response with non-array first element', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
-    
+
     // Mock AI response with non-array first element
     mockEnv.AI.run.mockResolvedValue({
       data: ['not-an-array']
@@ -390,7 +390,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Empty Arrays Recipe')
     });
-    
+
     // Verify empty arrays don't add text
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).not.toContain('Ingredients:');
@@ -427,7 +427,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Mixed Types Recipe')
     });
-    
+
     // Verify mixed types are handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('1 cup flour, 2 eggs, 3 tbsp oil');
@@ -440,7 +440,7 @@ describe('Embedding Handler - Queue Processing', () => {
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
-    
+
     // Mock vectorize upsert to throw error
     mockEnv.RECIPE_VECTORS.upsert.mockRejectedValue(new Error('Vectorize storage error'));
 
@@ -524,7 +524,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Full Recipe')
     });
-    
+
     // Verify all fields are included in the embedding text
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Full Recipe');
@@ -559,7 +559,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.any(String)
     });
-    
+
     // Verify the text is truncated to reasonable length (8000 chars)
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text.length).toBeLessThanOrEqual(8000);
@@ -596,7 +596,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Recipe with 🍕 🍰 🥗 special characters')
     });
-    
+
     // Verify unicode characters are preserved
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('🍕');
@@ -631,7 +631,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Mixed Types Recipe')
     });
-    
+
     // Verify mixed types are handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('1 cup flour, 2 eggs, 3 tbsp oil');
@@ -664,7 +664,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Mixed Types Instructions Recipe')
     });
-    
+
     // Verify mixed types are handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Mix ingredients Bake for 30 minutes');
@@ -698,7 +698,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Whitespace Recipe')
     });
-    
+
     // Verify that whitespace-only ingredients don't add text
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).not.toContain('Ingredients:');
@@ -730,7 +730,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Yield and Time Recipe')
     });
-    
+
     // Verify that yield and cook time are included
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Serves: 4 servings');
@@ -766,7 +766,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Whitespace Recipe')
     });
-    
+
     // Verify that whitespace-only ingredients don't add text
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).not.toContain('Ingredients:');
@@ -794,7 +794,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Minimal Valid Recipe')
     });
-    
+
     // Verify minimal text is generated
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Minimal Valid Recipe');
@@ -825,7 +825,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('No URL Recipe')
     });
-    
+
     // Verify that the upsert call handles missing fields gracefully
     expect(mockEnv.RECIPE_VECTORS.upsert).toHaveBeenCalledWith([{
       id: 'test-recipe-id',
@@ -862,7 +862,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.any(String)
     });
-    
+
     // Verify the text is truncated to reasonable length (8000 chars)
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text.length).toBeLessThanOrEqual(8000);
@@ -894,7 +894,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Alternative Fields Recipe')
     });
-    
+
     // Verify that alternative field names are handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Alternative Fields Recipe');
@@ -926,7 +926,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Array Keywords Recipe')
     });
-    
+
     // Verify that array keywords are handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Keywords: baking, dessert, easy');
@@ -955,7 +955,7 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
       text: expect.stringContaining('Nested Data Recipe')
     });
-    
+
     // Verify that nested data structure is handled correctly
     const callArgs = mockEnv.AI.run.mock.calls[0][1];
     expect(callArgs.text).toContain('Nested Data Recipe');
