@@ -1,0 +1,270 @@
+name: Recipe Generation Worker CI/CD
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'recipe-generation-worker/**'
+      - 'shared/**'
+      - '.github/workflows/recipe-generation-worker.yml'
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'recipe-generation-worker/**'
+      - 'shared/**'
+      - '.github/workflows/recipe-generation-worker.yml'
+
+defaults:
+  run:
+    working-directory: recipe-generation-worker
+
+jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: recipe-generation-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Run all tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./recipe-generation-worker/coverage/lcov.info
+          flags: recipe-generation-worker
+          name: recipe-generation-worker-coverage
+          fail_ci_if_error: false
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: recipe-generation-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Check for known vulnerabilities
+        run: npx audit-ci --moderate
+
+  deploy-preview:
+    name: Deploy to Preview
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.event_name == 'pull_request'
+    environment: preview
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: recipe-generation-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare Workers (Preview)
+        run: npx wrangler deploy --env preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Run health check
+        run: |
+          sleep 10
+          curl -f https://recipe-generation-worker-preview.nolanfoster.workers.dev/health || exit 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: recipe-generation-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare Workers (Staging)
+        run: npx wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Run health check
+        run: |
+          sleep 10
+          curl -f https://recipe-generation-worker-staging.nolanfoster.workers.dev/health || exit 1
+
+      - name: Run integration tests against staging
+        run: |
+          export API_BASE_URL=https://recipe-generation-worker-staging.nolanfoster.workers.dev
+          npm run test:integration
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: recipe-generation-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Cloudflare Workers (Production)
+        run: npx wrangler deploy --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Run health check
+        run: |
+          sleep 10
+          curl -f https://recipe-generation-worker.nolanfoster.workers.dev/health || exit 1
+
+      - name: Run smoke tests against production
+        run: |
+          export API_BASE_URL=https://recipe-generation-worker.nolanfoster.workers.dev
+          npm run test:integration
+
+      - name: Create release tag
+        if: success()
+        run: |
+          VERSION=$(date +%Y%m%d-%H%M%S)
+          git tag "recipe-generation-worker-v$VERSION"
+          git push origin "recipe-generation-worker-v$VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Run performance tests
+        run: |
+          cat > performance-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+
+          export let options = {
+            stages: [
+              { duration: '30s', target: 10 },
+              { duration: '1m', target: 20 },
+              { duration: '30s', target: 0 },
+            ],
+          };
+
+          export default function () {
+            // Test health endpoint
+            let healthResponse = http.get('https://recipe-generation-worker-staging.nolanfoster.workers.dev/health');
+            check(healthResponse, {
+              'health status is 200': (r) => r.status === 200,
+              'health response time < 500ms': (r) => r.timings.duration < 500,
+            });
+
+            // Test root endpoint
+            let rootResponse = http.get('https://recipe-generation-worker-staging.nolanfoster.workers.dev/');
+            check(rootResponse, {
+              'root status is 200': (r) => r.status === 200,
+              'root response time < 1000ms': (r) => r.timings.duration < 1000,
+            });
+
+            // Test generate endpoint
+            let generatePayload = JSON.stringify({
+              ingredients: ['chicken', 'rice'],
+              cuisine: 'italian'
+            });
+            let generateResponse = http.post(
+              'https://recipe-generation-worker-staging.nolanfoster.workers.dev/generate',
+              generatePayload,
+              { headers: { 'Content-Type': 'application/json' } }
+            );
+            check(generateResponse, {
+              'generate status is 200': (r) => r.status === 200,
+              'generate response time < 2000ms': (r) => r.timings.duration < 2000,
+            });
+
+            sleep(1);
+          }
+          EOF
+          
+          k6 run performance-test.js

@@ -50,15 +50,29 @@
   color: white;
 }
 
-.timer-button-inline:hover {
+.timer-button-inline:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
-.timer-button-inline:active {
+.timer-button-inline:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timer-button-disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  transform: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.timer-button-disabled:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .timer-icon-inline {
@@ -68,6 +82,189 @@
   display: block;
 }
 
+/* Header Timer FAB Styles */
+.header-timer-fab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
+  animation: header-timer-slide-in 0.3s ease-out;
+  margin-right: 8px;
+}
+
+@keyframes header-timer-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.header-timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.header-timer-time {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+.header-timer-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 1px;
+  text-align: center;
+}
+
+.header-timer-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.header-timer-control-btn,
+.header-timer-reset-btn,
+.header-timer-dismiss {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Timer icon styling for white icons */
+.timer-icon {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1); /* Make the icon white */
+  display: block;
+}
+
+.header-timer-control-btn:hover,
+.header-timer-reset-btn:hover,
+.header-timer-dismiss:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.header-timer-control-btn:active,
+.header-timer-reset-btn:active,
+.header-timer-dismiss:active {
+  transform: scale(0.95);
+}
+
+.header-timer-reset-btn {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.header-timer-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.header-timer-dismiss {
+  background: rgba(255, 100, 100, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+}
+
+.header-timer-dismiss:hover {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.4);
+}
+
+/* Active Timer Styles */
+.timer-active {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  color: white;
+}
+
+.timer-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-time {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  color: white;
+  min-width: 60px;
+  text-align: center;
+}
+
+.timer-control-btn,
+.timer-stop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  color: white;
+}
+
+.timer-control-btn:hover,
+.timer-stop-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.timer-control-btn:active,
+.timer-stop-btn:active {
+  transform: scale(0.95);
+}
+
+.timer-stop-btn {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.5);
+}
+
+.timer-stop-btn:hover {
+  background: rgba(255, 100, 100, 0.4);
+}
+
 /* Adjust list item to accommodate absolute positioning */
 .instructions-list li {
   position: relative;
@@ -75,19 +272,9 @@
 
 /* Mobile responsiveness */
 @media (max-width: 480px) {
-  .instruction-with-timers {
-    padding-bottom: 40px; /* Less space on mobile */
-  }
-  
   .timer-button-inline {
     padding: 4px 8px;
     font-size: 11px;
-  }
-  
-  .timer-text {
-    font-size: 11px;
-    margin-left: 2px;
-    color: white;
   }
   
   .timer-icon-inline {
@@ -96,8 +283,65 @@
   }
   
   .timer-buttons-container {
+    gap: 3px;
+  }
+  
+  .timer-active {
+    padding: 4px 8px;
+  }
+  
+  .timer-time {
+    font-size: 12px;
+    min-width: 50px;
+  }
+  
+  .timer-control-btn,
+  .timer-stop-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+  
+  .header-timer-fab {
+    padding: 6px 12px;
+    gap: 8px;
+    margin-right: 6px;
+  }
+  
+  .header-timer-display {
+    min-width: 50px;
+  }
+  
+  .header-timer-time {
+    font-size: 16px;
+  }
+  
+  .header-timer-label {
+    font-size: 9px;
+  }
+  
+  .header-timer-controls {
     gap: 4px;
   }
+  
+  .header-timer-control-btn,
+  .header-timer-reset-btn,
+  .header-timer-dismiss {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .timer-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .fab-nutrition-trigger {
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+
 }
 
 /* Tablet responsiveness */
@@ -115,4 +359,39 @@
   .timer-buttons-container {
     gap: 4px;
   }
+  
+  .timer-active {
+    padding: 5px 10px;
+  }
+  
+  .timer-time {
+    font-size: 13px;
+    min-width: 55px;
+  }
+  
+  .timer-control-btn,
+  .timer-stop-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+  
+  .header-timer-fab {
+    padding: 7px 14px;
+    gap: 10px;
+  }
+  
+  .header-timer-time {
+    font-size: 17px;
+  }
+  
+
+  
+  .timer-icon {
+    width: 15px;
+    height: 15px;
+  }
 }
+
+
+

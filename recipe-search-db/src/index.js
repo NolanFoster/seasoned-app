@@ -56,11 +56,14 @@ export default {
         });
       } else if (path === '/api/version' && method === 'GET') {
         return new Response(JSON.stringify({ 
-          version: '1.3.0',
+          version: '1.5.0',
           features: {
             partialWordSearch: true,
             smartSearch: true,
-            description: 'Supports partial word search and smart search with token breakdown strategies'
+            tagsParameter: true,
+            multiTagSearch: true,
+            arrayTags: true,
+            description: 'Supports partial word search, smart search with token breakdown strategies, tags parameter as JSON array or comma-separated string, and multi-tag individual search'
           },
           timestamp: new Date().toISOString() 
         }), {
@@ -422,28 +425,105 @@ async function searchNodes(request, env, corsHeaders) {
   });
 }
 
-// Smart search function that breaks down queries into smaller tokens until it gets results
-async function smartSearchNodes(request, env, corsHeaders) {
-  const url = new URL(request.url);
-  const originalQuery = url.searchParams.get('q');
-  const type = url.searchParams.get('type');
-  const limit = parseInt(url.searchParams.get('limit') || '50');
-
-  if (!originalQuery) {
-    throw new Error('Search query parameter "q" is required');
+// Multi-tag search function that searches each tag individually and combines results
+async function multiTagSearchArray(tagList, type, limit, env, corsHeaders) {
+  if (!Array.isArray(tagList) || tagList.length === 0) {
+    return {
+      query: tagList,
+      queryParam: 'tags',
+      strategy: 'multi-tag-empty',
+      similarityScore: 0.0,
+      results: []
+    };
   }
+  
+  // If only one tag, use regular smart search
+  if (tagList.length === 1) {
+    return await smartSearchSingle(tagList[0], 'tags', type, limit, env);
+  }
+  
+  // Search each tag individually
+  const tagResults = [];
+  const maxResultsPerTag = Math.max(1, Math.floor(limit / tagList.length));
+  
+  for (let i = 0; i < tagList.length; i++) {
+    const tag = tagList[i];
+    if (!tag || typeof tag !== 'string' || tag.trim().length === 0) {
+      continue; // Skip invalid tags
+    }
+    
+    try {
+      const result = await smartSearchSingle(tag.trim(), 'tags', type, maxResultsPerTag, env);
+      if (result.results && result.results.length > 0) {
+        tagResults.push({
+          tag: tag.trim(),
+          strategy: result.strategy,
+          similarityScore: result.similarityScore,
+          results: result.results
+        });
+      }
+    } catch (error) {
+      // Continue with other tags if one fails
+      console.warn(`Failed to search tag "${tag}":`, error.message);
+    }
+  }
+  
+  // Combine and deduplicate results
+  const combinedResults = [];
+  const seenIds = new Set();
+  
+  // Add results from each tag, prioritizing by tag order and similarity score
+  for (const tagResult of tagResults) {
+    for (const result of tagResult.results) {
+      if (!seenIds.has(result.id)) {
+        seenIds.add(result.id);
+        combinedResults.push({
+          ...result,
+          matchedTag: tagResult.tag,
+          tagStrategy: tagResult.strategy,
+          tagSimilarityScore: tagResult.similarityScore
+        });
+      }
+    }
+  }
+  
+  // Limit final results
+  const finalResults = combinedResults.slice(0, limit);
+  
+  // Calculate overall similarity score
+  const avgSimilarityScore = tagResults.length > 0 
+    ? tagResults.reduce((sum, tr) => sum + tr.similarityScore, 0) / tagResults.length 
+    : 0;
+  
+  return {
+    query: tagList.join(' '),
+    queryParam: 'tags',
+    strategy: 'multi-tag',
+    similarityScore: Math.round(avgSimilarityScore * 100) / 100,
+    tagsSearched: tagList.filter(tag => tag && typeof tag === 'string' && tag.trim().length > 0),
+    tagsMatched: tagResults.map(tr => tr.tag),
+    results: finalResults
+  };
+}
 
+// Legacy multi-tag search function for backward compatibility
+async function multiTagSearch(tags, type, limit, env, corsHeaders) {
+  const tagList = tags.trim().split(/\s+/).filter(tag => tag.length > 0);
+  return await multiTagSearchArray(tagList, type, limit, env, corsHeaders);
+}
+
+// Single search function extracted from smartSearchNodes for reuse
+async function smartSearchSingle(originalQuery, paramType, type, limit, env) {
   // Strategy 1: Try the original query first
   let result = await searchNodesInternal(originalQuery, type, limit, env);
   if (result.results && result.results.length > 0) {
-    return new Response(JSON.stringify({
+    return {
       query: originalQuery,
+      queryParam: paramType,
       strategy: 'original',
       similarityScore: 1.0,
       results: result.results
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    };
   }
 
   // Strategy 2: Break down into individual words and try each
@@ -458,15 +538,14 @@ async function smartSearchNodes(request, env, corsHeaders) {
         const wordScore = 0.8 - (i * 0.1 / words.length);
         const similarityScore = Math.max(0.6, wordScore);
         
-        return new Response(JSON.stringify({
+        return {
           query: originalQuery,
+          queryParam: paramType,
           strategy: 'word-breakdown',
           effectiveQuery: word,
           similarityScore: Math.round(similarityScore * 100) / 100,
           results: result.results
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        };
       }
     }
   }
@@ -484,15 +563,14 @@ async function smartSearchNodes(request, env, corsHeaders) {
           const totalWords = words.length;
           const similarityScore = 0.5 + (wordsKept / totalWords) * 0.3; // 0.5-0.8 range
           
-          return new Response(JSON.stringify({
+          return {
             query: originalQuery,
+            queryParam: paramType,
             strategy: 'word-combination',
             effectiveQuery: combination,
             similarityScore: Math.round(similarityScore * 100) / 100,
             results: result.results
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
+          };
         }
       }
     }
@@ -512,15 +590,14 @@ async function smartSearchNodes(request, env, corsHeaders) {
           const prefixRatio = charKept / totalChars;
           const similarityScore = 0.2 + (prefixRatio * 0.3); // 0.2-0.5 range
           
-          return new Response(JSON.stringify({
+          return {
             query: originalQuery,
+            queryParam: paramType,
             strategy: 'prefix-match',
             effectiveQuery: prefix,
             similarityScore: Math.round(similarityScore * 100) / 100,
             results: result.results
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
+          };
         }
       }
     }
@@ -537,25 +614,70 @@ async function smartSearchNodes(request, env, corsHeaders) {
       const termScore = 0.15 - (i * 0.02);
       const similarityScore = Math.max(0.05, termScore);
       
-      return new Response(JSON.stringify({
+      return {
         query: originalQuery,
+        queryParam: paramType,
         strategy: 'common-terms',
         effectiveQuery: term,
         similarityScore: Math.round(similarityScore * 100) / 100,
         results: result.results
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      };
     }
   }
 
   // If all strategies fail, return empty results
-  return new Response(JSON.stringify({
+  return {
     query: originalQuery,
+    queryParam: paramType,
     strategy: 'none',
     similarityScore: 0.0,
     results: []
-  }), {
+  };
+}
+
+// Smart search function that breaks down queries into smaller tokens until it gets results
+async function smartSearchNodes(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const queryParam = url.searchParams.get('q');
+  const tagsParam = url.searchParams.get('tags');
+  const type = url.searchParams.get('type');
+  const limit = parseInt(url.searchParams.get('limit') || '50');
+
+  // Handle tags parameter - can be JSON array or comma-separated string
+  let tagsList = null;
+  if (tagsParam) {
+    try {
+      // Try to parse as JSON array first
+      tagsList = JSON.parse(tagsParam);
+      if (!Array.isArray(tagsList)) {
+        // If not an array, treat as comma-separated string
+        tagsList = tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      }
+    } catch (error) {
+      // If JSON parsing fails, treat as comma-separated string
+      tagsList = tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    }
+  }
+
+  // Support both 'q' and 'tags' parameters - prefer 'tags' if both are provided
+  const originalQuery = tagsList ? tagsList.join(' ') : queryParam;
+  const paramType = tagsList ? 'tags' : 'q';
+  
+  if (!originalQuery) {
+    throw new Error('Search query parameter "q" or "tags" is required');
+  }
+
+  // If tags parameter is used, route to multi-tag search
+  if (tagsList && tagsList.length > 0) {
+    const result = await multiTagSearchArray(tagsList, type, limit, env, corsHeaders);
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Otherwise use the original single search logic
+  const result = await smartSearchSingle(originalQuery, paramType, type, limit, env);
+  return new Response(JSON.stringify(result), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }

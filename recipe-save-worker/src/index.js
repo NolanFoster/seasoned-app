@@ -2,7 +2,7 @@
 // This worker handles saving recipes to KV storage and synchronizing with the search database
 
 import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
-import { calculateNutritionalFacts } from '../../shared/nutrition-calculator.js';
+import { calculateNutritionalFacts, extractServingsFromYield } from '../../shared/nutrition-calculator.js';
 import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
 
 // Wrapper to automatically add worker context
@@ -1122,8 +1122,8 @@ export class RecipeSaver {
         totalIngredients: recipe.ingredients.length
       });
 
-      // Get servings count (default to 1 if not specified)
-      const servings = parseInt(recipe.servings) || parseInt(recipe.yield) || 1;
+      // Get servings count using robust extraction function
+      const servings = extractServingsFromYield(recipe.servings || recipe.yield || recipe.recipeYield);
 
       // Calculate nutrition
       log('info', 'Calling nutrition calculator', { 

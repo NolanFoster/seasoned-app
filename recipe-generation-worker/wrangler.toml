@@ -1,0 +1,83 @@
+# Recipe Generation Worker Configuration
+name = "recipe-generation-worker"
+main = "src/index.js"
+
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Default configuration
+[vars]
+ENVIRONMENT = "development"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+
+[observability]
+enabled = true
+
+# AI binding for LLaMA model
+[ai]
+binding = "AI"
+
+# Vectorize binding for recipe embeddings
+[[vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors-384"
+
+# Preview environment (for PR previews)
+[env.preview]
+name = "recipe-generation-worker-preview"
+[env.preview.vars]
+ENVIRONMENT = "preview"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+
+[env.preview.observability]
+enabled = true
+
+[[env.preview.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
+
+[[env.preview.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
+# Staging environment
+[env.staging]
+name = "recipe-generation-worker-staging"
+[env.staging.vars]
+ENVIRONMENT = "staging"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+
+[env.staging.observability]
+enabled = true
+
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
+
+[[env.staging.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
+# Production environment
+[env.production]
+name = "recipe-generation-worker"
+[env.production.vars]
+ENVIRONMENT = "production"
+OPIK_API_KEY = "bnqBJrjlbKfk7brgjTB9G6uel"
+
+[env.production.observability]
+enabled = true
+
+[env.production.ai]
+binding = "AI"
+
+[[env.production.vectorize]]
+binding = "RECIPE_VECTORS"
+index_name = "recipe-vectors"
+
+[[env.production.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"

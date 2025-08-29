@@ -4,9 +4,12 @@ import { Env } from '@/types/env';
 
 describe('Root Endpoint', () => {
   const mockEnv: Env = {
-    AUTH_KV: {} as KVNamespace,
-    AUTH_DB: {} as D1Database,
-    ENVIRONMENT: 'preview'
+    OTP_KV: {} as KVNamespace,
+    USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
+    ENVIRONMENT: 'preview',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+    JWT_SECRET: 'test-jwt-secret'
   };
 
   it('should return worker information', async () => {
@@ -24,9 +27,12 @@ describe('Root Endpoint', () => {
 
 describe('404 Handler', () => {
   const mockEnv: Env = {
-    AUTH_KV: {} as KVNamespace,
-    AUTH_DB: {} as D1Database,
-    ENVIRONMENT: 'preview'
+    OTP_KV: {} as KVNamespace,
+    USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
+    ENVIRONMENT: 'preview',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+    JWT_SECRET: 'test-jwt-secret'
   };
 
   it('should return 404 for unknown endpoints', async () => {

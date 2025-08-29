@@ -10,10 +10,8 @@ vi.mock('../../shared/kv-storage.js', () => ({
 }));
 
 vi.mock('../../shared/nutrition-calculator.js', () => ({
-  calculateNutritionalFacts: vi.fn().mockImplementation(async () => ({
-    success: true,
-    nutrition: { calories: 200 }
-  }))
+  calculateNutritionalFacts: vi.fn(),
+  extractServingsFromYield: vi.fn()
 }));
 
 describe('Real Image Processing Implementation', () => {
@@ -21,7 +19,7 @@ describe('Real Image Processing Implementation', () => {
   let mockState;
   let recipeSaver;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Setup fresh mocks
     mockState = {
       id: { toString: () => 'test-do-id' },
@@ -42,6 +40,18 @@ describe('Real Image Processing Implementation', () => {
     };
 
     recipeSaver = new RecipeSaver(mockState, mockEnv);
+    
+    // Setup nutrition calculator mocks
+    const { calculateNutritionalFacts, extractServingsFromYield } = await import('../../shared/nutrition-calculator.js');
+    calculateNutritionalFacts.mockImplementation(async () => ({
+      success: true,
+      nutrition: { calories: 200 }
+    }));
+    extractServingsFromYield.mockImplementation((value) => {
+      if (value === '4') return 4;
+      if (value === '8') return 8;
+      return 1;
+    });
     
     // Reset fetch mock
     global.fetch = vi.fn();

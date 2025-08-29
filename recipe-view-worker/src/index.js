@@ -7,7 +7,7 @@ export default {
     // CORS headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     };
 
@@ -27,6 +27,65 @@ export default {
       });
     }
     
+    // Handle POST /recipe/preview - Preview recipe without saving
+    if (url.pathname === '/recipe/preview' && request.method === 'POST') {
+      try {
+        // Parse the request body
+        const contentType = request.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          return new Response(JSON.stringify({ 
+            error: 'Content-Type must be application/json' 
+          }), {
+            status: 400,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+
+        const requestBody = await request.json();
+        
+        // Extract recipe data - support both direct recipe data and wrapped in 'data' property
+        const recipeData = requestBody && requestBody.data ? requestBody.data : requestBody;
+        
+        // Validate that we have some recipe data
+        if (!recipeData || typeof recipeData !== 'object') {
+          return new Response(JSON.stringify({ 
+            error: 'Invalid recipe data' 
+          }), {
+            status: 400,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+
+        // Generate HTML page from the recipe data
+        const html = generateRecipeHTML(recipeData);
+        
+        return new Response(html, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'text/html;charset=UTF-8'
+          }
+        });
+      } catch (error) {
+        console.error('Error processing recipe preview:', error);
+        return new Response(JSON.stringify({ 
+          error: 'Failed to process recipe data',
+          details: error.message 
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }
+    
     // Match /recipe/:id pattern
     const recipeMatch = url.pathname.match(/^\/recipe\/([^\/]+)$/);
     if (recipeMatch && request.method === 'GET') {
@@ -34,7 +93,7 @@ export default {
       
       try {
         // Fetch recipe data from the recipe save worker
-        const apiUrl = env.RECIPE_SAVE_WORKER_URL || 'https://recipe-save-worker.recipesage2.workers.dev';
+        const apiUrl = env.RECIPE_SAVE_WORKER_URL || 'https://recipe-save-worker.nolanfoster.workers.dev';
         const recipeResponse = await fetch(`${apiUrl}/recipe/get?id=${recipeId}`, {
           headers: {
             'Accept': 'application/json'
@@ -174,6 +233,17 @@ function generateHomePage() {
     </div>
     <div class="example">
       Example: /recipe/abc123def456
+    </div>
+  </div>
+
+  <div class="endpoint">
+    <span class="method" style="background: #27ae60;">POST</span> <span class="path">/recipe/preview</span>
+    <div class="description">
+      Preview a recipe without saving. Send recipe JSON-LD data in the request body.
+    </div>
+    <div class="example">
+      Content-Type: application/json<br>
+      Body: { "name": "Recipe Name", "ingredients": [...], ... }
     </div>
   </div>
   

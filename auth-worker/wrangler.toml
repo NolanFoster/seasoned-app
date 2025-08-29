@@ -2,16 +2,21 @@ name = "auth-worker"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# KV Namespaces
+# KV Namespace for OTP storage
 [[kv_namespaces]]
-binding = "AUTH_KV"
-id = "auth_kv_namespace_id" # Will be replaced with actual ID after creation
+binding = "OTP_KV"
+id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after creation
 
-# D1 Databases
-[[d1_databases]]
-binding = "AUTH_DB"
-database_name = "auth-db"
-database_id = "auth_db_id" # Will be replaced with actual ID after creation
+# AWS SES environment variables
+[vars]
+AWS_REGION = "us-east-2"
+FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+
+# JWT configuration
+# JWT_SECRET must be set as a Cloudflare secret using:
+# wrangler secret put JWT_SECRET
+# This should be a strong, random string of at least 32 characters
 
 # Observability settings
 [observability]
@@ -20,16 +25,10 @@ enabled = true
 # Preview environment (development)
 [env.preview]
 name = "auth-worker-preview"
-vars = { ENVIRONMENT = "preview" }
 
 [[env.preview.kv_namespaces]]
-binding = "AUTH_KV"
-id = "auth_kv_namespace_preview_id" # Will be replaced with actual ID
-
-[[env.preview.d1_databases]]
-binding = "AUTH_DB"
-database_name = "auth-db-preview"
-database_id = "auth_db_preview_id" # Will be replaced with actual ID
+binding = "OTP_KV"
+id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
 
 [env.preview.observability]
 enabled = true
@@ -37,16 +36,15 @@ enabled = true
 # Production environment
 [env.production]
 name = "auth-worker-production"
-vars = { ENVIRONMENT = "production" }
+
+[env.production.vars]
+AWS_REGION = "us-east-2"
+FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 
 [[env.production.kv_namespaces]]
-binding = "AUTH_KV"
-id = "auth_kv_namespace_production_id" # Will be replaced with actual ID
-
-[[env.production.d1_databases]]
-binding = "AUTH_DB"
-database_name = "auth-db-production"
-database_id = "auth_db_production_id" # Will be replaced with actual ID
+binding = "OTP_KV"
+id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
 
 [env.production.observability]
 enabled = true
@@ -54,16 +52,15 @@ enabled = true
 # Staging environment
 [env.staging]
 name = "auth-worker-staging"
-vars = { ENVIRONMENT = "staging" }
+
+[env.staging.vars]
+AWS_REGION = "us-east-2"
+FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 
 [[env.staging.kv_namespaces]]
-binding = "AUTH_KV"
-id = "auth_kv_namespace_staging_id" # Will be replaced with actual ID
-
-[[env.staging.d1_databases]]
-binding = "AUTH_DB"
-database_name = "auth-db-staging"
-database_id = "auth_db_staging_id" # Will be replaced with actual ID
+binding = "OTP_KV"
+id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
 
 [env.staging.observability]
 enabled = true

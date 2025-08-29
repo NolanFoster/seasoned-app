@@ -1,4 +1,8 @@
 
+<!-- Mermaid diagrams are enabled in this README -->
+<!-- Enable Mermaid rendering in GitHub -->
+<!-- GitHub Mermaid Support: This README contains Mermaid diagrams that should render automatically -->
+
 # Seasoned
 
 A modern recipe management application with SQLite backend and image upload support, built with React frontend and Cloudflare Workers backend.
@@ -24,7 +28,22 @@ A modern recipe management application with SQLite backend and image upload supp
 - **Shared Libraries**: Common utilities shared across workers
 - **Deployment**: Cloudflare Workers
 
+> **Note**: This README contains Mermaid diagrams that should render automatically in GitHub. If you're viewing this in a different environment, you may need to use a Mermaid-compatible viewer.
+
+## Authentication System
+
+The Seasoned application uses a modern, secure authentication system built around OTP (One-Time Password) technology. For detailed architecture information, see [auth-worker/ARCHITECTURE.md](auth-worker/ARCHITECTURE.md).
+
+**Key Features:**
+- OTP-based authentication with no password storage
+- Secure integration with User Management Worker
+- Rate limiting and automatic expiration
+- AWS SES email delivery
+- Comprehensive security architecture
+
 ### Workers:
+- **auth-worker**: OTP-based authentication system with user management integration
+- **user-management-worker**: User profile and account management
 - **recipe-scraper**: Scrapes and stores recipe data from URLs
 - **clipper**: Browser extension backend for recipe clipping
 - **recipe-search-db**: Search functionality for recipes
@@ -45,10 +64,12 @@ This project follows a strict testing and staging deployment workflow to ensure 
 
 #### Quick Start
 
-1. Install the pre-commit hook:
+1. **Install the pre-commit hook (REQUIRED):**
    ```bash
    ./.github/hooks/install-hooks.sh
    ```
+   
+   This hook automatically runs tests for all workers and frontend changes, preventing broken code from being committed.
 
 2. Make your changes and commit (tests run automatically)
 
@@ -58,6 +79,8 @@ This project follows a strict testing and staging deployment workflow to ensure 
    ```
 
 4. After staging validation, create a PR to main
+
+**⚠️ Important**: Never skip the pre-commit hook installation - it's your safety net!
 
 For detailed workflow rules, see `.cursorrules` in the project root.
 
@@ -90,6 +113,20 @@ npm run deploy
 #### Recipe Scraper
 ```bash
 cd recipe-scraper
+npm install
+npm run deploy
+```
+
+#### Auth Worker
+```bash
+cd auth-worker
+npm install
+npm run deploy
+```
+
+#### User Management Worker
+```bash
+cd user-management-worker
 npm install
 npm run deploy
 ```

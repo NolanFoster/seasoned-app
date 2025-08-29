@@ -101,22 +101,51 @@
           min-width: 280px !important;
           max-width: 280px !important;
           scroll-snap-align: start !important;
+          
+          /* Ensure consistent edge spacing */
+          &:first-child {
+            margin-left: 10px !important;
+          }
+          
+          &:last-child {
+            margin-right: 10px !important;
+          }
         }
       }
       
       @media (max-width: 640px) {
+        padding: 0 8px 8px 8px !important;
+        
         .loading-card {
           flex: 0 0 260px !important;
           min-width: 260px !important;
           max-width: 260px !important;
+          
+          &:first-child {
+            margin-left: 8px !important;
+          }
+          
+          &:last-child {
+            margin-right: 8px !important;
+          }
         }
       }
       
       @media (max-width: 480px) {
+        padding: 0 6px 6px 6px !important;
+        
         .loading-card {
           flex: 0 0 240px !important;
           min-width: 240px !important;
           max-width: 240px !important;
+          
+          &:first-child {
+            margin-left: 6px !important;
+          }
+          
+          &:last-child {
+            margin-right: 6px !important;
+          }
         }
       }
     }
@@ -151,22 +180,51 @@
         min-width: 280px !important;
         max-width: 280px !important;
         scroll-snap-align: start !important;
+        
+        /* Ensure consistent edge spacing */
+        &:first-child {
+          margin-left: 10px !important;
+        }
+        
+        &:last-child {
+          margin-right: 10px !important;
+        }
       }
     }
     
     @media (max-width: 640px) {
+      padding: 0 8px 8px 8px !important;
+      
       .loading-card {
         flex: 0 0 260px !important;
         min-width: 260px !important;
         max-width: 260px !important;
+        
+        &:first-child {
+          margin-left: 8px !important;
+        }
+        
+        &:last-child {
+          margin-right: 8px !important;
+        }
       }
     }
     
     @media (max-width: 480px) {
+      padding: 0 6px 6px 6px !important;
+      
       .loading-card {
         flex: 0 0 240px !important;
         min-width: 240px !important;
         max-width: 240px !important;
+        
+        &:first-child {
+          margin-left: 6px !important;
+        }
+        
+        &:last-child {
+          margin-right: 6px !important;
+        }
       }
     }
   }

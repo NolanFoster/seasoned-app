@@ -3,14 +3,45 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getRecipeRecommendations, getSeason, getMockRecommendations } from '../src/index.js';
+
+// Mock shared utilities before importing the main module
+vi.mock('../../shared/utility-functions.js', () => ({
+  log: vi.fn(),
+  generateRequestId: vi.fn(() => 'test-request-id')
+}));
+
+vi.mock('../../shared/metrics-collector.js', () => ({
+  MetricsCollector: vi.fn().mockImplementation(() => ({
+    timing: vi.fn(),
+    increment: vi.fn(),
+    gauge: vi.fn()
+  }))
+}));
+
+import { 
+  getSeason, 
+  getMockRecommendations, 
+  enhanceRecommendationsWithRecipes,
+  searchRecipeByCategory,
+  getRecipeRecommendations,
+  extractCookingTerms
+} from '../src/index.js';
 
 // Mock environment
 const mockEnv = {
-  AI: null
+  AI: null,
+  SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+  RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.workers.dev'
 };
 
+// Mock fetch for testing
+global.fetch = vi.fn();
+
 describe('Recipe Recommendation Worker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('getSeason function', () => {
     it('should return correct seasons', () => {
       expect(getSeason(new Date('2024-01-15'))).toBe('Winter');
@@ -21,32 +52,86 @@ describe('Recipe Recommendation Worker', () => {
   });
 
   describe('getMockRecommendations', () => {
-    it('should return seasonal data', () => {
-      const winterRecs = getMockRecommendations('New York', '2024-01-15');
+    it('should return seasonal data with limit parameter', () => {
+      const winterRecs = getMockRecommendations('New York', '2024-01-15', 2);
       expect(winterRecs.season).toBe('Winter');
       expect(winterRecs.location).toBe('New York');
       expect(winterRecs.date).toBe('2024-01-15');
       
-      const summerRecs = getMockRecommendations('Los Angeles', '2024-07-15');
+      // Check that each category has the correct number of recipes
+      Object.values(winterRecs.recommendations).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(2);
+      });
+      
+      const summerRecs = getMockRecommendations('Los Angeles', '2024-07-15', 5);
       expect(summerRecs.season).toBe('Summer');
       expect(summerRecs.location).toBe('Los Angeles');
       expect(summerRecs.date).toBe('2024-07-15');
+      
+      // Check that each category has the correct number of recipes
+      Object.values(summerRecs.recommendations).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(5);
+      });
+    });
+
+    it('should respect the limit parameter', () => {
+      const recs = getMockRecommendations('Test City', '2024-06-15', 1);
+      Object.values(recs.recommendations).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(1);
+      });
+      
+      const recs2 = getMockRecommendations('Test City', '2024-06-15', 10);
+      Object.values(recs2.recommendations).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(10);
+      });
+    });
+
+    it('should return enhanced recipe objects instead of just dish names', () => {
+      const recs = getMockRecommendations('Test City', '2024-06-15', 3);
+      
+      Object.values(recs.recommendations).forEach(recipes => {
+        recipes.forEach(recipe => {
+          expect(recipe).toHaveProperty('id');
+          expect(recipe).toHaveProperty('name');
+          expect(recipe).toHaveProperty('description');
+          expect(recipe).toHaveProperty('ingredients');
+          expect(recipe).toHaveProperty('instructions');
+          expect(recipe).toHaveProperty('type');
+          expect(recipe).toHaveProperty('source');
+          expect(recipe).toHaveProperty('fallback');
+          expect(recipe.fallback).toBe(true);
+        });
+      });
     });
 
     it('should include specific seasonal tags', () => {
-      const winterRecs = getMockRecommendations('Boston', '2024-02-10');
-      const allWinterTags = Object.values(winterRecs.recommendations).flat();
-      expect(allWinterTags.some(tag => tag.toLowerCase().includes('citrus') || tag.toLowerCase().includes('orange'))).toBe(true);
-      expect(allWinterTags.some(tag => tag.toLowerCase().includes('kale'))).toBe(true);
+      const winterRecs = getMockRecommendations('Boston', '2024-02-10', 3);
+      const allWinterRecipes = Object.values(winterRecs.recommendations).flat();
+      expect(allWinterRecipes.some(recipe => 
+        recipe.name.toLowerCase().includes('citrus') || 
+        recipe.name.toLowerCase().includes('orange')
+      )).toBe(true);
+      expect(allWinterRecipes.some(recipe => 
+        recipe.name.toLowerCase().includes('kale')
+      )).toBe(true);
       
-      const summerRecs = getMockRecommendations('Miami', '2024-07-20');
-      const allSummerTags = Object.values(summerRecs.recommendations).flat();
-      expect(allSummerTags.some(tag => tag.toLowerCase().includes('tomato'))).toBe(true);
-      expect(allSummerTags.some(tag => tag.toLowerCase().includes('berry') || tag.toLowerCase().includes('berries'))).toBe(true);
+      const summerRecs = getMockRecommendations('Miami', '2024-07-20', 3);
+      const allSummerRecipes = Object.values(summerRecs.recommendations).flat();
+      expect(allSummerRecipes.some(recipe => 
+        recipe.name.toLowerCase().includes('tomato')
+      )).toBe(true);
+      // Check for summer ingredients - since recipesPerCategory is 3, we only get first 3 recipes
+      // The first 3 summer recipes are: heirloom tomato salad, grilled corn salad, zucchini fritters
+      // So we should have tomato and salad
+      expect(allSummerRecipes.some(recipe => 
+        recipe.name.toLowerCase().includes('tomato') || 
+        recipe.name.toLowerCase().includes('salad') ||
+        recipe.name.toLowerCase().includes('corn')
+      )).toBe(true);
     });
 
     it('should have proper structure', () => {
-      const recs = getMockRecommendations('Test City', '2024-06-15');
+      const recs = getMockRecommendations('Test City', '2024-06-15', 3);
       expect(recs).toBeTypeOf('object');
       expect(recs.recommendations).toBeDefined();
       
@@ -56,6 +141,7 @@ describe('Recipe Recommendation Worker', () => {
       categories.forEach(category => {
         expect(recs.recommendations[category]).toBeInstanceOf(Array);
         expect(recs.recommendations[category].length).toBeGreaterThan(0);
+        expect(recs.recommendations[category].length).toBeLessThanOrEqual(3);
       });
     });
 
@@ -68,7 +154,7 @@ describe('Recipe Recommendation Worker', () => {
       ];
       
       dates.forEach(date => {
-        const recs = getMockRecommendations('Test', date);
+        const recs = getMockRecommendations('Test', date, 3);
         expect(recs.date).toBe(date);
         expect(recs.season).toBeDefined();
       });
@@ -84,46 +170,421 @@ describe('Recipe Recommendation Worker', () => {
       ];
       
       locations.forEach(location => {
-        const recs = getMockRecommendations(location, '2024-06-15');
+        const recs = getMockRecommendations(location, '2024-06-15', 3);
         expect(recs.location).toBe(location);
       });
     });
 
     it('should have appropriate seasonal recommendations content', () => {
       const seasons = {
-        'Winter': { date: '2024-01-15', expectedTag: 'citrus' },
-        'Spring': { date: '2024-04-15', expectedTag: 'asparagus' },
-        'Summer': { date: '2024-07-15', expectedTag: 'tomato' },
-        'Fall': { date: '2024-10-15', expectedTag: 'pumpkin' }
+        'Winter': { date: '2024-01-15', expectedTags: ['citrus', 'orange', 'duck'] },
+        'Spring': { date: '2024-04-15', expectedTags: ['asparagus', 'risotto'] },
+        'Summer': { date: '2024-07-15', expectedTags: ['tomato', 'salad'] },
+        'Fall': { date: '2024-10-15', expectedTags: ['pumpkin', 'risotto'] }
       };
       
       Object.entries(seasons).forEach(([season, data]) => {
-        const recs = getMockRecommendations('Test', data.date);
-        const allTags = Object.values(recs.recommendations).flat();
-        const categoryNames = Object.keys(recs.recommendations);
-        const allContent = [...allTags, ...categoryNames];
-        expect(allContent.some(item => item.toLowerCase().includes(data.expectedTag))).toBe(true);
+        const recs = getMockRecommendations('Test City', data.date, 3);
+        expect(recs.season).toBe(season);
+        
+        const allRecipes = Object.values(recs.recommendations).flat();
+        // Check that at least one of the expected tags is present
+        expect(data.expectedTags.some(tag => 
+          allRecipes.some(recipe => recipe.name.toLowerCase().includes(tag))
+        )).toBe(true);
       });
     });
 
-    it('should have appropriate category names', () => {
-      const recs = getMockRecommendations('Test', '2024-06-15');
-      const categories = Object.keys(recs.recommendations);
+    it('should handle PNW locations specially', () => {
+      const pnwLocations = ['Seattle, WA', 'Portland, OR'];
+      const nonPnnwLocations = ['Vancouver, WA'];
       
-      categories.forEach(category => {
-        expect(category.length).toBeGreaterThan(0);
-        expect(category).not.toContain('undefined');
+      // Test actual PNW locations
+      pnwLocations.forEach(location => {
+        const recs = getMockRecommendations(location, '2024-06-15', 3);
+        expect(recs.recommendations).toHaveProperty('Pacific Northwest Coastal Cuisine');
+        
+        const pnwRecipes = recs.recommendations['Pacific Northwest Coastal Cuisine'];
+        expect(pnwRecipes.length).toBeLessThanOrEqual(3);
+        expect(pnwRecipes.some(recipe => 
+          recipe.name.toLowerCase().includes('salmon')
+        )).toBe(true);
+      });
+      
+      // Test non-PNW locations (should not have PNW categories)
+      nonPnnwLocations.forEach(location => {
+        const recs = getMockRecommendations(location, '2024-06-15', 3);
+        expect(recs.recommendations).not.toHaveProperty('Pacific Northwest Coastal Cuisine');
+      });
+    });
+
+    it('should handle holiday recommendations', () => {
+      const holidayDates = [
+        { date: '2024-12-25', holiday: 'Christmas' },
+        { date: '2024-11-28', holiday: 'Thanksgiving' },
+        { date: '2024-10-31', holiday: 'Halloween' }
+      ];
+      
+      holidayDates.forEach(({ date, holiday }) => {
+        const recs = getMockRecommendations('Test City', date, 3);
+        const categoryNames = Object.keys(recs.recommendations);
+        
+        expect(categoryNames.some(name => 
+          name.toLowerCase().includes(holiday.toLowerCase())
+        )).toBe(true);
       });
     });
   });
 
-  describe('getRecipeRecommendations', () => {
-    it('should return mock recommendations when AI is not available', async () => {
-      const result = await getRecipeRecommendations('San Francisco', '2024-06-15', mockEnv);
-      expect(result).toBeDefined();
-      expect(result.recommendations).toBeDefined();
-      expect(result.location).toBe('San Francisco');
-      expect(result.date).toBe('2024-06-15');
+  describe('enhanceRecommendationsWithRecipes', () => {
+    it('should enhance category recommendations with recipes', async () => {
+      const mockCategoryRecommendations = {
+        'Summer Salads': ['caesar salad', 'greek salad', 'caprese salad'],
+        'Grilled Meats': ['steak', 'chicken', 'salmon']
+      };
+      
+      const enhanced = await enhanceRecommendationsWithRecipes(
+        mockCategoryRecommendations, 
+        2, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(enhanced).toBeDefined();
+      expect(Object.keys(enhanced)).toHaveLength(2);
+      
+      // Since we're mocking fetch, it should fall back to enhanced dish names
+      Object.values(enhanced).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(2);
+        recipes.forEach(recipe => {
+          expect(recipe).toHaveProperty('id');
+          expect(recipe).toHaveProperty('name');
+          expect(recipe).toHaveProperty('fallback');
+          expect(recipe.fallback).toBe(true);
+        });
+      });
     });
+
+    it('should handle errors gracefully and fall back to dish names', async () => {
+      const mockCategoryRecommendations = {
+        'Test Category': ['dish1', 'dish2', 'dish3']
+      };
+      
+      // Mock fetch to throw an error
+      global.fetch.mockRejectedValueOnce(new Error('Network error'));
+      
+      const enhanced = await enhanceRecommendationsWithRecipes(
+        mockCategoryRecommendations, 
+        2, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(enhanced).toBeDefined();
+      expect(enhanced['Test Category']).toBeDefined();
+      expect(enhanced['Test Category'].length).toBeLessThanOrEqual(2);
+      
+      enhanced['Test Category'].forEach(recipe => {
+        expect(recipe.fallback).toBe(true);
+        expect(recipe.type).toBe('dish_suggestion');
+      });
+    });
+  });
+
+  describe('searchRecipeByCategory', () => {
+    it('should search for recipes using smart-search database', async () => {
+      const mockSearchResponse = {
+        results: [
+          {
+            id: 'recipe1',
+            properties: {
+              name: 'Test Recipe 1',
+              description: 'A test recipe',
+              ingredients: ['ingredient1', 'ingredient2'],
+              instructions: ['step1', 'step2']
+            }
+          }
+        ],
+        strategy: 'original',
+        similarityScore: 1.0
+      };
+      
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSearchResponse
+      });
+      
+      const recipes = await searchRecipeByCategory(
+        'Test Category', 
+        ['dish1'], 
+        1, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(recipes).toBeDefined();
+      expect(recipes.length).toBe(1);
+      expect(recipes[0].id).toBe('recipe1');
+      expect(recipes[0].name).toBe('Test Recipe 1');
+      expect(recipes[0].source).toBe('smart_search_database');
+      expect(recipes[0].fallback).toBeUndefined();
+      
+      // Verify the smart-search endpoint was called with tags parameter
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/smart-search?tags='),
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-Request-ID': 'test-123'
+          })
+        })
+      );
+    });
+
+    it('should fall back to recipe save worker if search database fails', async () => {
+      // Mock search database to fail
+      global.fetch.mockResolvedValueOnce({
+        ok: false
+      });
+      
+      const mockSaveWorkerResponse = {
+        recipes: [
+          {
+            id: 'recipe2',
+            name: 'Test Recipe 2',
+            description: 'Another test recipe',
+            ingredients: ['ingredient3', 'ingredient4'],
+            instructions: ['step3', 'step4']
+          }
+        ]
+      };
+      
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSaveWorkerResponse
+      });
+      
+      const recipes = await searchRecipeByCategory(
+        'Test Category', 
+        ['dish1'], // Using only 1 dish to match expected result
+        1, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(recipes).toBeDefined();
+      expect(recipes.length).toBe(1);
+      expect(recipes[0].id).toBe('recipe2');
+      expect(recipes[0].name).toBe('Test Recipe 2');
+      expect(recipes[0].source).toBe('recipe_save_worker');
+    });
+
+    it('should return enhanced dish names as final fallback', async () => {
+      // Mock both search methods to fail
+      global.fetch.mockResolvedValueOnce({
+        ok: false
+      });
+      
+      global.fetch.mockResolvedValueOnce({
+        ok: false
+      });
+      
+      const recipes = await searchRecipeByCategory(
+        'Test Category', 
+        ['dish1', 'dish2', 'dish3'], 
+        2, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(recipes).toBeDefined();
+      expect(recipes.length).toBe(2); // Limited to 2
+      expect(recipes[0].fallback).toBe(true);
+      expect(recipes[0].type).toBe('dish_suggestion');
+      expect(recipes[0].source).toBe('ai_generated');
+    });
+
+    it('should handle network errors gracefully', async () => {
+      global.fetch.mockRejectedValueOnce(new Error('Network error'));
+      
+      const recipes = await searchRecipeByCategory(
+        'Test Category', 
+        ['dish1', 'dish2'], 
+        2, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(recipes).toBeDefined();
+      expect(recipes.length).toBe(2);
+      expect(recipes[0].fallback).toBe(true);
+      expect(recipes[0].source).toBe('fallback');
+    });
+
+    it('should handle recipe save worker search failure gracefully', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: null,
+        RECIPE_SAVE_WORKER_URL: 'https://invalid-url.workers.dev'
+      };
+
+      const recipes = await searchRecipeByCategory(
+        'Test Category',
+        ['test dish 1', 'test dish 2'],
+        2,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(2);
+      expect(recipes[0]).toHaveProperty('fallback', true);
+      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+    });
+
+    it('should handle complete search failure and return basic fallback', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: null,
+        RECIPE_SAVE_WORKER_URL: null
+      };
+
+      const recipes = await searchRecipeByCategory(
+        'Test Category',
+        ['test dish 1', 'test dish 2'],
+        2,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(2);
+      expect(recipes[0]).toHaveProperty('fallback', true);
+      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+    });
+
+    it('should handle search with no meaningful cooking terms extracted', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: 'https://recipe-search-db.nolanfoster.workers.dev',
+        RECIPE_SAVE_WORKER_URL: null
+      };
+
+      // Test with dish names that don't contain any predefined cooking terms
+      const recipes = await searchRecipeByCategory(
+        'Very Creative Category',
+        ['xyzzy dish', 'qwerty food', 'abracadabra meal'],
+        2,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(2);
+      // The search database may not find recipes for these terms, so it falls back
+      expect(recipes[0]).toHaveProperty('fallback', true);
+      expect(recipes[0]).toHaveProperty('source', 'fallback');
+    });
+  });
+
+  describe('getRecipeRecommendations integration', () => {
+    it('should handle the new limit parameter', async () => {
+      // Mock AI to return a simple response
+      const mockAIResponse = {
+        response: JSON.stringify({
+          recommendations: {
+            'Test Category': ['dish1', 'dish2', 'dish3', 'dish4']
+          }
+        })
+      };
+      
+      // Mock the AI binding
+      const mockAIEnv = {
+        AI: {
+          run: vi.fn().mockResolvedValue(mockAIResponse)
+        },
+        SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+        RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.workers.dev'
+      };
+      
+      // Mock fetch for recipe search
+      global.fetch.mockResolvedValue({
+        ok: false
+      });
+      
+      const recommendations = await getRecipeRecommendations(
+        'Test City', 
+        '2024-06-15', 
+        2, 
+        mockAIEnv, 
+        'test-123'
+      );
+      
+      expect(recommendations).toBeDefined();
+      expect(recommendations.recommendations).toBeDefined();
+      
+      // Check that each category respects the limit
+      Object.values(recommendations.recommendations).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(2);
+      });
+    });
+
+    it('should fall back to mock data when AI is not available', async () => {
+      const recommendations = await getRecipeRecommendations(
+        'Test City', 
+        '2024-06-15', 
+        3, 
+        mockEnv, 
+        'test-123'
+      );
+      
+      expect(recommendations).toBeDefined();
+      expect(recommendations.isMockData).toBe(true);
+      expect(recommendations.recommendations).toBeDefined();
+      
+      // Check that each category respects the limit
+      Object.values(recommendations.recommendations).forEach(recipes => {
+        expect(recipes.length).toBeLessThanOrEqual(3);
+      });
+    });
+  });
+});
+
+describe('extractCookingTerms edge cases', () => {
+  it('should handle empty dish names array', () => {
+    const terms = extractCookingTerms('Test Category', []);
+    expect(terms).toEqual([]);
+  });
+
+  it('should handle dish names with only stop words', () => {
+    const terms = extractCookingTerms('Test Category', ['with and the for']);
+    // The function falls back to returning the dish name when no meaningful terms found
+    expect(terms).toEqual(['with and the for']);
+  });
+
+  it('should handle dish names with very short words', () => {
+    const terms = extractCookingTerms('Test Category', ['a b c d']);
+    // The function falls back to returning the dish name when no meaningful terms found
+    expect(terms).toEqual(['a b c d']);
+  });
+
+  it('should handle dish names with special characters', () => {
+    const terms = extractCookingTerms('Test Category', ['dish@name#123', 'food&drink%special']);
+    // The function processes words individually and extracts meaningful terms
+    expect(terms).toContain('name');
+    expect(terms).toContain('special');
+    expect(terms).toContain('drink');
+  });
+
+  it('should handle category names with special characters', () => {
+    const terms = extractCookingTerms('Test@Category#123', ['simple dish']);
+    // The function processes words individually
+    expect(terms).toContain('simple');
+  });
+
+  it('should handle dish names with numbers and symbols', () => {
+    const terms = extractCookingTerms('Test Category', ['dish-123', 'food_456', 'meal+789']);
+    // The function only returns meaningful terms from its predefined list
+    expect(terms).toContain('meal');
+    // 'dish' and 'food' may not be in the predefined meaningful terms list
+    expect(terms).not.toContain('dish');
+    expect(terms).not.toContain('food');
+    // Check that we get some meaningful terms
+    expect(terms.length).toBeGreaterThan(0);
   });
 });

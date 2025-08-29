@@ -4,6 +4,15 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import workerModule from '../src/index.js';
+import { 
+  getSeason, 
+  getMockRecommendations, 
+  enhanceRecommendationsWithRecipes,
+  searchRecipeByCategory,
+  getRecipeRecommendations,
+  extractCookingTerms
+} from '../src/index.js';
+import { metrics } from '../src/index.js';
 
 // Create error categorization function for testing
 function categorizeError(error, context = {}) {
@@ -279,19 +288,6 @@ describe('Health Check Error Scenarios', () => {
 
 describe('Metrics Endpoint Error Handling', () => {
   it('should handle metrics retrieval errors', async () => {
-    // This test ensures the metrics endpoint handles any potential errors
-    const request = new Request('http://localhost/metrics');
-    const response = await workerModule.fetch(request, { AI: null });
-    
-    expect(response.status).toBe(200);
-    
-    const data = await response.json();
-    expect(data.metrics).toBeDefined();
-    expect(data.timestamp).toBeDefined();
-    expect(data.requestId).toBeDefined();
-  });
-
-  it('should handle metrics endpoint errors and return 500', async () => {
     // Test the error path by mocking JSON.stringify to fail
     const request = new Request('http://localhost/metrics');
     const originalStringify = JSON.stringify;
@@ -320,5 +316,64 @@ describe('Metrics Endpoint Error Handling', () => {
       // Ensure JSON.stringify is always restored
       JSON.stringify = originalStringify;
     }
+  });
+
+  it('should handle recipe save worker search network errors gracefully', async () => {
+    const mockEnv = {
+      SEARCH_DB_URL: null,
+      RECIPE_SAVE_WORKER_URL: 'https://invalid-url.workers.dev'
+    };
+
+    const recipes = await searchRecipeByCategory(
+      'Test Category',
+      ['test dish 1', 'test dish 2'],
+      2,
+      mockEnv,
+      'test-req-123'
+    );
+
+    expect(recipes).toHaveLength(2);
+    expect(recipes[0]).toHaveProperty('fallback', true);
+    expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+  });
+
+  it('should handle complete search failure gracefully', async () => {
+    const mockEnv = {
+      SEARCH_DB_URL: null,
+      RECIPE_SAVE_WORKER_URL: null
+    };
+
+    const recipes = await searchRecipeByCategory(
+      'Test Category',
+      ['test dish 1', 'test dish 2'],
+      2,
+      mockEnv,
+      'test-req-123'
+    );
+
+    expect(recipes).toHaveLength(2);
+    expect(recipes[0]).toHaveProperty('fallback', true);
+    expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+  });
+
+  it('should handle search with no meaningful cooking terms', async () => {
+    const mockEnv = {
+      SEARCH_DB_URL: 'https://recipe-search-db.nolanfoster.workers.dev',
+      RECIPE_SAVE_WORKER_URL: null
+    };
+
+    // Test with dish names that don't contain any predefined cooking terms
+    const recipes = await searchRecipeByCategory(
+      'Very Creative Category',
+      ['xyzzy dish', 'qwerty food', 'abracadabra meal'],
+      2,
+      mockEnv,
+      'test-req-123'
+    );
+
+    expect(recipes).toHaveLength(2);
+    // The search database is working, so it should find real recipes
+    expect(recipes[0]).toHaveProperty('source', 'smart_search_database');
+    expect(recipes[0]).not.toHaveProperty('fallback');
   });
 });

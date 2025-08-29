@@ -1,17 +1,32 @@
 #!/bin/bash
 
-# Pre-commit hook to ensure tests pass before committing
+# Pre-commit hook to ensure tests pass and code is properly linted before committing
 # To use this hook, copy it to .git/hooks/pre-commit and make it executable
 
-echo "Running pre-commit tests..."
+echo "Running pre-commit checks..."
 
 # Check if we're in the frontend directory or have frontend changes
 if git diff --cached --name-only | grep -q "^frontend/"; then
-    echo "Frontend changes detected. Running frontend tests..."
+    echo "Frontend changes detected. Running linting and tests..."
     cd frontend
     if [ -f "package.json" ]; then
+        # Run linting first
+        if npm run | grep -q " lint"; then
+            echo "🔍 Running frontend linting..."
+            npm run lint
+            FRONTEND_LINT_RESULT=$?
+            if [ $FRONTEND_LINT_RESULT -ne 0 ]; then
+                echo "❌ Frontend linting failed! Please fix linting issues before committing."
+                exit 1
+            fi
+            echo "✅ Frontend linting passed!"
+        else
+            echo "⚠️  No lint script found in frontend/package.json"
+        fi
+        
         # Check if test script exists
         if npm run | grep -q " test"; then
+            echo "🧪 Running frontend tests..."
             npm test
             FRONTEND_TEST_RESULT=$?
             if [ $FRONTEND_TEST_RESULT -ne 0 ]; then
@@ -26,14 +41,29 @@ if git diff --cached --name-only | grep -q "^frontend/"; then
     cd ..
 fi
 
-# Check if we have worker changes
-for worker_dir in recipe-save-worker recipe-search-db recipe-scraper clipper; do
+# Check if we have worker changes - Updated to cover all workers
+for worker_dir in auth-worker recipe-embedding-worker recipe-generation-worker recipe-recommendation-worker user-management-worker recipe-view-worker recipe-save-worker recipe-search-db recipe-scraper clipper crawler; do
     if git diff --cached --name-only | grep -q "^$worker_dir/"; then
-        echo "$worker_dir changes detected. Running tests..."
+        echo "$worker_dir changes detected. Running linting and tests..."
         cd "$worker_dir"
         if [ -f "package.json" ]; then
+            # Run linting first
+            if npm run | grep -q " lint"; then
+                echo "🔍 Running $worker_dir linting..."
+                npm run lint
+                WORKER_LINT_RESULT=$?
+                if [ $WORKER_LINT_RESULT -ne 0 ]; then
+                    echo "❌ $worker_dir linting failed! Please fix linting issues before committing."
+                    exit 1
+                fi
+                echo "✅ $worker_dir linting passed!"
+            else
+                echo "⚠️  No lint script found in $worker_dir/package.json"
+            fi
+            
             # Check if test script exists
             if npm run | grep -q " test"; then
+                echo "🧪 Running $worker_dir tests..."
                 npm test
                 WORKER_TEST_RESULT=$?
                 if [ $WORKER_TEST_RESULT -ne 0 ]; then
@@ -49,7 +79,43 @@ for worker_dir in recipe-save-worker recipe-search-db recipe-scraper clipper; do
     fi
 done
 
-echo "✅ All tests passed! Proceeding with commit..."
+# Check for shared directory changes (shared utilities used by workers)
+if git diff --cached --name-only | grep -q "^shared/"; then
+    echo "Shared utilities changes detected. Running linting and tests..."
+    cd shared
+    if [ -f "package.json" ]; then
+        # Run linting first
+        if npm run | grep -q " lint"; then
+            echo "🔍 Running shared utilities linting..."
+            npm run lint
+            SHARED_LINT_RESULT=$?
+            if [ $SHARED_LINT_RESULT -ne 0 ]; then
+                echo "❌ Shared utilities linting failed! Please fix linting issues before committing."
+                exit 1
+            fi
+            echo "✅ Shared utilities linting passed!"
+        else
+            echo "⚠️  No lint script found in shared/package.json"
+        fi
+        
+        # Check if test script exists
+        if npm run | grep -q " test"; then
+            echo "🧪 Running shared utilities tests..."
+            npm test
+            SHARED_TEST_RESULT=$?
+            if [ $SHARED_TEST_RESULT -ne 0 ]; then
+                echo "❌ Shared utilities tests failed! Commit aborted."
+                exit 1
+            fi
+            echo "✅ Shared utilities tests passed!"
+        else
+            echo "⚠️  No test script found in shared/package.json"
+        fi
+    fi
+    cd ..
+fi
+
+echo "✅ All linting and tests passed! Proceeding with commit..."
 echo "📝 Remember to push to a feature branch and then merge to staging!"
 
 exit 0

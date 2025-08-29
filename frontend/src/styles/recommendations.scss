@@ -38,6 +38,53 @@
       @media (max-width: 768px) {
         grid-template-columns: 1fr;
         gap: 20px;
+        /* Ensure consistent mobile spacing for carousel layout */
+        &.carousel-layout {
+          padding: 0 10px 10px 10px !important;
+          
+          .recipe-card {
+            &:first-child {
+              margin-left: 10px !important;
+            }
+            
+            &:last-child {
+              margin-right: 10px !important;
+            }
+          }
+        }
+        
+        /* Additional mobile breakpoints for consistent spacing */
+        @media (max-width: 640px) {
+          &.carousel-layout {
+            padding: 0 8px 8px 8px !important;
+            
+            .recipe-card {
+              &:first-child {
+                margin-left: 8px !important;
+              }
+              
+              &:last-child {
+                margin-right: 8px !important;
+              }
+            }
+          }
+        }
+        
+        @media (max-width: 480px) {
+          &.carousel-layout {
+            padding: 0 6px 6px 6px !important;
+            
+            .recipe-card {
+              &:first-child {
+                margin-left: 6px !important;
+              }
+              
+              &:last-child {
+                margin-right: 6px !important;
+              }
+            }
+          }
+        }
       }
       
       // Limit to 3 cards

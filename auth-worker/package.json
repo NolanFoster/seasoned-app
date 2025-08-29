@@ -1,7 +1,7 @@
 {
   "name": "auth-worker",
   "version": "1.0.0",
-  "description": "Authentication worker for user management with KV store and D1 database",
+  "description": "Authentication worker for OTP-based authentication with KV store",
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
@@ -11,21 +11,27 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "coverage": "vitest run --coverage",
+    "test:email": "node test-email.js",
+    "test:deployed": "node run-tests.js",
+    "test:all-envs": "node run-tests.js --all",
+    "deploy:preview": "wrangler deploy --env preview",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "deploy:test:preview": "./deploy-and-test.sh --env preview",
+    "deploy:test:staging": "./deploy-and-test.sh --env staging",
+    "deploy:test:production": "./deploy-and-test.sh --env production",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "tail": "wrangler tail",
     "tail:preview": "wrangler tail --env preview",
     "tail:staging": "wrangler tail --env staging",
-    "tail:production": "wrangler tail --env production",
-    "deploy:preview": "wrangler deploy --env preview",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production"
+    "tail:production": "wrangler tail --env production"
   },
   "keywords": [
     "cloudflare-workers",
     "authentication",
-    "kv",
-    "d1"
+    "otp",
+    "kv"
   ],
   "author": "",
   "license": "ISC",
@@ -42,6 +48,9 @@
     "wrangler": "^4.32.0"
   },
   "dependencies": {
-    "hono": "^4.5.0"
+    "@aws-sdk/client-ses": "^3.873.0",
+    "@aws-sdk/credential-providers": "^3.873.0",
+    "hono": "^4.5.0",
+    "jose": "^5.2.3"
   }
 }

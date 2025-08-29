@@ -20,11 +20,14 @@ describe('Error Handler', () => {
       }, 500);
     });
 
-    const mockEnv: Env = {
-      AUTH_KV: {} as KVNamespace,
-      AUTH_DB: {} as D1Database,
-      ENVIRONMENT: 'preview'
-    };
+      const mockEnv: Env = {
+    OTP_KV: {} as KVNamespace,
+    USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
+    ENVIRONMENT: 'preview',
+    AWS_ACCESS_KEY_ID: 'test-access-key',
+    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+    JWT_SECRET: 'test-jwt-secret'
+  };
 
     // Spy on console.error
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

@@ -131,30 +131,312 @@ function App() {
       <div className="instruction-with-timers">
         <div className="instruction-text">{text}</div>
         <div className="timer-buttons-container">
-          {timers.map((timer, index) => (
-            <button 
-              key={`timer-${timer.index}`}
-              className="timer-button-inline"
-              title={`Set timer for ${timer.text}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // Timer functionality will be added later
-              }}
-            >
-              <img 
-                src="/timer.svg" 
-                alt="Timer" 
-                className="timer-icon-inline"
-              />
-              <span className="timer-text">Set timer for {timer.text}</span>
-            </button>
-          ))}
+                      {timers.map((timer, index) => {
+              const timerId = `timer-${timer.index}-${index}`;
+              const activeTimer = activeTimers.get(timerId);
+              const isFloatingActive = floatingTimer && floatingTimer.id === timerId;
+              
+              // Show disabled button when timer is active (either inline or floating)
+              return (
+                <button 
+                  key={timerId}
+                  className={`timer-button-inline ${activeTimer ? 'timer-button-disabled' : ''}`}
+                  title={activeTimer ? `Timer active: ${activeTimer.timeText}` : `Set timer for ${timer.text}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!activeTimer) {
+                      startNewTimer(timerId, timer.text);
+                    }
+                  }}
+                  disabled={activeTimer}
+                >
+                  <img 
+                    src="/timer.svg" 
+                    alt="Timer" 
+                    className="timer-icon-inline"
+                  />
+                  <span className="timer-text">
+                    {activeTimer ? `Timer: ${formatTime(activeTimer.remainingSeconds)}` : `Set timer for ${timer.text}`}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       </div>
     );
   };
-  
+
+  // Timer utility functions
+  const parseTimeString = (timeString) => {
+    // Handle ranges like "5-10 minutes" by using the lower value
+    const rangeMatch = timeString.match(/(\d+)\s*[-–—]\s*(\d+)/);
+    if (rangeMatch) {
+      const min = parseInt(rangeMatch[1]);
+      const max = parseInt(rangeMatch[2]);
+      timeString = timeString.replace(/\d+\s*[-–—]\s*\d+/, min.toString());
+    }
+    
+    // Handle "X to Y" format
+    const toMatch = timeString.match(/(\d+)\s+to\s+(\d+)/);
+    if (toMatch) {
+      const min = parseInt(toMatch[1]);
+      const max = parseInt(toMatch[2]);
+      timeString = timeString.replace(/\d+\s+to\s+\d+/, min.toString());
+    }
+    
+    // Extract number and unit
+    const match = timeString.match(/(\d+)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?)/i);
+    if (!match) return 0;
+    
+    const number = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    
+    // Convert to seconds
+    if (unit.includes('hour') || unit.includes('hr')) {
+      return number * 60 * 60;
+    } else if (unit.includes('minute') || unit.includes('min')) {
+      return number * 60;
+    } else if (unit.includes('second') || unit.includes('sec')) {
+      return number;
+    }
+    
+    return 0;
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+  };
+
+  const startNewTimer = (timerId, timeText) => {
+    const totalSeconds = parseTimeString(timeText);
+    if (totalSeconds <= 0) return;
+    
+    const newTimer = {
+      id: timerId,
+      timeText: timeText,
+      totalSeconds: totalSeconds,
+      remainingSeconds: totalSeconds,
+      isRunning: true,
+      startTime: Date.now()
+    };
+    
+    setActiveTimers(prev => new Map(prev).set(timerId, newTimer));
+    setFloatingTimer(newTimer); // Set as floating timer
+    
+    // Start the interval
+    const interval = setInterval(() => {
+      setActiveTimers(prev => {
+        const currentTimer = prev.get(timerId);
+        if (!currentTimer) return prev;
+        
+        const elapsed = Math.floor((Date.now() - currentTimer.startTime) / 1000);
+        const remaining = Math.max(0, currentTimer.totalSeconds - elapsed);
+        
+        if (remaining <= 0) {
+          // Timer finished
+          clearInterval(interval);
+          setTimerIntervals(prev => {
+            const newIntervals = new Map(prev);
+            newIntervals.delete(timerId);
+            return newIntervals;
+          });
+          
+          // Show notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Timer Finished!', {
+              body: `Your timer for ${timeText} is complete!`,
+              icon: '/timer.svg'
+            });
+          }
+          
+          // Remove timer after a delay
+          setTimeout(() => {
+            setActiveTimers(prev => {
+              const newTimers = new Map(prev);
+              newTimers.delete(timerId);
+              return newTimers;
+            });
+            setFloatingTimer(null); // Clear floating timer
+          }, 3000);
+          
+          return prev;
+        }
+        
+        const updatedTimer = { ...currentTimer, remainingSeconds: remaining };
+        const newTimers = new Map(prev);
+        newTimers.set(timerId, updatedTimer);
+        
+        // Update floating timer if this is the active one
+        setFloatingTimer(prevFloating => {
+          if (prevFloating && prevFloating.id === timerId) {
+            return updatedTimer;
+          }
+          return prevFloating;
+        });
+        
+        return newTimers;
+      });
+    }, 1000);
+    
+    setTimerIntervals(prev => new Map(prev).set(timerId, interval));
+  };
+
+  const startTimer = (timerId) => {
+    // Clear any existing interval first
+    const existingInterval = timerIntervals.get(timerId);
+    if (existingInterval) {
+      clearInterval(existingInterval);
+      setTimerIntervals(prev => {
+        const newIntervals = new Map(prev);
+        newIntervals.delete(timerId);
+        return newIntervals;
+      });
+    }
+    
+    setActiveTimers(prev => {
+      const currentTimer = prev.get(timerId);
+      if (!currentTimer) return prev;
+      
+      const updatedTimer = { 
+        ...currentTimer, 
+        isRunning: true,
+        startTime: Date.now() - ((currentTimer.totalSeconds - currentTimer.remainingSeconds) * 1000)
+      };
+      
+      const newTimers = new Map(prev);
+      newTimers.set(timerId, updatedTimer);
+      
+      // Update floating timer if this is the active one
+      if (floatingTimer && floatingTimer.id === timerId) {
+        setFloatingTimer(updatedTimer);
+      }
+      
+      return newTimers;
+    });
+    
+    // Start the interval
+    const interval = setInterval(() => {
+      setActiveTimers(prev => {
+        const currentTimer = prev.get(timerId);
+        if (!currentTimer || !currentTimer.isRunning) return prev;
+        
+        const elapsed = Math.floor((Date.now() - currentTimer.startTime) / 1000);
+        const remaining = Math.max(0, currentTimer.totalSeconds - elapsed);
+        
+        if (remaining <= 0) {
+          // Timer finished
+          clearInterval(interval);
+          setTimerIntervals(prev => {
+            const newIntervals = new Map(prev);
+            newIntervals.delete(timerId);
+            return newIntervals;
+          });
+          
+          // Show notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Timer Finished!', {
+              body: `Your timer for ${currentTimer.timeText} is complete!`,
+              icon: '/timer.svg'
+            });
+          }
+          
+          // Remove timer after a delay
+          setTimeout(() => {
+            setActiveTimers(prev => {
+              const newTimers = new Map(prev);
+              newTimers.delete(timerId);
+              return newTimers;
+            });
+          }, 3000);
+          
+          return prev;
+        }
+        
+        const updatedTimer = { ...currentTimer, remainingSeconds: remaining };
+        const newTimers = new Map(prev);
+        newTimers.set(timerId, updatedTimer);
+        
+        // Update floating timer if this is the active one
+        setFloatingTimer(prevFloating => {
+          if (prevFloating && prevFloating.id === timerId) {
+            return updatedTimer;
+          }
+          return prevFloating;
+        });
+        
+        return newTimers;
+      });
+    }, 1000);
+    
+    setTimerIntervals(prev => new Map(prev).set(timerId, interval));
+  };
+
+  const pauseTimer = (timerId) => {
+    // Clear the interval
+    const interval = timerIntervals.get(timerId);
+    if (interval) {
+      clearInterval(interval);
+      setTimerIntervals(prev => {
+        const newIntervals = new Map(prev);
+        newIntervals.delete(timerId);
+        return newIntervals;
+      });
+    }
+    
+    setActiveTimers(prev => {
+      const currentTimer = prev.get(timerId);
+      if (!currentTimer) return prev;
+      
+      const updatedTimer = { ...currentTimer, isRunning: false };
+      const newTimers = new Map(prev);
+      newTimers.set(timerId, updatedTimer);
+      
+      // Update floating timer if this is the active one
+      setFloatingTimer(prevFloating => {
+        if (prevFloating && prevFloating.id === timerId) {
+          return updatedTimer;
+        }
+        return prevFloating;
+      });
+      
+      return newTimers;
+    });
+  };
+
+  const stopTimer = (timerId) => {
+    // Clear interval
+    const interval = timerIntervals.get(timerId);
+    if (interval) {
+      clearInterval(interval);
+      setTimerIntervals(prev => {
+        const newIntervals = new Map(prev);
+        newIntervals.delete(timerId);
+        return newIntervals;
+      });
+    }
+    
+    // Remove timer
+    setActiveTimers(prev => {
+      const newTimers = new Map(prev);
+      newTimers.delete(timerId);
+      return newTimers;
+    });
+    
+    // Clear floating timer if this was the active one
+    if (floatingTimer && floatingTimer.id === timerId) {
+      setFloatingTimer(null);
+    }
+  };
+
   // Recipes are now populated by the recommendations system instead of direct API calls
   const [recipes, setRecipes] = useState([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false); // Loading state for recipes
@@ -199,12 +481,25 @@ function App() {
   const [recipesByCategory, setRecipesByCategory] = useState(new Map()); // Store recipes organized by category
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
+  
+  // Timer state management
+  const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
+  const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
+  const [floatingTimer, setFloatingTimer] = useState(null); // Currently active floating timer
+  
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
   const recipeFullscreenRef = useRef(null);
   const searchTimeoutRef = useRef(null); // Add ref for debounce timeout
   const recipeContentRef = useRef(null);
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      timerIntervals.forEach(interval => clearInterval(interval));
+    };
+  }, [timerIntervals]);
 
   // Helper function to add timeout to fetch calls
   function fetchWithTimeout(url, options = {}) {
@@ -219,6 +514,34 @@ function App() {
     }).finally(() => {
       clearTimeout(timeoutId);
     });
+  }
+
+  // Batch processing utility for parallel fetching with rate limiting
+  async function processBatch(items, batchSize, processFunc) {
+    const results = [];
+    
+    // Process items in batches to avoid overwhelming the API
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      const batchPromises = batch.map((item, index) => 
+        processFunc(item, i + index)
+          .catch(error => {
+            console.error(`Error processing item ${i + index}:`, error);
+            return null;
+          })
+      );
+      
+      // Wait for the current batch to complete before starting the next
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // Add a small delay between batches to prevent rate limiting
+      if (i + batchSize < items.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    return results;
   }
 
   // Smart search function using the search worker
@@ -351,6 +674,12 @@ function App() {
         console.log('✅ Initialization completed');
       }
     };
+    
+    // Request notification permission for timer notifications
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    
     initializeRecipes();
     checkClipperHealth(); // Check clipper worker health on startup
   }, []);
@@ -591,8 +920,6 @@ function App() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
-      console.log('Initializing custom seasoning background...');
-      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
       
       // Create seasoning data
       const seasoningParticles = [];
@@ -633,9 +960,6 @@ function App() {
           twinkleSpeed: Math.random() * 0.01 + 0.005 // Twinkle speed
         });
       }
-      
-      console.log('Created', seasoningParticles.length, 'seasoning particles');
-      console.log('Sample particle:', seasoningParticles[0]);
       
       // Animation function
       const animate = () => {
@@ -735,7 +1059,7 @@ function App() {
       // Start animation
       animate();
       
-      console.log('Custom seasoning background initialized successfully');
+      console.log('Seasoning the background...');
     } catch (error) {
       console.error('Failed to initialize seasoning background:', error);
       seasoningRef.current = null;
@@ -886,109 +1210,109 @@ function App() {
           const newRecipesByCategory = new Map();
           const searchPromises = [];
           
-          for (const [categoryName, tags] of Object.entries(data.recommendations)) {
-            if (Array.isArray(tags)) {
-              debugLogEmoji('📂', `Processing category "${categoryName}" with ${tags.length} tags`);
+          for (const [categoryName, recipes] of Object.entries(data.recommendations)) {
+            if (Array.isArray(recipes)) {
+              debugLogEmoji('📂', `Processing category "${categoryName}" with ${recipes.length} recipes from recommendations`);
               // Initialize category in the map
               newRecipesByCategory.set(categoryName, []);
               
-              // Create search promises for each tag using smart search
-              for (const tag of tags) {
-                debugLogEmoji('🏷️', `Processing tag: "${tag}"`);
+              // Process recipes directly from recommendation response
+              for (const recipe of recipes) {
+                debugLogEmoji('🍽️', `Processing recipe: "${recipe.name || recipe.id}"`);
                 
-                // Create an async function for processing each tag
-                const processTag = async () => {
+                // Create an async function for processing each recipe
+                const processRecipe = async () => {
                   try {
-                    const recipes = await smartSearch(tag);
-                    if (recipes && recipes.length > 0) {
-                      debugLogEmoji('✅', `Tag "${tag}" successfully found ${recipes.length} recipes`);
+                    let completeRecipe = null;
+                    
+                    // Check if this is a real recipe with an ID or a fallback dish suggestion
+                    if (recipe.id && !recipe.fallback && recipe.source !== 'ai_generated') {
+                      // Try to fetch complete recipe data from KV storage
+                      debugLogEmoji('🔄', `Fetching complete data for recipe ${recipe.id} from KV...`);
+                      completeRecipe = await fetchCompleteRecipeData(recipe.id);
                       
-                      // Fetch complete recipe data from KV for each recipe
-                      const completeRecipes = [];
-                      debugLogEmoji('🔄', `Fetching complete data for ${recipes.length} recipes from KV...`);
-                      for (let i = 0; i < recipes.length; i++) {
-                        const recipe = recipes[i];
-                        debugLogEmoji('📥', `[${i + 1}/${recipes.length}] Fetching recipe ${recipe.id}...`);
-                        const completeRecipe = await fetchCompleteRecipeData(recipe.id);
-                        if (completeRecipe) {
-                          completeRecipes.push(completeRecipe);
-                          debugLogEmoji('✅', `[${i + 1}/${recipes.length}] Recipe ${recipe.id} fetched successfully`);
-                        } else {
-                          // Fallback to search result if KV fetch fails
-                          console.warn(`⚠️ [${i + 1}/${recipes.length}] KV fetch failed for recipe ${recipe.id}, using search result`);
-                          completeRecipes.push(recipe);
-                        }
+                      if (completeRecipe) {
+                        debugLogEmoji('✅', `Recipe ${recipe.id} fetched successfully from KV`);
+                      } else {
+                        console.warn(`⚠️ Recipe ${recipe.id} not found in KV storage - using recommendation data`);
+                        // Use the recipe data from recommendations as fallback
+                        completeRecipe = recipe;
                       }
-                      debugLogEmoji('🎯', `Completed KV fetching: ${completeRecipes.length}/${recipes.length} recipes retrieved`);
+                    } else {
+                      // This is a fallback dish suggestion from AI, use it directly
+                      debugLogEmoji('🤖', `Using AI-generated dish suggestion: ${recipe.name}`);
+                      completeRecipe = recipe;
+                    }
+                    
+                    if (completeRecipe) {
+                      // Transform the recipe to frontend format
+                      const recipeData = completeRecipe.data || completeRecipe;
+                      const transformedRecipe = {
+                        id: completeRecipe.id || recipeData.id,
+                        name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
+                        description: decodeHtmlEntities(recipeData.description || ''),
+                        image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+                        image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
+                        ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                        ),
+                        instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                          return inst;
+                        }),
+                        recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
+                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                        ),
+                        recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
+                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                          return inst;
+                        }),
+                        prep_time: recipeData.prepTime || recipeData.prep_time || null,
+                        cook_time: recipeData.cookTime || recipeData.cook_time || null,
+                        recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
+                        source_url: recipeData.source_url || recipeData.url || '',
+                        video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
+                        video: recipeData.video || null,
+                        author: recipeData.author || '',
+                        datePublished: recipeData.datePublished || '',
+                        recipeCategory: recipeData.recipeCategory || '',
+                        recipeCuisine: recipeData.recipeCuisine || '',
+                        keywords: recipeData.keywords || '',
+                        nutrition: recipeData.nutrition || {},
+                        aggregateRating: recipeData.aggregateRating || {},
+                        // Add metadata from recommendation
+                        source: recipe.source || 'recommendation',
+                        type: recipe.type || 'recipe',
+                        fallback: recipe.fallback || false
+                      };
                       
-                      // Transform complete recipes to frontend format
-                      const transformedRecipes = completeRecipes.map(recipe => {
-                        // Handle both KV format and search result format
-                        const recipeData = recipe.data || recipe;
-                        const transformed = {
-                          id: recipe.id || recipeData.id,
-                          name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
-                          description: decodeHtmlEntities(recipeData.description || ''),
-                          image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                          image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                          ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                          ),
-                          instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                            return inst;
-                          }),
-                          recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                            typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                          ),
-                          recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                            if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                            if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                            if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                            return inst;
-                          }),
-                          prep_time: recipeData.prepTime || recipeData.prep_time || null,
-                          cook_time: recipeData.cookTime || recipeData.cook_time || null,
-                          recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
-                          source_url: recipeData.source_url || recipeData.url || '',
-                          video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
-                          video: recipeData.video || null,
-                          author: recipeData.author || '',
-                          datePublished: recipeData.datePublished || '',
-                          recipeCategory: recipeData.recipeCategory || '',
-                          recipeCuisine: recipeData.recipeCuisine || '',
-                          keywords: recipeData.keywords || '',
-                          nutrition: recipeData.nutrition || {},
-                          aggregateRating: recipeData.aggregateRating || {}
-                        };
-                        
-                        // Debug: Log what we're actually transforming
-                        debugLogEmoji('🔍', `Transformed recipe ${transformed.id}:`, {
-                          name: transformed.name,
-                          hasIngredients: transformed.ingredients.length > 0,
-                          hasInstructions: transformed.instructions.length > 0,
-                          ingredientCount: transformed.ingredients.length,
-                          instructionCount: transformed.instructions.length
-                        });
-                        
-                        return transformed;
+                      debugLogEmoji('🔍', `Transformed recipe ${transformedRecipe.id}:`, {
+                        name: transformedRecipe.name,
+                        hasIngredients: transformedRecipe.ingredients.length > 0,
+                        hasInstructions: transformedRecipe.instructions.length > 0,
+                        source: transformedRecipe.source,
+                        fallback: transformedRecipe.fallback
                       });
                       
-                      debugLogEmoji('🎯', `Category "${categoryName}" now has ${transformedRecipes.length} complete recipes`);
-                      return { category: categoryName, recipes: transformedRecipes };
-                    } else {
-                      debugLogEmoji('⚠️', `Tag "${tag}" found no recipes`);
-                      return { category: categoryName, recipes: [] };
+                      // Add the recipe to the category
+                      const existingRecipes = newRecipesByCategory.get(categoryName) || [];
+                      newRecipesByCategory.set(categoryName, [...existingRecipes, transformedRecipe]);
+                      
+                      return { category: categoryName, recipes: [transformedRecipe] };
                     }
+                    
+                    return { category: categoryName, recipes: [] };
                   } catch (error) {
-                    console.warn(`❌ Smart search failed for tag "${tag}":`, error);
-                    return { category: categoryName, recipes: [] }; // Return empty array for failed searches
+                    console.error(`❌ Error processing recipe "${recipe.name || recipe.id}":`, error);
+                    return { category: categoryName, recipes: [] };
                   }
                 };
                 
-                searchPromises.push(processTag());
+                searchPromises.push(processRecipe());
               }
             }
           }
@@ -1676,22 +2000,48 @@ function App() {
       if (res.ok) {
         const result = await res.json();
         
-        // Fetch complete recipe data from KV for each search result
-        const completeResults = [];
+        // Fetch complete recipe data from KV for each search result IN PARALLEL
         debugLogEmoji('🔄', `Fetching complete data for ${result.results.length} search results from KV...`);
-        for (let i = 0; i < result.results.length; i++) {
-          const node = result.results[i];
-          debugLogEmoji('📥', `[${i + 1}/${result.results.length}] Fetching recipe ${node.id}...`);
-          const completeRecipe = await fetchCompleteRecipeData(node.id);
-          if (completeRecipe) {
-            completeResults.push(completeRecipe);
-            debugLogEmoji('✅', `[${i + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
-          } else {
-            // Fallback to search result if KV fetch fails
-            console.warn(`⚠️ [${i + 1}/${result.results.length}] KV fetch failed for recipe ${node.id}, using search result`);
-            completeResults.push({ id: node.id, data: node.properties });
-          }
+        
+        let completeResults;
+        
+        // For large result sets, use batch processing to avoid overwhelming the API
+        if (result.results.length > 10) {
+          debugLogEmoji('📦', `Using batch processing for ${result.results.length} search results (batch size: 5)`);
+          const fetchResults = await processBatch(result.results, 5, async (node, index) => {
+            const completeRecipe = await fetchCompleteRecipeData(node.id);
+            if (completeRecipe) {
+              debugLogEmoji('✅', `[${index + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
+              return completeRecipe;
+            } else {
+              console.warn(`⚠️ [${index + 1}/${result.results.length}] Recipe ${node.id} not found in KV storage - skipping (might be deleted)`);
+              return null;
+            }
+          });
+          completeResults = fetchResults.filter(recipe => recipe !== null);
+        } else {
+          // For smaller sets, fetch all at once
+          const fetchPromises = result.results.map((node, index) => 
+            fetchCompleteRecipeData(node.id)
+              .then(completeRecipe => {
+                if (completeRecipe) {
+                  debugLogEmoji('✅', `[${index + 1}/${result.results.length}] Recipe ${node.id} fetched successfully`);
+                  return completeRecipe;
+                } else {
+                  console.warn(`⚠️ [${index + 1}/${result.results.length}] Recipe ${node.id} not found in KV storage - skipping (might be deleted)`);
+                  return null;
+                }
+              })
+              .catch(error => {
+                console.error(`❌ [${index + 1}/${result.results.length}] Error fetching recipe ${node.id}:`, error);
+                return null;
+              })
+          );
+          
+          const fetchResults = await Promise.all(fetchPromises);
+          completeResults = fetchResults.filter(recipe => recipe !== null);
         }
+        
         debugLogEmoji('🎯', `Completed KV fetching: ${completeResults.length}/${result.results.length} recipes retrieved`);
         
         // Transform complete recipes to match the frontend format
@@ -1759,6 +2109,8 @@ function App() {
       setIsSearching(false);
     }
   }
+
+  // Advanced search cache with better key generation
 
 
 
@@ -2795,6 +3147,42 @@ function App() {
               <span className="back-arrow">←</span>
             </button>
             
+            {/* Timer FAB - integrated into header */}
+            {floatingTimer && (
+              <div className="header-timer-fab">
+                <div className="header-timer-display">
+                  <span className="header-timer-time">{formatTime(floatingTimer.remainingSeconds)}</span>
+                  <span className="header-timer-label">{floatingTimer.timeText}</span>
+                </div>
+                <div className="header-timer-controls">
+                  <button 
+                    className="header-timer-control-btn"
+                    onClick={() => {
+                      if (floatingTimer.isRunning) {
+                        pauseTimer(floatingTimer.id);
+                      } else {
+                        startTimer(floatingTimer.id);
+                      }
+                    }}
+                    title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
+                  >
+                    {floatingTimer.isRunning ? (
+                      <img src="/pause.svg" alt="Pause" className="timer-icon" />
+                    ) : (
+                      <img src="/play.svg" alt="Play" className="timer-icon" />
+                    )}
+                  </button>
+                  <button 
+                    className="header-timer-dismiss"
+                    onClick={() => stopTimer(floatingTimer.id)}
+                    title="Stop timer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {/* Nutrition FAB - only show if nutrition data exists */}
             {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
               <button 
@@ -2855,21 +3243,29 @@ function App() {
               className="share-panel-item share-action"
               onClick={() => {
                 // Generate shareable link using the recipe view worker
-                const shareableUrl = RECIPE_VIEW_URL ? 
-                  `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}` : 
-                  selectedRecipe.source_url;
+                let shareableUrl;
                 
-                if (navigator.share && shareableUrl) {
+                if (RECIPE_VIEW_URL && selectedRecipe.id) {
+                  // Use the recipe view worker for a proper shareable page
+                  shareableUrl = `${RECIPE_VIEW_URL}/recipe/${selectedRecipe.id}`;
+                } else {
+                  // No shareable URL available - silently close the share panel
+                  setShowSharePanel(false);
+                  return;
+                }
+                
+                if (navigator.share) {
                   navigator.share({
                     title: selectedRecipe.name,
                     text: `Check out this recipe: ${selectedRecipe.name}`,
                     url: shareableUrl
                   }).catch(() => {
-                    // Fallback to copy link
+                    // Fallback to copy link if share fails
                     navigator.clipboard.writeText(shareableUrl);
                     alert('Recipe link copied to clipboard!');
                   });
-                } else if (shareableUrl) {
+                } else {
+                  // Browser doesn't support Web Share API, copy to clipboard
                   navigator.clipboard.writeText(shareableUrl);
                   alert('Recipe link copied to clipboard!');
                 }
@@ -3110,6 +3506,8 @@ function App() {
           onClose={() => setShowVideoPopup(false)} 
         />
       )}
+
+
       </div>
     </>
   );
