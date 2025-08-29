@@ -1,0 +1,31 @@
+{
+  "name": "recipe-feeder",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker that feeds recipes to the embedding queue",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "type-check": "echo 'No TypeScript files to check'",
+    "tail": "wrangler tail",
+    "tail:preview": "wrangler tail --env preview",
+    "tail:staging": "wrangler tail --env staging",
+    "tail:production": "wrangler tail --env production"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "miniflare": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
