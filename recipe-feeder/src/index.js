@@ -47,8 +47,11 @@ export default {
         console.error('Final stats:', result.totalStats);
         if (result.error) {
           console.error('Error:', result.error);
-          // Re-throw to ensure the cron job is marked as failed
+          // Re-throw the original error message to ensure the cron job is marked as failed
           throw new Error(result.error);
+        } else {
+          // If no specific error but success is false, throw a generic error
+          throw new Error('Cron job completed with errors');
         }
       }
       
@@ -95,18 +98,35 @@ export default {
         // Manual trigger endpoint for testing
         console.log('Manual trigger requested');
         
-        const result = await executeFullFeedingCycle(env, {
-          maxBatchSize: parseInt(env.BATCH_SIZE) || 100,
-          maxCycles: 1
-        });
-        
-        return new Response(JSON.stringify({
-          triggered: true,
-          result: result,
-          timestamp: new Date().toISOString()
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        try {
+          const result = await executeFullFeedingCycle(env, {
+            maxBatchSize: parseInt(env.BATCH_SIZE) || 100,
+            maxCycles: 1
+          });
+          
+          // If the result contains an error, throw it to trigger catch block
+          if (!result.success && result.error) {
+            throw new Error(result.error);
+          }
+          
+          return new Response(JSON.stringify({
+            triggered: true,
+            result: result,
+            timestamp: new Date().toISOString()
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console.error('Error in manual trigger:', error);
+          return new Response(JSON.stringify({
+            error: 'Internal server error',
+            message: error.message,
+            timestamp: new Date().toISOString()
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
       
       if (url.pathname === '/status') {

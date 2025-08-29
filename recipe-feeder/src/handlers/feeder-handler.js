@@ -127,6 +127,7 @@ export async function executeFullFeedingCycle(env, options = {}) {
   let cycles = 0;
   let cursor = null;
   let hasMore = true;
+  let firstError = null;
   
   try {
     while (hasMore && cycles < maxCycles) {
@@ -155,6 +156,9 @@ export async function executeFullFeedingCycle(env, options = {}) {
       
       if (!batchResult.success) {
         console.error(`Cycle ${cycles} completed with errors`);
+        if (batchResult.error && !firstError) {
+          firstError = batchResult.error;
+        }
         break;
       }
       
@@ -172,7 +176,8 @@ export async function executeFullFeedingCycle(env, options = {}) {
       success: totalStats.errors === 0,
       totalStats,
       cycles,
-      completedFully: !hasMore
+      completedFully: !hasMore,
+      error: firstError
     };
     
   } catch (error) {
