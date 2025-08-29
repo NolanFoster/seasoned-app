@@ -45,7 +45,11 @@ export default {
       } else {
         console.error(`\\n❌ Cron job completed with errors in ${duration}ms`);
         console.error('Final stats:', result.totalStats);
-        console.error('Error:', result.error);
+        if (result.error) {
+          console.error('Error:', result.error);
+          // Re-throw to ensure the cron job is marked as failed
+          throw new Error(result.error);
+        }
       }
       
     } catch (error) {

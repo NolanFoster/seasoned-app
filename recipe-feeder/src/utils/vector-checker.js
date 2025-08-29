@@ -20,7 +20,7 @@ export async function recipeExistsInVectorStore(env, recipeId) {
     });
     
     // If we get any results, the recipe exists
-    return queryResult.matches && queryResult.matches.length > 0;
+    return !!(queryResult.matches && queryResult.matches.length > 0);
     
   } catch (error) {
     console.error(`Error checking vector store for recipe ${recipeId}:`, error);
