@@ -11,10 +11,13 @@
   background: transparent;
   z-index: 3000;
   overflow-y: auto;
-  transition: background 0.3s ease;
+  overflow-x: hidden;
   color: white;
   display: flex;
   flex-direction: column;
+  /* Ensure stable rendering */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Recipe Top Header */
@@ -545,12 +548,27 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: -1;
-  /* Ensure background container stays stable */
+  z-index: -2;
+  /* Ensure background container stays stable and isolated from scroll effects */
   transform: none !important;
   will-change: auto;
   backface-visibility: visible;
   -webkit-backface-visibility: visible;
+  /* Additional isolation properties */
+  isolation: isolate;
+  contain: layout style paint;
+  /* Prevent any scroll-related transforms */
+  transform-style: flat;
+  perspective: none;
+  /* Additional stability properties */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  /* Ensure background is completely isolated */
+  mix-blend-mode: normal;
+  filter: none;
 }
 
 .recipe-full-background::after {
@@ -561,7 +579,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 1;
+  z-index: -1;
   pointer-events: none;
 }
 
@@ -574,6 +592,15 @@
   will-change: auto;
   backface-visibility: visible;
   -webkit-backface-visibility: visible;
+  /* Additional isolation properties */
+  isolation: isolate;
+  contain: layout style paint;
+  /* Prevent any scroll-related transforms */
+  transform-style: flat;
+  perspective: none;
+  /* Ensure the image itself is stable */
+  image-rendering: auto;
+  image-orientation: from-image;
 }
 
 .recipe-full-background-placeholder {
