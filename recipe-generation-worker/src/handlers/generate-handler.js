@@ -615,7 +615,7 @@ Total Time: [Prep + Cook time]`;
 
 /**
  * Parse generated recipe text into structured format
- * 
+ *
  * This function handles the actual LLaMA response format where everything
  * is returned as numbered instructions including recipe metadata
  */
@@ -645,8 +645,7 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
   // Process each line to extract structured data
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    const lowerLine = line.toLowerCase();
-    
+
     // Remove numbered prefixes like "1. ", "2. ", etc.
     const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
     const cleanLowerLine = cleanLine.toLowerCase();
@@ -657,10 +656,10 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
       if (nameMatch && nameMatch[1]) {
         const potentialName = nameMatch[1].trim();
         // Make sure it's not a section header
-        if (!potentialName.toLowerCase().includes('description') && 
-            !potentialName.toLowerCase().includes('ingredients') && 
+        if (!potentialName.toLowerCase().includes('description') &&
+            !potentialName.toLowerCase().includes('ingredients') &&
             !potentialName.toLowerCase().includes('instructions') &&
-            !potentialName.toLowerCase().includes('prep time') && 
+            !potentialName.toLowerCase().includes('prep time') &&
             !potentialName.toLowerCase().includes('cook time') &&
             potentialName.length > 3 && potentialName.length < 100) {
           extractedName = potentialName;
@@ -672,9 +671,9 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
 
     // Extract description (look for "Description:" followed by descriptive text)
     if ((cleanLowerLine.includes('description:') || cleanLowerLine.includes('**description')) && !extractedDescription) {
-      let desc = cleanLine.replace(/^\*\*description\*\*:?\s*/i, '')
-                         .replace(/^description:?\s*/i, '')
-                         .trim();
+      const desc = cleanLine.replace(/^\*\*description\*\*:?\s*/i, '')
+        .replace(/^description:?\s*/i, '')
+        .trim();
       if (desc.length > 10 && desc.length < 500) {
         extractedDescription = desc;
         recipe.description = desc;
@@ -713,10 +712,10 @@ function parseGeneratedRecipe(recipeText, originalRequest) {
       }
     } else if (currentSection === 'instructions' && isInstructionLine(cleanLine)) {
       const instruction = cleanLine.replace(/^[-•*]\s*/, '').trim();
-      if (instruction.length > 10 && 
+      if (instruction.length > 10 &&
           !instruction.toLowerCase().includes('instructions') &&
-          !instruction.toLowerCase().includes('prep time') && 
-          !instruction.toLowerCase().includes('cook time') && 
+          !instruction.toLowerCase().includes('prep time') &&
+          !instruction.toLowerCase().includes('cook time') &&
           !instruction.toLowerCase().includes('total time')) {
         recipe.instructions.push(instruction);
       }
@@ -779,13 +778,13 @@ function isIngredientLine(line) {
   const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls|inch|inches|medium|large|small)/i;
   const fractionPattern = /\d+\/\d+/;
   const ingredientIndicators = /\b(fresh|dried|chopped|minced|sliced|diced|grated|ground|extra-virgin|olive oil|salt|pepper|garlic|onion|cheese|butter|flour|sugar|egg|milk|cream|water|stock|broth)/i;
-  
+
   // Exclude action words that indicate instructions
   const actionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble)/i;
-  
-  return (measurementPattern.test(line) || fractionPattern.test(line) || ingredientIndicators.test(line)) && 
-         line.length < 150 && 
-         !line.toLowerCase().includes('minute') && 
+
+  return (measurementPattern.test(line) || fractionPattern.test(line) || ingredientIndicators.test(line)) &&
+         line.length < 150 &&
+         !line.toLowerCase().includes('minute') &&
          !line.toLowerCase().includes('hour') &&
          !actionWords.test(line);
 }
@@ -796,191 +795,17 @@ function isIngredientLine(line) {
 function isInstructionLine(line) {
   const actionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble|transfer|divide|spread|layer|cover|wrap|chill|refrigerate|freeze|marinate|rest|let|allow|until|for|about|approximately)/i;
   const instructionIndicators = /\b(step|then|next|meanwhile|while|after|before|once|when|until|degrees|temperature|minutes|hours|golden|tender|crispy|bubbling|thick|smooth)/i;
-  
+
   // Exclude measurement patterns that indicate ingredients
   const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls)/i;
-  
-  return (actionWords.test(line) || instructionIndicators.test(line)) && 
-         line.length > 15 && 
+
+  return (actionWords.test(line) || instructionIndicators.test(line)) &&
+         line.length > 15 &&
          line.length < 500 &&
          !measurementPattern.test(line);
 }
 
-/**
- * Original parsing function as fallback
- */
-function parseGeneratedRecipeOriginal(recipeText, originalRequest) {
-  // Parse according to the defined template structure
-  const lines = recipeText.split('\n').filter(line => line.trim());
 
-  const recipe = {
-    name: 'Generated Recipe',
-    description: '',
-    ingredients: [],
-    instructions: [],
-    prepTime: '',
-    cookTime: '',
-    totalTime: '',
-    servings: originalRequest.servings || '',
-    difficulty: 'Medium',
-    cuisine: originalRequest.cuisine || '',
-    dietary: originalRequest.dietary || [],
-    generatedAt: new Date().toISOString(),
-    sourceIngredients: originalRequest.ingredients
-  };
-
-  let currentSection = 'unknown';
-  let instructionStep = 1;
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    const lowerLine = trimmedLine.toLowerCase();
-
-    // Parse recipe name according to template format
-    if (lowerLine.startsWith('name:') && recipe.name === 'Generated Recipe') {
-      let extractedName = trimmedLine.replace(/^name:\s*/i, '').trim();
-
-      // Limit name length and clean it up
-      if (extractedName.length > 100) {
-        // If first sentence or first 50 characters
-        const firstSentence = extractedName.split('.')[0];
-        extractedName = firstSentence.length <= 50 ? firstSentence : extractedName.substring(0, 50);
-      }
-
-      // Remove quotes and extra formatting
-      extractedName = extractedName.replace(/^["']|["']$/g, '').trim();
-
-      // Only use if it looks like a reasonable recipe name (not empty, not too generic)
-      if (extractedName && extractedName.length > 3 && !extractedName.toLowerCase().includes('recipe for')) {
-        recipe.name = extractedName;
-      }
-      continue;
-    }
-
-    // Parse description according to template format
-    if (lowerLine.startsWith('description:') && !recipe.description) {
-      recipe.description = trimmedLine.replace(/^description:\s*/i, '').trim();
-      continue;
-    }
-
-    // Identify sections according to template format
-    if (lowerLine.startsWith('ingredients:')) {
-      currentSection = 'ingredients';
-      continue;
-    } else if (lowerLine.startsWith('instructions:')) {
-      currentSection = 'instructions';
-      continue;
-    } else if (lowerLine.startsWith('prep time:') || lowerLine.startsWith('preparation time:')) {
-      recipe.prepTime = extractTime(trimmedLine);
-      continue;
-    } else if (lowerLine.startsWith('cook time:') || lowerLine.startsWith('cooking time:')) {
-      recipe.cookTime = extractTime(trimmedLine);
-      continue;
-    } else if (lowerLine.startsWith('total time:')) {
-      recipe.totalTime = extractTime(trimmedLine);
-      continue;
-    }
-
-    // Add content to current section according to template format
-    if (currentSection === 'ingredients' && trimmedLine && !lowerLine.startsWith('ingredients:')) {
-      // Clean up ingredient line - expect format: "- [Ingredient with quantity]"
-      const ingredient = trimmedLine.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '');
-      if (ingredient && !lowerLine.includes('ingredient')) {
-        recipe.ingredients.push(ingredient);
-      }
-    } else if (currentSection === 'instructions' && trimmedLine && !lowerLine.startsWith('instructions:')) {
-      // Clean up instruction line - expect format: "1. [Step description]"
-      const instruction = trimmedLine.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '');
-      if (instruction && !lowerLine.includes('instruction')) {
-        recipe.instructions.push(`${instructionStep}. ${instruction}`);
-        instructionStep++;
-      }
-    }
-  }
-
-  // Fallback: if no ingredients found, try to extract from any line containing measurements
-  if (recipe.ingredients.length === 0) {
-    const measurementPattern = /\d+(\.\d+)?\s*(cup|cups|tbsp|tsp|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|liter|liters)/i;
-    for (const line of lines) {
-      if (measurementPattern.test(line)) {
-        const ingredient = line.trim().replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '');
-        recipe.ingredients.push(ingredient);
-      }
-    }
-  }
-
-  // Fallback: if no instructions found, use remaining lines
-  if (recipe.instructions.length === 0) {
-    const remainingLines = lines.filter(line => {
-      const lower = line.toLowerCase();
-      return !lower.startsWith('name:') &&
-             !lower.startsWith('description:') &&
-             !lower.startsWith('ingredients:') &&
-             !lower.startsWith('instructions:') &&
-             !lower.startsWith('prep time:') &&
-             !lower.startsWith('cook time:') &&
-             !lower.startsWith('total time:') &&
-             line.trim().length > 10;
-    });
-
-    remainingLines.forEach((line, index) => {
-      recipe.instructions.push(`${index + 1}. ${line.trim()}`);
-    });
-  }
-
-  // Handle recipe name logic with prompt fallback
-  const promptedName = originalRequest.recipeName;
-
-  // Check if extracted name looks like a description (very long, multiple sentences, or starts with descriptive phrases)
-  const extractedNameLooksLikeDescription = recipe.name !== 'Generated Recipe' && (
-    recipe.name.length > 120 ||
-    (recipe.name.includes('.') && recipe.name.length > 60) || // Only if long AND has periods
-    recipe.name.toLowerCase().startsWith('this ') ||
-    recipe.name.toLowerCase().startsWith('a delicious ') ||
-    recipe.name.toLowerCase().startsWith('an amazing ') ||
-    recipe.name.toLowerCase().startsWith('the perfect ') ||
-    (recipe.name.includes(' and ') && recipe.name.includes(' with ') && recipe.name.length > 50) // Complex descriptive phrases
-  );
-
-  if (extractedNameLooksLikeDescription) {
-    // Move the extracted "name" to description if no description is set
-    if (!recipe.description) {
-      recipe.description = recipe.name;
-    }
-    // Use prompted name or fallback
-    recipe.name = promptedName || 'Generated Recipe';
-  } else if (recipe.name === 'Generated Recipe') {
-    // No good name extracted, try prompted name first
-    if (promptedName) {
-      recipe.name = promptedName;
-    } else {
-      // Final fallback: use first meaningful line that doesn't match template headers
-      for (const line of lines.slice(0, 3)) {
-        const trimmedLine = line.trim();
-        if (trimmedLine.length > 5 &&
-            trimmedLine.length <= 60 &&
-            !trimmedLine.toLowerCase().startsWith('name:') &&
-            !trimmedLine.toLowerCase().startsWith('description:') &&
-            !trimmedLine.toLowerCase().startsWith('ingredients:') &&
-            !trimmedLine.toLowerCase().startsWith('instructions:') &&
-            !trimmedLine.toLowerCase().startsWith('prep time:') &&
-            !trimmedLine.toLowerCase().startsWith('cook time:') &&
-            !trimmedLine.toLowerCase().startsWith('total time:') &&
-            !trimmedLine.includes(':')) {
-          recipe.name = trimmedLine;
-          break;
-        }
-      }
-    }
-  }
-
-  // If we still have default name and there's a prompted name, use it
-  if (recipe.name === 'Generated Recipe' && promptedName) {
-    recipe.name = promptedName;
-  }
-
-  return recipe;
-}
 
 /**
  * Extract time from text (e.g., "Prep time: 15 minutes" -> "15 minutes")
