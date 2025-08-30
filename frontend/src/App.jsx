@@ -95,16 +95,19 @@ function App() {
     console.log('🔧 Recipe generation worker test function available: window.testRecipeGenerationWorker()');
   }
   
-  // Extract description for AI-generated recipes from instructions if needed
+  // Get description for display - prioritize generated data for AI recipes
   const getRecipeDescription = (recipe) => {
-    // For regular recipes, use the description field
-    if (recipe.description && recipe.description.trim()) {
-      return recipe.description;
-    }
-    
-    // For AI-generated recipes, try to extract description from instructions
+    // For AI-generated recipes, first check the generated description
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      const instructions = recipe.recipeInstructions || recipe.instructions || [];
+      console.log('🔍 AI Recipe - Generated description:', recipe.description);
+      
+      // If there's a generated description, use it
+      if (recipe.description && recipe.description.trim()) {
+        return recipe.description;
+      }
+      
+      // Otherwise, try to extract description from instructions
+      const instructions = recipe.instructions || [];
       
       for (const instruction of instructions) {
         const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
@@ -117,90 +120,103 @@ function App() {
                                     .replace(/^description:?\s*/i, '')
                                     .trim();
           if (desc.length > 20 && desc.length < 500) {
+            console.log('🔍 AI Recipe - Extracted description:', desc);
             return desc;
           }
         }
       }
+      
+      return null;
     }
     
-    return null;
+    // For regular recipes, use the description field
+    return recipe.description && recipe.description.trim() ? recipe.description : null;
   };
 
-  // Filter ingredients for AI-generated recipes to extract from instructions if needed
+  // Get ingredients for display - prioritize generated data for AI recipes
   const getFilteredIngredients = (recipe) => {
-    let ingredients = recipe.recipeIngredient || recipe.ingredients || [];
-    
-    // Debug logging for AI-generated recipes
+    // For AI-generated recipes, use the generated ingredients directly
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      console.log('🔍 AI Recipe - Original ingredients:', ingredients);
+      console.log('🔍 AI Recipe - Using generated ingredients:', recipe.ingredients);
+      console.log('🔍 AI Recipe - Recipe object keys:', Object.keys(recipe));
       
-      const instructions = recipe.recipeInstructions || recipe.instructions || [];
-      const additionalIngredients = [];
+      // Use the ingredients from the generation API response
+      const generatedIngredients = recipe.ingredients || [];
       
-      for (const instruction of instructions) {
-        const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
-        const cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
+      // If the generated ingredients array is empty or very short, try to extract from instructions
+      if (generatedIngredients.length < 3) {
+        console.log('🔍 AI Recipe - Few ingredients, extracting from instructions');
+        const instructions = recipe.instructions || [];
+        const additionalIngredients = [];
         
-        // Look for ingredient lines (start with - and have measurements or food items)
-        if (cleanText.startsWith('- ') || cleanText.startsWith('• ')) {
-          const ingredientText = cleanText.replace(/^[-•]\s*/, '').trim();
-          const hasMeasurement = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls|inch|inches|medium|large|small|ripe|fresh|dried)/i.test(ingredientText);
-          const hasFoodWords = /\b(peach|peaches|cheese|oil|basil|salt|pepper|onion|garlic|chicken|beef|pork|fish|vegetable|fruit|herb|spice|flour|sugar|butter|milk|cream|egg|water|stock|broth|wine|vinegar|lemon|lime|tomato|potato|rice|pasta|bread)/i.test(ingredientText);
+        for (const instruction of instructions) {
+          const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
+          const cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
           
-          if ((hasMeasurement || hasFoodWords) && ingredientText.length < 150) {
-            additionalIngredients.push(ingredientText);
+          // Look for ingredient lines (start with - and have measurements or food items)
+          if (cleanText.startsWith('- ') || cleanText.startsWith('• ')) {
+            const ingredientText = cleanText.replace(/^[-•]\s*/, '').trim();
+            const hasMeasurement = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls|inch|inches|medium|large|small|ripe|fresh|dried)/i.test(ingredientText);
+            const hasFoodWords = /\b(peach|peaches|cheese|oil|basil|salt|pepper|onion|garlic|chicken|beef|pork|fish|vegetable|fruit|herb|spice|flour|sugar|butter|milk|cream|egg|water|stock|broth|wine|vinegar|lemon|lime|tomato|potato|rice|pasta|bread)/i.test(ingredientText);
+            
+            if ((hasMeasurement || hasFoodWords) && ingredientText.length < 150) {
+              additionalIngredients.push(ingredientText);
+            }
           }
         }
+        
+        // Combine generated ingredients with extracted ones
+        const allIngredients = [...generatedIngredients, ...additionalIngredients];
+        const uniqueIngredients = allIngredients.filter((ingredient, index, self) => 
+          index === self.findIndex(i => i.toLowerCase().trim() === ingredient.toLowerCase().trim())
+        );
+        
+        console.log('🔍 AI Recipe - Final combined ingredients:', uniqueIngredients);
+        return uniqueIngredients;
       }
       
-      console.log('🔍 AI Recipe - Additional ingredients found:', additionalIngredients);
-      
-      // Combine original ingredients with extracted ones, removing duplicates
-      const allIngredients = [...ingredients, ...additionalIngredients];
-      const uniqueIngredients = allIngredients.filter((ingredient, index, self) => 
-        index === self.findIndex(i => i.toLowerCase().trim() === ingredient.toLowerCase().trim())
-      );
-      
-      console.log('🔍 AI Recipe - Final ingredients:', uniqueIngredients);
-      
-      // Always return at least the original ingredients, even if filtering fails
-      return uniqueIngredients.length > 0 ? uniqueIngredients : ingredients;
+      console.log('🔍 AI Recipe - Using generated ingredients as-is:', generatedIngredients);
+      return generatedIngredients;
     }
     
-    return ingredients;
+    // For regular recipes, use the standard ingredient fields
+    return recipe.recipeIngredient || recipe.ingredients || [];
   };
 
-  // Filter instructions for AI-generated recipes to show only actual cooking steps
+  // Get instructions for display - prioritize generated data for AI recipes  
   const getFilteredInstructions = (recipe) => {
-    const instructions = recipe.recipeInstructions || recipe.instructions || [];
-    
-    // For AI-generated recipes, provide a simplified display that always works
+    // For AI-generated recipes, use the generated instructions directly
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      console.log('🔍 AI Recipe - Processing instructions for display');
+      console.log('🔍 AI Recipe - Using generated instructions:', recipe.instructions);
+      console.log('🔍 AI Recipe - Instructions type:', typeof recipe.instructions);
+      console.log('🔍 AI Recipe - Instructions length:', recipe.instructions?.length);
       
-      // Simple approach: show all instructions but clean them up for better readability
-      const cleanedInstructions = instructions.map(instruction => {
+      const generatedInstructions = recipe.instructions || [];
+      
+      // For the sample response format where instructions contain everything,
+      // provide a simplified display that shows all content in a readable way
+      const cleanedInstructions = generatedInstructions.map(instruction => {
         const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
         
         // Remove leading numbers and clean up formatting
         let cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
         
-        // Remove excessive bold formatting but keep some structure
+        // Remove excessive bold formatting but keep some structure for readability
         cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '$1');
         
         return cleanText;
       }).filter(instruction => 
-        instruction.length > 5 && // Must have some content
-        !instruction.toLowerCase().includes('total time:') // Skip timing summary at the end
+        instruction.length > 5 // Must have some content
       );
       
-      console.log('🔍 AI Recipe - Cleaned instructions count:', cleanedInstructions.length);
+      console.log('🔍 AI Recipe - Final instructions count:', cleanedInstructions.length);
+      console.log('🔍 AI Recipe - Sample instruction:', cleanedInstructions[0]);
       
-      return cleanedInstructions.length > 0 ? cleanedInstructions : instructions;
+      return cleanedInstructions.length > 0 ? cleanedInstructions : generatedInstructions;
     }
     
-    // For regular recipes, return instructions as-is
-    return instructions;
+    // For regular recipes, use the standard instruction fields
+    return recipe.recipeInstructions || recipe.instructions || [];
   };
 
   // Decode HTML entities for proper display
@@ -2093,17 +2109,29 @@ function App() {
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
         const generatedRecipe = {
-          ...recipe,
+          // Only keep essential fields from the original recipe
+          id: recipe.id || recipe.name,
+          source: 'ai_generated',
+          fallback: recipe.fallback,
+          // Use the generated data from the API response
           name: result.recipe.name,
           description: result.recipe.description,
           ingredients: result.recipe.ingredients,
           instructions: result.recipe.instructions,
+          recipeIngredient: result.recipe.ingredients, // Ensure both field names are set
+          recipeInstructions: result.recipe.instructions, // Ensure both field names are set
           prep_time: result.recipe.prepTime,
           cook_time: result.recipe.cookTime,
           recipe_yield: result.recipe.servings,
-          source: 'ai_generated',
+          prepTime: result.recipe.prepTime,
+          cookTime: result.recipe.cookTime,
+          servings: result.recipe.servings,
           generatedAt: result.recipe.generatedAt || new Date().toISOString(),
-          mockMode: result.recipe.mockMode || false
+          mockMode: result.recipe.mockMode || false,
+          // Add metadata from generation
+          generationTime: result.generationTime,
+          similarRecipesFound: result.similarRecipesFound,
+          generationMethod: result.generationMethod
         };
 
         // Clear loading state
