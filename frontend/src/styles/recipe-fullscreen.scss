@@ -89,6 +89,21 @@
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
 
+/* Recipe Description */
+.recipe-description {
+  color: white;
+  font-size: 1.2em;
+  font-weight: 400;
+  margin: 0 auto;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+  display: block;
+  max-width: 800px;
+  line-height: 1.5;
+  text-align: center;
+  opacity: 0.9;
+}
+
 /* Recipe Timing Info */
 .recipe-timing-info {
   display: flex;
