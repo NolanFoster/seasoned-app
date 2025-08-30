@@ -269,7 +269,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         },
         body: JSON.stringify({
           location: location,
-          date: currentDate
+          date: currentDate,
+          limit: 4
         })
       });
       
@@ -387,7 +388,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         },
         body: JSON.stringify({
           location: location,
-          date: currentDate
+          date: currentDate,
+          limit: 4
         })
       });
       

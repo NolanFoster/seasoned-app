@@ -1332,7 +1332,8 @@ function App() {
         },
         body: JSON.stringify({
           location: 'San Francisco, CA', // Default location
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          limit: 4
         }),
         timeout: 15000 // 15 second timeout for recommendations
       });
@@ -1387,7 +1388,8 @@ function App() {
         },
         body: JSON.stringify({
           location: 'San Francisco, CA', // Default location
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          limit: 4
         }),
         timeout: 15000 // 15 second timeout for recommendations
       });
