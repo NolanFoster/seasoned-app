@@ -47,13 +47,20 @@
   justify-content: center;
   gap: 0.5rem;
   
+  // Prevent any transform conflicts with the spinner
+  transform: none !important;
+  
   .loading-spinner {
+    // Isolate the spinner animation from parent transforms
+    transform: none;
     animation: spin 1s linear infinite;
     
     svg {
       width: 20px;
       height: 20px;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      // Ensure the SVG transform is isolated
+      transform-origin: center;
     }
   }
   

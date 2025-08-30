@@ -1259,13 +1259,20 @@ button:disabled:hover {
   justify-content: center !important;
   gap: 0.5rem !important;
   
+  // Prevent any transform conflicts with the spinner
+  transform: none !important;
+  
   .loading-spinner {
+    // Isolate the spinner animation from parent transforms
+    transform: none !important;
     animation: spin 1s linear infinite !important;
     
     svg {
       width: 20px !important;
       height: 20px !important;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+      // Ensure the SVG transform is isolated
+      transform-origin: center !important;
     }
   }
   
