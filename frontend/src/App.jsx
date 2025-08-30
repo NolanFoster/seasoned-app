@@ -671,6 +671,7 @@ function App() {
   const [showSharePanel, setShowSharePanel] = useState(false); // New state for share panel
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
   const [aiCardLoadingStates, setAiCardLoadingStates] = useState(new Map()); // Track loading state for AI cards
+  const [userLocation, setUserLocation] = useState(''); // Store user's location from geolocation
   
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
@@ -846,8 +847,8 @@ function App() {
       const startTime = Date.now();
       
       try {
-        await getRecipeCategories(); // Get category names first
-        await getRecipesFromRecommendations(); // Then get full recipes
+        await getRecipeCategories(userLocation); // Get category names first
+        await getRecipesFromRecommendations(userLocation); // Then get full recipes
         
         // Ensure minimum loading time for smooth UX
         const elapsedTime = Date.now() - startTime;
@@ -1319,7 +1320,7 @@ function App() {
 
 
   // Function to get just the category names first for loading display
-  async function getRecipeCategories() {
+  async function getRecipeCategories(location = '') {
     try {
       const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
       
@@ -1331,7 +1332,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          location: 'San Francisco, CA', // Default location
+          location: location, // Use passed location or empty string for location-agnostic
           date: new Date().toISOString().split('T')[0]
         }),
         timeout: 15000 // 15 second timeout for recommendations
@@ -1356,7 +1357,7 @@ function App() {
   }
 
   // Function to get recipes from recommendations system
-  async function getRecipesFromRecommendations() {
+  async function getRecipesFromRecommendations(location = '') {
     // Prevent multiple simultaneous refreshes
     if (isRefreshingRecipes) {
       console.log('🔄 Recipe refresh already in progress, skipping...');
@@ -1386,7 +1387,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          location: 'San Francisco, CA', // Default location
+          location: location, // Use passed location or empty string for location-agnostic
           date: new Date().toISOString().split('T')[0]
         }),
         timeout: 15000 // 15 second timeout for recommendations
@@ -1733,7 +1734,7 @@ function App() {
         
         // Refresh the recipe list
         setIsLoadingRecipes(true); // Show loading state
-        await getRecipesFromRecommendations();
+        await getRecipesFromRecommendations(userLocation);
         clearSearchCache(); // Clear search cache to include the new recipe
         resetForm();
         
@@ -1784,7 +1785,7 @@ function App() {
       if (result.success) {
         // Refresh the recipe list
         setIsLoadingRecipes(true); // Show loading state
-        await getRecipesFromRecommendations();
+        await getRecipesFromRecommendations(userLocation);
         clearSearchCache(); // Clear search cache to include the updated recipe
         resetForm();
         setEditingRecipe(null);
@@ -2729,6 +2730,7 @@ function App() {
                     recipesByCategory={recipesByCategory}
                     aiCardLoadingStates={aiCardLoadingStates}
                     onAiCardClick={handleAiCardRecipeGeneration}
+                    onLocationUpdate={setUserLocation}
                   />
                 ) : (
                   <div className="no-recipes-found">
@@ -2744,7 +2746,7 @@ function App() {
                         className="retry-button"
                         onClick={() => {
                           setIsLoadingRecipes(true);
-                          getRecipesFromRecommendations();
+                          getRecipesFromRecommendations(userLocation);
                         }}
                       >
                         🔄 Try Again

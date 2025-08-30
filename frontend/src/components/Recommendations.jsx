@@ -5,7 +5,7 @@ import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
 
-function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick }) {
+function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }) {
   // Debug flag - set to true to enable detailed logging
   const DEBUG_MODE = false;
   
@@ -75,6 +75,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       
       // Set a default location after timeout
       setUserLocation('San Francisco, CA');
+      onLocationUpdate?.('San Francisco, CA'); // Update parent component with default location
       setLocationTimeout(null);
       setIsResolvingLocation(false);
       
@@ -122,12 +123,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
               }
               
               setUserLocation(location);
+              onLocationUpdate?.(location); // Update parent component with location
               resolveLocationAndFetch(location);
             })
             .catch((error) => {
               // Fallback to coordinates if geocoding fails
               const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
               setUserLocation(location);
+              onLocationUpdate?.(location); // Update parent component with location
               resolveLocationAndFetch(location);
             });
         },
@@ -143,6 +146,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     } else {
       // Geolocation not supported, use default location immediately
       setUserLocation('San Francisco, CA');
+      onLocationUpdate?.('San Francisco, CA'); // Update parent component with default location
       resolveLocationAndFetch('San Francisco, CA');
     }
 
@@ -512,6 +516,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     const trimmedLocation = locationInput.trim();
     if (trimmedLocation) {
       setUserLocation(trimmedLocation);
+      onLocationUpdate?.(trimmedLocation); // Update parent component with manual location
       setShowLocationPrompt(false);
       setIsResolvingLocation(false); // Mark location as resolved
       debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
@@ -522,6 +527,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
   // Clear user location
   const clearUserLocation = () => {
     setUserLocation(null);
+    onLocationUpdate?.(''); // Update parent component to clear location
     setIsResolvingLocation(false); // Ensure resolving state is false
     debugLogEmoji('🗑️', 'User location cleared');
     fetchRecommendations();
@@ -597,6 +603,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           }
           
           setUserLocation(location);
+          onLocationUpdate?.(location); // Update parent component with manual GPS location
           debugLogEmoji('📍', 'Manual location set:', location);
           
           // Refresh recommendations with new location
@@ -606,6 +613,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         console.log('Reverse geocoding failed, using coordinates');
         const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
         setUserLocation(location);
+        onLocationUpdate?.(location); // Update parent component with coordinate location
         fetchRecommendations();
       }
     } catch (error) {
