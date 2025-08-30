@@ -95,6 +95,130 @@ function App() {
     console.log('🔧 Recipe generation worker test function available: window.testRecipeGenerationWorker()');
   }
   
+  // Get description for display - prioritize generated data for AI recipes
+  const getRecipeDescription = (recipe) => {
+    // For AI-generated recipes, first check the generated description
+    if (recipe.source === 'ai_generated' && recipe.generatedAt) {
+      console.log('🔍 AI Recipe - Generated description:', recipe.description);
+      
+      // If there's a generated description, use it
+      if (recipe.description && recipe.description.trim()) {
+        return recipe.description;
+      }
+      
+      // Otherwise, try to extract description from instructions
+      const instructions = recipe.instructions || [];
+      
+      for (const instruction of instructions) {
+        const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
+        const lowerText = instructionText.toLowerCase();
+        
+        // Look for description lines
+        if (lowerText.includes('description:') || lowerText.includes('**description')) {
+          const desc = instructionText.replace(/^\d+\.\s*/, '')
+                                    .replace(/^\*\*description\*\*:?\s*/i, '')
+                                    .replace(/^description:?\s*/i, '')
+                                    .trim();
+          if (desc.length > 20 && desc.length < 500) {
+            console.log('🔍 AI Recipe - Extracted description:', desc);
+            return desc;
+          }
+        }
+      }
+      
+      return null;
+    }
+    
+    // For regular recipes, use the description field
+    return recipe.description && recipe.description.trim() ? recipe.description : null;
+  };
+
+  // Get ingredients for display - prioritize generated data for AI recipes
+  const getFilteredIngredients = (recipe) => {
+    // For AI-generated recipes, use the generated ingredients directly
+    if (recipe.source === 'ai_generated' && recipe.generatedAt) {
+      console.log('🔍 AI Recipe - Using generated ingredients:', recipe.ingredients);
+      console.log('🔍 AI Recipe - Recipe object keys:', Object.keys(recipe));
+      
+      // Use the ingredients from the generation API response
+      const generatedIngredients = recipe.ingredients || [];
+      
+      // If the generated ingredients array is empty or very short, try to extract from instructions
+      if (generatedIngredients.length < 3) {
+        console.log('🔍 AI Recipe - Few ingredients, extracting from instructions');
+        const instructions = recipe.instructions || [];
+        const additionalIngredients = [];
+        
+        for (const instruction of instructions) {
+          const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
+          const cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
+          
+          // Look for ingredient lines (start with - and have measurements or food items)
+          if (cleanText.startsWith('- ') || cleanText.startsWith('• ')) {
+            const ingredientText = cleanText.replace(/^[-•]\s*/, '').trim();
+            const hasMeasurement = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls|inch|inches|medium|large|small|ripe|fresh|dried)/i.test(ingredientText);
+            const hasFoodWords = /\b(peach|peaches|cheese|oil|basil|salt|pepper|onion|garlic|chicken|beef|pork|fish|vegetable|fruit|herb|spice|flour|sugar|butter|milk|cream|egg|water|stock|broth|wine|vinegar|lemon|lime|tomato|potato|rice|pasta|bread)/i.test(ingredientText);
+            
+            if ((hasMeasurement || hasFoodWords) && ingredientText.length < 150) {
+              additionalIngredients.push(ingredientText);
+            }
+          }
+        }
+        
+        // Combine generated ingredients with extracted ones
+        const allIngredients = [...generatedIngredients, ...additionalIngredients];
+        const uniqueIngredients = allIngredients.filter((ingredient, index, self) => 
+          index === self.findIndex(i => i.toLowerCase().trim() === ingredient.toLowerCase().trim())
+        );
+        
+        console.log('🔍 AI Recipe - Final combined ingredients:', uniqueIngredients);
+        return uniqueIngredients;
+      }
+      
+      console.log('🔍 AI Recipe - Using generated ingredients as-is:', generatedIngredients);
+      return generatedIngredients;
+    }
+    
+    // For regular recipes, use the standard ingredient fields
+    return recipe.recipeIngredient || recipe.ingredients || [];
+  };
+
+  // Get instructions for display - prioritize generated data for AI recipes  
+  const getFilteredInstructions = (recipe) => {
+    // For AI-generated recipes, use the generated instructions directly
+    if (recipe.source === 'ai_generated' && recipe.generatedAt) {
+      console.log('🔍 AI Recipe - Using generated instructions:', recipe.instructions);
+      console.log('🔍 AI Recipe - Instructions type:', typeof recipe.instructions);
+      console.log('🔍 AI Recipe - Instructions length:', recipe.instructions?.length);
+      
+      const generatedInstructions = recipe.instructions || [];
+      
+      // For the sample response format where instructions contain everything,
+      // provide a simplified display that shows all content in a readable way
+      const cleanedInstructions = generatedInstructions.map(instruction => {
+        const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
+        
+        // Remove leading numbers and clean up formatting
+        let cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
+        
+        // Remove excessive bold formatting but keep some structure for readability
+        cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '$1');
+        
+        return cleanText;
+      }).filter(instruction => 
+        instruction.length > 5 // Must have some content
+      );
+      
+      console.log('🔍 AI Recipe - Final instructions count:', cleanedInstructions.length);
+      console.log('🔍 AI Recipe - Sample instruction:', cleanedInstructions[0]);
+      
+      return cleanedInstructions.length > 0 ? cleanedInstructions : generatedInstructions;
+    }
+    
+    // For regular recipes, use the standard instruction fields
+    return recipe.recipeInstructions || recipe.instructions || [];
+  };
+
   // Decode HTML entities for proper display
   const decodeHtmlEntities = (text) => {
     if (!text) return text;
@@ -1603,7 +1727,8 @@ function App() {
       if (result.success) {
         // Handle image upload if there's an image
         if (selectedImage) {
-          await uploadRecipeImage(result.id, selectedImage);
+          // TODO: Implement image upload functionality
+          console.log('Image upload not yet implemented for recipe:', result.id);
         }
         
         // Refresh the recipe list
@@ -1888,10 +2013,25 @@ function App() {
       return false; // Not an AI card, proceed normally
     }
 
+    // Check if recipe has already been generated
+    if (recipe.generatedAt) {
+      console.log('🔄 Recipe already generated, opening directly');
+      setSelectedRecipe(recipe);
+      window.history.pushState({ recipeView: true }, '', window.location.href);
+      return true;
+    }
+
     // Check if the environment variable is set
     if (!RECIPE_GENERATION_URL) {
       console.error('❌ RECIPE_GENERATION_URL environment variable is not set!');
       alert('Recipe generation is not configured. Please check your environment setup.');
+      return false;
+    }
+
+    // Check if this recipe is already being generated (prevent duplicate requests)
+    const cardId = recipe.id || recipe.name;
+    if (aiCardLoadingStates.has(cardId)) {
+      console.log('🔄 Recipe generation already in progress for:', recipe.name);
       return false;
     }
 
@@ -1926,7 +2066,6 @@ function App() {
     }
 
     // Set loading state for this specific card
-    const cardId = recipe.id || recipe.name;
     setAiCardLoadingStates(prev => new Map(prev).set(cardId, true));
 
     try {
@@ -1970,28 +2109,41 @@ function App() {
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
         const generatedRecipe = {
-          ...recipe,
+          // Only keep essential fields from the original recipe
+          id: recipe.id || recipe.name,
+          source: 'ai_generated',
+          fallback: recipe.fallback,
+          // Use the generated data from the API response
           name: result.recipe.name,
           description: result.recipe.description,
           ingredients: result.recipe.ingredients,
           instructions: result.recipe.instructions,
+          recipeIngredient: result.recipe.ingredients, // Ensure both field names are set
+          recipeInstructions: result.recipe.instructions, // Ensure both field names are set
           prep_time: result.recipe.prepTime,
           cook_time: result.recipe.cookTime,
           recipe_yield: result.recipe.servings,
-          source: 'ai_generated',
-          generatedAt: result.recipe.generatedAt,
-          mockMode: result.recipe.mockMode || false
+          prepTime: result.recipe.prepTime,
+          cookTime: result.recipe.cookTime,
+          servings: result.recipe.servings,
+          generatedAt: result.recipe.generatedAt || new Date().toISOString(),
+          mockMode: result.recipe.mockMode || false,
+          // Add metadata from generation
+          generationTime: result.generationTime,
+          similarRecipesFound: result.similarRecipesFound,
+          generationMethod: result.generationMethod
         };
 
-        // Clear loading state and open the generated recipe
+        // Clear loading state
         setAiCardLoadingStates(prev => {
           const newMap = new Map(prev);
           newMap.delete(cardId);
           return newMap;
         });
 
-        // Open the generated recipe in fullscreen view
-        openRecipeView(generatedRecipe);
+        // Open the generated recipe directly in fullscreen view
+        setSelectedRecipe(generatedRecipe);
+        window.history.pushState({ recipeView: true }, '', window.location.href);
         return true; // Recipe was generated and opened
       } else {
         throw new Error(result.error || 'Failed to generate recipe');
@@ -2029,13 +2181,14 @@ function App() {
 
   function openRecipeView(recipe) {
     // Check if this is an AI card that needs recipe generation
-    if (recipe.source === 'ai_generated' || recipe.fallback) {
-      // For AI cards, generate the recipe first
+    // Only trigger generation if it doesn't have generated content yet
+    if ((recipe.source === 'ai_generated' || recipe.fallback) && !recipe.generatedAt) {
+      // For AI cards that haven't been generated yet, generate the recipe first
       handleAiCardRecipeGeneration(recipe);
       return;
     }
 
-    // For regular recipes, open immediately
+    // For regular recipes or already generated AI recipes, open immediately
     setSelectedRecipe(recipe);
     // Push state to browser history when opening a recipe
     window.history.pushState({ recipeView: true }, '', window.location.href);
@@ -3503,6 +3656,11 @@ function App() {
           <div className="recipe-title-section" style={{ opacity: titleOpacity, transition: 'opacity 0.2s ease-out' }}>
             <h1 className="recipe-fullscreen-title">{selectedRecipe.name}</h1>
             
+            {/* Description for AI-generated recipes */}
+            {getRecipeDescription(selectedRecipe) && (
+              <p className="recipe-description">{getRecipeDescription(selectedRecipe)}</p>
+            )}
+            
             {/* Recipe Timing Info - prep time, cook time, yield */}
             {(selectedRecipe.prep_time || selectedRecipe.prepTime || 
               selectedRecipe.cook_time || selectedRecipe.cookTime || 
@@ -3698,9 +3856,15 @@ function App() {
                 <div className="recipe-panel glass">
                   <h2>Ingredients</h2>
                   <ul className="ingredients-list">
-                    {(selectedRecipe.recipeIngredient || selectedRecipe.ingredients || []).map((ingredient, index) => (
-                      <li key={index}>{formatIngredientAmount(ingredient)}</li>
-                    ))}
+                    {(() => {
+                      const ingredients = getFilteredIngredients(selectedRecipe);
+                      if (ingredients.length === 0) {
+                        return <li>No ingredients available</li>;
+                      }
+                      return ingredients.map((ingredient, index) => (
+                        <li key={index}>{formatIngredientAmount(ingredient)}</li>
+                      ));
+                    })()}
                   </ul>
                 </div>
                 
@@ -3708,11 +3872,17 @@ function App() {
                 <div className="recipe-panel glass">
                   <h2>Instructions</h2>
                   <ol className="instructions-list">
-                    {(selectedRecipe.recipeInstructions || selectedRecipe.instructions || []).map((instruction, index) => (
-                      <li key={index}>
-                        {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
-                      </li>
-                    ))}
+                    {(() => {
+                      const instructions = getFilteredInstructions(selectedRecipe);
+                      if (instructions.length === 0) {
+                        return <li>No instructions available</li>;
+                      }
+                      return instructions.map((instruction, index) => (
+                        <li key={index}>
+                          {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
+                        </li>
+                      ));
+                    })()}
                   </ol>
                 </div>
               </>
