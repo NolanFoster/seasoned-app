@@ -242,12 +242,12 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
     
     // Parse request body
     const body = await request.json();
-    const { location, date, limit = 3 } = body; // Default limit is 3 recipes per category
+    const { location, date, limit = 4 } = body; // Default limit is 4 recipes per category
 
     // Validate and log input parameters
     const hasLocation = location && location.trim() !== '';
     const recommendationDate = date || new Date().toISOString().split('T')[0];
-    const recipesPerCategory = Math.min(Math.max(parseInt(limit) || 3, 1), 10); // Limit between 1-10
+    const recipesPerCategory = Math.min(Math.max(parseInt(limit) || 4, 1), 10); // Limit between 1-10
     
     log('info', 'Recommendation parameters parsed', {
       requestId,
@@ -803,11 +803,25 @@ async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipe
         });
         
         // Fallback to dish names if recipe fetching fails
-        enhancedRecommendations[categoryName] = dishNames.slice(0, recipesPerCategory).map(dish => ({
-          name: dish,
-          type: 'dish_suggestion',
-          fallback: true
-        }));
+        enhancedRecommendations[categoryName] = dishNames.slice(0, recipesPerCategory).map((dish, index) => {
+          // Mark the 4th recipe (index 3) as AI-generated if we have 4 recipes
+          const isAiGenerated = recipesPerCategory === 4 && index === 3;
+          
+          return {
+            id: `fallback_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+            name: dish,
+            description: isAiGenerated 
+              ? `An AI-generated recipe for ${dish.toLowerCase()}` 
+              : `A recipe for ${dish.toLowerCase()}`,
+            ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
+            instructions: isAiGenerated 
+              ? [`Click to generate detailed recipe for ${dish.toLowerCase()}`]
+              : [`Prepare ${dish.toLowerCase()} according to your preferred method`],
+            type: 'dish_suggestion',
+            source: isAiGenerated ? 'ai_generated' : 'fallback_recipe',
+            fallback: true
+          };
+        });
         
         return { categoryName, recipeCount: dishNames.length, fallback: true };
       }
@@ -840,11 +854,25 @@ async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipe
     
     // Return original dish names as fallback
     Object.entries(categoryRecommendations).forEach(([categoryName, dishNames]) => {
-      enhancedRecommendations[categoryName] = dishNames.slice(0, recipesPerCategory).map(dish => ({
-        name: dish,
-        type: 'dish_suggestion',
-        fallback: true
-      }));
+      enhancedRecommendations[categoryName] = dishNames.slice(0, recipesPerCategory).map((dish, index) => {
+        // Mark the 4th recipe (index 3) as AI-generated if we have 4 recipes
+        const isAiGenerated = recipesPerCategory === 4 && index === 3;
+        
+        return {
+          id: `fallback_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+          name: dish,
+          description: isAiGenerated 
+            ? `An AI-generated recipe for ${dish.toLowerCase()}` 
+            : `A recipe for ${dish.toLowerCase()}`,
+          ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
+          instructions: isAiGenerated 
+            ? [`Click to generate detailed recipe for ${dish.toLowerCase()}`]
+            : [`Prepare ${dish.toLowerCase()} according to your preferred method`],
+          type: 'dish_suggestion',
+          source: isAiGenerated ? 'ai_generated' : 'fallback_recipe',
+          fallback: true
+        };
+      });
     });
     
     return enhancedRecommendations;
@@ -944,6 +972,10 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
   const startTime = Date.now();
   
   try {
+    // For 4 recipes per category, we want 3 real recipes + 1 AI-generated
+    const realRecipeLimit = limit === 4 ? 3 : limit;
+    const shouldAddAiRecipe = limit === 4;
+    
     // Try to search for recipes using the search database if available
     if (env.SEARCH_DB_URL) {
       // Extract meaningful cooking terms instead of using creative category names
@@ -958,10 +990,11 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
         originalDishNames: dishNames,
         extractedCookingTerms: cookingTerms,
         searchTerms: searchTerms,
-        limit
+        realRecipeLimit,
+        shouldAddAiRecipe
       });
       
-      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(searchTerms))}&type=recipe&limit=${limit}`;
+      const searchUrl = `${env.SEARCH_DB_URL}/api/smart-search?tags=${encodeURIComponent(JSON.stringify(searchTerms))}&type=recipe&limit=${realRecipeLimit}`;
       
       log('debug', 'Smart-search query details', {
         requestId,
@@ -984,7 +1017,7 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
         const searchResults = await response.json();
         
         if (searchResults.results && searchResults.results.length > 0) {
-          const recipes = searchResults.results.slice(0, limit).map(node => ({
+          const recipes = searchResults.results.slice(0, realRecipeLimit).map(node => ({
             id: node.id,
             name: node.properties.name || node.properties.title || 'Unknown Recipe',
             description: node.properties.description || '',
@@ -995,6 +1028,23 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
             type: 'recipe',
             source: 'smart_search_database'
           }));
+          
+          // Add AI-generated recipe as the 4th recipe if needed
+          if (shouldAddAiRecipe && dishNames.length >= 4) {
+            const aiRecipe = {
+              id: `ai_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+              name: dishNames[3], // Use the 4th dish name from AI recommendations
+              description: `An AI-generated recipe for ${dishNames[3].toLowerCase()}`,
+              ingredients: [`Fresh ingredients for ${dishNames[3].toLowerCase()}`],
+              instructions: [`Click to generate detailed recipe for ${dishNames[3].toLowerCase()}`],
+              image_url: null,
+              source_url: null,
+              type: 'dish_suggestion',
+              source: 'ai_generated',
+              fallback: true
+            };
+            recipes.push(aiRecipe);
+          }
           
           const duration = Date.now() - startTime;
           metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
@@ -1009,6 +1059,8 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
             category: categoryName,
             found: recipes.length,
             requested: limit,
+            realRecipeCount: realRecipeLimit,
+            aiRecipeAdded: shouldAddAiRecipe,
             duration: `${duration}ms`,
             source: 'smart_search_database',
             strategy: searchResults.strategy || 'unknown',
@@ -1025,11 +1077,12 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
       log('debug', 'Searching for recipes using recipe save worker', {
         requestId,
         category: categoryName,
-        limit
+        realRecipeLimit,
+        shouldAddAiRecipe
       });
 
       try {
-        const searchUrl = `${env.RECIPE_SAVE_WORKER_URL}/recipes/search?q=${encodeURIComponent(categoryName)}&limit=${limit}`;
+        const searchUrl = `${env.RECIPE_SAVE_WORKER_URL}/recipes/search?q=${encodeURIComponent(categoryName)}&limit=${realRecipeLimit}`;
         const response = await fetch(searchUrl, {
           method: 'GET',
           headers: {
@@ -1042,7 +1095,7 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
           const searchResults = await response.json();
           
           if (searchResults.recipes && searchResults.recipes.length > 0) {
-            const recipes = searchResults.recipes.slice(0, limit).map(recipe => ({
+            const recipes = searchResults.recipes.slice(0, realRecipeLimit).map(recipe => ({
               id: recipe.id,
               name: recipe.name,
               description: recipe.description || '',
@@ -1054,6 +1107,23 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
               source: 'recipe_save_worker'
             }));
             
+            // Add AI-generated recipe as the 4th recipe if needed
+            if (shouldAddAiRecipe && dishNames.length >= 4) {
+              const aiRecipe = {
+                id: `ai_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+                name: dishNames[3], // Use the 4th dish name from AI recommendations
+                description: `An AI-generated recipe for ${dishNames[3].toLowerCase()}`,
+                ingredients: [`Fresh ingredients for ${dishNames[3].toLowerCase()}`],
+                instructions: [`Click to generate detailed recipe for ${dishNames[3].toLowerCase()}`],
+                image_url: null,
+                source_url: null,
+                type: 'dish_suggestion',
+                source: 'ai_generated',
+                fallback: true
+              };
+              recipes.push(aiRecipe);
+            }
+            
             const duration = Date.now() - startTime;
             metrics.timing('recipe_search_duration', duration, { source: 'recipe_save_worker' });
             metrics.increment('recipes_found_via_save_worker', recipes.length);
@@ -1063,6 +1133,8 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
               category: categoryName,
               found: recipes.length,
               requested: limit,
+              realRecipeCount: realRecipeLimit,
+              aiRecipeAdded: shouldAddAiRecipe,
               duration: `${duration}ms`
             });
             
@@ -1081,21 +1153,32 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
     // Final fallback: return enhanced dish names with mock recipe structure
     log('debug', 'No recipes found, returning enhanced dish names', {
       requestId,
-      category: categoryName
+      category: categoryName,
+      shouldAddAiRecipe,
+      realRecipeLimit
     });
     
-    const enhancedDishes = dishNames.slice(0, limit).map((dish, index) => ({
-      id: `dish_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
-      name: dish,
-      description: `A delicious ${dish.toLowerCase()} perfect for ${categoryName.toLowerCase()}`,
-      ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
-      instructions: [`Prepare ${dish.toLowerCase()} according to your favorite recipe`],
-      image_url: null,
-      source_url: null,
-      type: 'dish_suggestion',
-      source: 'ai_generated',
-      fallback: true
-    }));
+    const enhancedDishes = dishNames.slice(0, limit).map((dish, index) => {
+      // Mark the 4th recipe (index 3) as AI-generated if we have 4 recipes
+      const isAiGenerated = shouldAddAiRecipe && index === 3;
+      
+      return {
+        id: `dish_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+        name: dish,
+        description: isAiGenerated 
+          ? `An AI-generated recipe for ${dish.toLowerCase()}` 
+          : `A delicious ${dish.toLowerCase()} perfect for ${categoryName.toLowerCase()}`,
+        ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
+        instructions: isAiGenerated 
+          ? [`Click to generate detailed recipe for ${dish.toLowerCase()}`]
+          : [`Prepare ${dish.toLowerCase()} according to your favorite recipe`],
+        image_url: null,
+        source_url: null,
+        type: 'dish_suggestion',
+        source: isAiGenerated ? 'ai_generated' : 'mock_recipe',
+        fallback: true
+      };
+    });
     
     const duration = Date.now() - startTime;
     metrics.timing('recipe_search_duration', duration, { source: 'fallback' });
@@ -1116,13 +1199,26 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
     metrics.increment('recipe_search_errors', 1);
     
     // Return basic dish names as final fallback
-    return dishNames.slice(0, limit).map(dish => ({
-      id: `fallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: dish,
-      type: 'dish_suggestion',
-      source: 'fallback',
-      fallback: true
-    }));
+    const shouldAddAiRecipe = limit === 4; // Define here for error fallback
+    return dishNames.slice(0, limit).map((dish, index) => {
+      // Mark the 4th recipe (index 3) as AI-generated if we have 4 recipes
+      const isAiGenerated = shouldAddAiRecipe && index === 3;
+      
+      return {
+        id: `fallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: dish,
+        description: isAiGenerated 
+          ? `An AI-generated recipe for ${dish.toLowerCase()}` 
+          : `A recipe for ${dish.toLowerCase()}`,
+        ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
+        instructions: isAiGenerated 
+          ? [`Click to generate detailed recipe for ${dish.toLowerCase()}`]
+          : [`Prepare ${dish.toLowerCase()} according to your preferred method`],
+        type: 'dish_suggestion',
+        source: isAiGenerated ? 'ai_generated' : 'fallback',
+        fallback: true
+      };
+    });
   }
 }
 
@@ -1149,7 +1245,7 @@ function getMockRecommendations(location, date, recipesPerCategory, requestId) {
   const trimmedLocation = hasLocation ? location.trim() : null;
   
   // Handle edge cases for recipesPerCategory
-  const actualLimit = Math.max(1, Math.min(recipesPerCategory || 3, 10));
+  const actualLimit = Math.max(1, Math.min(recipesPerCategory || 4, 10));
   
   // Provide sensible mock data based on date
   let dateObj;
@@ -1208,24 +1304,44 @@ function getMockRecommendations(location, date, recipesPerCategory, requestId) {
     }
   };
 
+  // Helper function to create recipe objects with AI-generated 4th recipe
+  const createRecipeObjects = (dishes, categoryPrefix, sourceType, actualLimit, season) => {
+    return dishes.slice(0, actualLimit).map((dish, index) => {
+      // Mark the 4th recipe (index 3) as AI-generated if we have 4 recipes
+      const isAiGenerated = actualLimit === 4 && index === 3;
+      
+      return {
+        id: `${categoryPrefix}_${index}`,
+        name: dish,
+        description: isAiGenerated 
+          ? `An AI-generated recipe for ${dish.toLowerCase()}` 
+          : `A delicious ${dish.toLowerCase()} perfect for ${season.toLowerCase()}`,
+        ingredients: [`Fresh ${isAiGenerated ? '' : 'seasonal '}ingredients for ${dish.toLowerCase()}`],
+        instructions: isAiGenerated 
+          ? [`Click to generate detailed recipe for ${dish.toLowerCase()}`]
+          : [`Prepare ${dish.toLowerCase()} according to your favorite recipe`],
+        image_url: null,
+        source_url: null,
+        type: 'dish_suggestion',
+        source: isAiGenerated ? 'ai_generated' : sourceType,
+        fallback: true
+      };
+    });
+  };
+
   // Build recommendations object dynamically
   let recommendations = {};
   
   // First category: Seasonal - use the first category from seasonalRecommendations
   const seasonalCategoryName = Object.keys(seasonalRecommendations[season])[0];
   const seasonalDishes = seasonalRecommendations[season][seasonalCategoryName];
-  recommendations[seasonalCategoryName] = seasonalDishes.slice(0, actualLimit).map((dish, index) => ({
-    id: `seasonal_${season.toLowerCase()}_${index}`,
-    name: dish,
-    description: `A delicious ${dish.toLowerCase()} perfect for ${season.toLowerCase()}`,
-    ingredients: [`Fresh seasonal ingredients for ${dish.toLowerCase()}`],
-    instructions: [`Prepare ${dish.toLowerCase()} according to your favorite recipe`],
-    image_url: null,
-    source_url: null,
-    type: 'dish_suggestion',
-    source: 'mock_seasonal',
-    fallback: true
-  }));
+  recommendations[seasonalCategoryName] = createRecipeObjects(
+    seasonalDishes, 
+    `seasonal_${season.toLowerCase()}`, 
+    'mock_seasonal', 
+    actualLimit,
+    season
+  );
   
   // Second category: Location-based or practical
   if (!hasLocation) {
@@ -1241,48 +1357,33 @@ function getMockRecommendations(location, date, recipesPerCategory, requestId) {
     const practicalDishes = practicalRecipes[practicalCategory] || 
       ['simple pasta', 'rice bowls', 'sandwiches', 'salads'];
     
-    recommendations[practicalCategory] = practicalDishes.slice(0, actualLimit).map((dish, index) => ({
-      id: `practical_${index}`,
-      name: dish,
-      description: `A practical and delicious ${dish.toLowerCase()} for everyday cooking`,
-      ingredients: [`Essential ingredients for ${dish.toLowerCase()}`],
-      instructions: [`Cook ${dish.toLowerCase()} using your preferred method`],
-      image_url: null,
-      source_url: null,
-      type: 'dish_suggestion',
-      source: 'mock_practical',
-      fallback: true
-    }));
+    recommendations[practicalCategory] = createRecipeObjects(
+      practicalDishes, 
+      'practical', 
+      'mock_practical', 
+      actualLimit,
+      season
+    );
   } else if (isPNW) {
     const pnwDishes = ['cedar plank salmon', 'dungeness crab cakes', 'grilled oysters', 'chanterelle risotto'];
-    recommendations['Pacific Northwest Coastal Cuisine'] = pnwDishes.slice(0, actualLimit).map((dish, index) => ({
-      id: `pnw_${index}`,
-      name: dish,
-      description: `A Pacific Northwest specialty: ${dish.toLowerCase()}`,
-      ingredients: [`Fresh local ingredients for ${dish.toLowerCase()}`],
-      instructions: [`Prepare ${dish.toLowerCase()} using traditional PNW methods`],
-      image_url: null,
-      source_url: null,
-      type: 'dish_suggestion',
-      source: 'mock_pnw',
-      fallback: true
-    }));
+    recommendations['Pacific Northwest Coastal Cuisine'] = createRecipeObjects(
+      pnwDishes, 
+      'pnw', 
+      'mock_pnw', 
+      actualLimit,
+      season
+    );
   } else {
     // Generic local specialties with creative name based on location
     const locationName = trimmedLocation.split(',')[0].trim(); // Get first part of location
     const localDishes = ['farmers market salad', 'artisan bread', 'local cheese plate', 'seasonal vegetable tart'];
-    recommendations[`${locationName} Local Favorites`] = localDishes.slice(0, actualLimit).map((dish, index) => ({
-      id: `local_${locationName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
-      name: dish,
-      description: `A local favorite from ${locationName}: ${dish.toLowerCase()}`,
-      ingredients: [`Fresh local ingredients for ${dish.toLowerCase()}`],
-      instructions: [`Prepare ${dish.toLowerCase()} using local techniques`],
-      image_url: null,
-      source_url: null,
-      type: 'dish_suggestion',
-      source: 'mock_local',
-      fallback: true
-    }));
+    recommendations[`${locationName} Local Favorites`] = createRecipeObjects(
+      localDishes, 
+      `local_${locationName.toLowerCase().replace(/\s+/g, '_')}`, 
+      'mock_local', 
+      actualLimit,
+      season
+    );
   }
   
   // Third category: Holiday or contextual
@@ -1312,18 +1413,13 @@ function getMockRecommendations(location, date, recipesPerCategory, requestId) {
       holidayRecipes[upcomingHoliday.replace("'s Day", "")] ||
       ['festive cookies', 'celebration cake', 'party appetizers', 'special drinks'];
     
-    recommendations[holidayName] = holidayDishes.slice(0, actualLimit).map((dish, index) => ({
-      id: `holiday_${upcomingHoliday.toLowerCase().replace(/\s+/g, '_')}_${index}`,
-      name: dish,
-      description: `A festive ${dish.toLowerCase()} perfect for ${upcomingHoliday}`,
-      ingredients: [`Celebratory ingredients for ${dish.toLowerCase()}`],
-      instructions: [`Prepare ${dish.toLowerCase()} with holiday spirit`],
-      image_url: null,
-      source_url: null,
-      type: 'dish_suggestion',
-      source: 'mock_holiday',
-      fallback: true
-    }));
+    recommendations[holidayName] = createRecipeObjects(
+      holidayDishes, 
+      `holiday_${upcomingHoliday.toLowerCase().replace(/\s+/g, '_')}`, 
+      'mock_holiday', 
+      actualLimit,
+      season
+    );
   } else {
     // No holiday - use contextual category
     // Make sure we don't duplicate the second category if no location
@@ -1354,33 +1450,23 @@ function getMockRecommendations(location, date, recipesPerCategory, requestId) {
     
     // Ensure contextCategory is defined before using it
     if (contextCategory) {
-      recommendations[contextCategory] = contextDishes.slice(0, actualLimit).map((dish, index) => ({
-        id: `context_${contextCategory.toLowerCase().replace(/\s+/g, '_')}_${index}`,
-        name: dish,
-        description: `A perfect ${dish.toLowerCase()} for ${contextCategory.toLowerCase()}`,
-        ingredients: [`Quality ingredients for ${dish.toLowerCase()}`],
-        instructions: [`Prepare ${dish.toLowerCase()} with care and attention`],
-        image_url: null,
-        source_url: null,
-        type: 'dish_suggestion',
-        source: 'mock_context',
-        fallback: true
-      }));
+      recommendations[contextCategory] = createRecipeObjects(
+        contextDishes, 
+        `context_${contextCategory.toLowerCase().replace(/\s+/g, '_')}`, 
+        'mock_context', 
+        actualLimit,
+        season
+      );
     } else {
       // Fallback if contextCategory is undefined
       const fallbackDishes = ['seasonal soup', 'comfort dish', 'family favorite', 'easy dinner'];
-      recommendations['Seasonal Comfort'] = fallbackDishes.slice(0, actualLimit).map((dish, index) => ({
-        id: `fallback_${index}`,
-        name: dish,
-        description: `A delicious ${dish.toLowerCase()} for any season`,
-        ingredients: [`Quality ingredients for ${dish.toLowerCase()}`],
-        instructions: [`Prepare ${dish.toLowerCase()} with care and attention`],
-        image_url: null,
-        source_url: null,
-        type: 'dish_suggestion',
-        source: 'mock_fallback',
-        fallback: true
-      }));
+      recommendations['Seasonal Comfort'] = createRecipeObjects(
+        fallbackDishes, 
+        'fallback', 
+        'mock_fallback', 
+        actualLimit,
+        season
+      );
     }
   }
 

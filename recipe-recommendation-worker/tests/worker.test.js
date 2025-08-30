@@ -402,7 +402,7 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes.length).toBe(2); // Limited to 2
       expect(recipes[0].fallback).toBe(true);
       expect(recipes[0].type).toBe('dish_suggestion');
-      expect(recipes[0].source).toBe('ai_generated');
+      expect(recipes[0].source).toBe('mock_recipe'); // Only 4th recipe is AI-generated when limit=4
     });
 
     it('should handle network errors gracefully', async () => {
@@ -438,7 +438,7 @@ describe('Recipe Recommendation Worker', () => {
 
       expect(recipes).toHaveLength(2);
       expect(recipes[0]).toHaveProperty('fallback', true);
-      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+      expect(recipes[0]).toHaveProperty('source', 'mock_recipe'); // Only 4th recipe is AI-generated when limit=4
     });
 
     it('should handle complete search failure and return basic fallback', async () => {
@@ -457,7 +457,30 @@ describe('Recipe Recommendation Worker', () => {
 
       expect(recipes).toHaveLength(2);
       expect(recipes[0]).toHaveProperty('fallback', true);
-      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+      expect(recipes[0]).toHaveProperty('source', 'mock_recipe'); // Only 4th recipe is AI-generated when limit=4
+    });
+
+    it('should mark 4th recipe as AI-generated when limit is 4', async () => {
+      const mockEnv = {
+        SEARCH_DB_URL: null,
+        RECIPE_SAVE_WORKER_URL: null
+      };
+
+      const recipes = await searchRecipeByCategory(
+        'Test Category',
+        ['dish1', 'dish2', 'dish3', 'dish4'],
+        4,
+        mockEnv,
+        'test-req-123'
+      );
+
+      expect(recipes).toHaveLength(4);
+      expect(recipes[0]).toHaveProperty('source', 'mock_recipe');
+      expect(recipes[1]).toHaveProperty('source', 'mock_recipe');
+      expect(recipes[2]).toHaveProperty('source', 'mock_recipe');
+      expect(recipes[3]).toHaveProperty('source', 'ai_generated'); // 4th recipe should be AI-generated
+      expect(recipes[3]).toHaveProperty('fallback', true);
+      expect(recipes[3]).toHaveProperty('type', 'dish_suggestion');
     });
 
     it('should handle search with no meaningful cooking terms extracted', async () => {
