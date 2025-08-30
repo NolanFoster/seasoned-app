@@ -1888,10 +1888,25 @@ function App() {
       return false; // Not an AI card, proceed normally
     }
 
+    // Check if recipe has already been generated
+    if (recipe.generatedAt) {
+      console.log('🔄 Recipe already generated, opening directly');
+      setSelectedRecipe(recipe);
+      window.history.pushState({ recipeView: true }, '', window.location.href);
+      return true;
+    }
+
     // Check if the environment variable is set
     if (!RECIPE_GENERATION_URL) {
       console.error('❌ RECIPE_GENERATION_URL environment variable is not set!');
       alert('Recipe generation is not configured. Please check your environment setup.');
+      return false;
+    }
+
+    // Check if this recipe is already being generated (prevent duplicate requests)
+    const cardId = recipe.id || recipe.name;
+    if (aiCardLoadingStates.has(cardId)) {
+      console.log('🔄 Recipe generation already in progress for:', recipe.name);
       return false;
     }
 
@@ -1926,7 +1941,6 @@ function App() {
     }
 
     // Set loading state for this specific card
-    const cardId = recipe.id || recipe.name;
     setAiCardLoadingStates(prev => new Map(prev).set(cardId, true));
 
     try {
@@ -1979,19 +1993,20 @@ function App() {
           cook_time: result.recipe.cookTime,
           recipe_yield: result.recipe.servings,
           source: 'ai_generated',
-          generatedAt: result.recipe.generatedAt,
+          generatedAt: result.recipe.generatedAt || new Date().toISOString(),
           mockMode: result.recipe.mockMode || false
         };
 
-        // Clear loading state and open the generated recipe
+        // Clear loading state
         setAiCardLoadingStates(prev => {
           const newMap = new Map(prev);
           newMap.delete(cardId);
           return newMap;
         });
 
-        // Open the generated recipe in fullscreen view
-        openRecipeView(generatedRecipe);
+        // Open the generated recipe directly in fullscreen view
+        setSelectedRecipe(generatedRecipe);
+        window.history.pushState({ recipeView: true }, '', window.location.href);
         return true; // Recipe was generated and opened
       } else {
         throw new Error(result.error || 'Failed to generate recipe');
@@ -2029,13 +2044,14 @@ function App() {
 
   function openRecipeView(recipe) {
     // Check if this is an AI card that needs recipe generation
-    if (recipe.source === 'ai_generated' || recipe.fallback) {
-      // For AI cards, generate the recipe first
+    // Only trigger generation if it doesn't have generated content yet
+    if ((recipe.source === 'ai_generated' || recipe.fallback) && !recipe.generatedAt) {
+      // For AI cards that haven't been generated yet, generate the recipe first
       handleAiCardRecipeGeneration(recipe);
       return;
     }
 
-    // For regular recipes, open immediately
+    // For regular recipes or already generated AI recipes, open immediately
     setSelectedRecipe(recipe);
     // Push state to browser history when opening a recipe
     window.history.pushState({ recipeView: true }, '', window.location.href);
