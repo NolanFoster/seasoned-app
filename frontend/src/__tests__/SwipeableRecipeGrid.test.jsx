@@ -8,7 +8,7 @@ const mockScrollBy = jest.fn();
 const mockAddEventListener = jest.fn();
 const mockRemoveEventListener = jest.fn();
 
-describe.skip('SwipeableRecipeGrid', () => {
+describe('SwipeableRecipeGrid', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();

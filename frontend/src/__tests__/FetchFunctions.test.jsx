@@ -3,7 +3,7 @@ import { render, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from '../App';
 
-describe.skip('Fetch Functions', () => {
+describe('Fetch Functions', () => {
   let originalFetch;
   let abortSpy;
 

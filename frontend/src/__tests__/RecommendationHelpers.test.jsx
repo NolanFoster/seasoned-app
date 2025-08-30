@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import App from '../App';
 
-describe.skip('Recommendation Helpers', () => {
+describe('Recommendation Helpers', () => {
   describe('formatDuration', () => {
     it('should format ISO 8601 durations correctly', () => {
       // We need to test the formatDuration function from App.jsx

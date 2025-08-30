@@ -40,7 +40,7 @@ const waitForLocationTimeout = async () => {
   });
 };
 
-describe.skip('Recommendations Component', () => {
+describe('Recommendations Component', () => {
   const mockOnRecipeSelect = jest.fn();
 
   beforeEach(() => {
@@ -327,7 +327,7 @@ describe.skip('Recommendations Component', () => {
     expect(screen.queryByText('Invalid Category')).not.toBeInTheDocument();
   }, 15000); // Increase timeout to 15 seconds
 
-  describe.skip('Carousel Integration', () => {
+  describe('Carousel Integration', () => {
     it('uses SwipeableRecipeGrid for recipe display', async () => {
       const mockRecommendations = {
         recommendations: {
@@ -491,7 +491,7 @@ describe.skip('Recommendations Component', () => {
     }, 15000); // Increase timeout to 15 seconds
   });
 
-  describe.skip('Error Handling', () => {
+  describe('Error Handling', () => {
     it('handles API errors gracefully', async () => {
       fetch.mockImplementation(() => {
         return Promise.reject(new Error('API Error'));
@@ -527,7 +527,7 @@ describe.skip('Recommendations Component', () => {
     }, 15000); // Increase timeout to 15 seconds
   });
 
-  describe.skip('Location Handling', () => {
+  describe('Location Handling', () => {
     it('shows location prompt when permission denied', async () => {
       mockGeolocation.getCurrentPosition.mockImplementation((resolve, reject) => {
         reject({ code: 1, message: 'Permission denied' });

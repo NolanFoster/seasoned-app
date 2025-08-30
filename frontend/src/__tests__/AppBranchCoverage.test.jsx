@@ -19,7 +19,7 @@ Object.entries(mockEnv).forEach(([key, value]) => {
   process.env[key] = value;
 });
 
-describe.skip('App Branch Coverage', () => {
+describe('App Branch Coverage', () => {
   beforeEach(() => {
     // Reset fetch mock before each test
     fetch.mockClear();
