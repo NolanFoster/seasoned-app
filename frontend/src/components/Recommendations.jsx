@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef, createRef } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
@@ -39,29 +39,60 @@ const Recommendations = forwardRef(({ onRecipeSelect, recipesByCategory, aiCardL
   // Refs for each carousel to enable scroll position memory
   const carouselRefs = useRef(new Map());
 
-  // Function to get or create a ref for a specific category
-  const getCarouselRef = useCallback((categoryName) => {
-    if (!carouselRefs.current.has(categoryName)) {
-      carouselRefs.current.set(categoryName, React.createRef());
+  // Create refs for all categories when recipesByCategory changes
+  useEffect(() => {
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      console.log('🔍 Creating refs for categories:', Array.from(recipesByCategory.keys()));
+      const newRefs = new Map();
+      for (const categoryName of recipesByCategory.keys()) {
+        if (!carouselRefs.current.has(categoryName)) {
+          console.log('📝 Creating new ref for category:', categoryName);
+          newRefs.set(categoryName, createRef());
+        } else {
+          console.log('📝 Reusing existing ref for category:', categoryName);
+          newRefs.set(categoryName, carouselRefs.current.get(categoryName));
+        }
+      }
+      carouselRefs.current = newRefs;
+      console.log('📍 All refs created:', Array.from(newRefs.keys()));
     }
-    return carouselRefs.current.get(categoryName);
+  }, [recipesByCategory]);
+
+  // Function to get a ref for a specific category
+  const getCarouselRef = useCallback((categoryName) => {
+    console.log('🔍 getCarouselRef called for category:', categoryName);
+    const ref = carouselRefs.current.get(categoryName);
+    console.log('📍 Ref for category', categoryName, ':', ref, 'ref.current:', ref?.current);
+    return ref;
   }, []);
 
   // Function to save scroll position for a specific category
   const saveCarouselPosition = useCallback((categoryName) => {
+    console.log('🔍 Recommendations: saveCarouselPosition called for category:', categoryName);
     const ref = carouselRefs.current.get(categoryName);
+    console.log('📍 Carousel ref found:', Boolean(ref), 'ref.current exists:', Boolean(ref?.current));
+    
     if (ref && ref.current) {
-      return ref.current.saveScrollPosition();
+      const position = ref.current.saveScrollPosition();
+      console.log('💾 Saved scroll position:', position);
+      return position;
     }
+    console.log('⚠️ Could not save scroll position - ref or ref.current is null');
     return 0;
   }, []);
 
   // Function to restore scroll position for a specific category
   const restoreCarouselPosition = useCallback((categoryName) => {
+    console.log('🔍 Recommendations: restoreCarouselPosition called for category:', categoryName);
     const ref = carouselRefs.current.get(categoryName);
+    console.log('📍 Carousel ref found:', Boolean(ref), 'ref.current exists:', Boolean(ref?.current));
+    
     if (ref && ref.current) {
-      return ref.current.restoreScrollPosition();
+      const restored = ref.current.restoreScrollPosition();
+      console.log('🔄 Restored scroll position:', restored);
+      return restored;
     }
+    console.log('⚠️ Could not restore scroll position - ref or ref.current is null');
     return false;
   }, []);
 

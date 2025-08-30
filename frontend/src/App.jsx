@@ -33,17 +33,32 @@ function App() {
 
   // Helper function to close recipe view and restore carousel position
   const closeRecipeView = useCallback((category = null) => {
+    console.log('🔍 Closing Recipe View Debug:', {
+      selectedRecipeCategory,
+      category,
+      categoryToRestore: category || selectedRecipeCategory,
+      recommendationsRefExists: Boolean(recommendationsRef.current),
+      carouselPositions: Array.from(carouselPositions.entries())
+    });
+
     // Restore carousel position before closing
     const categoryToRestore = category || selectedRecipeCategory;
     if (categoryToRestore && recommendationsRef.current) {
-      recommendationsRef.current.restoreCarouselPosition(categoryToRestore);
+      console.log('🔄 Restoring carousel position for category:', categoryToRestore);
+      const restored = recommendationsRef.current.restoreCarouselPosition(categoryToRestore);
+      console.log('✅ Carousel position restored:', restored);
+    } else {
+      console.log('⚠️ Could not restore carousel position:', {
+        categoryToRestore,
+        recommendationsRefExists: Boolean(recommendationsRef.current)
+      });
     }
     
     setSelectedRecipe(null);
     setShowSharePanel(false);
     setShowNutrition(false);
     setSelectedRecipeCategory(null);
-  }, []);
+  }, [selectedRecipeCategory, carouselPositions]);
 
   // Debug function to test recipe generation worker connectivity
   const testRecipeGenerationWorker = async () => {
@@ -2214,6 +2229,15 @@ function App() {
   }
 
   function openRecipeView(recipe) {
+    console.log('🔍 openRecipeView called with recipe:', {
+      id: recipe.id,
+      name: recipe.name,
+      source: recipe.source,
+      fallback: recipe.fallback,
+      generatedAt: recipe.generatedAt,
+      keys: Object.keys(recipe)
+    });
+
     // Check if this is an AI card that needs recipe generation
     // Only trigger generation if it doesn't have generated content yet
     if ((recipe.source === 'ai_generated' || recipe.fallback) && !recipe.generatedAt) {
@@ -2225,19 +2249,51 @@ function App() {
     // Find which category this recipe belongs to and save carousel position
     let recipeCategory = null;
     if (recipesByCategory && recipesByCategory.size > 0) {
+      console.log('🔍 Recipe matching debug:', {
+        recipeToFind: { id: recipe.id, name: recipe.name },
+        recipesByCategoryKeys: Array.from(recipesByCategory.keys()),
+        sampleRecipes: Array.from(recipesByCategory.entries()).map(([cat, recipes]) => ({
+          category: cat,
+          recipeCount: recipes.length,
+          sampleRecipe: recipes[0] ? { id: recipes[0].id, name: recipes[0].name } : null
+        }))
+      });
+      
       for (const [categoryName, recipes] of recipesByCategory.entries()) {
-        if (recipes.some(r => r.id === recipe.id)) {
+        const matchingRecipe = recipes.find(r => r.id === recipe.id);
+        if (matchingRecipe) {
           recipeCategory = categoryName;
+          console.log('✅ Found matching recipe in category:', categoryName, 'recipe:', matchingRecipe);
           break;
         }
       }
+      
+      if (!recipeCategory) {
+        console.log('❌ No matching recipe found in any category');
+      }
     }
+
+    console.log('🔍 Carousel Position Debug:', {
+      recipeId: recipe.id,
+      recipeName: recipe.name,
+      recipeCategory,
+      hasRecipesByCategory: Boolean(recipesByCategory && recipesByCategory.size > 0),
+      recommendationsRefExists: Boolean(recommendationsRef.current),
+      recipesByCategoryKeys: recipesByCategory ? Array.from(recipesByCategory.keys()) : []
+    });
 
     // Save carousel position for the category if found
     if (recipeCategory && recommendationsRef.current) {
+      console.log('💾 Saving carousel position for category:', recipeCategory);
       const scrollPosition = recommendationsRef.current.saveCarouselPosition(recipeCategory);
+      console.log('📍 Saved scroll position:', scrollPosition);
       setCarouselPositions(prev => new Map(prev).set(recipeCategory, scrollPosition));
       setSelectedRecipeCategory(recipeCategory);
+    } else {
+      console.log('⚠️ Could not save carousel position:', {
+        recipeCategory,
+        recommendationsRefExists: Boolean(recommendationsRef.current)
+      });
     }
 
     // Reset any lingering reflection effects before opening fullscreen
