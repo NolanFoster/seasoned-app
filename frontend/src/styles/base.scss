@@ -403,9 +403,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transform-origin: center center;
+    transform: none; // Ensure no transform interference
     
     svg {
       animation: spin 1s linear infinite;
+      will-change: transform;
+      backface-visibility: hidden;
+      transform-origin: center center;
     }
   }
   
