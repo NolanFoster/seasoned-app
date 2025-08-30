@@ -1560,6 +1560,11 @@ function getMockRecipeNamesByCategory(categories, recipesPerCategory, requestId)
   // Build recipe names object for requested categories
   const result = {};
   
+  // Handle null/undefined categories
+  if (!categories || !Array.isArray(categories)) {
+    return result;
+  }
+  
   categories.forEach(category => {
     // Find a matching mock category or use a default one
     let mockCategory = category;
@@ -1895,5 +1900,7 @@ export {
   getMockRecommendations, 
   enhanceRecommendationsWithRecipes, 
   searchRecipeByCategory,
-  extractCookingTerms
+  extractCookingTerms,
+  generateRecipeNamesByCategory,
+  getMockRecipeNamesByCategory
 };
