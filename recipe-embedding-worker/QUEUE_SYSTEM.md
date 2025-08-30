@@ -293,13 +293,20 @@ The old KV-based queue system has been completely replaced. The new system:
 
 ### Wrangler Configuration
 ```toml
-[[queues]]
-binding = "EMBEDDING_QUEUE"
-name = "recipe-embedding-queue"
+# Queue consumers must be defined at environment level
+[[env.staging.queues.consumers]]
+queue = "recipe-embedding-queue-staging"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "recipe-embedding-dlq-staging"
 
-[env.production.queues]
-binding = "EMBEDDING_QUEUE"
-name = "recipe-embedding-queue-production"
+[[env.production.queues.consumers]]
+queue = "recipe-embedding-queue-production"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "recipe-embedding-dlq-production"
 ```
 
 ### Environment Variables

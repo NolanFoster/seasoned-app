@@ -21,9 +21,7 @@ crons = ["0 2 * * *"]
 binding = "AI"
 
 # Cloudflare Queues for embedding processing
-[[queues]]
-binding = "EMBEDDING_QUEUE"
-name = "recipe-embedding-queue"
+# Queue consumers must be defined at environment level, not top level
 
 # Preview environment (for PR previews)
 [env.preview]
@@ -38,9 +36,12 @@ enabled = true
 [env.preview.ai]
 binding = "AI"
 
-[[env.preview.queues]]
-binding = "EMBEDDING_QUEUE"
-name = "recipe-embedding-queue-preview"
+[[env.preview.queues.consumers]]
+queue = "recipe-embedding-queue-preview"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "recipe-embedding-dlq-preview"
 
 [[env.preview.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -66,9 +67,12 @@ crons = ["0 2 * * *"]
 [env.staging.ai]
 binding = "AI"
 
-[[env.staging.queues]]
-binding = "EMBEDDING_QUEUE"
-name = "recipe-embedding-queue-staging"
+[[env.staging.queues.consumers]]
+queue = "recipe-embedding-queue-staging"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "recipe-embedding-dlq-staging"
 
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -94,9 +98,12 @@ crons = ["0 2 * * *"]
 [env.production.ai]
 binding = "AI"
 
-[[env.production.queues]]
-binding = "EMBEDDING_QUEUE"
-name = "recipe-embedding-queue-production"
+[[env.production.queues.consumers]]
+queue = "recipe-embedding-queue-production"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "recipe-embedding-dlq-production"
 
 [[env.production.kv_namespaces]]
 binding = "RECIPE_STORAGE"
