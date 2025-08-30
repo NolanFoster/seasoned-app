@@ -38,7 +38,7 @@ const mockRecipeResponse = {
   data: mockRecipeWithDecimals
 };
 
-describe.skip('Ingredient Formatting', () => {
+describe('Ingredient Formatting', () => {
   beforeEach(() => {
     fetch.mockClear();
     localStorage.clear();

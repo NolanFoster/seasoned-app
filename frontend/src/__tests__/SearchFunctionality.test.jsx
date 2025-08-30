@@ -35,7 +35,7 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
-describe.skip('Search Functionality', () => {
+describe('Search Functionality', () => {
   beforeEach(() => {
     mockFetch.mockClear();
     alert.mockClear();
