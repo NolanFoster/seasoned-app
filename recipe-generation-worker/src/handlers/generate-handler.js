@@ -615,21 +615,201 @@ Total Time: [Prep + Cook time]`;
 
 /**
  * Parse generated recipe text into structured format
- *
- * Expected template format:
- * Name: [Recipe name]
- * Description: [Description]
- * Ingredients:
- * - [Ingredient 1]
- * - [Ingredient 2]
- * Instructions:
- * 1. [Step 1]
- * 2. [Step 2]
- * Prep Time: [X minutes]
- * Cook Time: [X minutes]
- * Total Time: [X minutes]
+ * 
+ * This function handles the actual LLaMA response format where everything
+ * is returned as numbered instructions including recipe metadata
  */
 function parseGeneratedRecipe(recipeText, originalRequest) {
+  const lines = recipeText.split('\n').filter(line => line.trim());
+
+  const recipe = {
+    name: originalRequest.recipeName || 'Generated Recipe',
+    description: '',
+    ingredients: [],
+    instructions: [],
+    prepTime: '',
+    cookTime: '',
+    totalTime: '',
+    servings: originalRequest.servings || '',
+    difficulty: 'Medium',
+    cuisine: originalRequest.cuisine || '',
+    dietary: originalRequest.dietary || [],
+    generatedAt: new Date().toISOString(),
+    sourceIngredients: originalRequest.ingredients
+  };
+
+  let currentSection = 'unknown';
+  let extractedName = '';
+  let extractedDescription = '';
+
+  // Process each line to extract structured data
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const lowerLine = line.toLowerCase();
+    
+    // Remove numbered prefixes like "1. ", "2. ", etc.
+    const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+    const cleanLowerLine = cleanLine.toLowerCase();
+
+    // Extract recipe name (look for bold markers ** around the name)
+    if (cleanLine.includes('**') && !extractedName) {
+      const nameMatch = cleanLine.match(/\*\*([^*]+)\*\*/);
+      if (nameMatch && nameMatch[1]) {
+        const potentialName = nameMatch[1].trim();
+        // Make sure it's not a section header
+        if (!potentialName.toLowerCase().includes('description') && 
+            !potentialName.toLowerCase().includes('ingredients') && 
+            !potentialName.toLowerCase().includes('instructions') &&
+            !potentialName.toLowerCase().includes('prep time') && 
+            !potentialName.toLowerCase().includes('cook time') &&
+            potentialName.length > 3 && potentialName.length < 100) {
+          extractedName = potentialName;
+          recipe.name = extractedName;
+          continue;
+        }
+      }
+    }
+
+    // Extract description (look for "Description:" followed by descriptive text)
+    if ((cleanLowerLine.includes('description:') || cleanLowerLine.includes('**description')) && !extractedDescription) {
+      let desc = cleanLine.replace(/^\*\*description\*\*:?\s*/i, '')
+                         .replace(/^description:?\s*/i, '')
+                         .trim();
+      if (desc.length > 10 && desc.length < 500) {
+        extractedDescription = desc;
+        recipe.description = desc;
+        continue;
+      }
+    }
+
+    // Detect section headers
+    if (cleanLowerLine.includes('ingredients:') || cleanLowerLine.includes('**ingredients')) {
+      currentSection = 'ingredients';
+      continue;
+    } else if (cleanLowerLine.includes('instructions:') || cleanLowerLine.includes('**instructions')) {
+      currentSection = 'instructions';
+      continue;
+    }
+
+    // Extract timing information from any line that mentions it
+    if (cleanLowerLine.includes('prep time:') || cleanLowerLine.includes('**prep time')) {
+      recipe.prepTime = extractTime(cleanLine);
+      continue;
+    }
+    if (cleanLowerLine.includes('cook time:') || cleanLowerLine.includes('**cook time')) {
+      recipe.cookTime = extractTime(cleanLine);
+      continue;
+    }
+    if (cleanLowerLine.includes('total time:') || cleanLowerLine.includes('**total time')) {
+      recipe.totalTime = extractTime(cleanLine);
+      continue;
+    }
+
+    // Process ingredients and instructions based on patterns
+    if (currentSection === 'ingredients' && isIngredientLine(cleanLine)) {
+      const ingredient = cleanLine.replace(/^[-•*]\s*/, '').trim();
+      if (ingredient.length > 3 && !ingredient.toLowerCase().includes('ingredients')) {
+        recipe.ingredients.push(ingredient);
+      }
+    } else if (currentSection === 'instructions' && isInstructionLine(cleanLine)) {
+      const instruction = cleanLine.replace(/^[-•*]\s*/, '').trim();
+      if (instruction.length > 10 && 
+          !instruction.toLowerCase().includes('instructions') &&
+          !instruction.toLowerCase().includes('prep time') && 
+          !instruction.toLowerCase().includes('cook time') && 
+          !instruction.toLowerCase().includes('total time')) {
+        recipe.instructions.push(instruction);
+      }
+    } else if (currentSection === 'unknown') {
+      // Auto-detect ingredients and instructions when no section is set
+      if (isIngredientLine(cleanLine)) {
+        const ingredient = cleanLine.replace(/^[-•*]\s*/, '').trim();
+        if (ingredient.length > 3) {
+          recipe.ingredients.push(ingredient);
+        }
+      } else if (isInstructionLine(cleanLine) && recipe.ingredients.length > 0) {
+        // Only start collecting instructions after we have some ingredients
+        const instruction = cleanLine.replace(/^[-•*]\s*/, '').trim();
+        if (instruction.length > 10) {
+          recipe.instructions.push(instruction);
+        }
+      }
+    }
+  }
+
+  // Clean up and validate the extracted data
+  if (!recipe.name || recipe.name === 'Generated Recipe') {
+    recipe.name = originalRequest.recipeName || extractedName || 'Generated Recipe';
+  }
+
+  if (!recipe.description && extractedDescription) {
+    recipe.description = extractedDescription;
+  }
+
+  // Ensure we have at least some ingredients and instructions
+  if (recipe.ingredients.length === 0) {
+    // Fallback: extract from any line with measurements
+    const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls)/i;
+    for (const line of lines) {
+      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+      if (measurementPattern.test(cleanLine) && cleanLine.length < 200) {
+        const ingredient = cleanLine.replace(/^[-•*]\s*/, '').trim();
+        recipe.ingredients.push(ingredient);
+      }
+    }
+  }
+
+  if (recipe.instructions.length === 0) {
+    // Fallback: use lines that look like cooking instructions
+    for (const line of lines) {
+      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
+      if (isInstructionLine(cleanLine) && cleanLine.length > 15 && cleanLine.length < 500) {
+        recipe.instructions.push(cleanLine);
+      }
+    }
+  }
+
+  return recipe;
+}
+
+/**
+ * Check if a line looks like an ingredient (contains measurements)
+ */
+function isIngredientLine(line) {
+  const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls|inch|inches|medium|large|small)/i;
+  const fractionPattern = /\d+\/\d+/;
+  const ingredientIndicators = /\b(fresh|dried|chopped|minced|sliced|diced|grated|ground|extra-virgin|olive oil|salt|pepper|garlic|onion|cheese|butter|flour|sugar|egg|milk|cream|water|stock|broth)/i;
+  
+  // Exclude action words that indicate instructions
+  const actionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble)/i;
+  
+  return (measurementPattern.test(line) || fractionPattern.test(line) || ingredientIndicators.test(line)) && 
+         line.length < 150 && 
+         !line.toLowerCase().includes('minute') && 
+         !line.toLowerCase().includes('hour') &&
+         !actionWords.test(line);
+}
+
+/**
+ * Check if a line looks like an instruction (cooking action words)
+ */
+function isInstructionLine(line) {
+  const actionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble|transfer|divide|spread|layer|cover|wrap|chill|refrigerate|freeze|marinate|rest|let|allow|until|for|about|approximately)/i;
+  const instructionIndicators = /\b(step|then|next|meanwhile|while|after|before|once|when|until|degrees|temperature|minutes|hours|golden|tender|crispy|bubbling|thick|smooth)/i;
+  
+  // Exclude measurement patterns that indicate ingredients
+  const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls)/i;
+  
+  return (actionWords.test(line) || instructionIndicators.test(line)) && 
+         line.length > 15 && 
+         line.length < 500 &&
+         !measurementPattern.test(line);
+}
+
+/**
+ * Original parsing function as fallback
+ */
+function parseGeneratedRecipeOriginal(recipeText, originalRequest) {
   // Parse according to the defined template structure
   const lines = recipeText.split('\n').filter(line => line.trim());
 
