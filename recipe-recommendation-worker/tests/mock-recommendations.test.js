@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getMockRecommendations } from '../src/index.js';
+import { getMockRecommendations, getMockRecipeNamesByCategory } from '../src/index.js';
 
 describe('Mock Recommendations Comprehensive Tests', () => {
   describe('Location-based recommendations', () => {
@@ -583,6 +583,19 @@ describe('Mock Recommendations Comprehensive Tests', () => {
       expect(firstCategory.length).toBeLessThanOrEqual(10); // Some categories have fewer items
     });
 
+    it('should handle edge case recipe limits in getMockRecommendations', () => {
+      // Test with a very high limit that exceeds available recipes
+      const result = getMockRecommendations('Seattle', '2024-08-27', 50, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      
+      // Each category should have recipes but may be limited by available items
+      Object.values(result.recommendations).forEach(category => {
+        expect(category.length).toBeGreaterThan(0);
+        expect(category.length).toBeLessThanOrEqual(10); // Capped by actualLimit
+      });
+    });
+
     it('should handle null date gracefully', () => {
       const result = getMockRecommendations('Seattle', null, 3, 'test-req-123');
       expect(result).toBeDefined();
@@ -605,6 +618,115 @@ describe('Mock Recommendations Comprehensive Tests', () => {
       const result = getMockRecommendations('Seattle', '   ', 3, 'test-req-123');
       expect(result).toBeDefined();
       expect(Object.keys(result.recommendations)).toHaveLength(3);
+    });
+
+    it('should handle date that throws error on construction', () => {
+      // Create a date string that will cause the Date constructor to throw
+      const problematicDate = '2024-13-45'; // Invalid month and day
+      const result = getMockRecommendations('Seattle', problematicDate, 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      // Should fall back to current date when parsing fails
+      expect(result.season).toBeDefined();
+    });
+
+    it('should handle NaN date gracefully', () => {
+      // Create a date that will result in NaN
+      const result = getMockRecommendations('Seattle', 'not-a-date', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      // Should fall back to current date when parsing fails
+      expect(result.season).toBeDefined();
+    });
+
+    it('should handle invalid date string gracefully', () => {
+      const result = getMockRecommendations('Seattle', 'invalid-date-string', 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      // Should fall back to current date when parsing fails
+      expect(result.season).toBeDefined();
+    });
+  });
+
+  describe('getMockRecipeNamesByCategory', () => {
+    it('should generate mock recipe names for requested categories', () => {
+      const result = getMockRecipeNamesByCategory(['Italian Cuisine', 'Asian Fusion'], 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result)).toHaveLength(2);
+      expect(result['Italian Cuisine']).toBeDefined();
+      expect(result['Asian Fusion']).toBeDefined();
+      expect(result['Italian Cuisine']).toHaveLength(3);
+      expect(result['Asian Fusion']).toHaveLength(3);
+    });
+
+    it('should respect the limit parameter', () => {
+      const result = getMockRecipeNamesByCategory(['Desserts'], 5, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(result['Desserts']).toHaveLength(5);
+    });
+
+    it('should handle edge case limits', () => {
+      const result = getMockRecipeNamesByCategory(['Quick Meals'], 0, 'test-req-123');
+      expect(result).toBeDefined();
+      // Should default to minimum of 1 when 0 is passed
+      expect(result['Quick Meals'].length).toBeGreaterThan(0);
+      expect(result['Quick Meals'].length).toBeLessThanOrEqual(20); // Should be capped at max
+    });
+
+    it('should handle very high limits', () => {
+      const result = getMockRecipeNamesByCategory(['Healthy Options'], 999, 'test-req-123');
+      expect(result).toBeDefined();
+      // Should cap at maximum available items
+      expect(result['Healthy Options'].length).toBeLessThanOrEqual(20);
+    });
+
+    it('should find similar categories when exact match not found', () => {
+      const result = getMockRecipeNamesByCategory(['Mexican Food'], 3, 'test-req-123');
+      expect(result).toBeDefined();
+      // Should find a similar category (might be 'Quick Meals' or another food-related category)
+      expect(Object.keys(result).length).toBeGreaterThan(0);
+      const categories = Object.keys(result);
+      expect(categories.length).toBe(1);
+      expect(result[categories[0]]).toBeDefined();
+      expect(Array.isArray(result[categories[0]])).toBe(true);
+    });
+
+    it('should use default category when no match found', () => {
+      const result = getMockRecipeNamesByCategory(['Unknown Category'], 3, 'test-req-123');
+      expect(result).toBeDefined();
+      // Should find a similar category or fall back to default
+      expect(Object.keys(result).length).toBeGreaterThan(0);
+      // The result should contain some valid category
+      const categories = Object.keys(result);
+      expect(categories.length).toBe(1);
+      expect(result[categories[0]]).toBeDefined();
+      expect(Array.isArray(result[categories[0]])).toBe(true);
+    });
+
+    it('should handle empty categories array', () => {
+      const result = getMockRecipeNamesByCategory([], 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result)).toHaveLength(0);
+    });
+
+    it('should handle single category', () => {
+      const result = getMockRecipeNamesByCategory(['Comfort Food'], 4, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result)).toHaveLength(1);
+      expect(result['Comfort Food']).toHaveLength(4);
+    });
+
+    it('should handle categories with special characters', () => {
+      const result = getMockRecipeNamesByCategory(['Italian Cuisine & More!'], 3, 'test-req-123');
+      expect(result).toBeDefined();
+      expect(Object.keys(result).length).toBeGreaterThan(0);
+    });
+
+    it('should handle null and undefined categories gracefully', () => {
+      const result1 = getMockRecipeNamesByCategory(null, 3, 'test-req-123');
+      const result2 = getMockRecipeNamesByCategory(undefined, 3, 'test-req-123');
+      expect(result1).toBeDefined();
+      expect(result2).toBeDefined();
     });
   });
 });

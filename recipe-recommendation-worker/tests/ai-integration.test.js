@@ -491,4 +491,98 @@ describe('AI Integration', () => {
       });
     });
   });
+
+  describe('AI Recipe Names Generation', () => {
+    it('should generate recipe names using AI when available', async () => {
+      const mockAIResponse = {
+        response: JSON.stringify({
+          recipeNames: {
+            'Italian Cuisine': ['Margherita Pizza', 'Spaghetti Carbonara', 'Risotto ai Funghi'],
+            'Asian Fusion': ['Thai Green Curry', 'Sushi Roll Combo', 'Korean BBQ Beef']
+          }
+        })
+      };
+
+      mockEnvWithAI.AI.run.mockResolvedValue(mockAIResponse);
+
+      // Import the function dynamically to avoid circular dependencies
+      const { generateRecipeNamesByCategory } = await import('../src/index.js');
+      
+      const result = await generateRecipeNamesByCategory(
+        ['Italian Cuisine', 'Asian Fusion'],
+        3,
+        mockEnvWithAI,
+        'test-recipe-names'
+      );
+
+      expect(result).toBeDefined();
+      expect(result['Italian Cuisine']).toHaveLength(3);
+      expect(result['Asian Fusion']).toHaveLength(3);
+      expect(mockEnvWithAI.AI.run).toHaveBeenCalledWith(
+        '@cf/meta/llama-3.1-8b-instruct',
+        expect.objectContaining({
+          prompt: expect.stringContaining('Italian Cuisine'),
+          max_tokens: 512
+        })
+      );
+    });
+
+    it('should fall back to mock data when AI fails', async () => {
+      mockEnvWithAI.AI.run.mockRejectedValue(new Error('AI service unavailable'));
+
+      // Import the function dynamically to avoid circular dependencies
+      const { generateRecipeNamesByCategory } = await import('../src/index.js');
+      
+      const result = await generateRecipeNamesByCategory(
+        ['Desserts', 'Quick Meals'],
+        4,
+        mockEnvWithAI,
+        'test-recipe-names-fallback'
+      );
+
+      expect(result).toBeDefined();
+      expect(Object.keys(result).length).toBeGreaterThan(0);
+      // Should return mock data when AI fails
+      expect(result['Quick Meals']).toBeDefined();
+    });
+
+    it('should handle AI response parsing errors gracefully', async () => {
+      const mockAIResponse = {
+        response: 'Invalid JSON response'
+      };
+
+      mockEnvWithAI.AI.run.mockResolvedValue(mockAIResponse);
+
+      // Import the function dynamically to avoid circular dependencies
+      const { generateRecipeNamesByCategory } = await import('../src/index.js');
+      
+      const result = await generateRecipeNamesByCategory(
+        ['Comfort Food'],
+        3,
+        mockEnvWithAI,
+        'test-recipe-names-parse-error'
+      );
+
+      expect(result).toBeDefined();
+      // Should fall back to mock data when parsing fails
+      expect(Object.keys(result).length).toBeGreaterThan(0);
+    });
+
+    it('should use mock data when AI binding is not available', async () => {
+      // Import the function dynamically to avoid circular dependencies
+      const { generateRecipeNamesByCategory } = await import('../src/index.js');
+      
+      const result = await generateRecipeNamesByCategory(
+        ['Healthy Options'],
+        5,
+        mockEnvWithoutAI,
+        'test-recipe-names-no-ai'
+      );
+
+      expect(result).toBeDefined();
+      expect(Object.keys(result).length).toBeGreaterThan(0);
+      // Should use mock data when no AI binding
+      expect(result['Healthy Options']).toBeDefined();
+    });
+  });
 });
