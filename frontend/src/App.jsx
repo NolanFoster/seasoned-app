@@ -30,6 +30,70 @@ function App() {
       console.log(`${emoji} ${message}`, data);
     }
   };
+
+  // Debug function to test recipe generation worker connectivity
+  const testRecipeGenerationWorker = async () => {
+    if (!RECIPE_GENERATION_URL) {
+      console.error('❌ RECIPE_GENERATION_URL is not set');
+      return;
+    }
+    
+    console.log('🧪 Testing recipe generation worker connectivity...');
+    console.log('🔗 Worker URL:', RECIPE_GENERATION_URL);
+    
+    try {
+      // Test health endpoint
+      const healthResponse = await fetch(`${RECIPE_GENERATION_URL}/health`);
+      console.log('✅ Health check:', {
+        status: healthResponse.status,
+        statusText: healthResponse.statusText
+      });
+      
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.text();
+        console.log('✅ Health data:', healthData);
+      }
+      
+      // Test generate endpoint with mock data
+      const testData = {
+        recipeName: 'Test Recipe',
+        ingredients: ['test ingredient 1', 'test ingredient 2'],
+        servings: '2',
+        cuisine: 'Test',
+        dietary: []
+      };
+      
+      console.log('📝 Testing with data:', testData);
+      
+      const generateResponse = await fetch(`${RECIPE_GENERATION_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testData)
+      });
+      
+      console.log('✅ Generate test response:', {
+        status: generateResponse.status,
+        statusText: generateResponse.statusText
+      });
+      
+      if (generateResponse.ok) {
+        const result = await generateResponse.json();
+        console.log('✅ Generate test result:', result);
+      } else {
+        const errorText = await generateResponse.text();
+        console.error('❌ Generate test failed:', errorText);
+      }
+      
+    } catch (error) {
+      console.error('❌ Worker test failed:', error);
+    }
+  };
+
+  // Make the test function available globally for debugging
+  if (typeof window !== 'undefined') {
+    window.testRecipeGenerationWorker = testRecipeGenerationWorker;
+    console.log('🔧 Recipe generation worker test function available: window.testRecipeGenerationWorker()');
+  }
   
   // Decode HTML entities for proper display
   const decodeHtmlEntities = (text) => {
@@ -1829,30 +1893,84 @@ function App() {
       return false; // Not an AI card, proceed normally
     }
 
+    // Check if the environment variable is set
+    if (!RECIPE_GENERATION_URL) {
+      console.error('❌ RECIPE_GENERATION_URL environment variable is not set!');
+      alert('Recipe generation is not configured. Please check your environment setup.');
+      return false;
+    }
+
+    // Debug logging for troubleshooting
+    console.log('🚀 Starting AI recipe generation for:', recipe.name);
+    console.log('🔗 Recipe generation URL:', RECIPE_GENERATION_URL);
+    console.log('🔗 Full endpoint URL:', `${RECIPE_GENERATION_URL}/generate`);
+    console.log('📝 Recipe data:', {
+      recipeName: recipe.name,
+      ingredients: recipe.ingredients || [],
+      servings: recipe.servings || '4',
+      cuisine: recipe.cuisine || 'General',
+      dietary: recipe.dietary || []
+    });
+
+    // Test if the worker is reachable
+    try {
+      console.log('🧪 Testing worker connectivity...');
+      const testResponse = await fetch(`${RECIPE_GENERATION_URL}/health`);
+      console.log('✅ Worker health check response:', {
+        status: testResponse.status,
+        statusText: testResponse.statusText
+      });
+      
+      if (testResponse.ok) {
+        const healthData = await testResponse.text();
+        console.log('✅ Worker health data:', healthData);
+      }
+    } catch (testError) {
+      console.warn('⚠️ Worker health check failed:', testError);
+      console.warn('⚠️ This might indicate a CORS issue or worker is not accessible');
+    }
+
     // Set loading state for this specific card
     const cardId = recipe.id || recipe.name;
     setAiCardLoadingStates(prev => new Map(prev).set(cardId, true));
 
     try {
       // Call the recipe generation worker
+      console.log('📡 Making request to:', `${RECIPE_GENERATION_URL}/generate`);
+      
+      const requestBody = {
+        recipeName: recipe.name,
+        ingredients: recipe.ingredients || [],
+        servings: recipe.servings || '4',
+        cuisine: recipe.cuisine || 'General',
+        dietary: recipe.dietary || []
+      };
+      
       const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipeName: recipe.name,
-          ingredients: recipe.ingredients || [],
-          servings: recipe.servings || '4',
-          cuisine: recipe.cuisine || 'General',
-          dietary: recipe.dietary || []
-        }),
+        body: JSON.stringify(requestBody),
         timeout: 30000 // 30 second timeout for AI generation
       });
 
+      console.log('📥 Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
-        throw new Error(`Recipe generation failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Recipe generation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        throw new Error(`Recipe generation failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('📋 Response data:', result);
       
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
@@ -1893,8 +2011,23 @@ function App() {
         return newMap;
       });
 
-      // Show error message to user
-      alert(`Failed to generate recipe: ${error.message}. Please try again.`);
+      // Provide more specific error messages based on error type
+      let userMessage = 'Failed to generate recipe. Please try again.';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        userMessage = 'Network error: Unable to reach the recipe generation service. Please check your internet connection and try again.';
+      } else if (error.message.includes('Failed to fetch')) {
+        userMessage = 'Network error: Unable to reach the recipe generation service. Please check your internet connection and try again.';
+      } else if (error.message.includes('timeout')) {
+        userMessage = 'Request timed out. The recipe generation is taking longer than expected. Please try again.';
+      } else if (error.message.includes('CORS')) {
+        userMessage = 'Cross-origin error: The recipe generation service is not accessible from this domain. Please contact support.';
+      } else if (error.message.includes('Recipe generation failed')) {
+        userMessage = `Recipe generation failed: ${error.message}. Please try again.`;
+      }
+      
+      console.error('User-friendly error message:', userMessage);
+      alert(userMessage);
       return false;
     }
   }
