@@ -530,9 +530,6 @@ function formatFullRecipeContext(recipeData) {
   // Times and servings
   if (recipeData.prepTime) parts.push(`Prep time: ${recipeData.prepTime}`);
   if (recipeData.cookTime) parts.push(`Cook time: ${recipeData.cookTime}`);
-  if (recipeData.recipeYield || recipeData.yield) {
-    parts.push(`Serves: ${recipeData.recipeYield || recipeData.yield}`);
-  }
 
   return parts.join('\n');
 }
