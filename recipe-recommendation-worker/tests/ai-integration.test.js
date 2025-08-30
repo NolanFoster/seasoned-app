@@ -11,14 +11,22 @@ const mockEnvWithAI = {
   AI: {
     run: vi.fn()
   },
-  SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+  SEARCH_WORKER: {
+    fetch: vi.fn().mockResolvedValue({
+      ok: false
+    })
+  },
   RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.workers.dev'
 };
 
 // Mock environment without AI binding
 const mockEnvWithoutAI = {
   AI: null,
-  SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+  SEARCH_WORKER: {
+    fetch: vi.fn().mockResolvedValue({
+      ok: false
+    })
+  },
   RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.workers.dev'
 };
 
