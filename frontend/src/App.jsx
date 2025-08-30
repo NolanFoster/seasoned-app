@@ -130,8 +130,10 @@ function App() {
   const getFilteredIngredients = (recipe) => {
     let ingredients = recipe.recipeIngredient || recipe.ingredients || [];
     
-    // For AI-generated recipes, try to extract more ingredients from instructions
+    // Debug logging for AI-generated recipes
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
+      console.log('🔍 AI Recipe - Original ingredients:', ingredients);
+      
       const instructions = recipe.recipeInstructions || recipe.instructions || [];
       const additionalIngredients = [];
       
@@ -151,13 +153,18 @@ function App() {
         }
       }
       
+      console.log('🔍 AI Recipe - Additional ingredients found:', additionalIngredients);
+      
       // Combine original ingredients with extracted ones, removing duplicates
       const allIngredients = [...ingredients, ...additionalIngredients];
       const uniqueIngredients = allIngredients.filter((ingredient, index, self) => 
         index === self.findIndex(i => i.toLowerCase().trim() === ingredient.toLowerCase().trim())
       );
       
-      return uniqueIngredients.length > ingredients.length ? uniqueIngredients : ingredients;
+      console.log('🔍 AI Recipe - Final ingredients:', uniqueIngredients);
+      
+      // Always return at least the original ingredients, even if filtering fails
+      return uniqueIngredients.length > 0 ? uniqueIngredients : ingredients;
     }
     
     return ingredients;
@@ -167,73 +174,29 @@ function App() {
   const getFilteredInstructions = (recipe) => {
     const instructions = recipe.recipeInstructions || recipe.instructions || [];
     
-    // For AI-generated recipes, filter out metadata and only show actual cooking instructions
+    // For AI-generated recipes, provide a simplified display that always works
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      const filteredInstructions = [];
-      let foundInstructionsSection = false;
+      console.log('🔍 AI Recipe - Processing instructions for display');
       
-      for (const instruction of instructions) {
+      // Simple approach: show all instructions but clean them up for better readability
+      const cleanedInstructions = instructions.map(instruction => {
         const instructionText = typeof instruction === 'string' ? instruction : instruction.text || '';
-        const cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
-        const lowerText = cleanText.toLowerCase();
         
-        // Skip section headers but not cooking steps that mention the dish
-        if (lowerText.includes('**') && (
-          lowerText.includes('description:') || lowerText.includes('ingredients:') ||
-          lowerText.includes('instructions:')
-        )) {
-          continue;
-        }
+        // Remove leading numbers and clean up formatting
+        let cleanText = instructionText.replace(/^\d+\.\s*/, '').trim();
         
-        // Skip the main recipe title (usually in first few lines)
-        const instructionIndex = instructions.indexOf(instruction);
-        if (instructionIndex < 3 && lowerText.includes('**') && (
-          lowerText.includes('salad') || lowerText.includes('recipe')
-        ) && !lowerText.includes('assemble') && !lowerText.includes('serve') && !lowerText.includes('prepare')) {
-          continue;
-        }
+        // Remove excessive bold formatting but keep some structure
+        cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '$1');
         
-        // Skip pure section headers
-        const cleanLowerText = lowerText.replace(/^\*\*|\*\*$/g, '').trim();
-        if (cleanLowerText === 'description:' || cleanLowerText === 'ingredients:' || cleanLowerText === 'instructions:') {
-          if (cleanLowerText === 'instructions:') {
-            foundInstructionsSection = true;
-          }
-          continue;
-        }
-        
-        // Skip ingredient lines (they start with - and have measurements)
-        if (cleanText.startsWith('- ') || cleanText.startsWith('• ')) {
-          continue;
-        }
-        
-        // Skip timing metadata lines
-        if (lowerText.includes('prep time:') || lowerText.includes('cook time:') || lowerText.includes('total time:')) {
-          continue;
-        }
-        
-        // Skip long descriptive content at the end
-        if (instructionText.length > 200 && (
-          lowerText.includes('perfect for') || lowerText.includes('this salad') || 
-          lowerText.includes('enjoy') || lowerText.includes('delicious') ||
-          lowerText.includes('gatherings') || lowerText.includes('events')
-        )) {
-          continue;
-        }
-        
-        // Include lines that look like actual cooking instructions (numbered steps with actions)
-        const hasActionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble|transfer|divide|spread|layer|cover|wrap|chill|refrigerate|freeze|marinate|until|degrees|golden|tender)/i.test(cleanText);
-        const hasStepNumber = /^\d+\.\s*\*\*/.test(cleanText); // Steps like "1. **Preheat the grill**:"
-        const isNumberedStep = /^\d+\.\s*[A-Z]/.test(cleanText); // Steps that start with number and capital letter
-        
-        if ((hasActionWords || hasStepNumber || isNumberedStep) && cleanText.length > 20 && cleanText.length < 400) {
-          // Clean up the instruction text for display
-          let cleanInstruction = cleanText.replace(/^\*\*|\*\*$/g, '').replace(/:\s*$/, '').trim();
-          filteredInstructions.push(cleanInstruction);
-        }
-      }
+        return cleanText;
+      }).filter(instruction => 
+        instruction.length > 5 && // Must have some content
+        !instruction.toLowerCase().includes('total time:') // Skip timing summary at the end
+      );
       
-      return filteredInstructions.length > 0 ? filteredInstructions : instructions;
+      console.log('🔍 AI Recipe - Cleaned instructions count:', cleanedInstructions.length);
+      
+      return cleanedInstructions.length > 0 ? cleanedInstructions : instructions;
     }
     
     // For regular recipes, return instructions as-is
@@ -3864,9 +3827,15 @@ function App() {
                 <div className="recipe-panel glass">
                   <h2>Ingredients</h2>
                   <ul className="ingredients-list">
-                    {getFilteredIngredients(selectedRecipe).map((ingredient, index) => (
-                      <li key={index}>{formatIngredientAmount(ingredient)}</li>
-                    ))}
+                    {(() => {
+                      const ingredients = getFilteredIngredients(selectedRecipe);
+                      if (ingredients.length === 0) {
+                        return <li>No ingredients available</li>;
+                      }
+                      return ingredients.map((ingredient, index) => (
+                        <li key={index}>{formatIngredientAmount(ingredient)}</li>
+                      ));
+                    })()}
                   </ul>
                 </div>
                 
@@ -3874,11 +3843,17 @@ function App() {
                 <div className="recipe-panel glass">
                   <h2>Instructions</h2>
                   <ol className="instructions-list">
-                    {getFilteredInstructions(selectedRecipe).map((instruction, index) => (
-                      <li key={index}>
-                        {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
-                      </li>
-                    ))}
+                    {(() => {
+                      const instructions = getFilteredInstructions(selectedRecipe);
+                      if (instructions.length === 0) {
+                        return <li>No instructions available</li>;
+                      }
+                      return instructions.map((instruction, index) => (
+                        <li key={index}>
+                          {renderInstructionWithTimers(typeof instruction === 'string' ? instruction : instruction.text || '')}
+                        </li>
+                      ));
+                    })()}
                   </ol>
                 </div>
               </>
