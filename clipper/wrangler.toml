@@ -6,10 +6,7 @@ compatibility_date = "2024-08-09"
 [ai]
 binding = "AI"
 
-# Service binding to recipe-save-worker
-[[services]]
-binding = "RECIPE_SAVE_WORKER"
-service = "recipe-save-worker"
+# Service bindings are configured per environment below
 
 # Environment variables
 [vars]
