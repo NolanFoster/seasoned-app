@@ -40,8 +40,8 @@ export default {
           try {
             const recipeId = await generateRecipeId(pageUrl);
             
-            // Use recipe-save-worker to delete the recipe
-            const deleteResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/delete`, {
+            // Use recipe-save-worker service binding to delete the recipe
+            const deleteResponse = await env.RECIPE_SAVE_WORKER.fetch('/recipe/delete', {
               method: 'DELETE',
               headers: {
                 'Content-Type': 'application/json',
@@ -107,8 +107,8 @@ export default {
             });
           }
           
-          // Save the extracted recipe using recipe-save-worker
-          const recipeSaveResponse = await fetch(`${env.SAVE_WORKER_URL}/recipe/save`, {
+          // Save the extracted recipe using recipe-save-worker service binding
+          const recipeSaveResponse = await env.RECIPE_SAVE_WORKER.fetch('/recipe/save', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ export default {
         return new Response(JSON.stringify({ 
           status: 'healthy', 
           service: 'recipe-clipper',
-          features: ['ai-extraction', 'kv-storage', 'caching'],
+          features: ['ai-extraction', 'kv-storage', 'caching', 'service-binding'],
           endpoints: {
             'POST /clip': 'Extract recipe from URL (checks cache first)',
             'POST /clip with clearCache:true': 'Clear recipe from cache',

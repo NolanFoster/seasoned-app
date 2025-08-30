@@ -1,0 +1,34 @@
+
+> recipe-recommendation-worker@1.0.0 test:coverage
+> vitest run --coverage
+
+
+ RUN  v3.2.4 /workspace/recipe-recommendation-worker
+      Coverage enabled with v8
+
+ ❯ tests/coverage-improvements.test.js (10 tests | 2 failed) 24ms
+   ✓ Service Binding Error Response Coverage > should handle non-ok response status from service binding 7ms
+   ✓ Service Binding Error Response Coverage > should handle 404 response from service binding 1ms
+   ✓ Service Binding Error Response Coverage > should handle 500 internal server error from service binding 1ms
+   ✓ Recipe Search Complete Failure Coverage > should handle complete recipe search failure with exception 1ms
+   ✓ Recipe Search Complete Failure Coverage > should handle JSON parse error in service binding response 2ms
+   × Invalid Date Handling in getMockRecommendations > should handle invalid date string gracefully 11ms
+     → expected false to be true // Object.is equality
+   ✓ Invalid Date Handling in getMockRecommendations > should handle null date gracefully 0ms
+   × Invalid Date Handling in getMockRecommendations > should handle date object that throws on construction 1ms
+     → expected false to be true // Object.is equality
+   ✓ Invalid Date Handling in getMockRecommendations > should handle empty string date 0ms
+   ✓ Invalid Date Handling in getMockRecommendations > should handle undefined date 0ms
+ ✓ tests/error-handling.test.js (21 tests) 86ms
+ ✓ tests/ai-integration.test.js (21 tests) 34ms
+ ✓ tests/api.test.js (12 tests) 193ms
+ ✓ tests/worker.test.js (28 tests) 31ms
+ ✓ tests/mock-recommendations.test.js (42 tests) 17ms
+ ✓ tests/metrics.test.js (13 tests) 12ms
+ ✓ tests/holiday-context.test.js (19 tests) 6ms
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  2 failed | 164 passed (166)
+   Start at  04:33:58
+   Duration  964ms (transform 155ms, setup 105ms, collect 468ms, tests 404ms, environment 1ms, prepare 690ms)
+

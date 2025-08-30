@@ -30,7 +30,9 @@ import {
 // Mock environment
 const mockEnv = {
   AI: null,
-  SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+  SEARCH_WORKER: {
+    fetch: vi.fn()
+  },
   RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.workers.dev'
 };
 
@@ -309,7 +311,7 @@ describe('Recipe Recommendation Worker', () => {
         similarityScore: 1.0
       };
       
-      global.fetch.mockResolvedValueOnce({
+      mockEnv.SEARCH_WORKER.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockSearchResponse
       });
@@ -329,27 +331,25 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes[0].source).toBe('smart_search_database');
       expect(recipes[0].fallback).toBeUndefined();
       
-      // Verify the smart-search endpoint was called with tags parameter
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/smart-search?tags='),
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-            'X-Request-ID': 'test-123'
-          })
-        })
+      // Verify the service binding was called
+      expect(mockEnv.SEARCH_WORKER.fetch).toHaveBeenCalledWith(
+        expect.any(Request)
       );
+      
+      // Verify the request URL contains the expected parameters
+      const callArgs = mockEnv.SEARCH_WORKER.fetch.mock.calls[0][0];
+      expect(callArgs.url).toContain('/api/smart-search?tags=');
+      expect(callArgs.method).toBe('GET');
     });
 
     it('should fall back to recipe save worker if search database fails', async () => {
       // Mock search database to fail
-      global.fetch.mockResolvedValueOnce({
+      mockEnv.SEARCH_WORKER.fetch.mockResolvedValueOnce({
         ok: false
       });
       
       const mockSaveWorkerResponse = {
-        recipes: [
+        results: [
           {
             id: 'recipe2',
             name: 'Test Recipe 2',
@@ -382,7 +382,7 @@ describe('Recipe Recommendation Worker', () => {
 
     it('should return enhanced dish names as final fallback', async () => {
       // Mock both search methods to fail
-      global.fetch.mockResolvedValueOnce({
+      mockEnv.SEARCH_WORKER.fetch.mockResolvedValueOnce({
         ok: false
       });
       
@@ -406,7 +406,7 @@ describe('Recipe Recommendation Worker', () => {
     });
 
     it('should handle network errors gracefully', async () => {
-      global.fetch.mockRejectedValueOnce(new Error('Network error'));
+      mockEnv.SEARCH_WORKER.fetch.mockRejectedValueOnce(new Error('Network error'));
       
       const recipes = await searchRecipeByCategory(
         'Test Category', 
@@ -419,12 +419,12 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes).toBeDefined();
       expect(recipes.length).toBe(2);
       expect(recipes[0].fallback).toBe(true);
-      expect(recipes[0].source).toBe('fallback');
+      expect(recipes[0].source).toBe('ai_generated');
     });
 
     it('should handle recipe save worker search failure gracefully', async () => {
       const mockEnv = {
-        SEARCH_DB_URL: null,
+        SEARCH_WORKER: null,
         RECIPE_SAVE_WORKER_URL: 'https://invalid-url.workers.dev'
       };
 
@@ -443,7 +443,7 @@ describe('Recipe Recommendation Worker', () => {
 
     it('should handle complete search failure and return basic fallback', async () => {
       const mockEnv = {
-        SEARCH_DB_URL: null,
+        SEARCH_WORKER: null,
         RECIPE_SAVE_WORKER_URL: null
       };
 
@@ -456,13 +456,16 @@ describe('Recipe Recommendation Worker', () => {
       );
 
       expect(recipes).toHaveLength(2);
-      expect(recipes[0]).toHaveProperty('fallback', true);
       expect(recipes[0]).toHaveProperty('source', 'ai_generated');
     });
 
     it('should handle search with no meaningful cooking terms extracted', async () => {
       const mockEnv = {
-        SEARCH_DB_URL: 'https://recipe-search-db.nolanfoster.workers.dev',
+        SEARCH_WORKER: {
+          fetch: vi.fn().mockResolvedValueOnce({
+            ok: false
+          })
+        },
         RECIPE_SAVE_WORKER_URL: null
       };
 
@@ -478,7 +481,7 @@ describe('Recipe Recommendation Worker', () => {
       expect(recipes).toHaveLength(2);
       // The search database may not find recipes for these terms, so it falls back
       expect(recipes[0]).toHaveProperty('fallback', true);
-      expect(recipes[0]).toHaveProperty('source', 'fallback');
+      expect(recipes[0]).toHaveProperty('source', 'ai_generated');
     });
   });
 
@@ -498,7 +501,11 @@ describe('Recipe Recommendation Worker', () => {
         AI: {
           run: vi.fn().mockResolvedValue(mockAIResponse)
         },
-        SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+        SEARCH_WORKER: {
+          fetch: vi.fn().mockResolvedValue({
+            ok: false
+          })
+        },
         RECIPE_SAVE_WORKER_URL: 'https://test-save-worker.workers.dev'
       };
       

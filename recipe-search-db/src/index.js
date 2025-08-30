@@ -682,6 +682,10 @@ async function smartSearchNodes(request, env, corsHeaders) {
   });
 }
 
+
+
+
+
 // Internal search function used by smart search
 async function searchNodesInternal(query, type, limit, env) {
   try {

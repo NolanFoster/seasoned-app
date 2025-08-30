@@ -36,7 +36,23 @@ const createMockEnv = (overrides = {}) => ({
     delete: async (key) => { return { success: true }; },
     ...(overrides.RECIPE_STORAGE || overrides.RECIPES || {})
   },
-  SAVE_WORKER_URL: 'https://recipe-save-worker.example.com',
+  RECIPE_SAVE_WORKER: {
+    fetch: async (path, options) => {
+      if (path === '/recipe/save') {
+        return {
+          ok: true,
+          json: async () => ({ success: true, id: 'test-recipe-id' })
+        };
+      }
+      if (path === '/recipe/delete') {
+        return {
+          ok: true,
+          json: async () => ({ success: true })
+        };
+      }
+      throw new Error('Unexpected service binding path: ' + path);
+    }
+  },
   AI: {
     run: async (model, options) => {
       // Return properly formatted AI response
@@ -85,14 +101,6 @@ const createMockEnv = (overrides = {}) => ({
 
 // Mock fetch for HTML responses
 global.fetch = async (url) => {
-  // Handle recipe save worker
-  if (url.includes('recipe-save-worker')) {
-    return {
-      ok: true,
-      json: async () => ({ success: true, id: 'test-recipe-id' })
-    };
-  }
-  
   if (url.includes('error')) {
     throw new Error('Fetch error');
   }

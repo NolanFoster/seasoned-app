@@ -27,15 +27,7 @@ function assert(condition, message) {
 
 // Mock the fetch function before any tests
 global.fetch = async (url) => {
-  // Mock recipe save worker
-  if (url.includes('recipe-save-worker')) {
-    return {
-      ok: true,
-      json: async () => ({ success: true, id: 'test-id' })
-    };
-  }
-  
-  // Default HTML response for other URLs
+  // Default HTML response for URLs
   if (url.includes('example.com')) {
     return {
       ok: true,
@@ -53,7 +45,24 @@ const env = {
     put: async () => ({ success: true }),
     delete: async () => ({ success: true })
   },
-  SAVE_WORKER_URL: 'https://recipe-save-worker.test',
+  RECIPE_SAVE_WORKER: {
+    fetch: async (path, options) => {
+      // Mock the service binding fetch method
+      if (path === '/recipe/delete') {
+        return {
+          ok: true,
+          json: async () => ({ success: true })
+        };
+      }
+      if (path === '/recipe/save') {
+        return {
+          ok: true,
+          json: async () => ({ success: true, id: 'test-id' })
+        };
+      }
+      throw new Error('Unexpected service binding path: ' + path);
+    }
+  },
   AI: {
     run: async () => ({
       response: JSON.stringify({
@@ -294,12 +303,6 @@ await test('Cached recipe is returned from KV store', async () => {
   // Override fetch for this test to avoid hitting the mock HTML
   const originalFetch = global.fetch;
   global.fetch = async (url) => {
-    if (url.includes('recipe-save-worker')) {
-      return {
-        ok: true,
-        json: async () => ({ success: true, id: 'test-id' })
-      };
-    }
     // This shouldn't be called if cache works
     throw new Error('Should not fetch HTML when recipe is cached');
   };

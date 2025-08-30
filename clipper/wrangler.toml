@@ -6,29 +6,39 @@ compatibility_date = "2024-08-09"
 [ai]
 binding = "AI"
 
+# Service bindings are configured per environment below
+
 # Environment variables
 [vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
-SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.preview]
 name = "preview-clipper"
 [env.preview.vars]
-SAVE_WORKER_URL = "https://preview-recipe-save-worker.nolanfoster.workers.dev"
+# Service binding will automatically use the preview environment
 
 [env.preview.ai]
 binding = "AI"
+
+[env.preview.services]
+[[env.preview.services]]
+binding = "RECIPE_SAVE_WORKER"
+service = "preview-recipe-save-worker"
 
 [env.staging]
 name = "staging-clipper"
 [env.staging.vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
-SAVE_WORKER_URL = "https://staging-recipe-save-worker.nolanfoster.workers.dev"
 
 [env.staging.ai]
 binding = "AI"
+
+[env.staging.services]
+[[env.staging.services]]
+binding = "RECIPE_SAVE_WORKER"
+service = "staging-recipe-save-worker"
 
 # Staging KV Namespaces for storing recipes
 [[env.staging.kv_namespaces]]
@@ -41,10 +51,14 @@ name = "clipper"
 [env.production.vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
 IMAGE_DOMAIN = "https://images.nolanfoster.me"
-SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
 [env.production.ai]
 binding = "AI"
+
+[env.production.services]
+[[env.production.services]]
+binding = "RECIPE_SAVE_WORKER"
+service = "recipe-save-worker"
 
 [[env.production.kv_namespaces]]
 binding = "RECIPE_STORAGE"
