@@ -546,6 +546,11 @@
   right: 0;
   bottom: 0;
   z-index: -1;
+  /* Ensure background container stays stable */
+  transform: none !important;
+  will-change: auto;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
 }
 
 .recipe-full-background::after {
@@ -564,6 +569,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Ensure background image stays stable and doesn't get affected by transforms */
+  transform: none !important;
+  will-change: auto;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
 }
 
 .recipe-full-background-placeholder {
