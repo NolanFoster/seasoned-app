@@ -27,7 +27,7 @@ global.IntersectionObserver = jest.fn(() => ({
   disconnect: jest.fn()
 }));
 
-describe.skip('App Utility Functions Coverage', () => {
+describe('App Utility Functions Coverage', () => {
   beforeEach(() => {
     // Reset fetch mock before each test
     fetch.mockClear();

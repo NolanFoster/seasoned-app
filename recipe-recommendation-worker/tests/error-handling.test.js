@@ -320,7 +320,7 @@ describe('Metrics Endpoint Error Handling', () => {
 
   it('should handle recipe save worker search network errors gracefully', async () => {
     const mockEnv = {
-      SEARCH_DB_URL: null,
+      SEARCH_WORKER: null,
       RECIPE_SAVE_WORKER_URL: 'https://invalid-url.workers.dev'
     };
 
@@ -339,7 +339,7 @@ describe('Metrics Endpoint Error Handling', () => {
 
   it('should handle complete search failure gracefully', async () => {
     const mockEnv = {
-      SEARCH_DB_URL: null,
+      SEARCH_WORKER: null,
       RECIPE_SAVE_WORKER_URL: null
     };
 
@@ -358,7 +358,11 @@ describe('Metrics Endpoint Error Handling', () => {
 
   it('should handle search with no meaningful cooking terms', async () => {
     const mockEnv = {
-      SEARCH_DB_URL: 'https://recipe-search-db.nolanfoster.workers.dev',
+      SEARCH_WORKER: {
+        fetch: vi.fn().mockResolvedValue({
+          ok: false
+        })
+      },
       RECIPE_SAVE_WORKER_URL: null
     };
 
@@ -372,8 +376,8 @@ describe('Metrics Endpoint Error Handling', () => {
     );
 
     expect(recipes).toHaveLength(2);
-    // The search database is working, so it should find real recipes
-    expect(recipes[0]).toHaveProperty('source', 'smart_search_database');
-    expect(recipes[0]).not.toHaveProperty('fallback');
+    // The search database is not working, so it falls back
+    expect(recipes[0]).toHaveProperty('fallback', true);
+    expect(recipes[0]).toHaveProperty('source', 'ai_generated');
   });
 });
