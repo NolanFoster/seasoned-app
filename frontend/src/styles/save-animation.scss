@@ -47,19 +47,18 @@
   justify-content: center;
   gap: 0.5rem;
   
-  // Prevent any transform conflicts with the spinner
-  transform: none !important;
+  // Only prevent transform conflicts, don't disable all transforms
+  // This allows the spinner to rotate while preventing button wobbling
   
   .loading-spinner {
-    // Isolate the spinner animation from parent transforms
-    transform: none;
+    // Allow the spin animation to work
     animation: spin 1s linear infinite;
     
     svg {
       width: 20px;
       height: 20px;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-      // Ensure the SVG transform is isolated
+      // Ensure the SVG transform is isolated and centered
       transform-origin: center;
     }
   }
