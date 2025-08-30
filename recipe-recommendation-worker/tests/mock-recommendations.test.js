@@ -571,7 +571,7 @@ describe('Mock Recommendations Comprehensive Tests', () => {
       // Should default to minimum of 1
       const firstCategory = Object.values(result.recommendations)[0];
       expect(firstCategory.length).toBeGreaterThan(0);
-      expect(firstCategory.length).toBeLessThanOrEqual(3); // Default fallback
+      expect(firstCategory.length).toBeLessThanOrEqual(4); // Default fallback
     });
 
     it('should handle very high limits correctly', () => {
@@ -581,6 +581,25 @@ describe('Mock Recommendations Comprehensive Tests', () => {
       const firstCategory = Object.values(result.recommendations)[0];
       expect(firstCategory.length).toBeGreaterThan(0);
       expect(firstCategory.length).toBeLessThanOrEqual(10); // Some categories have fewer items
+    });
+
+    it('should mark 4th recipe as AI-generated when limit is 4', () => {
+      const result = getMockRecommendations('Seattle', '2024-08-27', 4, 'test-req-123');
+      expect(result).toBeDefined();
+      
+      // Check each category has 4 recipes with the 4th being AI-generated
+      Object.entries(result.recommendations).forEach(([categoryName, recipes]) => {
+        expect(recipes).toHaveLength(4);
+        // First 3 recipes should be regular recipes
+        expect(recipes[0]).toHaveProperty('source');
+        expect(recipes[1]).toHaveProperty('source');
+        expect(recipes[2]).toHaveProperty('source');
+        // 4th recipe should be AI-generated
+        expect(recipes[3]).toHaveProperty('source', 'ai_generated');
+        expect(recipes[3]).toHaveProperty('fallback', true);
+        expect(recipes[3]).toHaveProperty('type', 'dish_suggestion');
+        expect(recipes[3].description).toContain('AI-generated recipe');
+      });
     });
 
     it('should handle null date gracefully', () => {

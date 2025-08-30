@@ -108,7 +108,7 @@ describe('Recommendations Component', () => {
     
     // Should show loading cards
     const loadingCards = screen.getAllByText('', { selector: '.loading-card' });
-    expect(loadingCards).toHaveLength(9); // 3 categories × 3 cards each
+    expect(loadingCards).toHaveLength(12); // 3 categories × 4 cards each
   });
 
   it('fetches recommendations on mount', async () => {

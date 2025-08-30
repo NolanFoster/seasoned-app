@@ -334,7 +334,7 @@ describe('Metrics Endpoint Error Handling', () => {
 
     expect(recipes).toHaveLength(2);
     expect(recipes[0]).toHaveProperty('fallback', true);
-    expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+    expect(recipes[0]).toHaveProperty('source', 'mock_recipe'); // Only 4th recipe is AI-generated when limit=4
   });
 
   it('should handle complete search failure gracefully', async () => {
@@ -353,7 +353,7 @@ describe('Metrics Endpoint Error Handling', () => {
 
     expect(recipes).toHaveLength(2);
     expect(recipes[0]).toHaveProperty('fallback', true);
-    expect(recipes[0]).toHaveProperty('source', 'ai_generated');
+    expect(recipes[0]).toHaveProperty('source', 'mock_recipe'); // Only 4th recipe is AI-generated when limit=4
   });
 
   it('should handle search with no meaningful cooking terms', async () => {

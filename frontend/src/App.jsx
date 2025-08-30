@@ -2698,7 +2698,7 @@ function App() {
                     <div key={categoryName} className="recommendation-category">
                       <h2 className="category-title">{categoryName}</h2>
                       <SwipeableRecipeGrid>
-                        {[1, 2, 3].map(index => (
+                        {[1, 2, 3, 4].map(index => (
                           <div key={index} className="recipe-card loading-card">
                             <div className="recipe-card-image loading-pulse">
                               <div className="loading-shimmer"></div>

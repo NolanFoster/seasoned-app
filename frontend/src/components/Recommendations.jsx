@@ -192,7 +192,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           if (Array.isArray(tags)) {
             try {
               debugLogEmoji('🚀', `Starting parallel fetch for category: ${categoryName}`);
-              const externalRecipes = await searchRecipesByTags(tags, 3);
+              const externalRecipes = await searchRecipesByTags(tags, 4);
               return { categoryName, recipes: externalRecipes };
             } catch (error) {
               console.error(`Error fetching external recipes for ${categoryName}:`, error);
@@ -331,7 +331,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
             if (Array.isArray(tags)) {
               try {
                 debugLogEmoji('🚀', `Starting parallel fetch for category: ${categoryName}`);
-                const externalRecipes = await searchRecipesByTags(tags, 3);
+                const externalRecipes = await searchRecipesByTags(tags, 4);
                 return { categoryName, recipes: externalRecipes };
               } catch (error) {
                 console.error(`Error fetching external recipes for ${categoryName}:`, error);
@@ -452,7 +452,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
   }
 
   // New function to search for recipes matching recommendation category
-  async function searchRecipesByTags(tags, limit = 3) {
+  async function searchRecipesByTags(tags, limit = 4) {
     if (!tags || !Array.isArray(tags) || tags.length === 0) {
       return [];
     }
@@ -1028,7 +1028,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
                   <SwipeableRecipeGrid>
-                    {[1, 2, 3].map(index => (
+                    {[1, 2, 3, 4].map(index => (
                       <div key={index} className="recipe-card loading-card">
                         <div className="recipe-card-image loading-pulse">
                           <div className="loading-shimmer"></div>
