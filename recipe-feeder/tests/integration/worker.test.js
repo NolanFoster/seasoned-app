@@ -267,11 +267,11 @@ describe('Recipe Feeder Worker Integration', () => {
 
       const data = await response.json();
       expect(data.result.success).toBe(true);
-      expect(data.result.totalStats.scanned).toBe(150);
-      expect(data.result.totalStats.queued).toBe(150);
+      expect(data.result.totalStats.scanned).toBe(150); // Scans all recipes to find target
+      expect(data.result.totalStats.queued).toBe(10); // Should queue up to BATCH_SIZE (10)
 
-      // Should have been called multiple times due to chunking (chunk size = 50)
-      expect(mockEnv.EMBEDDING_QUEUE.sendBatch).toHaveBeenCalledTimes(3);
+      // Should have been called once since we're processing in one batch
+      expect(mockEnv.EMBEDDING_QUEUE.sendBatch).toHaveBeenCalledTimes(1);
     });
   });
 });

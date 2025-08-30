@@ -28,7 +28,7 @@ describe('Vector Checker', () => {
       expect(mockEnv.RECIPE_VECTORS.query).toHaveBeenCalledWith(
         expect.any(Array),
         {
-          topK: 1,
+          topK: 100,
           filter: { recipeId: { $eq: 'recipe-1' } }
         }
       );

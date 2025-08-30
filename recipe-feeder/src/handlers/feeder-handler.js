@@ -2,20 +2,21 @@
  * Main feeder handler that orchestrates the recipe feeding process
  */
 
+import { log } from '../utility-functions.js';
 import { scanRecipeKeys } from '../utils/kv-scanner.js';
 import { batchCheckVectorStore } from '../utils/vector-checker.js';
 import { safeQueueRecipes } from '../utils/queue-producer.js';
 
 /**
- * Processes a batch of recipes by checking vector store and queuing missing ones
+ * Processes recipes continuously until target count is reached or KV is exhausted
  * @param {Object} env - Cloudflare environment bindings
- * @param {number} batchSize - Number of recipes to process in this batch
+ * @param {number} targetQueueCount - Target number of recipes to queue
  * @param {string} cursor - Pagination cursor for KV scanning
  * @returns {Promise<{success: boolean, stats: Object, nextCursor: string|null}>}
  */
-export async function processRecipeBatch(env, batchSize = 100, cursor = null) {
+export async function processRecipesUntilTarget(env, targetQueueCount = 100, cursor = null) {
   const startTime = Date.now();
-  console.log(`Starting recipe batch processing: batchSize=${batchSize}, cursor=${cursor || 'none'}`);
+  log('info', 'Starting continuous recipe processing', { targetQueueCount, cursor: cursor || 'none' }, { worker: 'recipe-feeder' });
   
   const stats = {
     scanned: 0,
@@ -23,40 +24,87 @@ export async function processRecipeBatch(env, batchSize = 100, cursor = null) {
     missingFromVector: 0,
     queued: 0,
     errors: 0,
-    processingTimeMs: 0
+    processingTimeMs: 0,
+    batchesProcessed: 0
   };
   
+  let currentCursor = cursor;
+  let hasMore = true;
+  let recipesToQueue = [];
+  
   try {
-    // Step 1: Scan KV storage for recipe keys
-    console.log('Step 1: Scanning KV storage for recipe keys...');
-    const kvResult = await scanRecipeKeys(env, batchSize, cursor);
-    stats.scanned = kvResult.keys.length;
-    
-    if (kvResult.keys.length === 0) {
-      console.log('No more recipes found in KV storage');
-      return {
-        success: true,
-        stats,
-        nextCursor: null,
-        hasMore: false
-      };
+    // Continue scanning until we have enough recipes to queue or run out of KV values
+    while (hasMore && recipesToQueue.length < targetQueueCount) {
+      log('info', `Scanning batch ${stats.batchesProcessed + 1}`, { 
+        currentQueueCount: recipesToQueue.length, 
+        targetQueueCount,
+        cursor: currentCursor || 'none' 
+      }, { worker: 'recipe-feeder' });
+      
+      // Step 1: Scan KV storage for recipe keys (use smaller batch size for efficiency)
+      const batchSize = Math.min(50, targetQueueCount - recipesToQueue.length);
+      const kvResult = await scanRecipeKeys(env, batchSize, currentCursor);
+      stats.batchesProcessed++;
+      
+      if (kvResult.keys.length === 0) {
+        log('info', 'No more recipes found in KV storage', {}, { worker: 'recipe-feeder' });
+        hasMore = false;
+        break;
+      }
+      
+      stats.scanned += kvResult.keys.length;
+      log('info', 'Found recipes in KV storage', { 
+        batchCount: kvResult.keys.length, 
+        totalScanned: stats.scanned,
+        currentQueueCount: recipesToQueue.length 
+      }, { worker: 'recipe-feeder' });
+      
+      // Step 2: Check which recipes already exist in vector store
+      const vectorCheck = await batchCheckVectorStore(env, kvResult.keys);
+      stats.existsInVector += vectorCheck.exists.length;
+      stats.missingFromVector += vectorCheck.missing.length;
+      
+      // Add missing recipes to our queue list
+      recipesToQueue.push(...vectorCheck.missing);
+      
+      log('info', 'Vector check complete for batch', { 
+        exists: vectorCheck.exists.length, 
+        missing: vectorCheck.missing.length,
+        totalMissing: recipesToQueue.length,
+        targetQueueCount 
+      }, { worker: 'recipe-feeder' });
+      
+      // Update cursor for next iteration
+      currentCursor = kvResult.cursor;
+      hasMore = kvResult.hasMore;
+      
+      // If we've reached our target, we can stop scanning
+      if (recipesToQueue.length >= targetQueueCount) {
+        log('info', 'Reached target queue count, stopping KV scan', { 
+          targetQueueCount, 
+          actualCount: recipesToQueue.length 
+        }, { worker: 'recipe-feeder' });
+        break;
+      }
+      
+      // If no more recipes in KV, we're done
+      if (!hasMore) {
+        log('info', 'No more recipes in KV storage, stopping scan', {}, { worker: 'recipe-feeder' });
+        break;
+      }
     }
     
-    console.log(`Found ${kvResult.keys.length} recipes in KV storage`);
+    // Step 3: Queue the recipes we found (limit to target count)
+    const finalRecipesToQueue = recipesToQueue.slice(0, targetQueueCount);
     
-    // Step 2: Check which recipes already exist in vector store
-    console.log('Step 2: Checking vector store for existing recipes...');
-    const vectorCheck = await batchCheckVectorStore(env, kvResult.keys);
-    stats.existsInVector = vectorCheck.exists.length;
-    stats.missingFromVector = vectorCheck.missing.length;
-    
-    console.log(`Vector check complete: ${vectorCheck.exists.length} exist, ${vectorCheck.missing.length} missing`);
-    
-    // Step 3: Queue missing recipes for embedding
-    if (vectorCheck.missing.length > 0) {
-      console.log(`Step 3: Queuing ${vectorCheck.missing.length} missing recipes...`);
+    if (finalRecipesToQueue.length > 0) {
+      log('info', 'Queuing recipes for embedding', { 
+        count: finalRecipesToQueue.length,
+        targetQueueCount,
+        totalScanned: stats.scanned 
+      }, { worker: 'recipe-feeder' });
       
-      const queueResult = await safeQueueRecipes(env, vectorCheck.missing, {
+      const queueResult = await safeQueueRecipes(env, finalRecipesToQueue, {
         chunkSize: 50,
         validate: true
       });
@@ -64,36 +112,45 @@ export async function processRecipeBatch(env, batchSize = 100, cursor = null) {
       stats.queued = queueResult.stats.queued;
       
       if (!queueResult.success) {
-        console.error('Errors occurred while queuing recipes:', queueResult.errors);
+        log('error', 'Errors occurred while queuing recipes', { errors: queueResult.errors }, { worker: 'recipe-feeder' });
         stats.errors = queueResult.errors.length;
       }
       
-      console.log(`Successfully queued ${stats.queued} recipes for embedding`);
+      log('info', 'Successfully queued recipes for embedding', { count: stats.queued }, { worker: 'recipe-feeder' });
     } else {
-      console.log('No recipes need to be queued - all already exist in vector store');
+      log('info', 'No recipes need to be queued', {}, { worker: 'recipe-feeder' });
     }
     
     // Calculate processing time
     stats.processingTimeMs = Date.now() - startTime;
     
-    console.log(`Batch processing complete in ${stats.processingTimeMs}ms:`, stats);
+    log('info', 'Continuous processing complete', { 
+      stats, 
+      processingTimeMs: stats.processingTimeMs,
+      reachedTarget: finalRecipesToQueue.length >= targetQueueCount,
+      kvExhausted: !hasMore
+    }, { worker: 'recipe-feeder' });
     
     return {
       success: stats.errors === 0,
       stats,
-      nextCursor: kvResult.cursor,
-      hasMore: kvResult.hasMore
+      nextCursor: currentCursor,
+      hasMore,
+      reachedTarget: finalRecipesToQueue.length >= targetQueueCount,
+      kvExhausted: !hasMore
     };
     
   } catch (error) {
     stats.processingTimeMs = Date.now() - startTime;
-    console.error('Error in recipe batch processing:', error);
+    log('error', 'Error in continuous recipe processing', { error: error.message }, { worker: 'recipe-feeder' });
     
     return {
       success: false,
       stats: { ...stats, errors: 1 },
-      nextCursor: cursor, // Return same cursor to retry
-      hasMore: true,
+      nextCursor: currentCursor,
+      hasMore,
+      reachedTarget: false,
+      kvExhausted: !hasMore,
       error: error.message
     };
   }
@@ -113,7 +170,7 @@ export async function executeFullFeedingCycle(env, options = {}) {
   } = options;
   
   const startTime = Date.now();
-  console.log(`Starting full feeding cycle: maxBatchSize=${maxBatchSize}, maxCycles=${maxCycles}`);
+  log('info', 'Starting full feeding cycle', { targetQueueCount: maxBatchSize, maxCycles }, { worker: 'recipe-feeder' });
   
   const totalStats = {
     scanned: 0,
@@ -121,7 +178,8 @@ export async function executeFullFeedingCycle(env, options = {}) {
     missingFromVector: 0,
     queued: 0,
     errors: 0,
-    totalProcessingTimeMs: 0
+    totalProcessingTimeMs: 0,
+    batchesProcessed: 0
   };
   
   let cycles = 0;
@@ -135,54 +193,65 @@ export async function executeFullFeedingCycle(env, options = {}) {
       
       // Check if we're running out of time
       if (cycleStartTime - startTime > maxProcessingTimeMs) {
-        console.log(`Stopping due to time limit: ${cycleStartTime - startTime}ms`);
+        log('info', 'Stopping due to time limit', { elapsedTime: cycleStartTime - startTime }, { worker: 'recipe-feeder' });
         break;
       }
       
       cycles++;
-      console.log(`\\n--- Cycle ${cycles} ---`);
+      log('info', `--- Cycle ${cycles} ---`, {}, { worker: 'recipe-feeder' });
       
-      const batchResult = await processRecipeBatch(env, maxBatchSize, cursor);
+      const result = await processRecipesUntilTarget(env, maxBatchSize, cursor);
       
       // Accumulate stats
       Object.keys(totalStats).forEach(key => {
-        if (key !== 'totalProcessingTimeMs' && batchResult.stats[key]) {
-          totalStats[key] += batchResult.stats[key];
+        if (key !== 'totalProcessingTimeMs' && result.stats[key]) {
+          totalStats[key] += result.stats[key];
         }
       });
       
-      cursor = batchResult.nextCursor;
-      hasMore = batchResult.hasMore;
+      cursor = result.nextCursor;
+      hasMore = result.hasMore;
       
-      if (!batchResult.success) {
-        console.error(`Cycle ${cycles} completed with errors`);
-        if (batchResult.error && !firstError) {
-          firstError = batchResult.error;
+      if (!result.success) {
+        log('error', `Cycle ${cycles} completed with errors`, { error: result.error }, { worker: 'recipe-feeder' });
+        if (result.error && !firstError) {
+          firstError = result.error;
         }
         break;
       }
       
+      // If we reached our target or exhausted KV, we're done
+      if (result.reachedTarget || result.kvExhausted) {
+        log('info', 'Cycle complete', { 
+          reachedTarget: result.reachedTarget, 
+          kvExhausted: result.kvExhausted,
+          queued: result.stats.queued,
+          target: maxBatchSize
+        }, { worker: 'recipe-feeder' });
+        break;
+      }
+      
       if (!hasMore) {
-        console.log('No more recipes to process - cycle complete');
+        log('info', 'No more recipes to process - cycle complete', {}, { worker: 'recipe-feeder' });
         break;
       }
     }
     
     totalStats.totalProcessingTimeMs = Date.now() - startTime;
     
-    console.log(`\\nFeeding cycle complete after ${cycles} cycles:`, totalStats);
+    log('info', 'Feeding cycle complete', { totalStats, cycles }, { worker: 'recipe-feeder' });
     
     return {
       success: totalStats.errors === 0,
       totalStats,
       cycles,
-      completedFully: !hasMore,
+      completedFully: !hasMore || totalStats.queued >= maxBatchSize,
       error: firstError
     };
     
   } catch (error) {
     totalStats.totalProcessingTimeMs = Date.now() - startTime;
-    console.error('Error in full feeding cycle:', error);
+    log('error', 'Error in full feeding cycle', { error: error.message }, { worker: 'recipe-feeder' });
     
     return {
       success: false,

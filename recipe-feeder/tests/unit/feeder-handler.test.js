@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { processRecipeBatch, executeFullFeedingCycle } from '../../src/handlers/feeder-handler.js';
+import { processRecipesUntilTarget, executeFullFeedingCycle } from '../../src/handlers/feeder-handler.js';
 
 // Mock the utility modules
 vi.mock('../../src/utils/kv-scanner.js', () => ({
@@ -29,37 +29,77 @@ describe('Feeder Handler', () => {
     vi.clearAllMocks();
   });
 
-  describe('processRecipeBatch', () => {
-    it('should process a batch successfully', async () => {
-      // Mock KV scan
-      scanRecipeKeys.mockResolvedValue({
-        keys: ['recipe-1', 'recipe-2', 'recipe-3'],
-        cursor: 'next-cursor',
-        hasMore: true
-      });
+  describe('processRecipesUntilTarget', () => {
+    it('should process recipes until target count is reached', async () => {
+      // Mock multiple KV scans to reach target
+      scanRecipeKeys
+        .mockResolvedValueOnce({
+          keys: ['recipe-1', 'recipe-2', 'recipe-3'],
+          cursor: 'cursor-1',
+          hasMore: true
+        })
+        .mockResolvedValueOnce({
+          keys: ['recipe-4', 'recipe-5'],
+          cursor: 'cursor-2',
+          hasMore: true
+        });
 
-      // Mock vector check
-      batchCheckVectorStore.mockResolvedValue({
-        exists: ['recipe-1'],
-        missing: ['recipe-2', 'recipe-3']
-      });
+      // Mock vector checks
+      batchCheckVectorStore
+        .mockResolvedValueOnce({
+          exists: ['recipe-1'],
+          missing: ['recipe-2', 'recipe-3']
+        })
+        .mockResolvedValueOnce({
+          exists: ['recipe-4'],
+          missing: ['recipe-5']
+        });
 
       // Mock queue operation
       safeQueueRecipes.mockResolvedValue({
         success: true,
-        stats: { queued: 2 },
+        stats: { queued: 3 },
         errors: []
       });
 
-      const result = await processRecipeBatch(mockEnv, 100, null);
+      const result = await processRecipesUntilTarget(mockEnv, 3, null);
 
       expect(result.success).toBe(true);
-      expect(result.stats.scanned).toBe(3);
-      expect(result.stats.existsInVector).toBe(1);
-      expect(result.stats.missingFromVector).toBe(2);
-      expect(result.stats.queued).toBe(2);
-      expect(result.nextCursor).toBe('next-cursor');
-      expect(result.hasMore).toBe(true);
+      expect(result.stats.scanned).toBe(5);
+      expect(result.stats.existsInVector).toBe(2);
+      expect(result.stats.missingFromVector).toBe(3);
+      expect(result.stats.queued).toBe(3);
+      expect(result.stats.batchesProcessed).toBe(2);
+      expect(result.reachedTarget).toBe(true);
+      expect(result.kvExhausted).toBe(false);
+    });
+
+    it('should stop when KV is exhausted before reaching target', async () => {
+      // Mock single KV scan that exhausts the store
+      scanRecipeKeys.mockResolvedValue({
+        keys: ['recipe-1', 'recipe-2'],
+        cursor: null,
+        hasMore: false
+      });
+
+      batchCheckVectorStore.mockResolvedValue({
+        exists: ['recipe-1'],
+        missing: ['recipe-2']
+      });
+
+      safeQueueRecipes.mockResolvedValue({
+        success: true,
+        stats: { queued: 1 },
+        errors: []
+      });
+
+      const result = await processRecipesUntilTarget(mockEnv, 5, null);
+
+      expect(result.success).toBe(true);
+      expect(result.stats.scanned).toBe(2);
+      expect(result.stats.queued).toBe(1);
+      expect(result.reachedTarget).toBe(false);
+      expect(result.kvExhausted).toBe(true);
     });
 
     it('should handle empty KV results', async () => {
@@ -69,12 +109,15 @@ describe('Feeder Handler', () => {
         hasMore: false
       });
 
-      const result = await processRecipeBatch(mockEnv, 100, null);
+      const result = await processRecipesUntilTarget(mockEnv, 100, null);
 
       expect(result.success).toBe(true);
       expect(result.stats.scanned).toBe(0);
+      expect(result.stats.batchesProcessed).toBe(1);
       expect(result.nextCursor).toBeNull();
       expect(result.hasMore).toBe(false);
+      expect(result.reachedTarget).toBe(false);
+      expect(result.kvExhausted).toBe(true);
     });
 
     it('should handle recipes that all exist in vector store', async () => {
@@ -89,7 +132,7 @@ describe('Feeder Handler', () => {
         missing: []
       });
 
-      const result = await processRecipeBatch(mockEnv, 100, null);
+      const result = await processRecipesUntilTarget(mockEnv, 100, null);
 
       expect(result.success).toBe(true);
       expect(result.stats.existsInVector).toBe(2);
@@ -103,7 +146,7 @@ describe('Feeder Handler', () => {
     it('should handle KV scan errors', async () => {
       scanRecipeKeys.mockRejectedValue(new Error('KV error'));
 
-      const result = await processRecipeBatch(mockEnv, 100, null);
+      const result = await processRecipesUntilTarget(mockEnv, 100, null);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('KV error');
@@ -118,7 +161,7 @@ describe('Feeder Handler', () => {
 
       batchCheckVectorStore.mockRejectedValue(new Error('Vector error'));
 
-      const result = await processRecipeBatch(mockEnv, 100, null);
+      const result = await processRecipesUntilTarget(mockEnv, 100, null);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Vector error');
@@ -142,10 +185,48 @@ describe('Feeder Handler', () => {
         errors: [{ type: 'queue_error', message: 'Queue failed' }]
       });
 
-      const result = await processRecipeBatch(mockEnv, 100, null);
+      const result = await processRecipesUntilTarget(mockEnv, 100, null);
 
       expect(result.success).toBe(false);
       expect(result.stats.errors).toBe(1);
+    });
+
+    it('should use smaller batch sizes for efficiency', async () => {
+      // Mock multiple small batches
+      scanRecipeKeys
+        .mockResolvedValueOnce({
+          keys: ['recipe-1', 'recipe-2'],
+          cursor: 'cursor-1',
+          hasMore: true
+        })
+        .mockResolvedValueOnce({
+          keys: ['recipe-3'],
+          cursor: null,
+          hasMore: false
+        });
+
+      batchCheckVectorStore
+        .mockResolvedValueOnce({
+          exists: ['recipe-1'],
+          missing: ['recipe-2']
+        })
+        .mockResolvedValueOnce({
+          exists: [],
+          missing: ['recipe-3']
+        });
+
+      safeQueueRecipes.mockResolvedValue({
+        success: true,
+        stats: { queued: 2 },
+        errors: []
+      });
+
+      const result = await processRecipesUntilTarget(mockEnv, 2, null);
+
+      expect(result.success).toBe(true);
+      expect(result.stats.batchesProcessed).toBe(2);
+      expect(result.stats.queued).toBe(2);
+      expect(result.reachedTarget).toBe(true);
     });
   });
 
@@ -187,31 +268,31 @@ describe('Feeder Handler', () => {
     });
 
     it('should stop at max cycles', async () => {
-      // Mock multiple batches that would continue
+      // Mock a batch that would reach the target in one cycle
       scanRecipeKeys.mockResolvedValue({
-        keys: ['recipe-1'],
-        cursor: 'next-cursor',
-        hasMore: true
+        keys: ['recipe-1', 'recipe-2', 'recipe-3', 'recipe-4', 'recipe-5'],
+        cursor: null,
+        hasMore: false
       });
 
       batchCheckVectorStore.mockResolvedValue({
         exists: [],
-        missing: ['recipe-1']
+        missing: ['recipe-1', 'recipe-2', 'recipe-3', 'recipe-4', 'recipe-5']
       });
 
       safeQueueRecipes.mockResolvedValue({
         success: true,
-        stats: { queued: 1 },
+        stats: { queued: 5 },
         errors: []
       });
 
       const result = await executeFullFeedingCycle(mockEnv, {
-        maxBatchSize: 50,
+        maxBatchSize: 5,
         maxCycles: 2
       });
 
-      expect(result.cycles).toBe(2);
-      expect(result.completedFully).toBe(false); // Stopped due to cycle limit
+      expect(result.cycles).toBe(1); // Should complete in 1 cycle since target reached
+      expect(result.completedFully).toBe(true); // Completed because target reached
     });
 
     it('should handle processing errors', async () => {
@@ -224,47 +305,30 @@ describe('Feeder Handler', () => {
     });
 
     it('should accumulate stats across cycles', async () => {
-      // Mock two successful cycles
-      scanRecipeKeys
-        .mockResolvedValueOnce({
-          keys: ['recipe-1', 'recipe-2'],
-          cursor: 'cursor-1',
-          hasMore: true
-        })
-        .mockResolvedValueOnce({
-          keys: ['recipe-3'],
-          cursor: null,
-          hasMore: false
-        });
+      // Mock a single large batch that processes everything
+      scanRecipeKeys.mockResolvedValue({
+        keys: ['recipe-1', 'recipe-2', 'recipe-3'],
+        cursor: null,
+        hasMore: false
+      });
 
-      batchCheckVectorStore
-        .mockResolvedValueOnce({
-          exists: ['recipe-1'],
-          missing: ['recipe-2']
-        })
-        .mockResolvedValueOnce({
-          exists: [],
-          missing: ['recipe-3']
-        });
+      batchCheckVectorStore.mockResolvedValue({
+        exists: ['recipe-1'],
+        missing: ['recipe-2', 'recipe-3']
+      });
 
-      safeQueueRecipes
-        .mockResolvedValueOnce({
-          success: true,
-          stats: { queued: 1 },
-          errors: []
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          stats: { queued: 1 },
-          errors: []
-        });
+      safeQueueRecipes.mockResolvedValue({
+        success: true,
+        stats: { queued: 2 },
+        errors: []
+      });
 
       const result = await executeFullFeedingCycle(mockEnv, {
         maxCycles: 5
       });
 
       expect(result.success).toBe(true);
-      expect(result.cycles).toBe(2);
+      expect(result.cycles).toBe(1); // Should complete in 1 cycle since KV exhausted
       expect(result.totalStats.scanned).toBe(3);
       expect(result.totalStats.existsInVector).toBe(1);
       expect(result.totalStats.queued).toBe(2);
