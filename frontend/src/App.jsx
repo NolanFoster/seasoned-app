@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js'
 import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
@@ -30,6 +30,20 @@ function App() {
       console.log(`${emoji} ${message}`, data);
     }
   };
+
+  // Helper function to close recipe view and restore carousel position
+  const closeRecipeView = useCallback((category = null) => {
+    // Restore carousel position before closing
+    const categoryToRestore = category || selectedRecipeCategory;
+    if (categoryToRestore && recommendationsRef.current) {
+      recommendationsRef.current.restoreCarouselPosition(categoryToRestore);
+    }
+    
+    setSelectedRecipe(null);
+    setShowSharePanel(false);
+    setShowNutrition(false);
+    setSelectedRecipeCategory(null);
+  }, []);
 
   // Debug function to test recipe generation worker connectivity
   const testRecipeGenerationWorker = async () => {
@@ -673,6 +687,10 @@ function App() {
   const [aiCardLoadingStates, setAiCardLoadingStates] = useState(new Map()); // Track loading state for AI cards
   const [userLocation, setUserLocation] = useState(''); // Store user's location from geolocation
   
+  // Carousel position memory for fullscreen view navigation
+  const [carouselPositions, setCarouselPositions] = useState(new Map()); // Store scroll positions by category
+  const [selectedRecipeCategory, setSelectedRecipeCategory] = useState(null); // Track which category the selected recipe came from
+  
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
   const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
@@ -684,6 +702,7 @@ function App() {
   const recipeFullscreenRef = useRef(null);
   const searchTimeoutRef = useRef(null); // Add ref for debounce timeout
   const recipeContentRef = useRef(null);
+  const recommendationsRef = useRef(null); // Ref for Recommendations component to access carousel methods
   
   // Cleanup timers on unmount
   useEffect(() => {
@@ -1307,23 +1326,19 @@ function App() {
     const handlePopState = (event) => {
       // If we're currently showing a recipe and the back button is pressed
       if (selectedRecipe && !event.state?.recipeView) {
-        setSelectedRecipe(null);
-        setShowSharePanel(false);
-        setShowNutrition(false);
+        closeRecipeView();
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [selectedRecipe]);
+  }, [selectedRecipe, closeRecipeView]);
 
   // Handle escape key to close recipe view
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape' && selectedRecipe) {
-        setSelectedRecipe(null);
-        setShowSharePanel(false);
-        setShowNutrition(false);
+        closeRecipeView();
         // Go back in history if we pushed a state
         if (window.history.state?.recipeView) {
           window.history.back();
@@ -1335,7 +1350,7 @@ function App() {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [selectedRecipe]);
+  }, [selectedRecipe, closeRecipeView]);
 
 
   // Function to get just the category names first for loading display
@@ -1846,8 +1861,7 @@ function App() {
         clearSearchCache(); // Clear search cache to remove the deleted recipe
         // Close any open modals/panels if this was the selected recipe
         if (selectedRecipe && selectedRecipe.id === id) {
-          setSelectedRecipe(null);
-          setShowSharePanel(false);
+          closeRecipeView();
         }
       } else {
         throw new Error(result.error || 'Failed to delete recipe');
@@ -2206,6 +2220,24 @@ function App() {
       // For AI cards that haven't been generated yet, generate the recipe first
       handleAiCardRecipeGeneration(recipe);
       return;
+    }
+
+    // Find which category this recipe belongs to and save carousel position
+    let recipeCategory = null;
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      for (const [categoryName, recipes] of recipesByCategory.entries()) {
+        if (recipes.some(r => r.id === recipe.id)) {
+          recipeCategory = categoryName;
+          break;
+        }
+      }
+    }
+
+    // Save carousel position for the category if found
+    if (recipeCategory && recommendationsRef.current) {
+      const scrollPosition = recommendationsRef.current.saveCarouselPosition(recipeCategory);
+      setCarouselPositions(prev => new Map(prev).set(recipeCategory, scrollPosition));
+      setSelectedRecipeCategory(recipeCategory);
     }
 
     // Reset any lingering reflection effects before opening fullscreen
@@ -2755,6 +2787,7 @@ function App() {
               <>
                 {recipes.length > 0 ? (
                   <Recommendations 
+                    ref={recommendationsRef}
                     onRecipeSelect={openRecipeView} 
                     recipesByCategory={recipesByCategory}
                     aiCardLoadingStates={aiCardLoadingStates}
@@ -3542,9 +3575,7 @@ function App() {
           {/* Top Header with Back Button and Action Buttons */}
           <div className="recipe-top-header">
             <button className="back-btn" onClick={() => {
-              setSelectedRecipe(null);
-              setShowSharePanel(false); // Reset share panel when closing recipe view
-              setShowNutrition(false); // Reset nutrition view when closing
+              closeRecipeView();
               // Go back in history if we pushed a state
               if (window.history.state?.recipeView) {
                 window.history.back();
@@ -3636,8 +3667,7 @@ function App() {
               onClick={() => {
                 if (confirm('Are you sure you want to delete this recipe?')) {
                   deleteRecipe(selectedRecipe.id);
-                  setSelectedRecipe(null);
-                  setShowSharePanel(false);
+                  closeRecipeView();
                 }
               }}
             >

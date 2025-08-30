@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
 
-function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }) {
+const Recommendations = forwardRef(({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }, ref) => {
   // Debug flag - set to true to enable detailed logging
   const DEBUG_MODE = false;
   
@@ -35,6 +35,42 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
   const [locationTimeout, setLocationTimeout] = useState(null); // Track timeout state
   const [loadedCategories, setLoadedCategories] = useState(new Set()); // Track which categories have been loaded
   const [visibleCategories, setVisibleCategories] = useState(new Set()); // Track which categories are visible
+
+  // Refs for each carousel to enable scroll position memory
+  const carouselRefs = useRef(new Map());
+
+  // Function to get or create a ref for a specific category
+  const getCarouselRef = useCallback((categoryName) => {
+    if (!carouselRefs.current.has(categoryName)) {
+      carouselRefs.current.set(categoryName, React.createRef());
+    }
+    return carouselRefs.current.get(categoryName);
+  }, []);
+
+  // Function to save scroll position for a specific category
+  const saveCarouselPosition = useCallback((categoryName) => {
+    const ref = carouselRefs.current.get(categoryName);
+    if (ref && ref.current) {
+      return ref.current.saveScrollPosition();
+    }
+    return 0;
+  }, []);
+
+  // Function to restore scroll position for a specific category
+  const restoreCarouselPosition = useCallback((categoryName) => {
+    const ref = carouselRefs.current.get(categoryName);
+    if (ref && ref.current) {
+      return ref.current.restoreScrollPosition();
+    }
+    return false;
+  }, []);
+
+  // Expose carousel position methods to parent component
+  useImperativeHandle(ref, () => ({
+    saveCarouselPosition,
+    restoreCarouselPosition,
+    getCarouselRef
+  }), [saveCarouselPosition, restoreCarouselPosition, getCarouselRef]);
 
   // Fetch recommendations on component mount
   useEffect(() => {
@@ -662,7 +698,10 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
               return (
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
-                  <SwipeableRecipeGrid>
+                  <SwipeableRecipeGrid 
+                    ref={getCarouselRef(categoryName)}
+                    categoryName={categoryName}
+                  >
                     {sortedRecipes.map((recipe, index) => (
                       <div 
                         key={`${categoryName}-${recipe.id}-${index}`} 
@@ -1027,7 +1066,10 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
               return loadingCategories.map(categoryName => (
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
-                  <SwipeableRecipeGrid>
+                  <SwipeableRecipeGrid 
+                    ref={getCarouselRef(categoryName)}
+                    categoryName={categoryName}
+                  >
                     {[1, 2, 3].map(index => (
                       <div key={index} className="recipe-card loading-card">
                         <div className="recipe-card-image loading-pulse">
@@ -1079,7 +1121,10 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
               return (
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
-                  <SwipeableRecipeGrid>
+                  <SwipeableRecipeGrid 
+                    ref={getCarouselRef(categoryName)}
+                    categoryName={categoryName}
+                  >
                     {sortedRecipes.map((recipe, index) => (
                       <div 
                         key={`${categoryName}-${recipe.id}-${index}`} 
@@ -1201,6 +1246,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
 
   debugLogEmoji('❌', 'No rendering conditions met, returning null');
   return null;
-}
+});
+
+Recommendations.displayName = 'Recommendations';
 
 export default Recommendations;
