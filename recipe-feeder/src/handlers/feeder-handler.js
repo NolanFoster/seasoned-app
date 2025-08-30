@@ -2,10 +2,17 @@
  * Main feeder handler that orchestrates the recipe feeding process
  */
 
-import { log } from '../utility-functions.js';
+// import { log } from '../../shared/utility-functions.js';
 import { scanRecipeKeys } from '../utils/kv-scanner.js';
 import { batchCheckVectorStore } from '../utils/vector-checker.js';
 import { safeQueueRecipes } from '../utils/queue-producer.js';
+
+// Temporary log function for testing
+const log = (level, message, data = {}, context = {}) => {
+  const timestamp = new Date().toISOString();
+  const logEntry = { timestamp, level, message, ...data, ...context };
+  console.log(JSON.stringify(logEntry));
+};
 
 /**
  * Processes recipes continuously until target count is reached or KV is exhausted
@@ -220,13 +227,21 @@ export async function executeFullFeedingCycle(env, options = {}) {
         break;
       }
       
-      // If we reached our target or exhausted KV, we're done
-      if (result.reachedTarget || result.kvExhausted) {
-        log('info', 'Cycle complete', { 
+      // If we reached our target, we're done
+      if (result.reachedTarget) {
+        log('info', 'Cycle complete - target reached', { 
           reachedTarget: result.reachedTarget, 
-          kvExhausted: result.kvExhausted,
           queued: result.stats.queued,
           target: maxBatchSize
+        }, { worker: 'recipe-feeder' });
+        break;
+      }
+      
+      // Only stop if we've exhausted KV AND haven't queued anything in this cycle
+      if (result.kvExhausted && result.stats.queued === 0) {
+        log('info', 'Cycle complete - KV exhausted with no recipes queued', { 
+          kvExhausted: result.kvExhausted,
+          queued: result.stats.queued
         }, { worker: 'recipe-feeder' });
         break;
       }
@@ -245,7 +260,7 @@ export async function executeFullFeedingCycle(env, options = {}) {
       success: totalStats.errors === 0,
       totalStats,
       cycles,
-      completedFully: !hasMore || totalStats.queued >= maxBatchSize,
+      completedFully: totalStats.queued >= maxBatchSize || (!hasMore && totalStats.scanned > 0),
       error: firstError
     };
     
