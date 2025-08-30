@@ -1181,6 +1181,17 @@ button:disabled:hover {
 }
 
 /* Source link styling */
+
+/* Spin animation for loading spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Pulsating save button animation */
 @keyframes pulsateGreen {
   0% {
@@ -1241,5 +1252,31 @@ button:disabled:hover {
   animation: pulsateGreen 1.5s ease-in-out infinite !important;
   pointer-events: none;
   cursor: not-allowed;
+  
+  // Display loading spinner and text in a row
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  
+  // Only prevent transform conflicts, don't disable all transforms
+  // This allows the spinner to rotate while preventing button wobbling
+  
+  .loading-spinner {
+    // Allow the spin animation to work
+    animation: spin 1s linear infinite !important;
+    
+    svg {
+      width: 20px !important;
+      height: 20px !important;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+      // Ensure the SVG transform is isolated and centered
+      transform-origin: center !important;
+    }
+  }
+  
+  span {
+    color: inherit !important;
+  }
 }
 
