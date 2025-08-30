@@ -67,7 +67,18 @@ await test('convertTimeToISO8601 - converts various time formats', async () => {
         })
       })
     },
-    KV_STORE: {
+    RECIPE_SAVE_WORKER: {
+      fetch: async (path, options) => {
+        if (path === '/recipe/save') {
+          return {
+            ok: true,
+            json: async () => ({ success: true, id: 'test-id' })
+          };
+        }
+        throw new Error('Unexpected service binding path: ' + path);
+      }
+    },
+    RECIPE_STORAGE: {
       get: async () => null,
       put: async () => ({})
     }
@@ -139,7 +150,18 @@ await test('HTML extraction functions - extract metadata from HTML', async () =>
         })
       })
     },
-    KV_STORE: {
+    RECIPE_SAVE_WORKER: {
+      fetch: async (path, options) => {
+        if (path === '/recipe/save') {
+          return {
+            ok: true,
+            json: async () => ({ success: true, id: 'test-id' })
+          };
+        }
+        throw new Error('Unexpected service binding path: ' + path);
+      }
+    },
+    RECIPE_STORAGE: {
       get: async () => null,
       put: async () => ({})
     }
@@ -212,7 +234,18 @@ await test('JSON-LD processing - handles structured data', async () => {
         })
       })
     },
-    KV_STORE: {
+    RECIPE_SAVE_WORKER: {
+      fetch: async (path, options) => {
+        if (path === '/recipe/save') {
+          return {
+            ok: true,
+            json: async () => ({ success: true, id: 'test-id' })
+          };
+        }
+        throw new Error('Unexpected service binding path: ' + path);
+      }
+    },
+    RECIPE_STORAGE: {
       get: async () => null,
       put: async () => ({})
     }
@@ -310,7 +343,18 @@ await test('Additional utility function coverage', async () => {
         })
       })
     },
-    KV_STORE: {
+    RECIPE_SAVE_WORKER: {
+      fetch: async (path, options) => {
+        if (path === '/recipe/save') {
+          return {
+            ok: true,
+            json: async () => ({ success: true, id: 'test-id' })
+          };
+        }
+        throw new Error('Unexpected service binding path: ' + path);
+      }
+    },
+    RECIPE_STORAGE: {
       get: async () => null,
       put: async () => ({})
     }

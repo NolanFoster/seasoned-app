@@ -34,7 +34,23 @@ const createMockEnv = (kvOperations = {}) => ({
     delete: kvOperations.delete || (async (key) => {}),
     list: kvOperations.list || (async (options) => ({ keys: [], cursor: null, list_complete: true }))
   },
-  SAVE_WORKER_URL: 'https://recipe-save-worker.example.com',
+  RECIPE_SAVE_WORKER: {
+    fetch: async (path, options) => {
+      if (path === '/recipe/save') {
+        return {
+          ok: true,
+          json: async () => ({ success: true, id: 'test-id' })
+        };
+      }
+      if (path === '/recipe/delete') {
+        return {
+          ok: true,
+          json: async () => ({ success: true })
+        };
+      }
+      throw new Error('Unexpected service binding path: ' + path);
+    }
+  },
   AI: {
     run: async (model, options) => ({
       output: [{
