@@ -958,6 +958,12 @@ function App() {
     let scrollY = 0;
     
     const updateScrollEffects = () => {
+      // Skip scroll effects if we're in fullscreen mode
+      if (selectedRecipe) {
+        ticking = false;
+        return;
+      }
+      
       if (!recipeGridRef.current) {
         ticking = false;
         return;
@@ -1009,8 +1015,21 @@ function App() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial call
     
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [recipes]);
+    // Cleanup function to remove scroll effects
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      
+      // Reset any lingering reflection effects on recipe cards
+      if (recipeGridRef.current) {
+        const cards = recipeGridRef.current.querySelectorAll('.recipe-card');
+        cards.forEach((card) => {
+          card.style.removeProperty('--glass-intensity');
+          card.style.removeProperty('--reflection-offset');
+          card.style.removeProperty('--card-rotation');
+        });
+      }
+    };
+  }, [recipes, selectedRecipe]);
 
   // Scroll-based fade effect for recipe fullscreen title
   useEffect(() => {
@@ -2187,6 +2206,16 @@ function App() {
       // For AI cards that haven't been generated yet, generate the recipe first
       handleAiCardRecipeGeneration(recipe);
       return;
+    }
+
+    // Reset any lingering reflection effects before opening fullscreen
+    if (recipeGridRef.current) {
+      const cards = recipeGridRef.current.querySelectorAll('.recipe-card');
+      cards.forEach((card) => {
+        card.style.removeProperty('--glass-intensity');
+        card.style.removeProperty('--reflection-offset');
+        card.style.removeProperty('--card-rotation');
+      });
     }
 
     // For regular recipes or already generated AI recipes, open immediately
