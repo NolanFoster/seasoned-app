@@ -342,4 +342,95 @@ class MetricsCollector {
       expect(summerUnique.length).toBeGreaterThan(0);
     });
   });
+
+  describe('Recipe Names Endpoint', () => {
+    it('POST /recipe-names should return AI-generated recipe names by category', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recipe-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categories: ['Italian Cuisine', 'Quick Meals'],
+          limit: 3
+        })
+      });
+      
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data).toHaveProperty('recipeNames');
+      expect(data).toHaveProperty('requestId');
+      expect(data).toHaveProperty('processingTime');
+      expect(data).toHaveProperty('recipesPerCategory', 3);
+      expect(data).toHaveProperty('categories');
+      
+      // Check recipe names structure
+      const recipeNames = data.recipeNames;
+      expect(Object.keys(recipeNames).length).toBeGreaterThan(0);
+      
+      // Each category should have an array of recipe names
+      Object.values(recipeNames).forEach(recipes => {
+        expect(recipes).toBeInstanceOf(Array);
+        expect(recipes.length).toBeLessThanOrEqual(3);
+        expect(recipes.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('POST /recipe-names should validate required parameters', async () => {
+      // Test missing categories
+      const response1 = await mf.dispatchFetch('http://localhost/recipe-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      expect(response1.status).toBe(400);
+      
+      const data1 = await response1.json();
+      expect(data1.error).toContain('Categories array is required');
+      
+      // Test empty categories array
+      const response2 = await mf.dispatchFetch('http://localhost/recipe-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories: [] })
+      });
+      
+      expect(response2.status).toBe(400);
+      
+      const data2 = await response2.json();
+      expect(data2.error).toContain('Categories array is required');
+    });
+
+    it('POST /recipe-names should respect limit parameter', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recipe-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categories: ['Desserts'],
+          limit: 5
+        })
+      });
+      
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      expect(data.recipesPerCategory).toBe(5);
+      
+      // Check that we get the requested number of recipes
+      const desserts = data.recipeNames['Desserts'] || data.recipeNames['Desserts'] || [];
+      expect(desserts.length).toBeLessThanOrEqual(5);
+    });
+
+    it('GET /recipe-names should return 405 Method Not Allowed', async () => {
+      const response = await mf.dispatchFetch('http://localhost/recipe-names', {
+        method: 'GET'
+      });
+      
+      expect(response.status).toBe(405);
+      
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+      expect(data.error).toContain('Method not allowed');
+    });
+  });
 });

@@ -7,6 +7,7 @@ A Cloudflare Worker that provides recipe recommendations based on location and d
 - 🌍 Location-based recommendations
 - 📅 Seasonal and date-aware suggestions
 - 🏷️ Returns categorized recipe tags
+- 🍳 **AI-generated recipe names by category with configurable limits**
 - 🤖 Powered by Cloudflare Workers AI (Llama 3.1 8B model)
 - 🔄 Fallback to curated mock data when AI is unavailable
 - 🔐 No API keys required - uses Cloudflare's AI binding
@@ -41,6 +42,51 @@ Get recipe recommendations based on location and date.
   "location": "San Francisco, CA",
   "date": "2024-07-15",
   "season": "Summer"
+}
+```
+
+### `POST /recipe-names`
+
+Get AI-generated recipe names by category with configurable limits.
+
+**Request Body:**
+```json
+{
+  "categories": ["Italian Cuisine", "Asian Fusion", "Desserts"],
+  "limit": 5  // Optional, defaults to 5, max 20
+}
+```
+
+**Response:**
+```json
+{
+  "recipeNames": {
+    "Italian Cuisine": [
+      "Margherita Pizza",
+      "Spaghetti Carbonara",
+      "Risotto ai Funghi",
+      "Osso Buco",
+      "Tiramisu"
+    ],
+    "Asian Fusion": [
+      "Thai Green Curry",
+      "Sushi Roll Combo",
+      "Korean BBQ Beef",
+      "Vietnamese Pho",
+      "Chinese Dumplings"
+    ],
+    "Desserts": [
+      "Chocolate Lava Cake",
+      "Apple Pie",
+      "Cheesecake",
+      "Chocolate Chip Cookies",
+      "Tiramisu"
+    ]
+  },
+  "requestId": "req_1642248600000_abc123def",
+  "processingTime": "245ms",
+  "recipesPerCategory": 5,
+  "categories": ["Italian Cuisine", "Asian Fusion", "Desserts"]
 }
 ```
 

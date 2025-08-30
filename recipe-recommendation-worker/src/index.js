@@ -122,6 +122,19 @@ export default {
             routeHandled = true;
           }
           break;
+        case '/recipe-names':
+          if (request.method === 'POST') {
+            response = await handleRecipeNames(request, env, corsHeaders, requestId);
+            routeHandled = true;
+          } else {
+            // Method not allowed for non-POST requests
+            response = new Response(JSON.stringify({ error: 'Method not allowed' }), {
+              status: 405,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+            routeHandled = true;
+          }
+          break;
         case '/health':
           response = await handleHealth(env, corsHeaders, requestId);
           routeHandled = true;
@@ -328,6 +341,100 @@ async function handleRecommendations(request, env, corsHeaders, requestId) {
   }
 }
 
+async function handleRecipeNames(request, env, corsHeaders, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    log('info', 'Processing recipe names request', { requestId });
+    
+    // Parse request body
+    const body = await request.json();
+    const { categories, limit = 5 } = body; // Default limit is 5 recipes per category
+
+    // Validate input parameters
+    if (!categories || !Array.isArray(categories) || categories.length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'Categories array is required and must not be empty',
+        requestId
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const recipesPerCategory = Math.min(Math.max(parseInt(limit) || 5, 1), 20); // Limit between 1-20
+    
+    log('info', 'Recipe names parameters parsed', {
+      requestId,
+      categoriesCount: categories.length,
+      categories: categories,
+      recipesPerCategory
+    });
+
+    // Track recipe names request metrics
+    metrics.increment('recipe_names_requested', 1, {
+      categoriesCount: categories.length.toString(),
+      limitProvided: String(!!limit)
+    });
+
+    // Generate AI recipe names for each category
+    const recipeNames = await generateRecipeNamesByCategory(categories, recipesPerCategory, env, requestId);
+
+    const duration = Date.now() - startTime;
+    metrics.timing('recipe_names_duration', duration);
+    
+    log('info', 'Recipe names generated successfully', {
+      requestId,
+      duration: `${duration}ms`,
+      categoriesCount: Object.keys(recipeNames).length,
+      totalRecipes: Object.values(recipeNames).reduce((sum, recipes) => sum + recipes.length, 0)
+    });
+
+    // Send recipe names success analytics
+    await sendAnalytics(env, 'recipe_names_generated', {
+      requestId,
+      categoriesCount: categories.length,
+      recipesPerCategory,
+      totalRecipes: Object.values(recipeNames).reduce((sum, recipes) => sum + recipes.length, 0),
+      duration
+    });
+
+    return new Response(JSON.stringify({
+      recipeNames,
+      requestId,
+      processingTime: `${duration}ms`,
+      recipesPerCategory,
+      categories: categories
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const { category, severity } = categorizeError(error);
+    
+    metrics.increment('recipe_names_errors', 1, { category, severity });
+    metrics.timing('recipe_names_duration', duration, { error: true });
+    
+    log('error', 'Error getting recipe names', {
+      requestId,
+      error: error.message,
+      stack: error.stack,
+      category,
+      severity,
+      duration: `${duration}ms`
+    });
+
+    return new Response(JSON.stringify({ 
+      error: 'Failed to get recipe names',
+      requestId,
+      category
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+}
+
 // Enhanced health check endpoint with diagnostics
 async function handleHealth(env, corsHeaders, requestId) {
   const startTime = Date.now();
@@ -510,6 +617,194 @@ function getContextualCategory(season, date, hasLocation) {
   
   const seasonCategories = contextCategories[season];
   return seasonCategories[month % seasonCategories.length];
+}
+
+async function generateRecipeNamesByCategory(categories, recipesPerCategory, env, requestId) {
+  const startTime = Date.now();
+  
+  // Check if we have AI binding
+  if (!env.AI) {
+    log('warn', 'AI binding not configured, falling back to mock data', { requestId });
+    metrics.increment('ai_fallback_to_mock', 1, { reason: 'no_binding' });
+    return getMockRecipeNamesByCategory(categories, recipesPerCategory, requestId);
+  }
+
+  try {
+    const aiStartTime = Date.now();
+    const modelName = '@cf/meta/llama-3.1-8b-instruct';
+    
+    log('info', 'Generating recipe names by category using AI', { 
+      requestId, 
+      model: modelName,
+      categoriesCount: categories.length,
+      recipesPerCategory
+    });
+    
+    metrics.increment('ai_recipe_names_requests', 1, { 
+      model: modelName,
+      categoriesCount: categories.length.toString()
+    });
+
+    // Create a focused prompt for generating recipe names by category
+    const prompt = `Generate ${recipesPerCategory} creative and appetizing recipe names for each of the following categories:
+
+Categories: ${categories.join(', ')}
+
+For each category, create ${recipesPerCategory} specific, descriptive recipe names that are:
+- Creative and appetizing
+- Specific enough to be recognizable dishes
+- Varied in cooking methods and ingredients
+- Suitable for the category theme
+
+Return ONLY this JSON format:
+{
+  "recipeNames": {
+    "${categories[0]}": ["Recipe Name 1", "Recipe Name 2", "Recipe Name 3", "Recipe Name 4", "Recipe Name 5"],
+    "${categories[1] || 'Category 2'}": ["Recipe Name 1", "Recipe Name 2", "Recipe Name 3", "Recipe Name 4", "Recipe Name 5"]
+    ${categories.length > 2 ? `,"${categories[2]}"` : ''}: ["Recipe Name 1", "Recipe Name 2", "Recipe Name 3", "Recipe Name 4", "Recipe Name 5"]
+  }
+}`;
+
+    // Use the AI model to generate recipe names
+    const response = await env.AI.run(modelName, {
+      prompt: prompt,
+      max_tokens: 512
+    });
+
+    const aiDuration = Date.now() - aiStartTime;
+    metrics.timing('ai_recipe_names_duration', aiDuration, { model: modelName });
+    
+    log('info', 'AI recipe names response received', { 
+      requestId,
+      model: modelName,
+      responseType: typeof response,
+      aiDuration: `${aiDuration}ms`
+    });
+
+    if (!response || typeof response !== 'object') {
+      metrics.increment('ai_recipe_names_errors', 1, { 
+        type: 'invalid_response',
+        model: modelName 
+      });
+      throw new Error('Invalid response from Cloudflare AI');
+    }
+
+    // Extract the text content from the response
+    let content;
+    if (response.response) {
+      content = response.response;
+    } else if (response.result) {
+      content = response.result;
+    } else if (response.text) {
+      content = response.text;
+    } else if (typeof response === 'string') {
+      content = response;
+    } else {
+      log('error', 'Unexpected AI response structure for recipe names', { 
+        requestId, 
+        responseKeys: Object.keys(response),
+        responseType: typeof response
+      });
+      metrics.increment('ai_recipe_names_errors', 1, { 
+        type: 'unexpected_structure',
+        model: modelName 
+      });
+      throw new Error('Could not extract content from AI response');
+    }
+
+    log('debug', 'AI recipe names content extracted', { 
+      requestId, 
+      contentLength: content?.length || 0,
+      contentPreview: content?.substring(0, 100) + '...'
+    });
+
+    // Parse the JSON response
+    try {
+      const parseStartTime = Date.now();
+      let parsed;
+      
+      // Try to extract JSON from the response if it contains extra text
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+        log('debug', 'JSON extracted from AI recipe names response', { 
+          requestId,
+          extractedLength: jsonMatch[0].length 
+        });
+      } else {
+        // If the entire response is valid JSON
+        parsed = JSON.parse(content);
+        log('debug', 'Full AI recipe names response parsed as JSON', { requestId });
+      }
+
+      const parseDuration = Date.now() - parseStartTime;
+      metrics.timing('ai_recipe_names_parse_duration', parseDuration);
+      metrics.increment('ai_recipe_names_success', 1, { 
+        model: modelName,
+        categoriesCount: categories.length.toString()
+      });
+
+      const totalDuration = Date.now() - startTime;
+      
+      log('info', 'AI recipe names generated successfully', {
+        requestId,
+        totalDuration: `${totalDuration}ms`,
+        aiDuration: `${aiDuration}ms`,
+        parseDuration: `${parseDuration}ms`,
+        categoriesGenerated: parsed.recipeNames ? Object.keys(parsed.recipeNames).length : 0
+      });
+
+      // Send AI success analytics
+      await sendAnalytics(env, 'ai_recipe_names_success', {
+        requestId,
+        model: modelName,
+        totalDuration,
+        aiDuration,
+        parseDuration,
+        categoriesCount: categories.length,
+        categoriesGenerated: parsed.recipeNames ? Object.keys(parsed.recipeNames).length : 0,
+        promptLength: prompt.length
+      });
+
+      return parsed.recipeNames || {};
+    } catch (parseError) {
+      metrics.increment('ai_recipe_names_errors', 1, { 
+        type: 'parse_error',
+        model: modelName 
+      });
+      
+      log('error', 'Failed to parse AI recipe names response', {
+        requestId,
+        error: parseError.message,
+        content: content?.substring(0, 200) + '...'
+      });
+      
+      throw new Error('Failed to parse AI response');
+    }
+  } catch (error) {
+    const totalDuration = Date.now() - startTime;
+    
+    log('error', 'AI recipe names generation failed, falling back to mock data', {
+      requestId,
+      error: error.message,
+      duration: `${totalDuration}ms`
+    });
+    
+    metrics.increment('ai_recipe_names_fallback', 1, { 
+      reason: error.message.includes('AI') ? 'ai_error' : 'other_error'
+    });
+    
+    // Send AI error analytics
+    await sendAnalytics(env, 'ai_recipe_names_error', {
+      requestId,
+      error: error.message,
+      duration: totalDuration,
+      categoriesCount: categories.length
+    });
+    
+    // Fall back to mock data
+    return getMockRecipeNamesByCategory(categories, recipesPerCategory, requestId);
+  }
 }
 
 async function getRecipeRecommendations(location, date, recipesPerCategory, env, requestId) {
@@ -1184,6 +1479,130 @@ function getSeason(date) {
   if (month >= 5 && month <= 7) return 'Summer';
   if (month >= 8 && month <= 10) return 'Fall';
   return 'Winter';
+}
+
+function getMockRecipeNamesByCategory(categories, recipesPerCategory, requestId) {
+  const startTime = Date.now();
+  
+  log('info', 'Generating mock recipe names by category', { 
+    requestId,
+    categories,
+    recipesPerCategory
+  });
+  
+  // Handle edge cases for recipesPerCategory
+  const actualLimit = Math.max(1, Math.min(recipesPerCategory || 5, 20));
+  
+  // Mock recipe names for different category types
+  const mockRecipeNames = {
+    'Italian Cuisine': [
+      'Margherita Pizza',
+      'Spaghetti Carbonara',
+      'Risotto ai Funghi',
+      'Osso Buco',
+      'Tiramisu',
+      'Bruschetta',
+      'Lasagna Bolognese',
+      'Panna Cotta'
+    ],
+    'Asian Fusion': [
+      'Thai Green Curry',
+      'Sushi Roll Combo',
+      'Korean BBQ Beef',
+      'Vietnamese Pho',
+      'Chinese Dumplings',
+      'Japanese Ramen',
+      'Indian Butter Chicken',
+      'Malaysian Laksa'
+    ],
+    'Comfort Food': [
+      'Mac and Cheese',
+      'Chicken Pot Pie',
+      'Beef Stew',
+      'Grilled Cheese',
+      'Meatloaf',
+      'Chicken Noodle Soup',
+      'Shepherd\'s Pie',
+      'Potato Gratin'
+    ],
+    'Healthy Options': [
+      'Quinoa Buddha Bowl',
+      'Grilled Salmon',
+      'Kale Caesar Salad',
+      'Vegetable Stir Fry',
+      'Greek Yogurt Parfait',
+      'Avocado Toast',
+      'Chicken Breast',
+      'Smoothie Bowl'
+    ],
+    'Desserts': [
+      'Chocolate Lava Cake',
+      'Apple Pie',
+      'Cheesecake',
+      'Chocolate Chip Cookies',
+      'Tiramisu',
+      'Creme Brulee',
+      'Fruit Tart',
+      'Ice Cream Sundae'
+    ],
+    'Quick Meals': [
+      '15-Minute Pasta',
+      'Sheet Pan Dinner',
+      'One-Pot Rice',
+      'Stir Fry Express',
+      'Breakfast Burrito',
+      'Quesadilla',
+      'Panini',
+      'Omelette'
+    ]
+  };
+  
+  // Build recipe names object for requested categories
+  const result = {};
+  
+  categories.forEach(category => {
+    // Find a matching mock category or use a default one
+    let mockCategory = category;
+    let mockRecipes = mockRecipeNames[category];
+    
+    // If exact match not found, try to find a similar category
+    if (!mockRecipes) {
+      const categoryLower = category.toLowerCase();
+      for (const [mockCat, recipes] of Object.entries(mockRecipeNames)) {
+        if (mockCat.toLowerCase().includes(categoryLower) || 
+            categoryLower.includes(mockCat.toLowerCase()) ||
+            mockCat.toLowerCase().includes('cuisine') ||
+            mockCat.toLowerCase().includes('food')) {
+          mockCategory = mockCat;
+          mockRecipes = recipes;
+          break;
+        }
+      }
+    }
+    
+    // If still no match, use a default category
+    if (!mockRecipes) {
+      mockCategory = 'Quick Meals';
+      mockRecipes = mockRecipeNames['Quick Meals'];
+    }
+    
+    // Take the requested number of recipes
+    const selectedRecipes = mockRecipes.slice(0, actualLimit);
+    
+    result[mockCategory] = selectedRecipes;
+  });
+  
+  const duration = Date.now() - startTime;
+  
+  log('info', 'Mock recipe names generated successfully', {
+    requestId,
+    duration: `${duration}ms`,
+    categoriesRequested: categories.length,
+    categoriesGenerated: Object.keys(result).length,
+    totalRecipes: Object.values(result).reduce((sum, recipes) => sum + recipes.length, 0)
+  });
+  
+  return result;
 }
 
 function getMockRecommendations(location, date, recipesPerCategory, requestId) {
