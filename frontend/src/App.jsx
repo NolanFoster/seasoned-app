@@ -1711,7 +1711,8 @@ function App() {
       if (result.success) {
         // Handle image upload if there's an image
         if (selectedImage) {
-          await uploadRecipeImage(result.id, selectedImage);
+          // TODO: Implement image upload functionality
+          console.log('Image upload not yet implemented for recipe:', result.id);
         }
         
         // Refresh the recipe list
