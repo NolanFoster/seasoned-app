@@ -283,6 +283,21 @@ export class RecipeSaver {
           log('info', 'Syncing with search database', { requestId, recipeId });
           await this.syncWithSearchDB(recipeRecord, 'create', requestId);
 
+          // Add recipe to embedding queue
+          log('info', 'Adding recipe to embedding queue', { requestId, recipeId });
+          try {
+            await this.env.EMBEDDING_QUEUE.sendBatch([{ body: recipeId }]);
+            log('info', 'Recipe added to embedding queue successfully', { requestId, recipeId });
+          } catch (queueError) {
+            log('warn', 'Failed to add recipe to embedding queue', { 
+              requestId, 
+              recipeId, 
+              error: queueError.message 
+            });
+            // Don't fail the save operation if queue fails
+            // The recipe can be queued for embedding later through other means
+          }
+
           // Store operation status
           const operationStatus = {
             status: 'completed',
@@ -442,6 +457,21 @@ export class RecipeSaver {
           // Sync with search database
           log('info', 'Syncing updated recipe with search database', { requestId, recipeId });
           await this.syncWithSearchDB(updatedRecipe, 'update', requestId);
+
+          // Add updated recipe to embedding queue for re-embedding
+          log('info', 'Adding updated recipe to embedding queue', { requestId, recipeId });
+          try {
+            await this.env.EMBEDDING_QUEUE.sendBatch([{ body: recipeId }]);
+            log('info', 'Updated recipe added to embedding queue successfully', { requestId, recipeId });
+          } catch (queueError) {
+            log('warn', 'Failed to add updated recipe to embedding queue', { 
+              requestId, 
+              recipeId, 
+              error: queueError.message 
+            });
+            // Don't fail the update operation if queue fails
+            // The recipe can be queued for embedding later through other means
+          }
 
           // Store operation status
           const operationStatus = {
