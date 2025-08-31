@@ -136,20 +136,13 @@ async function checkExistingEmbedding(recipeId, vectorStorage) {
       if (existingEmbedding && existingEmbedding.length > 0) {
         return true;
       }
-    } catch {
-      // If getByIds fails, fall back to query method
+    } catch (getByIdsError) {
+      // Log the specific error for debugging
+      console.warn(`getByIds failed for ${recipeId}, assuming no existing embedding:`, getByIdsError.message);
+      // Don't fall back to query method as it's unreliable and can hit limits
     }
 
-    // Use a dummy vector to query for the specific recipe ID
-    const dummyVector = new Array(384).fill(0);
-    const query = await vectorStorage.query(dummyVector, {
-      topK: 1000 // Query more results to find the specific ID
-    });
-
-    if (query.matches) {
-      return query.matches.some(match => match.id === recipeId);
-    }
-
+    // If getByIds returns no results, the recipe doesn't have an embedding
     return false;
   } catch (error) {
     console.error(`Error checking existing embedding for ${recipeId}:`, error);
