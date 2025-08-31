@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="generated" content="2025-08-31T00:30:47.700Z">
+    <meta name="generated" content="2025-08-31T02:05:22.705Z">
 </head>
 <body>
     <div class="container">
@@ -16,7 +16,7 @@
             <div class="header-content">
                 <h1 class="title">🍳 Seasoned Recipe App</h1>
                 <p class="subtitle">Developer Documentation & API Reference</p>
-                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-31T00:30:47.700Z</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2025-08-31T02:05:22.705Z</p>
             </div>
         </header>
 
@@ -34,7 +34,7 @@
                 <div class="nav-section">
                     <h3>Workers</h3>
                     <ul>
-                        <li><a href="#recipe-search-db">Recipe Search DB</a></li><li><a href="#recipe-scraper">Recipe Scraper</a></li><li><a href="#recipe-clipper">Recipe Clipper</a></li><li><a href="#recipe-crawler">Recipe Crawler</a></li>
+                        <li><a href="#recipe-search-db">Recipe Search DB</a></li><li><a href="#recipe-clipper">Recipe Clipper</a></li><li><a href="#recipe-crawler">Recipe Crawler</a></li>
                     </ul>
                 </div>
 
@@ -65,7 +65,7 @@
                     <h3>🔄 Auto-Update Information</h3>
                     <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
                     <pre><code>npm run docs:generate</code></pre>
-                    <p><strong>Last Generated:</strong> 2025-08-31T00:30:47.700Z</p>
+                    <p><strong>Last Generated:</strong> 2025-08-31T02:05:22.705Z</p>
                 </div>
                 
                 <div class="feature-grid">
@@ -98,7 +98,7 @@
                     <div class="arch-layer">
                         <h4>API Gateway & Workers</h4>
                         <ul>
-                            <li><strong>Recipe Search DB:</strong> Graph Search, FTS, Node/Edge Management</li><li><strong>Recipe Scraper:</strong> JSON-LD Extraction, Batch Processing, KV Storage</li><li><strong>Recipe Clipper:</strong> AI Extraction, GPT-4o-mini, Smart Caching</li><li><strong>Recipe Crawler:</strong> Batch Processing, Health Monitoring, Progress Tracking</li>
+                            <li><strong>Recipe Search DB:</strong> Graph Search, FTS, Node/Edge Management</li><li><strong>Recipe Clipper:</strong> AI Extraction, GPT-4o-mini, Smart Caching</li><li><strong>Recipe Crawler:</strong> Batch Processing, Health Monitoring, Progress Tracking</li>
                         </ul>
                     </div>
                     <div class="arch-layer">
@@ -338,115 +338,6 @@ export default {
         return await getNodes(request, env, corsHeaders);
       } else if (path.startsWith('/api/nodes/') && method === 'GET') {
         const nodeId = path.split(...</code></pre>
-                </div>
-            </section>
-            <section id="recipe-scraper" class="section">
-                <h2>Recipe Scraper Worker</h2>
-                <p>JSON-LD Extraction, Batch Processing, KV Storage</p>
-                
-                <div class="worker-info">
-                    <div class="info-card">
-                        <h4>📍 Location</h4>
-                        <p><code>recipe-scraper/</code></p>
-                    </div>
-                    <div class="info-card">
-                        <h4>🗄️ Database</h4>
-                        <p>KV</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>🔧 Main Features</h4>
-                        <p>JSON-LD Extraction, Batch Processing, KV Storage</p>
-                    </div>
-                </div>
-
-                
-
-                
-                <h3>Key Functions</h3>
-                <div class="function-grid">
-                    
-                    <div class="function">
-                        <h4><code>decodeHtmlEntities()</code></h4>
-                        <p>Decode HTML entities</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>normalizeIngredients()</code></h4>
-                        <p>Normalize ingredients to ensure they're always arrays</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>normalizeInstructions()</code></h4>
-                        <p>Normalize instructions</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>isRecipeType()</code></h4>
-                        <p>Helper to check if a type value represents a schema.org/Recipe</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>validateRecipeSchema()</code></h4>
-                        <p>Validate if the JSON-LD object is a valid schema.org/Recipe</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>extractRecipeData()</code></h4>
-                        <p>Extract recipe data from JSON-LD</p>
-                    </div>
-                    
-                    <div class="function">
-                        <h4><code>processRecipeUrl()</code></h4>
-                        <p>Process a single URL</p>
-                    </div>
-                    
-                </div>
-                
-
-                <div class="source-code-preview">
-                    <h3>Source Code Preview</h3>
-                    <pre><code>/**
- * Cloudflare Worker for scraping recipe data from URLs
- * Returns structured recipe data in JSON-LD format when available
- * Stores recipes in KV database with hashed URL as key
- */
-
-import { 
-  generateRecipeId, 
-  getRecipeFromKV
-} from '../shared/kv-storage.js';
-
-import {
-  processRecipeImages
-} from '../shared/image-service.js';
-
-// Decode HTML entities
-function decodeHtmlEntities(text) {
-  if (typeof text !== 'string') return text;
-  
-  const entities = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&apos;': "'",
-    '&nbsp;': ' ',
-    '&copy;': '©',
-    '&reg;': '®',
-    '&trade;': '™'
-  };
-  
-  return text.replace(/&[#\w]+;/g, entity => {
-    return entities[entity] || entity;
-  });
-}
-
-// Normalize ingredients to ensure they're always arrays
-function normalizeIngredients(ingredients) {
-  if (!ingredients) return [];
-  if (typeof ingredients === 'string') return [decodeHtmlEntities(ingredients)];
-  if (Array.isArray(ingredient...</code></pre>
                 </div>
             </section>
             <section id="recipe-clipper" class="section">
@@ -906,10 +797,6 @@ export async function compressData(data) {
                     
                     <h4>Recipe Search DB</h4>
                     <pre><code>cd recipe-search-db
-npm test</code></pre>
-                    
-                    <h4>Recipe Scraper</h4>
-                    <pre><code>cd recipe-scraper
 npm test</code></pre>
                     
                     <h4>Recipe Clipper</h4>
