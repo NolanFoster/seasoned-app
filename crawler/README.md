@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 2. The crawler is configured to use the deployed scraper at:
    ```
-   https://recipe-scraper.nolanfoster.workers.dev
+   https://recipe-clipper.nolanfoster.workers.dev
    ```
    
    If you want to use a local scraper, specify it with `--scraper-url`:
@@ -145,7 +145,7 @@ python recipe_crawler.py --url-file recipes.txt --save-history --history-file my
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--scraper-url` | URL of the recipe scraper worker | `https://recipe-scraper.nolanfoster.workers.dev` |
+| `--scraper-url` | URL of the recipe scraper worker | `https://recipe-clipper.nolanfoster.workers.dev` |
 | `--urls` | List of URLs to scrape | None |
 | `--url-file` | File containing URLs (one per line) | None |
 | `--output` | Output file for results | `crawl_results.json` |
@@ -216,7 +216,7 @@ When using `--save-history`, the crawler creates a detailed JSON file:
 ```json
 {
   "metadata": {
-    "scraper_url": "https://recipe-scraper.nolanfoster.workers.dev",
+    "scraper_url": "https://recipe-clipper.nolanfoster.workers.dev",
     "exported_at": "2025-08-15 12:30:00",
     "total_records": 10
   },

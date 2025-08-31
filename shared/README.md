@@ -160,7 +160,7 @@ Data is automatically compressed using gzip compression to reduce storage costs.
 ## Workers Using This Library
 
 - **recipe-clipper**: Uses KV functions for caching extracted recipes
-- **recipe-scraper**: Uses KV functions for storing scraped recipes
+- **recipe-clipper**: Uses KV functions for storing clipped recipes
 
 ## Configuration
 

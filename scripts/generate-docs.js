@@ -31,7 +31,7 @@ const CONFIG = {
 
     {
       name: 'Recipe Scraper',
-      path: '../recipe-scraper/worker.js',
+      path: '../recipe-clipper/worker.js',
       type: 'worker',
       database: 'KV',
       features: ['JSON-LD Extraction', 'Batch Processing', 'KV Storage']
@@ -665,7 +665,7 @@ function writeUpdatedFiles(html) {
       "build": "echo 'No build step required - static HTML documentation'",
       "preview": "python3 -m http.server 8000",
       "docs:generate": "node ../scripts/generate-docs.js",
-      "docs:watch": "nodemon ../scripts/generate-docs.js --watch ../src --watch ../clipped-recipe-db-worker/src --watch ../recipe-scraper --watch ../clipper/src --watch ../shared"
+      "docs:watch": "nodemon ../scripts/generate-docs.js --watch ../src --watch ../clipped-recipe-db-worker/src --watch ../recipe-clipper --watch ../clipper/src --watch ../shared"
     },
     keywords: [
       "documentation",

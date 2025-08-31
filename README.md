@@ -44,7 +44,7 @@ The Seasoned application uses a modern, secure authentication system built aroun
 ### Workers:
 - **auth-worker**: OTP-based authentication system with user management integration
 - **user-management-worker**: User profile and account management
-- **recipe-scraper**: Scrapes and stores recipe data from URLs
+- **recipe-clipper**: Clips and stores recipe data from URLs
 - **clipper**: Browser extension backend for recipe clipping
 - **recipe-search-db**: Search functionality for recipes
 - **recipe-save-worker**: Handles recipe saving operations
@@ -110,9 +110,9 @@ npm install
 npm run deploy
 ```
 
-#### Recipe Scraper
+#### Recipe Clipper
 ```bash
-cd recipe-scraper
+cd recipe-clipper
 npm install
 npm run deploy
 ```
@@ -239,8 +239,8 @@ npm run dev
 cd recipe-search-db
 npm run dev
 
-# For recipe scraper
-cd recipe-scraper
+# For recipe clipper
+cd recipe-clipper
 npm run dev
 ```
 
@@ -276,8 +276,8 @@ npm run deploy
 cd recipe-search-db
 npm run deploy
 
-# Deploy recipe scraper
-cd recipe-scraper
+# Deploy recipe clipper
+cd recipe-clipper
 npm run deploy
 ```
 

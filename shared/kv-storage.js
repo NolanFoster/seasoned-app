@@ -1,7 +1,7 @@
 /**
  * Shared KV Storage Library
  * Common functions for recipe storage and retrieval using Cloudflare KV
- * Used by both recipe-clipper and recipe-scraper workers
+ * Used by recipe-clipper worker
  */
 
 // Utility function to generate a unique ID from URL

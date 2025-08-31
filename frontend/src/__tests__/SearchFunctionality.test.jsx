@@ -20,7 +20,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Define the worker URLs
-const API_URL = 'https://recipe-scraper.nolanfoster.workers.dev';
+const API_URL = 'https://recipe-clipper.nolanfoster.workers.dev';
 const CLIPPER_API_URL = 'https://recipe-clipper-worker.nolanfoster.workers.dev';
 const SEARCH_DB_URL = 'https://recipe-search-db.nolanfoster.workers.dev';
 
