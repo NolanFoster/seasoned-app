@@ -62,7 +62,7 @@ describe('Recipe Embedding Worker Integration - Queue Processing', () => {
       };
 
       // Mock successful processing
-      mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+      mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
       mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
       mockEnv.AI.run.mockResolvedValue({
         data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
@@ -107,7 +107,7 @@ describe('Recipe Embedding Worker Integration - Queue Processing', () => {
         }
       };
 
-      mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+      mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
       mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
       mockEnv.AI.run.mockResolvedValue({
         data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
@@ -143,9 +143,9 @@ describe('Recipe Embedding Worker Integration - Queue Processing', () => {
 
       await worker.queue(batch, mockEnv, {});
 
-      // The current design handles errors gracefully, so the message is acknowledged
-      expect(message.ack).toHaveBeenCalled();
-      expect(message.retry).not.toHaveBeenCalled();
+      // The current design retries messages on error
+      expect(message.retry).toHaveBeenCalled();
+      expect(message.ack).not.toHaveBeenCalled();
     });
   });
 
@@ -163,7 +163,7 @@ describe('Recipe Embedding Worker Integration - Queue Processing', () => {
         .mockResolvedValueOnce(JSON.stringify({ data: { name: 'Recipe 2' } }));
 
       // Second message: successful processing
-      mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+      mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
       mockEnv.AI.run.mockResolvedValue({
         data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
       });
@@ -200,9 +200,10 @@ describe('Recipe Embedding Worker Integration - Queue Processing', () => {
       const message = createMockQueueMessage('recipe-1', 'msg-1');
       const batch = createMockQueueBatch([message]);
 
-      mockEnv.RECIPE_VECTORS.query.mockResolvedValue({
-        matches: [{ id: 'recipe-1' }]
-      });
+      // Mock getByIds to return existing embedding (recipe will be skipped)
+      mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([
+        { id: 'recipe-1', values: [0.1, 0.2, 0.3] }
+      ]);
 
       await worker.queue(batch, mockEnv, {});
 
@@ -216,12 +217,14 @@ describe('Recipe Embedding Worker Integration - Queue Processing', () => {
       const message = createMockQueueMessage('recipe-1', 'msg-1');
       const batch = createMockQueueBatch([message]);
 
-      // Mock vectorize query to throw error (this gets logged but doesn't trigger retry)
-      mockEnv.RECIPE_VECTORS.query.mockRejectedValue(new Error('Test error'));
+      // Mock getByIds to fail first, then mock KV storage to throw error
+      // This ensures we go through the error path
+      mockEnv.RECIPE_VECTORS.getByIds.mockRejectedValue(new Error('Vectorize error'));
+      mockEnv.RECIPE_STORAGE.get.mockRejectedValue(new Error('Test error'));
 
       await worker.queue(batch, mockEnv, {});
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error checking existing embedding for recipe-1:', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith('Error processing recipe recipe-1:', expect.any(Error));
     });
   });
 });
