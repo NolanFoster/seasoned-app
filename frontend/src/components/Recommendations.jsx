@@ -7,7 +7,7 @@ const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
 
 function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }) {
   // Debug flag - set to true to enable detailed logging
-  const DEBUG_MODE = false;
+  const DEBUG_MODE = true;
   
   // Helper function for debug logging with emojis
   const debugLogEmoji = (emoji, message, data = {}) => {
@@ -38,6 +38,13 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
 
   // Fetch recommendations on component mount
   useEffect(() => {
+    // Debug: Check if recommendation API URL is set
+    debugLogEmoji('🔗', 'Recommendation API URL:', RECOMMENDATION_API_URL);
+    if (!RECOMMENDATION_API_URL) {
+      console.error('❌ RECOMMENDATION_API_URL is not set!');
+      debugLogEmoji('❌', 'RECOMMENDATION_API_URL is not set - recommendations will fail');
+    }
+    
     // Don't fetch recommendations immediately - wait for location permission resolution
     // The fetchRecommendations will be called after location is determined or timeout occurs
   }, []); // Empty dependency array means this runs once on mount
@@ -520,7 +527,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       setShowLocationPrompt(false);
       setIsResolvingLocation(false); // Mark location as resolved
       debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
-      fetchRecommendations();
+      // Use fetchRecommendationsWithLocation to ensure location is passed immediately
+      fetchRecommendationsWithLocation(trimmedLocation);
     }
   };
 
@@ -607,14 +615,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           debugLogEmoji('📍', 'Manual location set:', location);
           
           // Refresh recommendations with new location
-          fetchRecommendations();
+          fetchRecommendationsWithLocation(location);
         }
       } catch (geocodeError) {
         console.log('Reverse geocoding failed, using coordinates');
         const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
         setUserLocation(location);
         onLocationUpdate?.(location); // Update parent component with coordinate location
-        fetchRecommendations();
+        fetchRecommendationsWithLocation(location);
       }
     } catch (error) {
       debugLogEmoji('❌', 'Manual location request failed:', error.message);
