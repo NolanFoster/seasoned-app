@@ -23,6 +23,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
   const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track location resolution state
   const [locationTimeout, setLocationTimeout] = useState(null); // Track timeout state
   const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false); // Prevent multiple simultaneous API calls
+  const [lastProcessedLocation, setLastProcessedLocation] = useState(null); // Track the last location we processed recipes for
 
   // Debug logging - now that all state variables are declared
   debugLogEmoji('🔍', 'Recommendations component rendered with:', {
@@ -31,8 +32,36 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     recipesByCategoryType: typeof recipesByCategory,
     hasRecipesByCategory: Boolean(recipesByCategory && recipesByCategory.size > 0),
     hasRecommendations: Boolean(recommendations),
-    recommendationsType: recommendations ? typeof recommendations : 'none'
+    recommendationsType: recommendations ? typeof recommendations : 'none',
+    userLocation: userLocation,
+    lastProcessedLocation: lastProcessedLocation
   });
+
+  // Check if we need to fetch fresh recommendations due to location change
+  const shouldFetchFreshRecommendations = () => {
+    // If we don't have recipesByCategory, we need to fetch
+    if (!recipesByCategory || recipesByCategory.size === 0) {
+      return true;
+    }
+    
+    // If we have a new location that's different from what we processed last, we need to fetch
+    if (userLocation && userLocation !== lastProcessedLocation) {
+      debugLogEmoji('🔄', 'Location changed, need fresh recommendations:', {
+        currentLocation: userLocation,
+        lastProcessedLocation: lastProcessedLocation
+      });
+      return true;
+    }
+    
+    // If we have recipes but no location tracking, we might need to fetch
+    if (recipesByCategory.size > 0 && lastProcessedLocation === null) {
+      debugLogEmoji('🤔', 'Have recipes but no location tracking, may need fresh recommendations');
+      return true;
+    }
+    
+    // Otherwise, we can use existing recipesByCategory
+    return false;
+  };
 
   // Fetch recommendations on component mount
   useEffect(() => {
@@ -47,11 +76,28 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     // The fetchRecommendations will be called after location is determined or timeout occurs
   }, []); // Empty dependency array means this runs once on mount
 
+  // Handle when recipesByCategory changes from parent (e.g., when location changes)
+  useEffect(() => {
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      // If we receive recipesByCategory from parent, mark that we've processed data
+      // This prevents unnecessary API calls while still allowing fresh calls when location changes
+      if (lastProcessedLocation === null) {
+        // If we don't have a lastProcessedLocation, assume this is location-agnostic data
+        setLastProcessedLocation('');
+        debugLogEmoji('📥', 'Received recipesByCategory from parent, set lastProcessedLocation to empty string');
+      }
+      
+      // Set loading states to false since we have data
+      setIsResolvingLocation(false);
+      setIsLoadingRecommendations(false);
+    }
+  }, [recipesByCategory, lastProcessedLocation]);
+
   // Handle location permission resolution with timeout
   useEffect(() => {
-    // If we already have recipesByCategory, don't fetch recommendations
-    if (recipesByCategory && recipesByCategory.size > 0) {
-      debugLogEmoji('✅', 'recipesByCategory already available, skipping location resolution and API calls');
+    // Check if we need to fetch fresh recommendations
+    if (!shouldFetchFreshRecommendations()) {
+      debugLogEmoji('✅', 'No need to fetch fresh recommendations, using existing recipesByCategory');
       setIsResolvingLocation(false);
       setIsLoadingRecommendations(false);
       return;
@@ -255,9 +301,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
 
   // Monitor location permission changes
   useEffect(() => {
-    // If we already have recipesByCategory, don't monitor permission changes
-    if (recipesByCategory && recipesByCategory.size > 0) {
-      debugLogEmoji('✅', 'recipesByCategory already available, skipping permission monitoring');
+    // Check if we need to monitor permission changes
+    if (!shouldFetchFreshRecommendations()) {
+      debugLogEmoji('✅', 'No need to monitor permission changes, using existing recipesByCategory');
       return;
     }
 
@@ -358,9 +404,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       return;
     }
     
-    // If we already have recipesByCategory, don't fetch recommendations
-    if (recipesByCategory && recipesByCategory.size > 0) {
-      debugLogEmoji('✅', 'recipesByCategory already available, skipping API call');
+    // Check if we need to fetch fresh recommendations
+    if (!shouldFetchFreshRecommendations()) {
+      debugLogEmoji('✅', 'No need to fetch fresh recommendations, using existing recipesByCategory');
       return;
     }
     
@@ -435,6 +481,10 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         
         setRecommendations(data);
         
+        // Update the last processed location to prevent unnecessary future API calls
+        setLastProcessedLocation(location || '');
+        debugLogEmoji('📍', 'Updated lastProcessedLocation to:', location || '');
+        
         // Recommendations now include recipes directly, no additional fetching needed
         debugLogEmoji('✅', 'Recommendations with recipes set, no additional fetching required');
       } else {
@@ -455,9 +505,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       return;
     }
     
-    // If we already have recipesByCategory, don't fetch recommendations
-    if (recipesByCategory && recipesByCategory.size > 0) {
-      debugLogEmoji('✅', 'recipesByCategory already available, skipping API call');
+    // Check if we need to fetch fresh recommendations
+    if (!shouldFetchFreshRecommendations()) {
+      debugLogEmoji('✅', 'No need to fetch fresh recommendations, using existing recipesByCategory');
       return;
     }
     
@@ -534,6 +584,10 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         }
         
         setRecommendations(data);
+        
+        // Update the last processed location to prevent unnecessary future API calls
+        setLastProcessedLocation(userLocation || '');
+        debugLogEmoji('📍', 'Updated lastProcessedLocation to:', userLocation || '');
       } else {
         console.error('Failed to fetch recommendations:', res.status);
         setRecommendations(null);
