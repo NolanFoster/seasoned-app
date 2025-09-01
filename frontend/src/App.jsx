@@ -902,6 +902,14 @@ function App() {
     }
   }, [recipesByCategory]);
 
+  // Refresh recommendations when userLocation changes
+  useEffect(() => {
+    if (userLocation && !isInitializing) {
+      debugLogEmoji('📍', 'App: userLocation changed, refreshing recommendations:', userLocation);
+      getRecipesFromRecommendations(userLocation);
+    }
+  }, [userLocation, isInitializing]);
+
   // Clear loading state when recipes are loaded and initialization is complete
   useEffect(() => {
     if (!isInitializing && recipes.length > 0 && isLoadingRecipes) {
