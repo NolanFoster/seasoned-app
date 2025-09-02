@@ -24,6 +24,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
   const [locationTimeout, setLocationTimeout] = useState(null); // Track timeout state
   const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false); // Prevent multiple simultaneous API calls
   const [lastProcessedLocation, setLastProcessedLocation] = useState(null); // Track the last location we processed recipes for
+  const [recommendationCallCount, setRecommendationCallCount] = useState(0); // Track total number of API calls made
 
   // Debug logging - now that all state variables are declared
   debugLogEmoji('🔍', 'Recommendations component rendered with:', {
@@ -34,7 +35,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     hasRecommendations: Boolean(recommendations),
     recommendationsType: recommendations ? typeof recommendations : 'none',
     userLocation: userLocation,
-    lastProcessedLocation: lastProcessedLocation
+    lastProcessedLocation: lastProcessedLocation,
+    recommendationCallCount: recommendationCallCount
   });
 
   // Check if we need to fetch fresh recommendations due to location change
@@ -126,7 +128,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Now fetch recommendations with the resolved location
-      await fetchRecommendationsWithLocation(location);
+      await fetchRecommendations(location);
     };
 
     const handleLocationTimeout = () => {
@@ -140,7 +142,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       setIsResolvingLocation(false);
       
       // Call recommendations without location (empty string)
-      fetchRecommendationsWithLocation('');
+      fetchRecommendations('');
     };
 
     const checkPermissionAndGetLocation = async () => {
@@ -362,7 +364,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                       setIsResolvingLocation(false);
                       
                       // Reload recommendations with new location
-                      fetchRecommendationsWithLocation(location);
+                      fetchRecommendations(location);
                     }
                   } catch (geocodeError) {
                     // Fallback to coordinates if geocoding fails
@@ -373,7 +375,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                     setIsResolvingLocation(false);
                     
                     // Reload recommendations with new location
-                    fetchRecommendationsWithLocation(location);
+                    fetchRecommendations(location);
                   }
                 } catch (error) {
                   debugLogEmoji('❌', 'Failed to get location after permission grant:', error.message);
@@ -396,8 +398,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     }
   }, [userLocation, recipesByCategory]);
 
-  // Fetch recommendations with a specific location (to avoid timing issues with state updates)
-  async function fetchRecommendationsWithLocation(location) {
+  // Centralized function to fetch recommendations - handles all cases
+  async function fetchRecommendations(location = null) {
     // Prevent multiple simultaneous calls
     if (isFetchingRecommendations) {
       debugLogEmoji('🔄', 'Recommendations fetch already in progress, skipping duplicate call');
@@ -414,14 +416,28 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       setIsFetchingRecommendations(true);
       setIsLoadingRecommendations(true);
       
+      // Increment the API call counter
+      const newCallCount = recommendationCallCount + 1;
+      setRecommendationCallCount(newCallCount);
+      debugLogEmoji('📊', `API call #${newCallCount} initiated`);
+      
+      // Determine the location to use:
+      // 1. Use passed location parameter if provided
+      // 2. Fall back to userLocation state if available
+      // 3. Use empty string for location-agnostic recommendations
+      let finalLocation = location;
+      if (finalLocation === null) {
+        finalLocation = userLocation || '';
+      }
+      
       // If we still don't have a location, use empty string for location-agnostic recommendations
-      if (!location) {
-        location = '';
+      if (!finalLocation) {
+        finalLocation = '';
         debugLogEmoji('🌍', 'Using location-agnostic recommendations');
       }
       
       const currentDate = new Date().toISOString().split('T')[0];
-      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
+      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', finalLocation);
       
       const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
         method: 'POST',
@@ -431,7 +447,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          location: location,
+          location: finalLocation,
           date: currentDate
         })
       });
@@ -482,118 +498,17 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         setRecommendations(data);
         
         // Update the last processed location to prevent unnecessary future API calls
-        setLastProcessedLocation(location || '');
-        debugLogEmoji('📍', 'Updated lastProcessedLocation to:', location || '');
+        setLastProcessedLocation(finalLocation || '');
+        debugLogEmoji('📍', 'Updated lastProcessedLocation to:', finalLocation || '');
         
         // Recommendations now include recipes directly, no additional fetching needed
         debugLogEmoji('✅', 'Recommendations with recipes set, no additional fetching required');
       } else {
         console.error('Failed to fetch recommendations:', res.status, res.statusText);
+        setRecommendations(null);
       }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
-    } finally {
-      setIsLoadingRecommendations(false);
-      setIsFetchingRecommendations(false);
-    }
-  }
-
-  async function fetchRecommendations() {
-    // Prevent multiple simultaneous calls
-    if (isFetchingRecommendations) {
-      debugLogEmoji('🔄', 'Recommendations fetch already in progress, skipping duplicate call');
-      return;
-    }
-    
-    // Check if we need to fetch fresh recommendations
-    if (!shouldFetchFreshRecommendations()) {
-      debugLogEmoji('✅', 'No need to fetch fresh recommendations, using existing recipesByCategory');
-      return;
-    }
-    
-    try {
-      setIsFetchingRecommendations(true);
-      setIsLoadingRecommendations(true);
-      
-      // Use the userLocation state that was set by the timeout system
-      let location = userLocation || '';
-      
-      // If we still don't have a location, use empty string for location-agnostic recommendations
-      if (!location) {
-        location = '';
-        debugLogEmoji('🌍', 'Using location-agnostic recommendations');
-      }
-      
-      const currentDate = new Date().toISOString().split('T')[0];
-      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
-      
-      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location: location,
-          date: currentDate
-        })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        debugLogEmoji('✅', 'Recommendations received:', data);
-        
-        // Filter out inappropriate seasonal recommendations
-        if (data.recommendations && data.season) {
-          const filteredRecommendations = {};
-          const season = data.season.toLowerCase();
-          
-          Object.entries(data.recommendations).forEach(([category, tags]) => {
-            if (Array.isArray(tags)) {
-              // Filter out fall/winter holiday items in summer
-              if (season === 'summer' && category.toLowerCase().includes('holiday')) {
-                // Keep only summer-appropriate items
-                filteredRecommendations[category] = tags.filter(tag => {
-                  const tagLower = tag.toLowerCase();
-                  // Remove fall/winter holidays
-                  return !tagLower.includes('halloween') && 
-                         !tagLower.includes('thanksgiving') && 
-                         !tagLower.includes('christmas') &&
-                         !tagLower.includes('pumpkin') &&
-                         !tagLower.includes('gingerbread');
-                });
-              } else if (season === 'winter' && category.toLowerCase().includes('holiday')) {
-                // Keep only winter-appropriate items
-                filteredRecommendations[category] = tags.filter(tag => {
-                  const tagLower = tag.toLowerCase();
-                  // Remove summer holidays
-                  return !tagLower.includes('4th of july') && 
-                         !tagLower.includes('labor day') &&
-                         !tagLower.includes('memorial day');
-                });
-              } else {
-                // Keep all tags for non-holiday categories
-                filteredRecommendations[category] = tags;
-              }
-            }
-          });
-          
-          // Update the data with filtered recommendations
-          data.recommendations = filteredRecommendations;
-        }
-        
-        setRecommendations(data);
-        
-        // Update the last processed location to prevent unnecessary future API calls
-        setLastProcessedLocation(userLocation || '');
-        debugLogEmoji('📍', 'Updated lastProcessedLocation to:', userLocation || '');
-      } else {
-        console.error('Failed to fetch recommendations:', res.status);
-        setRecommendations(null);
-      }
-    } catch (e) {
-      console.error('Error fetching recommendations:', e);
       setRecommendations(null);
     } finally {
       setIsLoadingRecommendations(false);
@@ -615,8 +530,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       onLocationUpdate?.(trimmedLocation); // Update parent component with manual location
       setShowLocationPrompt(false);
       debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
-      // Use fetchRecommendationsWithLocation to ensure location is passed immediately
-      fetchRecommendationsWithLocation(trimmedLocation);
+              // Use fetchRecommendations to ensure location is passed immediately
+      fetchRecommendations(trimmedLocation);
     }
   };
 
@@ -703,7 +618,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           
           // Refresh recommendations with new location
           if (!isFetchingRecommendations) {
-            fetchRecommendationsWithLocation(location);
+            fetchRecommendations(location);
           }
         }
       } catch (geocodeError) {
@@ -712,7 +627,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         setUserLocation(location);
         onLocationUpdate?.(location); // Update parent component with coordinate location
         if (!isFetchingRecommendations) {
-          fetchRecommendationsWithLocation(location);
+          fetchRecommendations(location);
         }
       }
     } catch (error) {
@@ -922,6 +837,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                 Waiting for location permission... (up to 2 minutes)
               </div>
             )}
+
             <style>{`
               @keyframes spin {
                 0% { transform: rotate(0deg); }
@@ -994,6 +910,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
             margin: '16px 0',
             textAlign: 'center'
           }}>
+
             <button
               onClick={() => setShowLocationPrompt(true)}
               style={{
