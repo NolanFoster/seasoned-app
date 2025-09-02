@@ -7,7 +7,7 @@ import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
 const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL; // Search database worker
-const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL; // Recipe save worker
+// SAVE_WORKER_URL removed - no longer needed for recommendations processing
 const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL; // Recipe view worker for shareable pages
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL; // Recipe generation worker for AI cards
 
@@ -756,83 +756,7 @@ function App() {
     }
   }
 
-  // Function to fetch complete recipe data from KV storage via recipe-save-worker
-  // This fixes the issue where smart search returns limited data and full recipe data
-  // needs to be fetched from the recipe-save-worker which has direct KV access
-  async function fetchCompleteRecipeData(recipeId) {
-    try {
-      debugLogEmoji('🔍', `Fetching complete recipe data for ID: ${recipeId}`);
-      
-      // First try the recipe-save-worker which has direct KV access
-      // The worker routes /recipe/get to the Durable Object's /get endpoint
-      const response = await fetchWithTimeout(
-        `${SAVE_WORKER_URL}/recipe/get?id=${recipeId}`,
-        { timeout: 15000 }
-      );
-      
-      if (response.ok) {
-        const recipeData = await response.json();
-        
-        // Validate that we got meaningful recipe data
-        // Recipe-save-worker returns data in a nested structure: { id, url, data: { actual recipe data } }
-        const actualRecipeData = recipeData.data || recipeData;
-        if (recipeData && actualRecipeData && (actualRecipeData.title || actualRecipeData.name)) {
-          debugLogEmoji('✅', `Complete recipe data fetched from save worker for ID: ${recipeId}`, {
-            hasData: !!actualRecipeData,
-            hasTitle: !!(actualRecipeData.title || actualRecipeData.name),
-            hasIngredients: !!(actualRecipeData.ingredients && actualRecipeData.ingredients.length > 0),
-            hasInstructions: !!(actualRecipeData.instructions && actualRecipeData.instructions.length > 0),
-            ingredientCount: actualRecipeData.ingredients?.length || 0,
-            instructionCount: actualRecipeData.instructions?.length || 0
-          });
-          
-          // Return the recipe data in the expected format
-          // If recipeData already has a data property, use it as-is, otherwise wrap it
-          return recipeData.data ? recipeData : {
-            id: recipeId,
-            data: recipeData
-          };
-        } else {
-          debugLogEmoji('⚠️', `Invalid recipe data from save worker for ID: ${recipeId}`, recipeData);
-        }
-      } else {
-        const errorText = await response.text();
-        debugLogEmoji('⚠️', `Save worker request failed for ID: ${recipeId}`, {
-          status: response.status,
-          error: errorText
-        });
-      }
-      
-      // Fallback to the old API endpoint
-      debugLogEmoji('🔄', `Falling back to old API for recipe ID: ${recipeId}`);
-      const fallbackResponse = await fetchWithTimeout(
-        `${API_URL}/recipes?id=${recipeId}`,
-        { timeout: 15000 }
-      );
-      
-      if (fallbackResponse.ok) {
-        const completeRecipe = await fallbackResponse.json();
-        debugLogEmoji('✅', `Complete recipe data fetched from fallback API for ID: ${recipeId}`, {
-          hasData: !!completeRecipe.data,
-          hasTitle: !!(completeRecipe.data?.title || completeRecipe.title),
-          hasIngredients: !!(completeRecipe.data?.ingredients || completeRecipe.ingredients),
-          hasInstructions: !!(completeRecipe.data?.instructions || completeRecipe.instructions)
-        });
-        return completeRecipe;
-      } else {
-        const errorText = await fallbackResponse.text();
-        console.warn(`⚠️ Both save worker and fallback API failed for recipe ID: ${recipeId}`, {
-          saveWorkerStatus: response?.status,
-          fallbackStatus: fallbackResponse.status,
-          fallbackError: errorText
-        });
-        return null;
-      }
-    } catch (error) {
-      console.warn(`⚠️ Error fetching complete recipe data for ID: ${recipeId}:`, error);
-      return null;
-    }
-  }
+
 
 
 
@@ -1441,26 +1365,9 @@ function App() {
                 // Create an async function for processing each recipe
                 const processRecipe = async () => {
                   try {
-                    let completeRecipe = null;
-                    
-                    // Check if this is a real recipe with an ID or a fallback dish suggestion
-                    if (recipe.id && !recipe.fallback && recipe.source !== 'ai_generated') {
-                      // Try to fetch complete recipe data from KV storage
-                      debugLogEmoji('🔄', `Fetching complete data for recipe ${recipe.id} from KV...`);
-                      completeRecipe = await fetchCompleteRecipeData(recipe.id);
-                      
-                      if (completeRecipe) {
-                        debugLogEmoji('✅', `Recipe ${recipe.id} fetched successfully from KV`);
-                      } else {
-                        console.warn(`⚠️ Recipe ${recipe.id} not found in KV storage - using recommendation data`);
-                        // Use the recipe data from recommendations as fallback
-                        completeRecipe = recipe;
-                      }
-                    } else {
-                      // This is a fallback dish suggestion from AI, use it directly
-                      debugLogEmoji('🤖', `Using AI-generated dish suggestion: ${recipe.name}`);
-                      completeRecipe = recipe;
-                    }
+                    // Recommendations now contain all the information needed, no additional fetching required
+                    const completeRecipe = recipe;
+                    debugLogEmoji('✅', `Using recipe data directly from recommendations: ${recipe.name || recipe.id}`);
                     
                     if (completeRecipe) {
                       // Transform the recipe to frontend format
