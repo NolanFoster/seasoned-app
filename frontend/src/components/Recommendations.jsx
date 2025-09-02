@@ -400,6 +400,16 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
 
   // Centralized function to fetch recommendations - handles all cases
   async function fetchRecommendations(location = null) {
+    debugLogEmoji('🚀', 'fetchRecommendations called', {
+      location,
+      userLocation,
+      lastProcessedLocation,
+      recipesByCategorySize: recipesByCategory?.size || 0,
+      isFetchingRecommendations,
+      shouldFetch: shouldFetchFreshRecommendations(),
+      callStack: new Error().stack?.split('\n').slice(1, 4).join('\n') || 'No stack trace'
+    });
+    
     // Prevent multiple simultaneous calls
     if (isFetchingRecommendations) {
       debugLogEmoji('🔄', 'Recommendations fetch already in progress, skipping duplicate call');
@@ -419,7 +429,15 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       // Increment the API call counter
       const newCallCount = recommendationCallCount + 1;
       setRecommendationCallCount(newCallCount);
-      debugLogEmoji('📊', `API call #${newCallCount} initiated`);
+      debugLogEmoji('📊', `API call #${newCallCount} initiated (previous count: ${recommendationCallCount})`);
+      debugLogEmoji('🔍', 'fetchRecommendations called with:', {
+        location,
+        userLocation,
+        lastProcessedLocation,
+        recipesByCategorySize: recipesByCategory?.size || 0,
+        shouldFetch: shouldFetchFreshRecommendations(),
+        timestamp: new Date().toISOString()
+      });
       
       // Determine the location to use:
       // 1. Use passed location parameter if provided
