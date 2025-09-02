@@ -962,21 +962,13 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
       });
       
       try {
-        // Create a request to the search worker using service binding
-        const searchRequest = new Request('https://dummy-url.com/api/smart-search', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        // Add search parameters to the URL
-        const searchUrl = new URL(searchRequest.url);
+        // Create the search URL with proper parameters
+        const searchUrl = new URL('https://dummy-url.com/api/smart-search');
         searchUrl.searchParams.set('tags', JSON.stringify(searchTerms));
         searchUrl.searchParams.set('type', 'recipe');
         searchUrl.searchParams.set('limit', limit.toString());
         
-        // Create the actual request with the correct URL
+        // Create the request with the correct URL
         const actualRequest = new Request(searchUrl.toString(), {
           method: 'GET',
           headers: {
@@ -1000,17 +992,34 @@ async function searchRecipeByCategory(categoryName, dishNames, limit, env, reque
           const searchResults = await response.json();
           
           if (searchResults.results && searchResults.results.length > 0) {
-            const recipes = searchResults.results.slice(0, limit).map(node => ({
-              id: node.id,
-              name: node.properties.name || node.properties.title || 'Unknown Recipe',
-              description: node.properties.description || '',
-              ingredients: node.properties.ingredients || [],
-              instructions: node.properties.instructions || [],
-              image_url: node.properties.image_url || node.properties.image || null,
-              source_url: node.properties.source_url || node.properties.url || null,
-              type: 'recipe',
-              source: 'smart_search_database'
-            }));
+            const recipes = searchResults.results.slice(0, limit).map(node => {
+              // Extract properties from the node
+              const properties = node.properties || {};
+              
+              // Log the raw node data for debugging
+              log('debug', 'Processing search result node', {
+                requestId,
+                nodeId: node.id,
+                hasProperties: !!properties,
+                propertyKeys: Object.keys(properties),
+                nameValue: properties.name,
+                titleValue: properties.title,
+                imageValue: properties.image,
+                imageUrlValue: properties.image_url
+              });
+              
+              return {
+                id: node.id,
+                name: properties.name || properties.title || 'Unknown Recipe',
+                description: properties.description || '',
+                ingredients: properties.ingredients || properties.recipeIngredient || [],
+                instructions: properties.instructions || properties.recipeInstructions || [],
+                image_url: properties.image_url || properties.image || properties.imageUrl || null,
+                source_url: properties.source_url || properties.url || null,
+                type: 'recipe',
+                source: 'smart_search_database'
+              };
+            });
             
             const duration = Date.now() - startTime;
             metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
