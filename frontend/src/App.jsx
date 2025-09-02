@@ -1346,6 +1346,14 @@ function App() {
       
       if (res.ok) {
         const data = await res.json();
+        debugLogEmoji('📡', 'Raw recommendation API response:', {
+          hasRecommendations: !!data.recommendations,
+          recommendationsType: typeof data.recommendations,
+          categories: Object.keys(data.recommendations || {}),
+          sampleCategory: data.recommendations ? Object.keys(data.recommendations)[0] : null,
+          sampleRecipes: data.recommendations ? data.recommendations[Object.keys(data.recommendations)[0]] : null,
+          fullResponse: data
+        });
         if (data.recommendations) {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
           // Collect all recipes from all categories using a Map
@@ -1358,9 +1366,19 @@ function App() {
               // Initialize category in the map
               newRecipesByCategory.set(categoryName, []);
               
-              // Process recipes directly from recommendation response
-              for (const recipe of recipes) {
-                debugLogEmoji('🍽️', `Processing recipe: "${recipe.name || recipe.id}"`);
+                              // Process recipes directly from recommendation response
+                for (const recipe of recipes) {
+                  debugLogEmoji('🍽️', `Processing recipe: "${recipe.name || recipe.id}"`);
+                  debugLogEmoji('🔍', 'Raw recipe data structure:', {
+                    recipe: recipe,
+                    hasName: !!recipe.name,
+                    hasTitle: !!recipe.title,
+                    hasImage: !!recipe.image,
+                    hasImageUrl: !!recipe.imageUrl,
+                    hasImage_url: !!recipe.image_url,
+                    recipeKeys: Object.keys(recipe),
+                    recipeType: typeof recipe
+                  });
                 
                 // Create an async function for processing each recipe
                 const processRecipe = async () => {
@@ -1417,6 +1435,10 @@ function App() {
                       
                       debugLogEmoji('🔍', `Transformed recipe ${transformedRecipe.id}:`, {
                         name: transformedRecipe.name,
+                        image: transformedRecipe.image,
+                        image_url: transformedRecipe.image_url,
+                        hasName: !!transformedRecipe.name,
+                        hasImage: !!transformedRecipe.image,
                         hasIngredients: transformedRecipe.ingredients.length > 0,
                         hasInstructions: transformedRecipe.instructions.length > 0,
                         source: transformedRecipe.source,
