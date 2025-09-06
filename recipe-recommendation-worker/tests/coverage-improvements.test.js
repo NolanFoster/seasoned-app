@@ -149,7 +149,7 @@ describe('Recipe Search Complete Failure Coverage', () => {
       // Should return basic fallback - service binding throws, so it falls back to enhanced dishes
       expect(recipes).toBeDefined();
       expect(recipes.length).toBe(2);
-      expect(recipes[0].id).toMatch(/^dish_failure_category_/);
+      expect(recipes[0].id).toMatch(/^ai_\d+_[a-z0-9]+$/);
       expect(recipes[0].name).toBe('dish1');
       expect(recipes[0].type).toBe('dish_suggestion');
       expect(recipes[0].source).toBe('ai_generated');

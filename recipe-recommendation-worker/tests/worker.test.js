@@ -98,8 +98,9 @@ describe('Recipe Recommendation Worker', () => {
           expect(recipe).toHaveProperty('id');
           expect(recipe).toHaveProperty('name');
           expect(recipe).toHaveProperty('description');
-          expect(recipe).toHaveProperty('ingredients');
-          expect(recipe).toHaveProperty('instructions');
+          expect(recipe).toHaveProperty('yield');
+          expect(recipe).toHaveProperty('prepTime');
+          expect(recipe).toHaveProperty('cookTime');
           expect(recipe).toHaveProperty('type');
           expect(recipe).toHaveProperty('source');
           expect(recipe).toHaveProperty('fallback');
@@ -304,8 +305,9 @@ describe('Recipe Recommendation Worker', () => {
             properties: {
               name: 'Test Recipe 1',
               description: 'A test recipe',
-              ingredients: ['ingredient1', 'ingredient2'],
-              instructions: ['step1', 'step2']
+              servings: '4',
+              prepTime: 'PT15M',
+              cookTime: 'PT30M'
             }
           }
         ],
@@ -352,8 +354,9 @@ describe('Recipe Recommendation Worker', () => {
             id: 'recipe2',
             name: 'Test Recipe 2',
             description: 'Another test recipe',
-            ingredients: ['ingredient3', 'ingredient4'],
-            instructions: ['step3', 'step4']
+            yield: '6',
+            prepTime: 'PT20M',
+            cookTime: 'PT45M'
           }
         ]
       };
