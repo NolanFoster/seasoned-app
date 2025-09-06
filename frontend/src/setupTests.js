@@ -1,45 +1,57 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// Mock environment variables
+Object.defineProperty(import.meta, 'env', {
+  value: {
+    VITE_API_URL: 'https://test-api.example.com',
+    VITE_CLIPPER_API_URL: 'https://test-clipper-api.example.com',
+    VITE_SEARCH_DB_URL: 'https://test-search-api.example.com',
+    VITE_RECIPE_VIEW_URL: 'https://test-recipe-view-api.example.com',
+    VITE_RECIPE_GENERATION_URL: 'https://test-recipe-generation-api.example.com'
+  }
+});
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   })),
 });
 
 // Mock canvas for seasoning background
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-  clearRect: jest.fn(),
-  beginPath: jest.fn(),
-  moveTo: jest.fn(),
-  lineTo: jest.fn(),
-  arc: jest.fn(),
-  fill: jest.fn(),
+HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
+  clearRect: vi.fn(),
+  beginPath: vi.fn(),
+  moveTo: vi.fn(),
+  lineTo: vi.fn(),
+  arc: vi.fn(),
+  fill: vi.fn(),
   fillStyle: '',
-  translate: jest.fn(),
-  rotate: jest.fn(),
-  save: jest.fn(),
-  restore: jest.fn(),
-  bezierCurveTo: jest.fn(),
-  quadraticCurveTo: jest.fn(),
-  closePath: jest.fn(),
+  translate: vi.fn(),
+  rotate: vi.fn(),
+  save: vi.fn(),
+  restore: vi.fn(),
+  bezierCurveTo: vi.fn(),
+  quadraticCurveTo: vi.fn(),
+  closePath: vi.fn(),
 }));
 
 // Global alert/confirm mocks and clearing between tests
-if (!global.alert) global.alert = jest.fn();
-if (!global.confirm) global.confirm = jest.fn();
+if (!global.alert) global.alert = vi.fn();
+if (!global.confirm) global.confirm = vi.fn();
 
 // Global fetch mock - ensures fetch always returns a proper Promise
 if (!global.fetch) {
-  global.fetch = jest.fn(() => 
+  global.fetch = vi.fn(() => 
     Promise.resolve({
       ok: true,
       status: 200,
@@ -49,20 +61,21 @@ if (!global.fetch) {
   );
 }
 
+// Mock console methods to reduce noise in tests
+global.console = {
+  ...console,
+  log: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+};
+
 beforeEach(() => {
   global.alert && global.alert.mockClear && global.alert.mockClear();
   global.confirm && global.confirm.mockClear && global.confirm.mockClear();
+  global.fetch && global.fetch.mockClear && global.fetch.mockClear();
 
-  // Ensure main.jsx executes fresh when required within tests that rely on it
-  try {
-    const mainPath = require.resolve('./main.jsx');
-    delete require.cache[mainPath];
-  } catch (_) {
-    // ignore if not resolvable in this test context
-  }
+  // Clear all mocks
+  vi.clearAllMocks();
 });
-
-// Mock import.meta.env -> process.env for tests
-process.env.VITE_API_URL = 'https://test-api.example.com';
-process.env.VITE_CLIPPER_API_URL = 'https://test-clipper-api.example.com';
-process.env.VITE_SEARCH_DB_URL = 'https://test-search-db.example.com';

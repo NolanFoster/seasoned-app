@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { formatDuration } from '../utils/index.js';
-import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
+import { formatDuration } from '../../../utils/index.js';
+import SwipeableRecipeGrid from '../../../components/SwipeableRecipeGrid.jsx';
 
 const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || process.env.VITE_RECOMMENDATION_API_URL || 'https://recommendations.test.workers.dev';
 

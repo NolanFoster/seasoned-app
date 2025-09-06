@@ -1,5 +1,5 @@
 import React from 'react';
-import { isValidUrl } from '../../../shared/utility-functions.js';
+import { isValidUrl } from '../utils/index.js';
 
 const Header = ({
   searchInput,

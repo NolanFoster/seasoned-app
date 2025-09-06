@@ -1,6 +1,6 @@
 import React from 'react';
-import { formatDuration, isValidUrl } from '../utils/index.js';
-import { renderInstructionWithTimers } from '../features/timers/components/TimerUtils.jsx';
+import { formatDuration, isValidUrl } from '../../../utils/index.js';
+import { renderInstructionWithTimers } from '../../timers/components/TimerUtils.jsx';
 
 const RecipeFullscreen = ({
   selectedRecipe,
