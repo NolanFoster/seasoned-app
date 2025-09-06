@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
-const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
+const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || process.env.VITE_RECOMMENDATION_API_URL || 'https://recommendations.test.workers.dev';
 
 function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }) {
   // Debug flag - set to true to enable detailed logging
