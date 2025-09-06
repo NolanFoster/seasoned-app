@@ -199,7 +199,7 @@ describe('Analytics Integration', () => {
     });
 
     const response = await workerModule.fetch(request, mockEnvWithAnalytics);
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     
     // Verify analytics was called
     expect(mockEnvWithAnalytics.ANALYTICS.writeDataPoint).toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('Analytics Integration', () => {
     const response = await workerModule.fetch(request, mockEnvWithFailingAnalytics);
     
     // Should still return successful response even if analytics fails
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     expect(mockEnvWithFailingAnalytics.ANALYTICS.writeDataPoint).toHaveBeenCalled();
   });
 
@@ -229,7 +229,7 @@ describe('Analytics Integration', () => {
     });
 
     const response = await workerModule.fetch(request, mockEnvNoAnalytics);
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     
     // Should not throw error when analytics binding is missing
   });

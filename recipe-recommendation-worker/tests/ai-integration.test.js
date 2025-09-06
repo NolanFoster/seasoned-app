@@ -138,11 +138,8 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('Miami', '2024-07-15', 3, mockEnvWithAI, 'test-req-string');
-
-      expect(result).toBeDefined();
-      expect(result.recommendations).toBeDefined();
-      expect(result.season).toBe('Summer');
+      await expect(getRecipeRecommendations('Miami', '2024-07-15', 3, mockEnvWithAI, 'test-req-string'))
+        .rejects.toThrow('AI request failed: Invalid response from Cloudflare AI');
     });
 
     it('should extract JSON from response with extra text', async () => {
@@ -246,35 +243,27 @@ describe('AI Integration', () => {
   });
 
   describe('AI error handling', () => {
-    it('should fallback to mock data when AI service fails', async () => {
+    it('should throw error when AI service fails', async () => {
       mockEnvWithAI.AI.run.mockRejectedValue(new Error('AI service unavailable'));
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-ai-fail');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
-      expect(result.recommendations).toBeDefined();
-      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-ai-fail'))
+        .rejects.toThrow('AI request failed: AI service unavailable');
     });
 
     it('should handle invalid AI response structure', async () => {
       const invalidResponse = { unexpected: 'structure' };
       mockEnvWithAI.AI.run.mockResolvedValue(invalidResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-invalid-structure');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-invalid-structure'))
+        .rejects.toThrow('AI request failed: Could not extract content from AI response');
     });
 
     it('should handle AI response without expected fields', async () => {
       const emptyResponse = {};
       mockEnvWithAI.AI.run.mockResolvedValue(emptyResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-empty-response');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-empty-response'))
+        .rejects.toThrow('AI request failed: Could not extract content from AI response');
     });
 
     it('should handle AI response with invalid JSON', async () => {
@@ -283,28 +272,22 @@ describe('AI Integration', () => {
       };
       mockEnvWithAI.AI.run.mockResolvedValue(invalidJSONResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-invalid-json');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-invalid-json'))
+        .rejects.toThrow('AI request failed: Unexpected token');
     });
 
     it('should handle AI timeout errors', async () => {
       mockEnvWithAI.AI.run.mockRejectedValue(new Error('Request timeout'));
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-timeout');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-timeout'))
+        .rejects.toThrow('AI request failed: Request timeout');
     });
 
     it('should handle AI model errors', async () => {
       mockEnvWithAI.AI.run.mockRejectedValue(new Error('Model not available'));
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-model-error');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-model-error'))
+        .rejects.toThrow('AI request failed: Model not available');
     });
   });
 
@@ -432,10 +415,8 @@ describe('AI Integration', () => {
       const mockAIResponse = 'This is a plain string response';
       mockEnvWithAI.AI.run.mockResolvedValue(mockAIResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-plain-string');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-plain-string'))
+        .rejects.toThrow('AI request failed: Invalid response from Cloudflare AI');
     });
 
     it('should handle AI response with clean JSON (no extraction needed)', async () => {
@@ -462,33 +443,20 @@ describe('AI Integration', () => {
       };
       mockEnvWithAI.AI.run.mockResolvedValue(mockAIResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-unknown-structure');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-unknown-structure'))
+        .rejects.toThrow('AI request failed: Could not extract content from AI response');
     });
   });
 
-  describe('Fallback behavior', () => {
-    it('should use mock data when AI is not available', async () => {
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithoutAI, 'test-req-no-ai');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
-      expect(result.recommendations).toBeDefined();
-      expect(Object.keys(result.recommendations)).toHaveLength(3);
+  describe('Error handling', () => {
+    it('should throw error when AI is not available', async () => {
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithoutAI, 'test-req-no-ai'))
+        .rejects.toThrow('AI binding not configured - cannot generate recommendations');
     });
 
-    it('should respect the limit parameter in mock fallback', async () => {
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 2, mockEnvWithoutAI, 'test-req-limit-test');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
-      
-      // Check that each category respects the limit
-      Object.values(result.recommendations).forEach(recipes => {
-        expect(recipes.length).toBeLessThanOrEqual(2);
-      });
+    it('should throw error when AI request fails', async () => {
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 2, mockEnvWithoutAI, 'test-req-limit-test'))
+        .rejects.toThrow('AI binding not configured - cannot generate recommendations');
     });
   });
 });
