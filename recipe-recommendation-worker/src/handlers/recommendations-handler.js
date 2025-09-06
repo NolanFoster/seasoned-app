@@ -3,7 +3,7 @@
  */
 
 import { log, generateRequestId } from '../../../shared/utility-functions.js';
-import { metrics, categorizeError, sendAnalytics } from '../index.js';
+import { metrics, categorizeError, sendAnalytics } from '../shared-utilities.js';
 import { getRecipeRecommendations } from '../recommendation-service.js';
 
 export async function handleRecommendations(request, env, corsHeaders, requestId) {

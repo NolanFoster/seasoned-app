@@ -5,7 +5,9 @@
  */
 
 import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
-import { MetricsCollector } from '../../shared/metrics-collector.js';
+
+// Import shared utilities
+import { metrics, sendAnalytics, categorizeError } from './shared-utilities.js';
 
 // Import handlers
 import { handleRoot } from './handlers/root-handler.js';
@@ -18,55 +20,6 @@ function log(level, message, data = {}, context = {}) {
   return baseLog(level, message, data, { worker: 'recipe-recommendation-worker', ...context });
 }
 
-// Global metrics collector
-export const metrics = new MetricsCollector();
-
-// Analytics utility for Cloudflare Analytics Engine
-export async function sendAnalytics(env, event, data = {}) {
-  try {
-    if (env.ANALYTICS) {
-      const analyticsData = {
-        timestamp: Date.now(),
-        event,
-        ...data
-      };
-      
-      await env.ANALYTICS.writeDataPoint(analyticsData);
-      log('debug', 'Analytics event sent', { event, data: analyticsData });
-    }
-  } catch (error) {
-    // Don't fail the request if analytics fails
-    log('warn', 'Failed to send analytics', { 
-      event, 
-      error: error.message 
-    });
-  }
-}
-
-// Error categorization utility
-export function categorizeError(error, context = {}) {
-  let category = 'unknown';
-  let severity = 'error';
-  
-  if (error.name === 'TypeError' || error.name === 'ReferenceError') {
-    category = 'code_error';
-    severity = 'error';
-  } else if (error.message?.includes('AI') || error.message?.includes('model')) {
-    category = 'ai_service_error';
-    severity = 'error';
-  } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-    category = 'network_error';
-    severity = 'warn';
-  } else if (error.message?.includes('parse') || error.message?.includes('JSON')) {
-    category = 'parsing_error';
-    severity = 'warn';
-  } else if (error.message?.includes('timeout')) {
-    category = 'timeout_error';
-    severity = 'warn';
-  }
-
-  return { category, severity };
-}
 
 export default {
   async fetch(request, env) {

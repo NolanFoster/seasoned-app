@@ -3,7 +3,7 @@
  */
 
 import { log } from '../../../shared/utility-functions.js';
-import { metrics } from '../index.js';
+import { metrics } from '../shared-utilities.js';
 
 export async function handleMetrics(corsHeaders, requestId) {
   try {

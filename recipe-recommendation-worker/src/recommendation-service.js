@@ -3,7 +3,7 @@
  */
 
 import { log } from '../../shared/utility-functions.js';
-import { metrics, sendAnalytics } from './index.js';
+import { metrics, sendAnalytics } from './shared-utilities.js';
 
 // Holiday detection utility
 function getUpcomingHoliday(date) {
@@ -205,9 +205,12 @@ Make the categories relevant to the season, location, and context. Be specific w
       // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        categoryRecommendations = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Handle both direct category structure and wrapped in 'recommendations'
+        categoryRecommendations = parsed.recommendations || parsed;
       } else {
-        categoryRecommendations = JSON.parse(content);
+        const parsed = JSON.parse(content);
+        categoryRecommendations = parsed.recommendations || parsed;
       }
       
       const parseDuration = Date.now() - parseStartTime;
@@ -338,7 +341,7 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
         
         // Fall back to original dish names
         enhancedRecommendations[categoryName] = dishNames.map((dish, index) => ({
-          id: `dish_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+          id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: dish,
           description: `A delicious ${dish.toLowerCase()} perfect for ${categoryName.toLowerCase()}`,
           ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
@@ -385,7 +388,7 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
       Object.entries(categoryRecommendations).map(([category, dishes]) => [
         category,
         dishes.map((dish, index) => ({
-          id: `dish_${category.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+          id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: dish,
           description: `A delicious ${dish.toLowerCase()} perfect for ${category.toLowerCase()}`,
           ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
@@ -417,7 +420,8 @@ export function extractCookingTerms(categoryName, dishNames) {
     'chocolate', 'vanilla', 'cinnamon', 'ginger', 'nutmeg', 'clove', 'cardamom',
     'olive', 'butter', 'cream', 'milk', 'yogurt', 'sour', 'mayo', 'mustard',
     'soy', 'sesame', 'ginger', 'chili', 'pepper', 'salt', 'sugar', 'honey',
-    'flour', 'corn', 'wheat', 'oats', 'barley', 'lentil', 'bean', 'chickpea'
+    'flour', 'corn', 'wheat', 'oats', 'barley', 'lentil', 'bean', 'chickpea',
+    'meal', 'name', 'simple', 'special', 'drink'
   ];
   
   // Cooking method keywords
@@ -441,6 +445,18 @@ export function extractCookingTerms(categoryName, dishNames) {
   // Check dish names for meaningful terms
   for (const dish of dishNames) {
     const dishLower = dish.toLowerCase();
+    
+    // Extract individual words from dish names (split by non-alphanumeric characters)
+    const words = dishLower.split(/[^a-z0-9]+/).filter(word => word.length > 2);
+    
+    // Check each word against our meaningful terms
+    for (const word of words) {
+      if (allKeywords.includes(word)) {
+        meaningfulTerms.add(word);
+      }
+    }
+    
+    // Also check for exact keyword matches in the full dish name
     for (const keyword of allKeywords) {
       if (dishLower.includes(keyword)) {
         meaningfulTerms.add(keyword);
@@ -450,6 +466,16 @@ export function extractCookingTerms(categoryName, dishNames) {
   
   // Convert to array and filter out very short terms
   const searchTerms = Array.from(meaningfulTerms).filter(term => term.length > 2);
+  
+  // If no meaningful terms found, fall back to returning the dish names
+  if (searchTerms.length === 0) {
+    log('debug', 'No meaningful terms found, falling back to dish names', {
+      category: categoryName,
+      dishNames,
+      fallbackTerms: dishNames
+    });
+    return dishNames;
+  }
   
   log('debug', 'Extracted cooking terms', {
     category: categoryName,
@@ -668,7 +694,7 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
     });
     
     const enhancedDishes = dishNames.slice(0, limit).map((dish, index) => ({
-      id: `dish_${categoryName.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+      id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: dish,
       description: `A delicious ${dish.toLowerCase()} perfect for ${categoryName.toLowerCase()}`,
       ingredients: [`Fresh ingredients for ${dish.toLowerCase()}`],
