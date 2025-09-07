@@ -121,11 +121,12 @@ function mapAspectRatioDimensions(aspectRatio) {
  */
 function generateImageId(recipe) {
   const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substr(2, 9);
   const recipeName = (recipe.name || recipe.title || 'recipe')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '-')
     .replace(/-+/g, '-')
     .substring(0, 50);
   
-  return `recipe-${recipeName}-${timestamp}`;
+  return `recipe-${recipeName}-${timestamp}-${randomSuffix}`;
 }
