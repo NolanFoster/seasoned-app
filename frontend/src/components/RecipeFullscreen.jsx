@@ -206,17 +206,25 @@ const RecipeFullscreen = ({
       
       {/* Full Background Image */}
       <div className="recipe-full-background">
-        {(selectedRecipe.image || selectedRecipe.image_url) ? (
-          <img 
-            src={selectedRecipe.image || selectedRecipe.image_url} 
-            alt={selectedRecipe.name}
-            className="recipe-full-background-image"
-          />
-        ) : (
-          <div className="recipe-full-background-placeholder">
-            <div className="placeholder-gradient"></div>
-          </div>
-        )}
+        {(() => {
+          // For AI-generated recipes, use the card image as background
+          const isAiGenerated = selectedRecipe.source === 'ai_generated' || selectedRecipe.fallback;
+          const backgroundImageUrl = isAiGenerated 
+            ? (selectedRecipe.image_url || selectedRecipe.image)  // For AI recipes, use image_url first (this is the card image)
+            : (selectedRecipe.image || selectedRecipe.image_url); // For regular recipes, use image first
+          
+          return backgroundImageUrl ? (
+            <img 
+              src={backgroundImageUrl} 
+              alt={selectedRecipe.name}
+              className="recipe-full-background-image"
+            />
+          ) : (
+            <div className="recipe-full-background-placeholder">
+              <div className="placeholder-gradient"></div>
+            </div>
+          );
+        })()}
       </div>
       
       {/* Recipe Content */}

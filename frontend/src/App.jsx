@@ -684,6 +684,8 @@ function App() {
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
   const [aiCardLoadingStates, setAiCardLoadingStates] = useState(new Map()); // Track loading state for AI cards
   const [userLocation, setUserLocation] = useState(''); // Store user's location from geolocation
+  const [previousLocation, setPreviousLocation] = useState(null); // Track previous location to prevent duplicate calls
+  const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track if we're resolving location permissions
   
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
@@ -772,19 +774,123 @@ function App() {
 
 
 
+  // Function to check location permissions and get location
+  const checkLocationPermissionsAndGetLocation = async () => {
+    try {
+      // First check if geolocation is supported
+      if (!navigator.geolocation) {
+        debugLogEmoji('❌', 'Geolocation not supported - using location-agnostic recommendations');
+        return '';
+      }
+
+      // Check permission status first
+      if (navigator.permissions && navigator.permissions.query) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        debugLogEmoji('🔒', 'Location permission status:', permission.state);
+        
+        if (permission.state === 'granted') {
+          // Permission already granted, get location immediately
+          debugLogEmoji('✅', 'Location permission granted, getting location...');
+          return await getCurrentLocation();
+        } else if (permission.state === 'denied') {
+          // Permission denied, use location-agnostic recommendations
+          debugLogEmoji('❌', 'Location permission denied - using location-agnostic recommendations');
+          return '';
+        } else {
+          // Permission state is 'prompt' - user hasn't decided yet
+          // For initialization, we'll use location-agnostic recommendations
+          // The user can manually enable location later
+          debugLogEmoji('🤔', 'Location permission not decided yet - using location-agnostic recommendations');
+          return '';
+        }
+      } else {
+        // Permissions API not supported, try to get location directly
+        debugLogEmoji('⚠️', 'Permissions API not supported, trying direct location request...');
+        return await getCurrentLocation();
+      }
+    } catch (error) {
+      debugLogEmoji('❌', 'Error checking location permission:', error);
+      // Fallback to location-agnostic recommendations
+      return '';
+    }
+  };
+
+  // Function to get current location
+  const getCurrentLocation = async () => {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 10000, 
+          enableHighAccuracy: true, 
+          maximumAge: 300000 
+        });
+      });
+      
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      
+      // Try to get city name using reverse geocoding
+      try {
+        const geocodeResponse = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+        );
+        
+        if (geocodeResponse.ok) {
+          const geocodeData = await geocodeResponse.json();
+          const city = geocodeData.city || geocodeData.locality;
+          const region = geocodeData.principalSubdivision || geocodeData.countryName;
+          
+          let location;
+          if (city && region) {
+            location = `${city}, ${region}`;
+          } else if (city) {
+            location = city;
+          } else {
+            location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+          }
+          
+          debugLogEmoji('📍', 'Location obtained:', location);
+          return location;
+        }
+      } catch (geocodeError) {
+        // Fallback to coordinates if geocoding fails
+        const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+        debugLogEmoji('📍', 'Location obtained (coordinates):', location);
+        return location;
+      }
+    } catch (error) {
+      debugLogEmoji('❌', 'Failed to get location:', error.message);
+      if (error.code === 1) { // PERMISSION_DENIED
+        debugLogEmoji('❌', 'Location permission denied during getCurrentPosition');
+        return '';
+      } else {
+        // Other errors - use location-agnostic recommendations
+        debugLogEmoji('⚠️', 'Location error, using location-agnostic recommendations');
+        return '';
+      }
+    }
+  };
+
   useEffect(() => {
-    // Initialize with recommendations instead of fetchRecipes
-    // First get categories for loading display, then get full recipes
+    // Initialize with location permission check and recommendations
     const initializeRecipes = async () => {
       setIsLoadingRecipes(true); // Start loading state immediately
+      setIsResolvingLocation(true); // Start location resolution
       
       // Add a small delay to prevent rapid state changes and ensure smooth loading
       const minLoadingTime = 800; // Minimum loading time in milliseconds
       const startTime = Date.now();
       
       try {
-        await getRecipeCategories(userLocation); // Get category names first
-        await getRecipesFromRecommendations(userLocation); // Then get full recipes
+        // Check location permissions and get location
+        const location = await checkLocationPermissionsAndGetLocation();
+        
+        // Set the location (this will trigger the userLocation useEffect)
+        setUserLocation(location);
+        setPreviousLocation(location);
+        
+        // Load recommendations with the determined location
+        await getRecipesFromRecommendations(location);
         
         // Ensure minimum loading time for smooth UX
         const elapsedTime = Date.now() - startTime;
@@ -795,9 +901,14 @@ function App() {
         console.error('❌ Error during initialization:', error);
         // Even if there's an error, we should show some content
         setRecipes([]);
+        // Set empty location and load without location
+        setUserLocation('');
+        setPreviousLocation('');
+        await getRecipesFromRecommendations('');
       } finally {
         setIsInitializing(false); // Mark initialization as complete
         setIsLoadingRecipes(false); // Ensure loading state is cleared
+        setIsResolvingLocation(false); // Mark location resolution as complete
         console.log('✅ Initialization completed');
       }
     };
@@ -840,11 +951,24 @@ function App() {
 
   // Refresh recommendations when userLocation changes
   useEffect(() => {
-    if (userLocation && !isInitializing) {
-      debugLogEmoji('📍', 'App: userLocation changed, refreshing recommendations:', userLocation);
+    // Only call if:
+    // 1. Not during initialization (initialization handles the first call)
+    // 2. Not currently refreshing recipes
+    // 3. Location has actually changed from the previous location
+    if (!isInitializing && !isRefreshingRecipes && userLocation !== previousLocation) {
+      debugLogEmoji('📍', 'App: userLocation changed, refreshing recommendations:', {
+        currentLocation: userLocation,
+        previousLocation: previousLocation,
+        hasChanged: userLocation !== previousLocation
+      });
+      
+      // Update previous location to prevent duplicate calls
+      setPreviousLocation(userLocation);
+      
+      // Load recommendations with new location
       getRecipesFromRecommendations(userLocation);
     }
-  }, [userLocation, isInitializing]);
+  }, [userLocation, isInitializing, isRefreshingRecipes, previousLocation]);
 
   // Clear loading state when recipes are loaded and initialization is complete
   useEffect(() => {
@@ -1282,42 +1406,6 @@ function App() {
   }, [selectedRecipe]);
 
 
-  // Function to get just the category names first for loading display
-  async function getRecipeCategories(location = '') {
-    try {
-      const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
-      
-      const res = await fetchWithTimeout(`${RECOMMENDATION_API_URL}/recommendations`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location: location, // Use passed location or empty string for location-agnostic
-          date: new Date().toISOString().split('T')[0]
-        }),
-        timeout: 15000 // 15 second timeout for recommendations
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.recommendations) {
-          // Extract just the category names
-          const categories = Object.keys(data.recommendations);
-          setRecipeCategories(categories);
-          // Cache the category names for instant display on refreshes
-          setCachedCategoryNames(categories);
-          return categories;
-        }
-      }
-      return [];
-    } catch (e) {
-      console.error('Error getting recipe categories:', e);
-      return [];
-    }
-  }
 
   // Function to get recipes from recommendations system
   async function getRecipesFromRecommendations(location = '') {
@@ -1351,9 +1439,11 @@ function App() {
         },
         body: JSON.stringify({
           location: location, // Use passed location or empty string for location-agnostic
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          limit: 3,
+          aiGenerated: 2
         }),
-        timeout: 15000 // 15 second timeout for recommendations
+        timeout: 30000 // 30 second timeout for recommendations (AI generation can take time)
       });
       
       if (res.ok) {
@@ -1368,229 +1458,30 @@ function App() {
         });
         if (data.recommendations) {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
-          // Collect all recipes from all categories using a Map
-          const newRecipesByCategory = new Map();
-          const searchPromises = [];
           
+          // Since recommendations now contain complete recipe data, we can use it directly
+          const newRecipesByCategory = new Map();
+          
+          // Process each category and its recipes directly from the API response
           for (const [categoryName, recipes] of Object.entries(data.recommendations)) {
             if (Array.isArray(recipes)) {
-              debugLogEmoji('📂', `Processing category "${categoryName}" with ${recipes.length} recipes from recommendations`);
-              // Initialize category in the map
-              newRecipesByCategory.set(categoryName, []);
+              debugLogEmoji('📂', `Processing category "${categoryName}" with ${recipes.length} recipes`);
               
-                              // Process recipes directly from recommendation response
-                for (const recipe of recipes) {
-                  debugLogEmoji('🍽️', `Processing recipe: "${recipe.name || recipe.id}"`);
-                  debugLogEmoji('🔍', 'Raw recipe data structure:', {
-                    recipe: recipe,
-                    hasName: !!recipe.name,
-                    hasTitle: !!recipe.title,
-                    hasImage: !!recipe.image,
-                    hasImageUrl: !!recipe.imageUrl,
-                    hasImage_url: !!recipe.image_url,
-                    recipeKeys: Object.keys(recipe),
-                    recipeType: typeof recipe
-                  });
-                
-                // Create an async function for processing each recipe
-                const processRecipe = async () => {
-                  try {
-                    // Recommendations now contain all the information needed, no additional fetching required
-                    const completeRecipe = recipe;
-                    debugLogEmoji('✅', `Using recipe data directly from recommendations: ${recipe.name || recipe.id}`);
-                    
-                    if (completeRecipe) {
-                      // Transform the recipe to frontend format
-                      const recipeData = completeRecipe.data || completeRecipe;
-                      const transformedRecipe = {
-                        id: completeRecipe.id || recipeData.id,
-                        name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
-                        description: decodeHtmlEntities(recipeData.description || ''),
-                        image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                        image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                        ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                        ),
-                        instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                          return inst;
-                        }),
-                        recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                        ),
-                        recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                          return inst;
-                        }),
-                        prep_time: recipeData.prepTime || recipeData.prep_time || null,
-                        cook_time: recipeData.cookTime || recipeData.cook_time || null,
-                        recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
-                        source_url: recipeData.source_url || recipeData.url || '',
-                        video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
-                        video: recipeData.video || null,
-                        author: recipeData.author || '',
-                        datePublished: recipeData.datePublished || '',
-                        recipeCategory: recipeData.recipeCategory || '',
-                        recipeCuisine: recipeData.recipeCuisine || '',
-                        keywords: recipeData.keywords || '',
-                        nutrition: recipeData.nutrition || {},
-                        aggregateRating: recipeData.aggregateRating || {},
-                        // Add metadata from recommendation
-                        source: recipe.source || 'recommendation',
-                        type: recipe.type || 'recipe',
-                        fallback: recipe.fallback || false
-                      };
-                      
-                      debugLogEmoji('🔍', `Transformed recipe ${transformedRecipe.id}:`, {
-                        name: transformedRecipe.name,
-                        image: transformedRecipe.image,
-                        image_url: transformedRecipe.image_url,
-                        hasName: !!transformedRecipe.name,
-                        hasImage: !!transformedRecipe.image,
-                        hasIngredients: transformedRecipe.ingredients.length > 0,
-                        hasInstructions: transformedRecipe.instructions.length > 0,
-                        source: transformedRecipe.source,
-                        fallback: transformedRecipe.fallback
-                      });
-                      
-                      // Add the recipe to the category
-                      const existingRecipes = newRecipesByCategory.get(categoryName) || [];
-                      newRecipesByCategory.set(categoryName, [...existingRecipes, transformedRecipe]);
-                      
-                      return { category: categoryName, recipes: [transformedRecipe] };
-                    }
-                    
-                    return { category: categoryName, recipes: [] };
-                  } catch (error) {
-                    console.error(`❌ Error processing recipe "${recipe.name || recipe.id}":`, error);
-                    return { category: categoryName, recipes: [] };
-                  }
-                };
-                
-                searchPromises.push(processRecipe());
-              }
+              // Use recipes directly from the API response - no additional processing needed
+              newRecipesByCategory.set(categoryName, recipes);
             }
           }
           
-          // Wait for all search promises to resolve (with timeout)
-          try {
-            const searchResults = await Promise.allSettled(searchPromises);
-            searchResults.forEach(result => {
-              if (result.status === 'fulfilled' && result.value && result.value.category) {
-                const { category, recipes } = result.value;
-                const existingRecipes = newRecipesByCategory.get(category) || [];
-                newRecipesByCategory.set(category, [...existingRecipes, ...recipes]);
-              }
-            });
-          } catch (error) {
-            console.error('Error processing search results:', error);
-          }
+          // Set the processed recipes directly - no additional processing needed
+          setRecipesByCategory(newRecipesByCategory);
           
-          // Log results by category and collect all unique recipes
-          let totalUniqueRecipes = 0;
-          const allRecipes = [];
-          const seenRecipeIds = new Set(); // Track seen recipe IDs across all categories
+          // Also populate the main recipes array for compatibility with existing code
+          const allRecipes = Array.from(newRecipesByCategory.values()).flat();
+          setRecipes(allRecipes);
           
-          // First pass: collect all recipes and track seen IDs
-          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes`);
-            allRecipes.push(...recipes);
-          }
-          
-          // Remove duplicates across all categories
-          const uniqueRecipes = allRecipes.filter((recipe, index, self) => 
-            index === self.findIndex(r => r.id === recipe.id)
-          );
-          
-          debugLogEmoji('📊', `Found ${allRecipes.length} total recipes and ${uniqueRecipes.length} unique recipes across all categories`);
-          
-          // Now rebuild recipesByCategory with no duplicates across categories
-          const deduplicatedRecipesByCategory = new Map();
-          const usedRecipeIds = new Set();
-          let totalDuplicatesRemoved = 0;
-          const recipeCategoryMapping = new Map(); // Track which category each recipe ended up in
-          
-          // First pass: identify which category should "own" each recipe
-          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            for (const recipe of recipes) {
-              if (!recipeCategoryMapping.has(recipe.id)) {
-                recipeCategoryMapping.set(recipe.id, categoryName);
-              }
-            }
-          }
-          
-          // Second pass: build deduplicated categories based on ownership
-          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            const uniqueCategoryRecipes = [];
-            let categoryDuplicatesRemoved = 0;
-            
-            for (const recipe of recipes) {
-              if (recipeCategoryMapping.get(recipe.id) === categoryName) {
-                // This category owns this recipe
-                uniqueCategoryRecipes.push(recipe);
-                usedRecipeIds.add(recipe.id);
-              } else {
-                // This recipe belongs to another category
-                debugLogEmoji('🔄', `Skipping duplicate recipe ${recipe.id} in category "${categoryName}" (belongs to "${recipeCategoryMapping.get(recipe.id)}")`);
-                categoryDuplicatesRemoved++;
-                totalDuplicatesRemoved++;
-              }
-            }
-            
-            if (uniqueCategoryRecipes.length > 0) {
-              deduplicatedRecipesByCategory.set(categoryName, uniqueCategoryRecipes);
-              debugLogEmoji('📊', `Category "${categoryName}": ${uniqueCategoryRecipes.length} unique recipes after deduplication (${categoryDuplicatesRemoved} duplicates removed)`);
-            } else {
-              debugLogEmoji('⚠️', `Category "${categoryName}": No unique recipes remaining after deduplication (${categoryDuplicatesRemoved} duplicates removed)`);
-            }
-          }
-          
-          debugLogEmoji('🎯', `Deduplication complete: ${totalDuplicatesRemoved} total duplicates removed across all categories`);
-          
-          // Log recipe distribution summary
-          debugLogEmoji('📋', 'Recipe distribution summary:');
-          for (const [recipeId, categoryName] of recipeCategoryMapping.entries()) {
-            const recipe = allRecipes.find(r => r.id === recipeId);
-            if (recipe) {
-              debugLogEmoji('  -', `Recipe "${recipe.name}" (${recipeId}) → Category: "${categoryName}"`);
-            }
-          }
-          
-          // Debug: Log what's being set in recipesByCategory
-          debugLogEmoji('🔍', 'Setting recipesByCategory with:', {
-            categoryCount: deduplicatedRecipesByCategory.size,
-            categories: Array.from(deduplicatedRecipesByCategory.keys()),
-            totalRecipes: uniqueRecipes.length
-          });
-          
-          // Debug: Log a sample of recipes from each category
-          for (const [categoryName, recipes] of deduplicatedRecipesByCategory.entries()) {
-            if (recipes.length > 0) {
-              const sampleRecipe = recipes[0];
-              debugLogEmoji('📋', `Sample recipe from "${categoryName}":`, {
-                id: sampleRecipe.id,
-                name: sampleRecipe.name,
-                hasIngredients: sampleRecipe.ingredients.length > 0,
-                hasInstructions: sampleRecipe.instructions.length > 0,
-                ingredientCount: sampleRecipe.ingredients.length,
-                instructionCount: sampleRecipe.instructions.length
-              });
-            }
-          }
-          
-          setRecipes(uniqueRecipes);
-          // Create a new Map instance to ensure React detects the state change
-          const finalRecipesByCategory = new Map(deduplicatedRecipesByCategory);
-          setRecipesByCategory(finalRecipesByCategory); // Update the state with organized recipes
-          
-          // If no recipes found, still clear loading state to prevent hanging
-          if (uniqueRecipes.length === 0) {
-            console.warn('⚠️ No recipes found from search results, showing empty state');
-          }
+          // Log summary of what was processed
+          const totalRecipes = allRecipes.length;
+          debugLogEmoji('✅', `Successfully processed ${newRecipesByCategory.size} categories with ${totalRecipes} total recipes`);
         } else {
           console.warn('⚠️ No recommendations data received');
           setRecipes([]);
@@ -1600,7 +1491,11 @@ function App() {
         setRecipes([]);
       }
     } catch (e) {
-      console.error('Error getting recipes from recommendations:', e);
+      if (e.name === 'AbortError' || e.message.includes('aborted')) {
+        console.error('⏰ Recommendation API call timed out after 30 seconds. The AI generation process may be taking longer than expected.');
+      } else {
+        console.error('Error getting recipes from recommendations:', e);
+      }
       setRecipes([]);
       setIsRefreshingRecipes(false);
     } finally {
@@ -2873,17 +2768,25 @@ function App() {
           
           {/* Full Background Image */}
           <div className="recipe-full-background">
-            {(selectedRecipe.image || selectedRecipe.image_url) ? (
-              <img 
-                src={selectedRecipe.image || selectedRecipe.image_url} 
-                alt={selectedRecipe.name}
-                className="recipe-full-background-image"
-              />
-            ) : (
-              <div className="recipe-full-background-placeholder">
-                <div className="placeholder-gradient"></div>
-              </div>
-            )}
+            {(() => {
+              // For AI-generated recipes, use the card image as background
+              const isAiGenerated = selectedRecipe.source === 'ai_generated' || selectedRecipe.fallback;
+              const backgroundImageUrl = isAiGenerated 
+                ? (selectedRecipe.image_url || selectedRecipe.image)  // For AI recipes, use image_url first (this is the card image)
+                : (selectedRecipe.image || selectedRecipe.image_url); // For regular recipes, use image first
+              
+              return backgroundImageUrl ? (
+                <img 
+                  src={backgroundImageUrl} 
+                  alt={selectedRecipe.name}
+                  className="recipe-full-background-image"
+                />
+              ) : (
+                <div className="recipe-full-background-placeholder">
+                  <div className="placeholder-gradient"></div>
+                </div>
+              );
+            })()}
           </div>
           
           {/* Recipe Content */}
