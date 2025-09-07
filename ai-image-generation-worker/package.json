@@ -1,0 +1,33 @@
+{
+  "name": "ai-image-generation-worker",
+  "version": "1.0.0",
+  "description": "Worker for generating AI images from recipes using FLUX model",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env preview",
+    "deploy": "wrangler publish",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src tests",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "@eslint/js": "^9.0.0",
+    "@miniflare/core": "^2.14.4",
+    "@miniflare/shared": "^2.14.4",
+    "@miniflare/shared-test-environment": "^2.14.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4",
+    "vitest-environment-miniflare": "^2.14.4",
+    "wrangler": "^4.33.1"
+  },
+  "dependencies": {}
+}
