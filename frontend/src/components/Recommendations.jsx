@@ -95,11 +95,25 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     }
   }, [recipesByCategory, lastProcessedLocation]);
 
+  // Handle location changes that require fresh recommendations
+  useEffect(() => {
+    // Only fetch if we have a new location that's different from what we processed
+    // AND we don't already have recipesByCategory from parent
+    // AND we're not currently fetching
+    if (userLocation !== lastProcessedLocation && !isFetchingRecommendations && (!recipesByCategory || recipesByCategory.size === 0)) {
+      debugLogEmoji('🔄', 'Location changed, fetching fresh recommendations:', {
+        currentLocation: userLocation,
+        lastProcessedLocation: lastProcessedLocation
+      });
+      fetchRecommendations(userLocation || '');
+    }
+  }, [userLocation, lastProcessedLocation, isFetchingRecommendations, recipesByCategory]);
+
   // Handle location permission resolution with timeout
   useEffect(() => {
-    // Check if we need to fetch fresh recommendations
-    if (!shouldFetchFreshRecommendations()) {
-      debugLogEmoji('✅', 'No need to fetch fresh recommendations, using existing recipesByCategory');
+    // Only run if we don't have recipesByCategory from parent
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      debugLogEmoji('✅', 'Have recipesByCategory from parent, skipping location resolution');
       setIsResolvingLocation(false);
       setIsLoadingRecommendations(false);
       return;
@@ -124,11 +138,12 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       // Set resolving state to false
       setIsResolvingLocation(false);
       
-      // Add a small delay to ensure state updates are processed before fetching
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Now fetch recommendations with the resolved location
-      await fetchRecommendations(location);
+      // Set the location state - the location change useEffect will handle the API call
+      if (location) {
+        setUserLocation(location);
+        onLocationUpdate?.(location);
+      }
+      // If no location, the location change useEffect will handle calling without location
     };
 
     const handleLocationTimeout = () => {
@@ -141,8 +156,9 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       setLocationTimeout(null);
       setIsResolvingLocation(false);
       
-      // Call recommendations without location (empty string)
-      fetchRecommendations('');
+      // Set empty location - the location change useEffect will handle the API call
+      setUserLocation('');
+      onLocationUpdate?.('');
     };
 
     const checkPermissionAndGetLocation = async () => {
@@ -237,16 +253,12 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
               location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
             }
             
-            setUserLocation(location);
-            onLocationUpdate?.(location);
             debugLogEmoji('📍', 'Location obtained:', location);
             resolveLocationAndFetch(location);
           }
         } catch (geocodeError) {
           // Fallback to coordinates if geocoding fails
           const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
-          setUserLocation(location);
-          onLocationUpdate?.(location);
           debugLogEmoji('📍', 'Location obtained (coordinates):', location);
           resolveLocationAndFetch(location);
         }
@@ -273,7 +285,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
         clearTimeout(timeoutId);
       }
     };
-  }, [recipesByCategory]); // Re-run when recipesByCategory changes
+  }, []); // Only run once on mount - don't re-run when recipesByCategory changes
 
   // Monitor changes to recipesByCategory
   useEffect(() => {
@@ -301,13 +313,11 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     }
   }, [recommendations, recipesByCategory]);
 
-  // Monitor location permission changes
+  // Monitor location permission changes - DISABLED to prevent multiple API calls
   useEffect(() => {
-    // Check if we need to monitor permission changes
-    if (!shouldFetchFreshRecommendations()) {
-      debugLogEmoji('✅', 'No need to monitor permission changes, using existing recipesByCategory');
-      return;
-    }
+    // Skip permission monitoring to prevent multiple API calls
+    debugLogEmoji('✅', 'Permission monitoring disabled to prevent multiple API calls');
+    return;
 
     if (navigator.permissions && navigator.permissions.query) {
       const checkPermission = async () => {
@@ -396,7 +406,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       
       checkPermission();
     }
-  }, [userLocation, recipesByCategory]);
+  }, [userLocation]); // Only monitor userLocation changes, not recipesByCategory
 
   // Centralized function to fetch recommendations - handles all cases
   async function fetchRecommendations(location = null) {
@@ -548,8 +558,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       onLocationUpdate?.(trimmedLocation); // Update parent component with manual location
       setShowLocationPrompt(false);
       debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
-              // Use fetchRecommendations to ensure location is passed immediately
-      fetchRecommendations(trimmedLocation);
+      // fetchRecommendations will be called by useEffect when userLocation changes
     }
   };
 
@@ -563,7 +572,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
       setUserLocation(null);
       onLocationUpdate?.(''); // Update parent component to clear location
       debugLogEmoji('🗑️', 'User location cleared');
-      fetchRecommendations();
+      // fetchRecommendations will be called by useEffect when userLocation changes
     }
   };
 
@@ -633,20 +642,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           setUserLocation(location);
           onLocationUpdate?.(location); // Update parent component with manual GPS location
           debugLogEmoji('📍', 'Manual location set:', location);
-          
-          // Refresh recommendations with new location
-          if (!isFetchingRecommendations) {
-            fetchRecommendations(location);
-          }
+          // fetchRecommendations will be called by useEffect when userLocation changes
         }
       } catch (geocodeError) {
         console.log('Reverse geocoding failed, using coordinates');
         const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
         setUserLocation(location);
         onLocationUpdate?.(location); // Update parent component with coordinate location
-        if (!isFetchingRecommendations) {
-          fetchRecommendations(location);
-        }
+        // fetchRecommendations will be called by useEffect when userLocation changes
       }
     } catch (error) {
       debugLogEmoji('❌', 'Manual location request failed:', error.message);
@@ -682,9 +685,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
             return entries.map(([categoryName, recipes]) => {
               debugLogEmoji('🎯', `Rendering category "${categoryName}" with ${recipes.length} recipes`);
               
-              // For now, show all recipes in each category without cross-category deduplication
-              // This prevents the blank page issue while we debug the data structure
-              const sortedRecipes = recipes.slice(0, 10);
+              // Show all recipes in each category without any limits
+              const sortedRecipes = recipes;
               
               debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
               
@@ -1071,7 +1073,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
                   <SwipeableRecipeGrid>
-                    {[1, 2, 3].map(index => (
+                    {[1, 2, 3, 4, 5].map(index => (
                       <div key={index} className="recipe-card loading-card">
                         <div className="recipe-card-image loading-pulse">
                           <div className="loading-shimmer"></div>
@@ -1103,8 +1105,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                 !shownRecipeIds.has(recipe.id)
               );
               
-              // Take up to 10 recipes for this category
-              const sortedRecipes = uniqueRecipes.slice(0, 10);
+              // Show all unique recipes for this category
+              const sortedRecipes = uniqueRecipes;
               
               debugLogEmoji('🎯', `Category "${categoryName}": ${uniqueRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
               
