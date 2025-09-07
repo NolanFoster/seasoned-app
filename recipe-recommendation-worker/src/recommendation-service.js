@@ -5,6 +5,64 @@
 import { log } from '../../shared/utility-functions.js';
 import { metrics, sendAnalytics } from './shared-utilities.js';
 import { getRecipeFromKV as getRecipeFromKVShared } from '../../shared/kv-storage.js';
+import { generateRecipeImages } from './utils/image-generator.js';
+
+// Generate relevant ingredients from dish name for better image generation
+function generateIngredientsFromName(dishName) {
+  const name = dishName.toLowerCase();
+  const ingredients = [];
+  
+  // Common ingredient mappings based on dish names
+  const ingredientMappings = {
+    'salmon': ['salmon fillet', 'lemon', 'dill', 'olive oil', 'salt', 'pepper'],
+    'chicken': ['chicken breast', 'garlic', 'herbs', 'olive oil', 'salt', 'pepper'],
+    'beef': ['beef', 'onion', 'garlic', 'red wine', 'herbs', 'salt'],
+    'pasta': ['pasta', 'tomato', 'basil', 'garlic', 'olive oil', 'parmesan'],
+    'pizza': ['pizza dough', 'tomato sauce', 'mozzarella', 'basil', 'olive oil'],
+    'soup': ['vegetables', 'broth', 'herbs', 'onion', 'garlic', 'salt'],
+    'salad': ['lettuce', 'tomato', 'cucumber', 'olive oil', 'vinegar', 'herbs'],
+    'bread': ['flour', 'yeast', 'water', 'salt', 'olive oil'],
+    'cake': ['flour', 'sugar', 'eggs', 'butter', 'vanilla'],
+    'cookie': ['flour', 'sugar', 'butter', 'eggs', 'vanilla'],
+    'donut': ['flour', 'sugar', 'yeast', 'milk', 'butter', 'cinnamon'],
+    'apple': ['apples', 'cinnamon', 'sugar', 'butter', 'flour'],
+    'pumpkin': ['pumpkin', 'cinnamon', 'nutmeg', 'sugar', 'cream'],
+    'mushroom': ['mushrooms', 'garlic', 'herbs', 'butter', 'wine'],
+    'quinoa': ['quinoa', 'vegetables', 'herbs', 'olive oil', 'lemon'],
+    'risotto': ['rice', 'broth', 'parmesan', 'wine', 'onion', 'butter'],
+    'ravioli': ['pasta dough', 'ricotta', 'herbs', 'tomato sauce', 'parmesan'],
+    'tart': ['pastry dough', 'eggs', 'cream', 'herbs', 'cheese'],
+    'stew': ['meat', 'vegetables', 'broth', 'herbs', 'wine', 'onion'],
+    'crab': ['crab meat', 'mayonnaise', 'lemon', 'herbs', 'breadcrumbs'],
+    'seafood': ['seafood', 'garlic', 'white wine', 'herbs', 'lemon'],
+    'cioppino': ['seafood', 'tomato', 'white wine', 'garlic', 'herbs'],
+    'brie': ['brie cheese', 'cranberries', 'puff pastry', 'walnuts'],
+    'carrot': ['carrots', 'olive oil', 'herbs', 'garlic', 'lemon'],
+    'polenta': ['cornmeal', 'cheese', 'butter', 'herbs', 'broth']
+  };
+  
+  // Find matching ingredients based on dish name
+  for (const [key, ingredients] of Object.entries(ingredientMappings)) {
+    if (name.includes(key)) {
+      return ingredients;
+    }
+  }
+  
+  // Fallback: extract potential ingredients from the dish name
+  const words = name.split(/\s+/);
+  const potentialIngredients = [];
+  
+  for (const word of words) {
+    if (word.length > 3 && !['with', 'and', 'the', 'for', 'in', 'on', 'at'].includes(word)) {
+      potentialIngredients.push(word);
+    }
+  }
+  
+  // Add some common cooking ingredients
+  const commonIngredients = ['olive oil', 'salt', 'pepper', 'garlic', 'herbs'];
+  
+  return [...potentialIngredients.slice(0, 3), ...commonIngredients.slice(0, 2)];
+}
 
 // Holiday detection utility
 function getUpcomingHoliday(date) {
@@ -488,8 +546,12 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
         aiGenerated: true,
         season,
         month,
-        location: location || null
+        location: location || null,
+        ingredients: generateIngredientsFromName(dish) // Generate relevant ingredients from dish name
       }));
+
+      // Generate images for the AI recipes
+      const recipesWithImages = await generateRecipeImages(formattedRecipes, env, requestId, 'realistic', '1:1');
 
       const duration = Date.now() - startTime;
       
@@ -498,13 +560,13 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
         duration: `${duration}ms`,
         aiDuration: `${aiDuration}ms`,
         requested: count,
-        generated: formattedRecipes.length,
+        generated: recipesWithImages.length,
         season,
         hasLocation,
         upcomingHoliday: !!upcomingHoliday
       });
 
-      return formattedRecipes;
+      return recipesWithImages;
       
     } catch (parseError) {
       metrics.increment('ai_only_errors', 1, { 
@@ -723,11 +785,58 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
             
             return {
               name: dishName,
-              source: "ai_generated"
+              source: "ai_generated",
+              description: `A creative ${dishName.toLowerCase()} perfect for ${season.toLowerCase()} cooking`,
+              ingredients: generateIngredientsFromName(dishName), // Generate relevant ingredients from dish name
+              image_url: null
             };
           });
         }
       });
+
+      // Generate images for all AI recipes across categories
+      const allRecipes = Object.values(formattedRecipesByCategory).flat();
+      if (allRecipes.length > 0) {
+        const recipesWithImages = await generateRecipeImages(allRecipes, env, requestId, 'realistic', '1:1');
+        
+        // Create a map of recipe name to image URL for reliable matching
+        const imageMap = new Map();
+        recipesWithImages.forEach(recipe => {
+          if (recipe.name && recipe.image_url) {
+            imageMap.set(recipe.name, recipe.image_url);
+            log('debug', 'Mapped recipe to image URL', {
+              requestId,
+              recipeName: recipe.name,
+              imageUrl: recipe.image_url
+            });
+          }
+        });
+        
+        log('info', 'Image mapping completed', {
+          requestId,
+          totalRecipes: recipesWithImages.length,
+          mappedImages: imageMap.size,
+          imageMapKeys: Array.from(imageMap.keys())
+        });
+        
+        // Map the images back to the category structure using recipe names
+        Object.keys(formattedRecipesByCategory).forEach(category => {
+          const categoryRecipes = formattedRecipesByCategory[category];
+          formattedRecipesByCategory[category] = categoryRecipes.map(recipe => {
+            const imageUrl = imageMap.get(recipe.name) || null;
+            log('debug', 'Assigning image to recipe', {
+              requestId,
+              category,
+              recipeName: recipe.name,
+              imageUrl: imageUrl || 'no-image'
+            });
+            return {
+              ...recipe,
+              image_url: imageUrl
+            };
+          });
+        });
+      }
 
       const duration = Date.now() - startTime;
       
@@ -771,7 +880,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
   }
 }
 
-// Enhanced recommendations with actual recipes
+// Enhanced recommendations with actual recipes and cross-category duplicate prevention
 export async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipesPerCategory, env, requestId) {
   const startTime = Date.now();
   
@@ -782,9 +891,13 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
       recipesPerCategory
     });
 
-    // Process each category in parallel for better performance
+    // Track duplicates across all categories
+    const globalSeenRecipeIds = new Set();
+    const globalSeenRecipeNames = new Set();
     const enhancedRecommendations = {};
-    const categoryPromises = Object.entries(categoryRecommendations).map(async ([categoryName, dishNames]) => {
+    
+    // Process categories sequentially to maintain cross-category duplicate prevention
+    for (const [categoryName, dishNames] of Object.entries(categoryRecommendations)) {
       try {
         // Search for recipes based on the category and dish names
         const recipes = await searchRecipeByCategory(
@@ -795,16 +908,90 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           requestId
         );
         
-        enhancedRecommendations[categoryName] = recipes;
+        // Filter out duplicates across categories
+        const uniqueRecipes = [];
+        const duplicateIds = [];
+        const duplicateNames = [];
+        
+        for (const recipe of recipes) {
+          const isDuplicateId = globalSeenRecipeIds.has(recipe.id);
+          const isDuplicateName = globalSeenRecipeNames.has(recipe.name.toLowerCase().trim());
+          
+          if (isDuplicateId || isDuplicateName) {
+            if (isDuplicateId) duplicateIds.push(recipe.id);
+            if (isDuplicateName) duplicateNames.push(recipe.name);
+            log('debug', 'Found cross-category duplicate recipe', {
+              requestId,
+              category: categoryName,
+              recipeId: recipe.id,
+              recipeName: recipe.name,
+              isDuplicateId,
+              isDuplicateName
+            });
+          } else {
+            globalSeenRecipeIds.add(recipe.id);
+            globalSeenRecipeNames.add(recipe.name.toLowerCase().trim());
+            uniqueRecipes.push(recipe);
+          }
+        }
+        
+        log('info', 'Cross-category deduplication results', {
+          requestId,
+          category: categoryName,
+          totalResults: recipes.length,
+          uniqueResults: uniqueRecipes.length,
+          duplicateIds: duplicateIds.length,
+          duplicateNames: duplicateNames.length,
+          duplicateIdsList: duplicateIds,
+          duplicateNamesList: duplicateNames
+        });
+        
+        // If we don't have enough unique recipes, try to get more
+        if (uniqueRecipes.length < recipesPerCategory) {
+          log('info', 'Not enough unique recipes after cross-category deduplication, searching for more', {
+            requestId,
+            category: categoryName,
+            uniqueFound: uniqueRecipes.length,
+            requested: recipesPerCategory,
+            duplicatesFiltered: duplicateIds.length + duplicateNames.length
+          });
+          
+          // Try to get more recipes with different search terms
+          const additionalRecipes = await searchRecipeByCategory(
+            categoryName, 
+            dishNames.slice(0, Math.ceil(dishNames.length / 2)), // Use fewer terms
+            recipesPerCategory - uniqueRecipes.length, 
+            env, 
+            requestId
+          );
+          
+          // Filter additional recipes for cross-category duplicates
+          for (const recipe of additionalRecipes) {
+            const isDuplicateId = globalSeenRecipeIds.has(recipe.id);
+            const isDuplicateName = globalSeenRecipeNames.has(recipe.name.toLowerCase().trim());
+            
+            if (!isDuplicateId && !isDuplicateName) {
+              globalSeenRecipeIds.add(recipe.id);
+              globalSeenRecipeNames.add(recipe.name.toLowerCase().trim());
+              uniqueRecipes.push(recipe);
+              
+              if (uniqueRecipes.length >= recipesPerCategory) {
+                break;
+              }
+            }
+          }
+        }
+        
+        enhancedRecommendations[categoryName] = uniqueRecipes.slice(0, recipesPerCategory);
         
         log('debug', 'Category enhanced with recipes', {
           requestId,
           category: categoryName,
           originalDishes: dishNames.length,
-          foundRecipes: recipes.length
+          foundRecipes: enhancedRecommendations[categoryName].length,
+          crossCategoryDuplicatesFiltered: duplicateIds.length + duplicateNames.length
         });
         
-        return { category: categoryName, recipes };
       } catch (error) {
         log('warn', 'Failed to enhance category with recipes', {
           requestId,
@@ -823,26 +1010,26 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           image_url: null,
           source_url: null,
           type: 'dish_suggestion',
-          source: 'ai_category_generation',
+          source: 'ai_generated',
           fallback: true
         }));
-        
-        return { category: categoryName, recipes: enhancedRecommendations[categoryName] };
       }
-    });
-
-    const results = await Promise.all(categoryPromises);
+    }
     
     const duration = Date.now() - startTime;
     
     metrics.timing('recipe_enhancement_duration', duration);
-    metrics.increment('categories_enhanced', results.length);
+    metrics.increment('categories_enhanced', Object.keys(enhancedRecommendations).length);
+    metrics.increment('cross_category_duplicates_filtered', 
+      Array.from(globalSeenRecipeIds).length + Array.from(globalSeenRecipeNames).length);
     
-    log('info', 'Recommendations enhanced successfully', {
+    log('info', 'Recommendations enhanced successfully with cross-category duplicate prevention', {
       requestId,
       duration: `${duration}ms`,
-      categories: results.length,
-      totalRecipes: results.reduce((sum, result) => sum + result.recipes.length, 0)
+      categories: Object.keys(enhancedRecommendations).length,
+      totalRecipes: Object.values(enhancedRecommendations).reduce((sum, recipes) => sum + recipes.length, 0),
+      globalUniqueIds: globalSeenRecipeIds.size,
+      globalUniqueNames: globalSeenRecipeNames.size
     });
     
     return enhancedRecommendations;
@@ -871,7 +1058,7 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           image_url: null,
           source_url: null,
           type: 'dish_suggestion',
-          source: 'ai_category_generation',
+          source: 'ai_generated',
           fallback: true
         }))
       ])
@@ -962,9 +1149,12 @@ export function extractCookingTerms(categoryName, dishNames) {
   return searchTerms;
 }
 
-// Search for recipes by category
+// Search for recipes by category with duplicate prevention and retry logic
 export async function searchRecipeByCategory(categoryName, dishNames, limit, env, requestId) {
   const startTime = Date.now();
+  const maxRetries = 3;
+  const seenRecipeIds = new Set();
+  const seenRecipeNames = new Set();
   
   try {
     // Try to search for recipes using the search database service binding if available
@@ -989,189 +1179,316 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
         limit
       });
       
-      try {
-        // Create the search URL with proper parameters for service binding
-        const searchParams = new URLSearchParams();
-        searchParams.set('tags', searchTerms.join(','));
-        searchParams.set('type', 'recipe');
-        searchParams.set('limit', limit.toString());
-        
-        const searchUrl = `/api/smart-search?${searchParams.toString()}`;
-        
-        log('debug', 'Smart-search service binding query details', {
-          requestId,
-          category: categoryName,
-          dishCount: dishNames.length,
-          cookingTermsExtracted: cookingTerms.length,
-          finalSearchTerms: searchTerms,
-          searchUrl: searchUrl,
-          hasSearchWorker: !!env.SEARCH_WORKER,
-          searchWorkerType: typeof env.SEARCH_WORKER
-        });
-        
-        // Try using the service binding with a Request object instead of direct fetch
-        const request = new Request(`https://dummy.com${searchUrl}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        // Use the service binding to call the search worker
-        const response = await env.SEARCH_WORKER.fetch(request);
-        
-        log('debug', 'Service binding response received', {
-          requestId,
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-
-        if (response.ok) {
-          const searchResults = await response.json();
+      // Retry logic to get unique results
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          // Create the search URL with proper parameters for service binding
+          const searchParams = new URLSearchParams();
+          searchParams.set('tags', searchTerms.join(','));
+          searchParams.set('type', 'recipe');
+          // Request more results than needed to account for duplicates
+          const searchLimit = Math.min(limit * 2, 50);
+          searchParams.set('limit', searchLimit.toString());
           
-          log('debug', 'Search results received from service binding', {
+          const searchUrl = `/api/smart-search?${searchParams.toString()}`;
+          
+          log('debug', 'Smart-search service binding query details', {
             requestId,
-            hasResults: !!searchResults.results,
-            resultsCount: searchResults.results?.length || 0,
-            strategy: searchResults.strategy,
-            similarityScore: searchResults.similarityScore,
-            fullResponse: JSON.stringify(searchResults, null, 2)
+            category: categoryName,
+            attempt,
+            dishCount: dishNames.length,
+            cookingTermsExtracted: cookingTerms.length,
+            finalSearchTerms: searchTerms,
+            searchUrl: searchUrl,
+            hasSearchWorker: !!env.SEARCH_WORKER,
+            searchWorkerType: typeof env.SEARCH_WORKER
           });
           
-          if (searchResults.results && searchResults.results.length > 0) {
-            // First, extract basic recipe data from search results
-            const searchRecipes = searchResults.results.slice(0, limit).map(node => {
-              // Extract properties from the node
-              const properties = node.properties || {};
-              
-              // Log the raw node data for debugging
-              log('debug', 'Processing search result node', {
-                requestId,
-                nodeId: node.id,
-                hasProperties: !!properties,
-                propertyKeys: Object.keys(properties),
-                titleValue: properties.title,
-                nameValue: properties.name,
-                descriptionValue: properties.description,
-                yieldValue: properties.servings || properties.recipeYield,
-                prepTimeValue: properties.prepTime,
-                cookTimeValue: properties.cookTime,
-                urlValue: properties.url,
-                imageUrlValue: properties.imageUrl,
-                fullProperties: JSON.stringify(properties, null, 2)
+          // Try using the service binding with a Request object instead of direct fetch
+          const request = new Request(`https://dummy.com${searchUrl}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          // Use the service binding to call the search worker
+          const response = await env.SEARCH_WORKER.fetch(request);
+          
+          log('debug', 'Service binding response received', {
+            requestId,
+            attempt,
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            headers: Object.fromEntries(response.headers.entries())
+          });
+
+          if (response.ok) {
+            const searchResults = await response.json();
+            
+            log('debug', 'Search results received from service binding', {
+              requestId,
+              attempt,
+              hasResults: !!searchResults.results,
+              resultsCount: searchResults.results?.length || 0,
+              strategy: searchResults.strategy,
+              similarityScore: searchResults.similarityScore,
+              fullResponse: JSON.stringify(searchResults, null, 2)
+            });
+            
+            if (searchResults.results && searchResults.results.length > 0) {
+              // First, extract basic recipe data from search results
+              const searchRecipes = searchResults.results.map(node => {
+                // Extract properties from the node
+                const properties = node.properties || {};
+                
+                // Log the raw node data for debugging
+                log('debug', 'Processing search result node', {
+                  requestId,
+                  attempt,
+                  nodeId: node.id,
+                  hasProperties: !!properties,
+                  propertyKeys: Object.keys(properties),
+                  titleValue: properties.title,
+                  nameValue: properties.name,
+                  descriptionValue: properties.description,
+                  yieldValue: properties.servings || properties.recipeYield,
+                  prepTimeValue: properties.prepTime,
+                  cookTimeValue: properties.cookTime,
+                  urlValue: properties.url,
+                  imageUrlValue: properties.imageUrl,
+                  fullProperties: JSON.stringify(properties, null, 2)
+                });
+                
+                // Try multiple possible name fields, handling empty strings
+                let recipeName = (properties.title && properties.title.trim()) || 
+                                (properties.name && properties.name.trim()) || 
+                                (properties.recipeName && properties.recipeName.trim()) ||
+                                (properties.recipeTitle && properties.recipeTitle.trim());
+                
+                // If no name found, try to extract from URL
+                if (!recipeName && properties.url) {
+                  try {
+                    const url = new URL(properties.url);
+                    const pathParts = url.pathname.split('/').filter(part => part.length > 0);
+                    if (pathParts.length > 0) {
+                      // Take the last part of the URL path and format it nicely
+                      const lastPart = pathParts[pathParts.length - 1];
+                      recipeName = lastPart
+                        .split('-')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                    }
+                  } catch (e) {
+                    // URL parsing failed, continue with fallback
+                  }
+                }
+                
+                // Final fallback
+                if (!recipeName) {
+                  recipeName = 'Unknown Recipe';
+                }
+                
+                return {
+                  id: node.id,
+                  name: recipeName,
+                  description: properties.description || '',
+                  yield: properties.servings || properties.recipeYield || null,
+                  prepTime: properties.prepTime || null,
+                  cookTime: properties.cookTime || null,
+                  image_url: properties.imageUrl || properties.image_url || null,
+                  source_url: properties.url || properties.source_url || null,
+                  type: 'recipe',
+                  source: 'smart_search_database'
+                };
               });
               
-              // Try multiple possible name fields, handling empty strings
-              let recipeName = (properties.title && properties.title.trim()) || 
-                              (properties.name && properties.name.trim()) || 
-                              (properties.recipeName && properties.recipeName.trim()) ||
-                              (properties.recipeTitle && properties.recipeTitle.trim());
+              // Deduplicate by ID and name
+              const uniqueRecipes = [];
+              const duplicateIds = [];
+              const duplicateNames = [];
               
-              // If no name found, try to extract from URL
-              if (!recipeName && properties.url) {
-                try {
-                  const url = new URL(properties.url);
-                  const pathParts = url.pathname.split('/').filter(part => part.length > 0);
-                  if (pathParts.length > 0) {
-                    // Take the last part of the URL path and format it nicely
-                    const lastPart = pathParts[pathParts.length - 1];
-                    recipeName = lastPart
-                      .split('-')
-                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(' ');
-                  }
-                } catch (e) {
-                  // URL parsing failed, continue with fallback
+              for (const recipe of searchRecipes) {
+                const isDuplicateId = seenRecipeIds.has(recipe.id);
+                const isDuplicateName = seenRecipeNames.has(recipe.name.toLowerCase().trim());
+                
+                if (isDuplicateId || isDuplicateName) {
+                  if (isDuplicateId) duplicateIds.push(recipe.id);
+                  if (isDuplicateName) duplicateNames.push(recipe.name);
+                  log('debug', 'Found duplicate recipe', {
+                    requestId,
+                    attempt,
+                    recipeId: recipe.id,
+                    recipeName: recipe.name,
+                    isDuplicateId,
+                    isDuplicateName
+                  });
+                } else {
+                  seenRecipeIds.add(recipe.id);
+                  seenRecipeNames.add(recipe.name.toLowerCase().trim());
+                  uniqueRecipes.push(recipe);
                 }
               }
               
-              // Final fallback
-              if (!recipeName) {
-                recipeName = 'Unknown Recipe';
-              }
+              log('info', 'Deduplication results', {
+                requestId,
+                attempt,
+                totalResults: searchRecipes.length,
+                uniqueResults: uniqueRecipes.length,
+                duplicateIds: duplicateIds.length,
+                duplicateNames: duplicateNames.length,
+                duplicateIdsList: duplicateIds,
+                duplicateNamesList: duplicateNames
+              });
               
-              return {
-                id: node.id,
-                name: recipeName,
-                description: properties.description || '',
-                yield: properties.servings || properties.recipeYield || null,
-                prepTime: properties.prepTime || null,
-                cookTime: properties.cookTime || null,
-                image_url: properties.imageUrl || properties.image_url || null,
-                source_url: properties.url || properties.source_url || null,
-                type: 'recipe',
-                source: 'smart_search_database'
-              };
-            });
-            
-            // Extract recipe IDs for KV lookup
-            const recipeIds = searchRecipes.map(recipe => recipe.id);
-            
-            // Query KV storage for additional recipe details
-            const kvRecipes = await getRecipesFromKV(recipeIds, env, requestId);
-            
-            // Merge search results with KV data
-            const recipes = mergeSearchResultsWithKV(searchRecipes, kvRecipes, requestId);
-            
-            const duration = Date.now() - startTime;
-            metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
-            metrics.increment('recipes_found_via_smart_search', recipes.length);
-            metrics.increment(`smart_search_strategy_${searchResults.strategy || 'unknown'}`, 1);
-            if (searchResults.similarityScore) {
-              metrics.increment('smart_search_similarity_score', Math.round(searchResults.similarityScore * 100));
+              // If we have enough unique recipes, proceed with KV lookup
+              if (uniqueRecipes.length >= limit) {
+                // Extract recipe IDs for KV lookup
+                const recipeIds = uniqueRecipes.slice(0, limit).map(recipe => recipe.id);
+                
+                // Query KV storage for additional recipe details
+                const kvRecipes = await getRecipesFromKV(recipeIds, env, requestId);
+                
+                // Merge search results with KV data
+                const recipes = mergeSearchResultsWithKV(uniqueRecipes.slice(0, limit), kvRecipes, requestId);
+                
+                const duration = Date.now() - startTime;
+                metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
+                metrics.increment('recipes_found_via_smart_search', recipes.length);
+                metrics.increment(`smart_search_strategy_${searchResults.strategy || 'unknown'}`, 1);
+                if (searchResults.similarityScore) {
+                  metrics.increment('smart_search_similarity_score', Math.round(searchResults.similarityScore * 100));
+                }
+                metrics.increment('duplicate_recipes_filtered', duplicateIds.length + duplicateNames.length);
+                
+                const kvEnrichedCount = recipes.filter(r => r.kvEnriched).length;
+                
+                log('info', 'Recipes found via smart-search database service binding with KV enrichment', {
+                  requestId,
+                  category: categoryName,
+                  found: recipes.length,
+                  requested: limit,
+                  duration: `${duration}ms`,
+                  source: 'smart_search_database_kv_enriched',
+                  strategy: searchResults.strategy || 'unknown',
+                  similarityScore: searchResults.similarityScore || 0,
+                  kvEnriched: kvEnrichedCount,
+                  kvEnrichmentRate: recipes.length > 0 ? (kvEnrichedCount / recipes.length * 100).toFixed(1) + '%' : '0%',
+                  duplicatesFiltered: duplicateIds.length + duplicateNames.length,
+                  attempts: attempt
+                });
+                
+                return recipes;
+              } else if (attempt < maxRetries) {
+                // Not enough unique recipes, try again with different search terms
+                log('info', 'Not enough unique recipes found, retrying search', {
+                  requestId,
+                  attempt,
+                  uniqueFound: uniqueRecipes.length,
+                  requested: limit,
+                  duplicatesFound: duplicateIds.length + duplicateNames.length
+                });
+                
+                // Add some variation to search terms for retry
+                if (attempt === 2) {
+                  // Try with just the first few terms
+                  searchTerms.splice(0, Math.ceil(searchTerms.length / 2));
+                } else if (attempt === 3) {
+                  // Try with just the category name and first dish
+                  searchTerms.splice(0, searchTerms.length, categoryName, dishNames[0]);
+                }
+                
+                continue;
+              } else {
+                // Final attempt failed, return what we have
+                log('warn', 'Final attempt failed to find enough unique recipes', {
+                  requestId,
+                  attempt,
+                  uniqueFound: uniqueRecipes.length,
+                  requested: limit,
+                  totalDuplicates: duplicateIds.length + duplicateNames.length
+                });
+                
+                if (uniqueRecipes.length > 0) {
+                  // Extract recipe IDs for KV lookup
+                  const recipeIds = uniqueRecipes.map(recipe => recipe.id);
+                  
+                  // Query KV storage for additional recipe details
+                  const kvRecipes = await getRecipesFromKV(recipeIds, env, requestId);
+                  
+                  // Merge search results with KV data
+                  const recipes = mergeSearchResultsWithKV(uniqueRecipes, kvRecipes, requestId);
+                  
+                  const duration = Date.now() - startTime;
+                  metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
+                  metrics.increment('recipes_found_via_smart_search', recipes.length);
+                  metrics.increment(`smart_search_strategy_${searchResults.strategy || 'unknown'}`, 1);
+                  if (searchResults.similarityScore) {
+                    metrics.increment('smart_search_similarity_score', Math.round(searchResults.similarityScore * 100));
+                  }
+                  metrics.increment('duplicate_recipes_filtered', duplicateIds.length + duplicateNames.length);
+                  
+                  const kvEnrichedCount = recipes.filter(r => r.kvEnriched).length;
+                  
+                  log('info', 'Returning partial results after retry attempts', {
+                    requestId,
+                    category: categoryName,
+                    found: recipes.length,
+                    requested: limit,
+                    duration: `${duration}ms`,
+                    source: 'smart_search_database_kv_enriched',
+                    strategy: searchResults.strategy || 'unknown',
+                    similarityScore: searchResults.similarityScore || 0,
+                    kvEnriched: kvEnrichedCount,
+                    kvEnrichmentRate: recipes.length > 0 ? (kvEnrichedCount / recipes.length * 100).toFixed(1) + '%' : '0%',
+                    duplicatesFiltered: duplicateIds.length + duplicateNames.length,
+                    attempts: attempt
+                  });
+                  
+                  return recipes;
+                }
+              }
             }
-            
-            const kvEnrichedCount = recipes.filter(r => r.kvEnriched).length;
-            
-            log('info', 'Recipes found via smart-search database service binding with KV enrichment', {
+          } else {
+            // Log error details for failed service binding request
+            const errorText = await response.text();
+            log('warn', 'Smart-search service binding request failed', {
               requestId,
+              attempt,
               category: categoryName,
-              found: recipes.length,
-              requested: limit,
-              duration: `${duration}ms`,
-              source: 'smart_search_database_kv_enriched',
-              strategy: searchResults.strategy || 'unknown',
-              similarityScore: searchResults.similarityScore || 0,
-              kvEnriched: kvEnrichedCount,
-              kvEnrichmentRate: recipes.length > 0 ? (kvEnrichedCount / recipes.length * 100).toFixed(1) + '%' : '0%'
+              status: response.status,
+              statusText: response.statusText,
+              errorResponse: errorText.substring(0, 500),
+              searchTerms,
+              limit,
+              searchUrl: searchUrl
             });
             
-            return recipes;
+            metrics.increment('smart_search_service_binding_errors', 1, { 
+              status: response.status.toString(),
+              category: categoryName 
+            });
           }
-        } else {
-          // Log error details for failed service binding request
-          const errorText = await response.text();
-          log('warn', 'Smart-search service binding request failed', {
+        } catch (error) {
+          log('warn', 'Smart-search service binding error', {
             requestId,
+            attempt,
             category: categoryName,
-            status: response.status,
-            statusText: response.statusText,
-            errorResponse: errorText.substring(0, 500),
+            error: error.message,
             searchTerms,
-            limit,
-            searchUrl: searchUrl
+            limit
           });
           
           metrics.increment('smart_search_service_binding_errors', 1, { 
-            status: response.status.toString(),
+            type: 'exception',
             category: categoryName 
           });
+          
+          if (attempt === maxRetries) {
+            throw error;
+          }
         }
-      } catch (error) {
-        log('warn', 'Smart-search service binding error', {
-          requestId,
-          category: categoryName,
-          error: error.message,
-          searchTerms,
-          limit
-        });
-        
-        metrics.increment('smart_search_service_binding_errors', 1, { 
-          type: 'exception',
-          category: categoryName 
-        });
       }
     }
 
@@ -1194,7 +1511,7 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
       image_url: null,
       source_url: null,
       type: 'dish_suggestion',
-      source: 'ai_category_generation',
+      source: 'ai_generated',
       fallback: true
     }));
     
@@ -1221,7 +1538,7 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
       id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: dish,
       type: 'dish_suggestion',
-      source: 'ai_category_generation',
+      source: 'ai_generated',
       fallback: true
     }));
   }
