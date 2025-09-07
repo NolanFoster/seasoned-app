@@ -129,7 +129,7 @@
       
       /* Ensure title fits in larger carousel cards */
       .recipe-card-title {
-        font-size: 1.6em !important;
+        font-size: 1.4em !important;
         padding: 10px 14px 14px 14px !important;
         line-height: 1.15 !important;
       }
@@ -159,7 +159,7 @@
       
       /* Ensure title fits in medium carousel cards */
       .recipe-card-title {
-        font-size: 1.4em !important;
+        font-size: 1.2em !important;
         padding: 8px 12px 12px 12px !important;
         line-height: 1.15 !important;
       }
@@ -188,7 +188,7 @@
       
       /* Ensure title fits in smaller carousel cards */
       .recipe-card-title {
-        font-size: 1.2em !important;
+        font-size: 1.1em !important;
         padding: 6px 10px 10px 10px !important;
         line-height: 1.1 !important;
       }
@@ -216,7 +216,7 @@
       }
       
       .recipe-card-title {
-        font-size: 1.1em !important;
+        font-size: 1em !important;
         padding: 4px 8px 8px 8px !important;
         line-height: 1.1 !important;
       }
@@ -244,7 +244,7 @@
       }
       
       .recipe-card-title {
-        font-size: 1em !important;
+        font-size: 0.95em !important;
         padding: 3px 6px 6px 6px !important;
         line-height: 1.1 !important;
       }
@@ -272,7 +272,7 @@
       }
       
       .recipe-card-title {
-        font-size: 0.9em !important;
+        font-size: 0.85em !important;
         padding: 2px 5px 5px 5px !important;
         line-height: 1.1 !important;
       }
@@ -1023,7 +1023,7 @@
 .recipe-card-title {
   margin: 0;
   color: white;
-  font-size: 2.2em;
+  font-size: 1.6em;
   font-weight: 600;
   text-align: left;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -1043,36 +1043,36 @@
   
   /* Responsive font sizing to prevent text cutoff */
   @media (max-width: 1200px) {
-    font-size: 2em;
+    font-size: 1.5em;
   }
   
   @media (max-width: 768px) {
-    font-size: 1.8em;
+    font-size: 1.4em;
     padding: 12px 16px 16px 16px;
   }
   
   @media (max-width: 640px) {
-    font-size: 1.6em;
+    font-size: 1.3em;
     padding: 10px 14px 14px 14px;
   }
   
   @media (max-width: 480px) {
-    font-size: 1.4em;
+    font-size: 1.2em;
     padding: 8px 12px 12px 12px;
   }
   
   @media (max-width: 400px) {
-    font-size: 1.2em;
+    font-size: 1.1em;
     padding: 6px 10px 10px 10px;
   }
   
   @media (max-width: 360px) {
-    font-size: 1.1em;
+    font-size: 1em;
     padding: 5px 8px 8px 8px;
   }
   
   @media (max-width: 320px) {
-    font-size: 1em;
+    font-size: 0.95em;
     padding: 4px 6px 6px 6px;
   }
   
