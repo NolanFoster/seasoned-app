@@ -6,7 +6,7 @@ import { generatePromptFromRecipe } from '../utils/prompt-generator.js';
 import { uploadImageToR2 } from '../utils/r2-uploader.js';
 import { validateRecipe } from '../utils/validator.js';
 
-export async function handleGenerate(request, env, ctx) {
+export async function handleGenerate(request, env, _ctx) {
   try {
     // Parse request body
     const body = await request.json();

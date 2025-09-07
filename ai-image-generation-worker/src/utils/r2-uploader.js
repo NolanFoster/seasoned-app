@@ -74,7 +74,7 @@ export async function imageExistsInR2(bucket, imageId) {
     const filename = `ai-generated/${imageId}.png`;
     const object = await bucket.head(filename);
     return object !== null;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

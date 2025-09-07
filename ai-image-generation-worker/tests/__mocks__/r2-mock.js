@@ -3,7 +3,7 @@
  */
 
 export const mockR2Bucket = {
-  put: async (key, value, options) => {
+  put: async (key, _value, _options) => {
     // Simulate successful upload
     return {
       key,
@@ -27,7 +27,7 @@ export const mockR2Bucket = {
     return null;
   },
   
-  delete: async (key) => {
+  delete: async (_key) => {
     // Simulate deletion
     return true;
   }
