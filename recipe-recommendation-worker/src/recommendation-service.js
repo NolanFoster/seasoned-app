@@ -84,7 +84,7 @@ function getContextualCategory(season, date, hasLocation) {
 }
 
 // Main recommendation function
-export async function getRecipeRecommendations(location, date, recipesPerCategory, env, requestId) {
+export async function getRecipeRecommendations(location, date, recipesPerCategory, aiGeneratedCount, env, requestId) {
   const startTime = Date.now();
   
   // Check if we have AI binding
@@ -244,6 +244,26 @@ Make the categories relevant to the season, location, and context. Be specific w
       requestId
     );
 
+    // Generate additional AI recipes per category if requested
+    if (aiGeneratedCount > 0) {
+      const aiGeneratedPerCategory = await generateAIOnlyRecipesPerCategory(
+        location, 
+        date, 
+        aiGeneratedCount,
+        Object.keys(enhancedRecommendations),
+        env, 
+        requestId
+      );
+      
+      // Merge AI-generated recipe names into existing categories
+      Object.keys(enhancedRecommendations).forEach(category => {
+        if (aiGeneratedPerCategory[category]) {
+          // Add AI-generated recipe names as simple strings
+          enhancedRecommendations[category].push(...aiGeneratedPerCategory[category]);
+        }
+      });
+    }
+
     const duration = Date.now() - startTime;
     
     log('info', 'Recommendations generated successfully', {
@@ -252,6 +272,7 @@ Make the categories relevant to the season, location, and context. Be specific w
       aiDuration: `${aiDuration}ms`,
       categories: Object.keys(enhancedRecommendations).length,
       totalRecipes: Object.values(enhancedRecommendations).reduce((sum, recipes) => sum + recipes.length, 0),
+      aiGeneratedCount: aiGeneratedCount,
       season,
       hasLocation,
       upcomingHoliday: !!upcomingHoliday
@@ -296,6 +317,457 @@ Make the categories relevant to the season, location, and context. Be specific w
     });
     
     throw new Error(`AI request failed: ${error.message}`);
+  }
+}
+
+// Generate AI-only recipes (not enhanced with search results)
+export async function generateAIOnlyRecipes(location, date, count, env, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    log('info', 'Generating AI-only recipes', {
+      requestId,
+      count,
+      hasLocation: !!location
+    });
+
+    // Format the date for better context
+    const dateObj = new Date(date);
+    const month = dateObj.toLocaleString('default', { month: 'long' });
+    const season = getSeason(dateObj);
+    
+    // Determine context dynamically
+    const hasLocation = location && location.trim() !== '';
+    const upcomingHoliday = getUpcomingHoliday(date);
+    
+    // Create enhanced prompt for AI-only recipes
+    const locationContext = hasLocation ? `Location: ${location}` : 'Location: Not specified';
+    const promptContext = hasLocation ? 
+      'Consider local cuisine, regional ingredients, and specialties specific to this area.' : 
+      'Focus on practical, accessible recipes that work anywhere.';
+    
+    // Build dynamic prompt for AI-only recipes
+    let basePrompt = `Generate ${count} creative and unique recipe recommendations. ${promptContext}`;
+    
+    if (upcomingHoliday) {
+      basePrompt += ` It's near ${upcomingHoliday}, so include holiday-appropriate recipes.`;
+    } else {
+      basePrompt += ` It's ${season} in ${month}, so focus on seasonal ingredients and ${season.toLowerCase()}-appropriate dishes.`;
+    }
+    
+    const prompt = `${basePrompt}
+
+${locationContext}
+Date: ${date}
+Season: ${season}
+Month: ${month}
+
+Please provide ${count} specific dish recommendations. Format your response as a JSON array with this structure:
+["dish1", "dish2", "dish3", ...]
+
+Make the dishes creative, unique, and specific. Be descriptive with dish names.`;
+
+    const aiStartTime = Date.now();
+    
+    log('debug', 'Sending AI-only recipe request to Cloudflare AI', {
+      requestId,
+      model: '@cf/meta/llama-3.1-8b-instruct',
+      hasLocation,
+      season,
+      month,
+      upcomingHoliday: !!upcomingHoliday,
+      count
+    });
+    
+    metrics.increment('ai_only_requests', 1, { 
+      model: '@cf/meta/llama-3.1-8b-instruct',
+      hasLocation: (!!location).toString(),
+      season
+    });
+
+    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      prompt,
+      max_tokens: 1000
+    });
+
+    const aiDuration = Date.now() - aiStartTime;
+    metrics.timing('ai_only_request_duration', aiDuration, { model: '@cf/meta/llama-3.1-8b-instruct' });
+    
+    log('info', 'AI-only recipe response received', { 
+      requestId,
+      duration: `${aiDuration}ms`,
+      responseType: typeof response,
+      hasResponse: !!response
+    });
+
+    // Validate response structure
+    if (!response) {
+      metrics.increment('ai_only_errors', 1, { 
+        type: 'invalid_response',
+        model: '@cf/meta/llama-3.1-8b-instruct' 
+      });
+      throw new Error('Invalid response from Cloudflare AI');
+    }
+
+    // Extract content from response
+    let content;
+    if (response.response) {
+      content = response.response;
+    } else if (response.content) {
+      content = response.content;
+    } else if (typeof response === 'string') {
+      content = response;
+    } else {
+      log('warn', 'Unexpected AI-only response structure', {
+        requestId,
+        responseKeys: Object.keys(response),
+        responseType: typeof response
+      });
+      metrics.increment('ai_only_errors', 1, { 
+        type: 'unexpected_structure',
+        model: '@cf/meta/llama-3.1-8b-instruct' 
+      });
+      throw new Error('Unexpected response structure from Cloudflare AI');
+    }
+
+    // Parse the JSON response
+    const parseStartTime = Date.now();
+    let aiRecipes;
+    
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        aiRecipes = JSON.parse(jsonMatch[0]);
+      } else {
+        // Try to parse the content directly
+        try {
+          aiRecipes = JSON.parse(content);
+        } catch (directParseError) {
+          // If direct parsing fails, try to extract array from the content
+          const arrayMatch = content.match(/\[.*\]/);
+          if (arrayMatch) {
+            aiRecipes = JSON.parse(arrayMatch[0]);
+          } else {
+            throw directParseError;
+          }
+        }
+      }
+      
+      // Ensure it's an array
+      if (!Array.isArray(aiRecipes)) {
+        throw new Error('Response is not an array');
+      }
+      
+      const parseDuration = Date.now() - parseStartTime;
+      metrics.timing('ai_only_response_parse_duration', parseDuration);
+      metrics.increment('ai_only_success', 1, { 
+        model: '@cf/meta/llama-3.1-8b-instruct',
+        hasLocation: (!!location).toString(),
+        season
+      });
+      
+      log('info', 'AI-only recipes parsed successfully', {
+        requestId,
+        parseDuration: `${parseDuration}ms`,
+        recipesCount: aiRecipes.length
+      });
+
+      // Convert to recipe objects with proper structure
+      const formattedRecipes = aiRecipes.slice(0, count).map((dish, index) => ({
+        id: `ai_only_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: dish,
+        description: `A creative ${dish.toLowerCase()} perfect for ${season.toLowerCase()} cooking`,
+        yield: '4 servings',
+        prepTime: '15 minutes',
+        cookTime: '30 minutes',
+        image_url: null,
+        source_url: null,
+        type: 'ai_generated_recipe',
+        source: 'ai_only_generation',
+        aiGenerated: true,
+        season,
+        month,
+        location: location || null
+      }));
+
+      const duration = Date.now() - startTime;
+      
+      log('info', 'AI-only recipes generated successfully', {
+        requestId,
+        duration: `${duration}ms`,
+        aiDuration: `${aiDuration}ms`,
+        requested: count,
+        generated: formattedRecipes.length,
+        season,
+        hasLocation,
+        upcomingHoliday: !!upcomingHoliday
+      });
+
+      return formattedRecipes;
+      
+    } catch (parseError) {
+      metrics.increment('ai_only_errors', 1, { 
+        type: 'parse_error',
+        model: '@cf/meta/llama-3.1-8b-instruct' 
+      });
+      throw new Error(`Could not parse AI-only response: ${parseError.message}`);
+    }
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'AI-only recipe generation failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+      count
+    });
+    
+    metrics.increment('ai_only_request_errors', 1, { 
+      reason: 'ai_error',
+      model: '@cf/meta/llama-3.1-8b-instruct'
+    });
+    
+    // Return empty array on error
+    return [];
+  }
+}
+
+export async function generateAIOnlyRecipesPerCategory(location, date, totalCount, categories, env, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    log('info', 'Generating AI-only recipes per category', {
+      requestId,
+      totalCount,
+      categories: categories.length,
+      hasLocation: !!location
+    });
+
+    // Format the date for better context
+    const dateObj = new Date(date);
+    const month = dateObj.toLocaleString('default', { month: 'long' });
+    const season = getSeason(dateObj);
+    
+    // Determine context dynamically
+    const hasLocation = location && location.trim() !== '';
+    const upcomingHoliday = getUpcomingHoliday(date);
+    
+    // Use totalCount as recipes per category (user wants this many per category)
+    const recipesPerCategory = totalCount;
+    
+    // Create enhanced prompt for AI-only recipes per category
+    const locationContext = hasLocation ? `Location: ${location}` : 'Location: Not specified';
+    const promptContext = hasLocation ? 
+      'Consider local cuisine, regional ingredients, and specialties specific to this area.' : 
+      'Focus on practical, accessible recipes that work anywhere.';
+    
+    // Build dynamic prompt for AI-only recipes per category
+    let basePrompt = `Generate ${recipesPerCategory} creative and unique recipe recommendations for each of these categories: ${categories.join(', ')}. ${promptContext}`;
+    
+    if (upcomingHoliday) {
+      basePrompt += ` It's near ${upcomingHoliday}, so include holiday-appropriate recipes.`;
+    } else {
+      basePrompt += ` It's ${season} in ${month}, so focus on seasonal ingredients and ${season.toLowerCase()}-appropriate dishes.`;
+    }
+    
+    const prompt = `${basePrompt}
+
+${locationContext}
+Date: ${date}
+Season: ${season}
+Month: ${month}
+
+Please provide ${recipesPerCategory} specific dish recommendations for each category. Format your response as a JSON object with this structure:
+{
+  "${categories[0]}": ["dish1", "dish2", ...],
+  "${categories[1]}": ["dish1", "dish2", ...],
+  ...
+}
+
+Make the dishes creative, unique, and specific to each category. Be descriptive with dish names.`;
+
+    const aiStartTime = Date.now();
+    
+    log('debug', 'Sending AI-only per-category recipe request to Cloudflare AI', {
+      requestId,
+      model: '@cf/meta/llama-3.1-8b-instruct',
+      hasLocation,
+      season,
+      month,
+      upcomingHoliday: !!upcomingHoliday,
+      totalCount,
+      recipesPerCategory
+    });
+    
+    metrics.increment('ai_only_requests', 1, { 
+      model: '@cf/meta/llama-3.1-8b-instruct',
+      hasLocation: (!!location).toString(),
+      season
+    });
+
+    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      prompt,
+      max_tokens: 1500
+    });
+
+    const aiDuration = Date.now() - aiStartTime;
+    metrics.timing('ai_only_request_duration', aiDuration, { model: '@cf/meta/llama-3.1-8b-instruct' });
+    
+    log('info', 'AI-only per-category recipe response received', { 
+      requestId,
+      duration: `${aiDuration}ms`,
+      responseType: typeof response,
+      hasResponse: !!response
+    });
+
+    // Validate response structure
+    if (!response) {
+      metrics.increment('ai_only_errors', 1, { 
+        type: 'invalid_response',
+        model: '@cf/meta/llama-3.1-8b-instruct' 
+      });
+      throw new Error('Invalid response from Cloudflare AI');
+    }
+
+    // Extract content from response
+    let content;
+    if (response.response) {
+      content = response.response;
+    } else if (response.content) {
+      content = response.content;
+    } else if (typeof response === 'string') {
+      content = response;
+    } else {
+      log('warn', 'Unexpected AI-only per-category response structure', {
+        requestId,
+        responseKeys: Object.keys(response),
+        responseType: typeof response
+      });
+      metrics.increment('ai_only_errors', 1, { 
+        type: 'unexpected_structure',
+        model: '@cf/meta/llama-3.1-8b-instruct' 
+      });
+      throw new Error('Unexpected response structure from Cloudflare AI');
+    }
+
+    // Parse the JSON response
+    const parseStartTime = Date.now();
+    let aiRecipesByCategory;
+    
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        aiRecipesByCategory = JSON.parse(jsonMatch[0]);
+      } else {
+        // Try to parse the content directly
+        try {
+          aiRecipesByCategory = JSON.parse(content);
+        } catch (directParseError) {
+          // If direct parsing fails, try to extract object from the content
+          const objectMatch = content.match(/\{.*\}/);
+          if (objectMatch) {
+            aiRecipesByCategory = JSON.parse(objectMatch[0]);
+          } else {
+            throw directParseError;
+          }
+        }
+      }
+      
+      // Ensure it's an object
+      if (typeof aiRecipesByCategory !== 'object' || Array.isArray(aiRecipesByCategory)) {
+        throw new Error('Response is not an object');
+      }
+      
+      const parseDuration = Date.now() - parseStartTime;
+      metrics.timing('ai_only_response_parse_duration', parseDuration);
+      metrics.increment('ai_only_success', 1, { 
+        model: '@cf/meta/llama-3.1-8b-instruct',
+        hasLocation: (!!location).toString(),
+        season
+      });
+      
+      log('info', 'AI-only per-category recipes parsed successfully', {
+        requestId,
+        parseDuration: `${parseDuration}ms`,
+        categories: Object.keys(aiRecipesByCategory),
+        totalRecipes: Object.values(aiRecipesByCategory).reduce((sum, recipes) => sum + recipes.length, 0)
+      });
+
+      // Return recipe objects with source: "ai_generated" for each category
+      const formattedRecipesByCategory = {};
+      
+      Object.entries(aiRecipesByCategory).forEach(([category, dishes]) => {
+        if (Array.isArray(dishes)) {
+          formattedRecipesByCategory[category] = dishes.slice(0, recipesPerCategory).map(dish => {
+            // Handle both string dish names and object structures
+            let dishName = 'Unknown Recipe';
+            
+            if (typeof dish === 'string') {
+              dishName = dish;
+            } else if (dish && typeof dish === 'object') {
+              // Handle nested structure: dish.name.name
+              if (dish.name && dish.name.name) {
+                dishName = dish.name.name;
+              }
+              // Handle direct structure: dish.name
+              else if (dish.name && typeof dish.name === 'string') {
+                dishName = dish.name;
+              }
+              // Handle other object structures
+              else if (dish.name) {
+                dishName = String(dish.name);
+              }
+            }
+            
+            return {
+              name: dishName,
+              source: "ai_generated"
+            };
+          });
+        }
+      });
+
+      const duration = Date.now() - startTime;
+      
+      log('info', 'AI-only per-category recipes generated successfully', {
+        requestId,
+        duration: `${duration}ms`,
+        aiDuration: `${aiDuration}ms`,
+        requested: totalCount,
+        generated: Object.values(formattedRecipesByCategory).reduce((sum, recipes) => sum + recipes.length, 0),
+        season,
+        hasLocation,
+        upcomingHoliday: !!upcomingHoliday
+      });
+
+      return formattedRecipesByCategory;
+      
+    } catch (parseError) {
+      metrics.increment('ai_only_errors', 1, { 
+        type: 'parse_error',
+        model: '@cf/meta/llama-3.1-8b-instruct' 
+      });
+      throw new Error(`Could not parse AI-only per-category response: ${parseError.message}`);
+    }
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'AI-only per-category recipe generation failed', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`,
+      totalCount
+    });
+    
+    metrics.increment('ai_only_request_errors', 1, { 
+      reason: 'ai_error',
+      model: '@cf/meta/llama-3.1-8b-instruct'
+    });
+    
+    // Return empty object on error
+    return {};
   }
 }
 
@@ -351,7 +823,7 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           image_url: null,
           source_url: null,
           type: 'dish_suggestion',
-          source: 'ai_generated',
+          source: 'ai_category_generation',
           fallback: true
         }));
         
@@ -399,7 +871,7 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           image_url: null,
           source_url: null,
           type: 'dish_suggestion',
-          source: 'ai_generated',
+          source: 'ai_category_generation',
           fallback: true
         }))
       ])
@@ -722,7 +1194,7 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
       image_url: null,
       source_url: null,
       type: 'dish_suggestion',
-      source: 'ai_generated',
+      source: 'ai_category_generation',
       fallback: true
     }));
     
@@ -749,7 +1221,7 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
       id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: dish,
       type: 'dish_suggestion',
-      source: 'ai_generated',
+      source: 'ai_category_generation',
       fallback: true
     }));
   }

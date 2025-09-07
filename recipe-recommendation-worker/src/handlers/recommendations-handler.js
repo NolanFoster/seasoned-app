@@ -14,30 +14,33 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
     
     // Parse request body
     const body = await request.json();
-    const { location, date, limit = 3 } = body; // Default limit is 3 recipes per category
+    const { location, date, limit = 3, aiGenerated = 0 } = body; // Default limit is 3 recipes per category, 0 AI-generated
 
     // Validate and log input parameters
     const hasLocation = location && location.trim() !== '';
     const recommendationDate = date || new Date().toISOString().split('T')[0];
     const recipesPerCategory = Math.min(Math.max(parseInt(limit) || 3, 1), 10); // Limit between 1-10
+    const aiGeneratedCount = Math.min(Math.max(parseInt(aiGenerated) || 0, 0), 10); // AI-generated between 0-10
     
     log('info', 'Recommendation parameters parsed', {
       requestId,
       hasLocation,
       location: hasLocation ? location : 'not_specified',
       date: recommendationDate,
-      recipesPerCategory
+      recipesPerCategory,
+      aiGeneratedCount
     });
 
     // Track recommendation request metrics
     metrics.increment('recommendations_requested', 1, {
       hasLocation: String(hasLocation),
       dateProvided: String(!!date),
-      limitProvided: String(!!limit)
+      limitProvided: String(!!limit),
+      aiGeneratedRequested: String(aiGeneratedCount > 0)
     });
 
     // Get recommendations from the recommendation service
-    const recommendations = await getRecipeRecommendations(location, recommendationDate, recipesPerCategory, env, requestId);
+    const recommendations = await getRecipeRecommendations(location, recommendationDate, recipesPerCategory, aiGeneratedCount, env, requestId);
 
     const duration = Date.now() - startTime;
     metrics.timing('recommendations_duration', duration);
@@ -59,6 +62,7 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
       duration,
       categoriesCount: recommendations.recommendations ? Object.keys(recommendations.recommendations).length : 0,
       recipesPerCategory,
+      aiGeneratedCount,
       totalRecipes: recommendations.recommendations ? 
         Object.values(recommendations.recommendations).reduce((sum, recipes) => sum + recipes.length, 0) : 0,
       isAIGenerated: !recommendations.isMockData,
@@ -69,7 +73,8 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
       ...recommendations,
       requestId,
       processingTime: `${duration}ms`,
-      recipesPerCategory
+      recipesPerCategory,
+      aiGeneratedCount
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
