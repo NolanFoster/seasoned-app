@@ -4,6 +4,7 @@
 
 import { log } from '../../shared/utility-functions.js';
 import { metrics, sendAnalytics } from './shared-utilities.js';
+import { getRecipeFromKV as getRecipeFromKVShared } from '../../shared/kv-storage.js';
 
 // Holiday detection utility
 function getUpcomingHoliday(date) {
@@ -568,7 +569,8 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
           });
           
           if (searchResults.results && searchResults.results.length > 0) {
-            const recipes = searchResults.results.slice(0, limit).map(node => {
+            // First, extract basic recipe data from search results
+            const searchRecipes = searchResults.results.slice(0, limit).map(node => {
               // Extract properties from the node
               const properties = node.properties || {};
               
@@ -632,6 +634,15 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
               };
             });
             
+            // Extract recipe IDs for KV lookup
+            const recipeIds = searchRecipes.map(recipe => recipe.id);
+            
+            // Query KV storage for additional recipe details
+            const kvRecipes = await getRecipesFromKV(recipeIds, env, requestId);
+            
+            // Merge search results with KV data
+            const recipes = mergeSearchResultsWithKV(searchRecipes, kvRecipes, requestId);
+            
             const duration = Date.now() - startTime;
             metrics.timing('recipe_search_duration', duration, { source: 'smart_search_database' });
             metrics.increment('recipes_found_via_smart_search', recipes.length);
@@ -640,15 +651,19 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
               metrics.increment('smart_search_similarity_score', Math.round(searchResults.similarityScore * 100));
             }
             
-            log('info', 'Recipes found via smart-search database service binding', {
+            const kvEnrichedCount = recipes.filter(r => r.kvEnriched).length;
+            
+            log('info', 'Recipes found via smart-search database service binding with KV enrichment', {
               requestId,
               category: categoryName,
               found: recipes.length,
               requested: limit,
               duration: `${duration}ms`,
-              source: 'smart_search_database',
+              source: 'smart_search_database_kv_enriched',
               strategy: searchResults.strategy || 'unknown',
-              similarityScore: searchResults.similarityScore || 0
+              similarityScore: searchResults.similarityScore || 0,
+              kvEnriched: kvEnrichedCount,
+              kvEnrichmentRate: recipes.length > 0 ? (kvEnrichedCount / recipes.length * 100).toFixed(1) + '%' : '0%'
             });
             
             return recipes;
@@ -737,6 +752,242 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
       source: 'ai_generated',
       fallback: true
     }));
+  }
+}
+
+// Query KV storage for recipe details by ID using shared library
+export async function getRecipeFromKV(recipeId, env, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    if (!env.RECIPE_STORAGE) {
+      log('warn', 'KV binding not available for recipe storage', { requestId, recipeId });
+      return null;
+    }
+    
+    log('debug', 'Querying KV for recipe details using shared library', { requestId, recipeId });
+    
+    const result = await getRecipeFromKVShared(env, recipeId);
+    
+    if (!result.success) {
+      log('debug', 'Recipe not found in KV storage', { 
+        requestId, 
+        recipeId, 
+        error: result.error 
+      });
+      return null;
+    }
+    
+    const recipe = result.recipe;
+    const duration = Date.now() - startTime;
+    
+    log('debug', 'Recipe retrieved from KV storage using shared library', {
+      requestId,
+      recipeId,
+      duration: `${duration}ms`,
+      hasName: !!recipe.data?.name,
+      hasDescription: !!recipe.data?.description,
+      hasIngredients: !!recipe.data?.ingredients,
+      hasInstructions: !!recipe.data?.instructions,
+      recipeVersion: recipe.version,
+      scrapedAt: recipe.scrapedAt
+    });
+    
+    metrics.timing('kv_recipe_query_duration', duration);
+    metrics.increment('kv_recipe_queries_success', 1);
+    
+    // Return the recipe data in the expected format
+    return recipe.data || recipe;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'Failed to query KV for recipe using shared library', {
+      requestId,
+      recipeId,
+      error: error.message,
+      duration: `${duration}ms`
+    });
+    
+    metrics.timing('kv_recipe_query_duration', duration);
+    metrics.increment('kv_recipe_queries_error', 1);
+    
+    return null;
+  }
+}
+
+// Merge search results with KV data, prioritizing KV data for missing fields
+export function mergeSearchResultsWithKV(searchResults, kvRecipes, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    const mergedResults = searchResults.map(searchResult => {
+      const recipeId = searchResult.id;
+      const kvRecipe = kvRecipes[recipeId];
+      
+      if (!kvRecipe) {
+        // No KV data available, return search result as-is
+        return {
+          ...searchResult,
+          source: 'search_database_only',
+          kvEnriched: false
+        };
+      }
+      
+      // Merge data, prioritizing KV data for missing or incomplete fields
+      const mergedRecipe = {
+        id: recipeId,
+        name: searchResult.name || kvRecipe.name || 'Unknown Recipe',
+        description: searchResult.description || kvRecipe.description || '',
+        yield: searchResult.yield || kvRecipe.yield || kvRecipe.servings || null,
+        prepTime: searchResult.prepTime || kvRecipe.prepTime || kvRecipe.prepTimeMinutes || null,
+        cookTime: searchResult.cookTime || kvRecipe.cookTime || kvRecipe.cookTimeMinutes || null,
+        image_url: searchResult.image_url || kvRecipe.image_url || kvRecipe.image || null,
+        source_url: searchResult.source_url || kvRecipe.source_url || kvRecipe.url || null,
+        type: 'recipe',
+        source: 'search_database_kv_enriched',
+        kvEnriched: true,
+        
+        // Additional fields from KV that might not be in search results
+        ingredients: kvRecipe.ingredients || null,
+        instructions: kvRecipe.instructions || null,
+        nutrition: kvRecipe.nutrition || null,
+        tags: kvRecipe.tags || null,
+        cuisine: kvRecipe.cuisine || null,
+        difficulty: kvRecipe.difficulty || null,
+        totalTime: kvRecipe.totalTime || kvRecipe.totalTimeMinutes || null,
+        
+        // Keep original search result data for reference
+        searchData: {
+          name: searchResult.name,
+          description: searchResult.description,
+          yield: searchResult.yield,
+          prepTime: searchResult.prepTime,
+          cookTime: searchResult.cookTime,
+          image_url: searchResult.image_url,
+          source_url: searchResult.source_url
+        }
+      };
+      
+      return mergedRecipe;
+    });
+    
+    const duration = Date.now() - startTime;
+    const enrichedCount = mergedResults.filter(r => r.kvEnriched).length;
+    
+    log('debug', 'Search results merged with KV data', {
+      requestId,
+      totalResults: mergedResults.length,
+      enrichedCount,
+      duration: `${duration}ms`
+    });
+    
+    metrics.timing('search_kv_merge_duration', duration);
+    metrics.increment('search_results_merged', mergedResults.length);
+    metrics.increment('search_results_kv_enriched', enrichedCount);
+    
+    return mergedResults;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'Failed to merge search results with KV data', {
+      requestId,
+      error: error.message,
+      duration: `${duration}ms`
+    });
+    
+    metrics.timing('search_kv_merge_duration', duration);
+    metrics.increment('search_kv_merge_errors', 1);
+    
+    // Return original search results as fallback
+    return searchResults.map(result => ({
+      ...result,
+      source: 'search_database_only',
+      kvEnriched: false
+    }));
+  }
+}
+
+// Query multiple recipes from KV storage in parallel using shared library
+export async function getRecipesFromKV(recipeIds, env, requestId) {
+  const startTime = Date.now();
+  
+  try {
+    if (!env.RECIPE_STORAGE || !recipeIds || recipeIds.length === 0) {
+      log('debug', 'No KV binding or recipe IDs provided', { 
+        requestId, 
+        hasKV: !!env.RECIPE_STORAGE,
+        recipeCount: recipeIds?.length || 0 
+      });
+      return {};
+    }
+    
+    log('debug', 'Querying KV for multiple recipes using shared library', { 
+      requestId, 
+      recipeCount: recipeIds.length,
+      recipeIds: recipeIds.slice(0, 5) // Log first 5 IDs for debugging
+    });
+    
+    // Query all recipes in parallel using the shared library
+    const kvPromises = recipeIds.map(async (recipeId) => {
+      try {
+        const result = await getRecipeFromKVShared(env, recipeId);
+        if (result.success) {
+          // Return the recipe data in the expected format
+          const recipe = result.recipe.data || result.recipe;
+          return { id: recipeId, recipe };
+        }
+        return { id: recipeId, recipe: null };
+      } catch (error) {
+        log('warn', 'Failed to retrieve recipe from KV using shared library', {
+          requestId,
+          recipeId,
+          error: error.message
+        });
+        return { id: recipeId, recipe: null };
+      }
+    });
+    
+    const results = await Promise.all(kvPromises);
+    
+    // Convert to a map for easy lookup
+    const recipeMap = {};
+    let successCount = 0;
+    
+    for (const result of results) {
+      if (result.recipe) {
+        recipeMap[result.id] = result.recipe;
+        successCount++;
+      }
+    }
+    
+    const duration = Date.now() - startTime;
+    
+    log('info', 'KV batch query completed using shared library', {
+      requestId,
+      requested: recipeIds.length,
+      found: successCount,
+      duration: `${duration}ms`
+    });
+    
+    metrics.timing('kv_batch_recipe_query_duration', duration);
+    metrics.increment('kv_batch_recipe_queries', 1);
+    metrics.increment('kv_recipes_found', successCount);
+    
+    return recipeMap;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    log('error', 'Failed to query KV for multiple recipes using shared library', {
+      requestId,
+      recipeCount: recipeIds?.length || 0,
+      error: error.message,
+      duration: `${duration}ms`
+    });
+    
+    metrics.timing('kv_batch_recipe_query_duration', duration);
+    metrics.increment('kv_batch_recipe_queries_error', 1);
+    
+    return {};
   }
 }
 

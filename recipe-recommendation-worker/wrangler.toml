@@ -25,6 +25,11 @@ service = "recipe-search-db"
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"
 
+# KV Namespace for recipe storage
+[[kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "dd001c20659a4d6982f6d650abcac880"
+
 [env.production.ai]
 binding = "AI"
 
@@ -76,3 +81,7 @@ service = "staging-recipe-search-db"
 [[env.staging.services]]
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"
+
+[[env.staging.kv_namespaces]]
+binding = "RECIPE_STORAGE"
+id = "3f8a3b17db9e4f8ea3eae83d864ad518"
