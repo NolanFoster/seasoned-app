@@ -8,10 +8,16 @@ import {
   generateAIOnlyRecipesPerCategory,
   getRecipeRecommendations
 } from '../src/recommendation-service.js';
+import { generateRecipeImages } from '../src/utils/image-generator.js';
 
 // Mock the shared KV storage library
 vi.mock('../../shared/kv-storage.js', () => ({
   getRecipeFromKV: vi.fn()
+}));
+
+// Mock the image generator utility
+vi.mock('../src/utils/image-generator.js', () => ({
+  generateRecipeImages: vi.fn()
 }));
 
 describe('AI-Generated Recipes Functions', () => {
@@ -28,8 +34,19 @@ describe('AI-Generated Recipes Functions', () => {
       AI: mockAI,
       RECIPE_STORAGE: {
         get: vi.fn()
+      },
+      AI_IMAGE_WORKER: {
+        fetch: vi.fn()
       }
     };
+
+    // Mock the image generation function to return recipes with mock image URLs
+    vi.mocked(generateRecipeImages).mockImplementation(async (recipes) => {
+      return recipes.map(recipe => ({
+        ...recipe,
+        image_url: `https://images.nolanfoster.me/mock-${recipe.name.toLowerCase().replace(/\s+/g, '-')}.jpg`
+      }));
+    });
   });
 
   describe('generateAIOnlyRecipes', () => {
@@ -58,8 +75,22 @@ describe('AI-Generated Recipes Functions', () => {
         aiGenerated: true,
         season: 'Summer',
         month: 'July',
-        location: 'San Francisco'
+        location: 'San Francisco',
+        image_url: 'https://images.nolanfoster.me/mock-grilled-salmon-with-lemon-herb-butter.jpg'
       });
+
+      // Verify that image generation was called
+      expect(generateRecipeImages).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'Grilled Salmon with Lemon Herb Butter'
+          })
+        ]),
+        mockEnv,
+        requestId,
+        'realistic',
+        '1:1'
+      );
     });
 
     it('should handle AI response with different structure', async () => {

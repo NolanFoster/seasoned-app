@@ -47,3 +47,4 @@ export function categorizeError(error, context = {}) {
   
   return { category, severity, context };
 }
+

@@ -25,6 +25,11 @@ service = "recipe-search-db"
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"
 
+# Service binding to AI image generation worker
+[[services]]
+binding = "AI_IMAGE_WORKER"
+service = "ai-image-generation-worker"
+
 # KV Namespace for recipe storage
 [[kv_namespaces]]
 binding = "RECIPE_STORAGE"
@@ -45,6 +50,10 @@ service = "recipe-search-db"
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"
 
+[[env.production.services]]
+binding = "AI_IMAGE_WORKER"
+service = "ai-image-generation-worker"
+
 [env.preview]
 name = "preview-recipe-recommendation-worker"
 
@@ -62,6 +71,10 @@ service = "recipe-search-db"
 [[env.preview.services]]
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"
+
+[[env.preview.services]]
+binding = "AI_IMAGE_WORKER"
+service = "ai-image-generation-worker"
 
 # Staging environment
 [env.staging]
@@ -81,6 +94,10 @@ service = "staging-recipe-search-db"
 [[env.staging.services]]
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"
+
+[[env.staging.services]]
+binding = "AI_IMAGE_WORKER"
+service = "ai-image-generation-worker"
 
 [[env.staging.kv_namespaces]]
 binding = "RECIPE_STORAGE"
