@@ -38,7 +38,7 @@ describe('Generate Handler - Unit Tests', () => {
         return Promise.resolve({
           data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
         });
-      } else if (model === 'llama-4-scout-17b-16e-instruct') {
+      } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
         return Promise.resolve({
           response: `Chicken Rice Bowl
 
@@ -113,7 +113,7 @@ Serves: 4`
 
       // Verify AI calls were made
       expect(mockAI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', expect.any(Object));
-      expect(mockAI.run).toHaveBeenCalledWith('llama-4-scout-17b-16e-instruct', expect.any(Object));
+      expect(mockAI.run).toHaveBeenCalledWith('@cf/meta/llama-4-scout-17b-16e-instruct', expect.any(Object));
       expect(mockVectors.query).toHaveBeenCalled();
     });
 
