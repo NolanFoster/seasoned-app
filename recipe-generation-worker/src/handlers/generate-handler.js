@@ -247,7 +247,7 @@ async function generateRecipeWithAI(requestData, env) {
             { prompt: operationData.prompt },
             { response: operationData.llmResponse, structuredRecipe: generatedRecipe },
             {
-              model: 'llama-3-8b-instruct',
+              model: 'llama-4-scout-17b-16e-instruct',
               provider: 'cloudflare',
               metadata: {
                 similarRecipesCount: similarRecipes.length,
@@ -433,7 +433,7 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   operationData.prompt = prompt;
 
   // Generate recipe using LLaMA
-  const response = await aiBinding.run('@cf/meta/llama-3.1-8b-instruct', {
+  const response = await aiBinding.run('llama-4-scout-17b-16e-instruct', {
     messages: [
       {
         role: 'system',
