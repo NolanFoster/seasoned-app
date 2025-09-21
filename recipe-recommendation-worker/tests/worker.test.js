@@ -24,7 +24,7 @@ import {
   searchRecipeByCategory,
   getRecipeRecommendations,
   extractCookingTerms
-} from '../src/index.js';
+} from '../src/recommendation-service.js';
 
 // Mock environment
 const mockEnv = {

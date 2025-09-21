@@ -6,6 +6,13 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     pool: 'forks',
+    transformMode: {
+      web: [/\.[jt]sx?$/],
+      ssr: [/\.[jt]sx?$/]
+    },
+    deps: {
+      inline: ['miniflare']
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],

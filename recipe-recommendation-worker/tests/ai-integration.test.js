@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getRecipeRecommendations } from '../src/index.js';
+import { getRecipeRecommendations } from '../src/recommendation-service.js';
 
 // Mock environment with AI binding
 const mockEnvWithAI = {
