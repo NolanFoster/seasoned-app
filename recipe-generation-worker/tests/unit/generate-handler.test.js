@@ -33,31 +33,72 @@ describe('Generate Handler - Unit Tests', () => {
     vi.clearAllMocks();
 
     // Default mock responses
-    mockAI.run.mockImplementation((model, _params) => {
+    mockAI.run.mockImplementation((model, params) => {
       if (model === '@cf/baai/bge-small-en-v1.5') {
         return Promise.resolve({
           data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
         });
       } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+        // Extract request info from the user prompt to make dynamic responses
+        const userMessage = params.messages?.find(m => m.role === 'user')?.content || '';
+
+        // Determine cuisine and dietary from the prompt
+        let cuisine = 'Asian-inspired';
+        let dietary = [];
+
+        if (userMessage.includes('asian')) {
+          cuisine = 'asian';
+        }
+        if (userMessage.includes('vegetarian')) {
+          dietary = ['vegetarian'];
+        }
+        if (userMessage.includes('gluten-free')) {
+          dietary.push('gluten-free');
+        }
+        if (userMessage.includes('low-sodium')) {
+          dietary.push('low-sodium');
+        }
+
+        // Return valid JSON matching our schema
+        const mockRecipe = {
+          name: 'Chicken Rice Bowl',
+          description: 'A delicious and easy chicken rice bowl perfect for a quick meal',
+          ingredients: [
+            '2 cups cooked rice',
+            '1 lb chicken breast, diced',
+            '2 tbsp olive oil',
+            '1 onion, chopped',
+            'Salt and pepper to taste'
+          ],
+          instructions: [
+            'Heat olive oil in a large pan over medium heat',
+            'Cook chicken until golden brown, about 6-8 minutes',
+            'Add onion and cook until soft, about 3-4 minutes',
+            'Season with salt and pepper',
+            'Serve over rice and enjoy'
+          ],
+          prepTime: '10 minutes',
+          cookTime: '15 minutes',
+          totalTime: '25 minutes',
+          servings: '4 servings',
+          difficulty: 'Easy',
+          cuisine: cuisine,
+          dietary: dietary,
+          tips: [
+            'Use leftover rice for best results',
+            'Can substitute chicken with tofu for vegetarian option'
+          ],
+          nutrition: {
+            calories: '350 per serving',
+            protein: '25g',
+            carbs: '40g',
+            fat: '8g'
+          },
+          storage: 'Store leftovers in refrigerator for up to 3 days'
+        };
+
         return Promise.resolve({
-          response: `Chicken Rice Bowl
-
-Ingredients:
-- 2 cups cooked rice
-- 1 lb chicken breast, diced
-- 2 tbsp olive oil
-- 1 onion, chopped
-- Salt and pepper to taste
-
-Instructions:
-1. Heat olive oil in a large pan
-2. Cook chicken until golden brown
-3. Add onion and cook until soft
-4. Serve over rice
-
-Prep time: 10 minutes
-Cook time: 15 minutes
-Serves: 4`
+          response: JSON.stringify(mockRecipe)
         });
       }
     });
