@@ -578,25 +578,6 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
     structuredRecipe.dietary = requestData.dietary || [];
   }
 
-  // Flatten complex ingredient structures to simple string arrays
-  if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
-    const flatIngredients = [];
-
-    // Handle categorized ingredients (e.g., {chicken: [...], spices: [...]})
-    Object.values(structuredRecipe.ingredients).forEach(category => {
-      if (Array.isArray(category)) {
-        category.forEach(item => {
-          if (typeof item === 'string') {
-            flatIngredients.push(item);
-          } else if (item.name && item.quantity) {
-            flatIngredients.push(`${item.quantity} ${item.name}`);
-          }
-        });
-      }
-    });
-
-    structuredRecipe.ingredients = flatIngredients;
-  }
 
   // Normalize time formats (PT30M -> "30 minutes")
   if (structuredRecipe.prepTime && structuredRecipe.prepTime.startsWith('PT')) {
