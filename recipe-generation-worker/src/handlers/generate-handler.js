@@ -525,8 +525,9 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
           'recipes are realistic for home cooks. Balance flavors scientifically and suggest helpful tips.' +
           '\n- **Inclusivity and Ethics**: Promote sustainable practices and respect cultural origins. ' +
           'Focus on balanced nutrition.' +
-          '\n- **Output Format**: You must respond with valid JSON only, following the exact schema provided. ' +
-          'Do not include any text outside the JSON structure.'
+          '\n- **Output Format**: You must respond with STRICTLY VALID JSON only. Use double quotes for all strings and property names. ' +
+          'Follow the exact schema provided. Do not include any text outside the JSON structure. ' +
+          'Do not use JavaScript object syntax - use proper JSON format with double quotes.'
       },
       {
         role: 'user',
@@ -551,12 +552,12 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   // Store LLM response for tracing
   operationData.llmResponse = response.response;
 
-  // Parse the JSON response
-  let structuredRecipe;
-  try {
-    structuredRecipe = JSON.parse(response.response);
-  } catch (error) {
-    throw new Error(`Failed to parse JSON response from LLaMA: ${error.message}`);
+  // Parse the JSON response and flatten any nested structure
+  let structuredRecipe = response.response;
+
+  // Handle nested recipe structure (flatten recipe.recipe to just recipe)
+  if (structuredRecipe.recipe && typeof structuredRecipe.recipe === 'object') {
+    structuredRecipe = structuredRecipe.recipe;
   }
 
   // Add metadata fields
@@ -575,6 +576,50 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   }
   if (!structuredRecipe.dietary) {
     structuredRecipe.dietary = requestData.dietary || [];
+  }
+
+  // Flatten complex ingredient structures to simple string arrays
+  if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
+    const flatIngredients = [];
+
+    // Handle categorized ingredients (e.g., {chicken: [...], spices: [...]})
+    Object.values(structuredRecipe.ingredients).forEach(category => {
+      if (Array.isArray(category)) {
+        category.forEach(item => {
+          if (typeof item === 'string') {
+            flatIngredients.push(item);
+          } else if (item.name && item.quantity) {
+            flatIngredients.push(`${item.quantity} ${item.name}`);
+          }
+        });
+      }
+    });
+
+    structuredRecipe.ingredients = flatIngredients;
+  }
+
+  // Normalize time formats (PT30M -> "30 minutes")
+  if (structuredRecipe.prepTime && structuredRecipe.prepTime.startsWith('PT')) {
+    structuredRecipe.prepTime = normalizeISOTime(structuredRecipe.prepTime);
+  }
+  if (structuredRecipe.cookTime && structuredRecipe.cookTime.startsWith('PT')) {
+    structuredRecipe.cookTime = normalizeISOTime(structuredRecipe.cookTime);
+  }
+  if (structuredRecipe.totalTime && structuredRecipe.totalTime.startsWith('PT')) {
+    structuredRecipe.totalTime = normalizeISOTime(structuredRecipe.totalTime);
+  }
+
+  // Ensure servings is a string
+  if (typeof structuredRecipe.servings === 'number') {
+    structuredRecipe.servings = `${structuredRecipe.servings} servings`;
+  }
+
+  // Handle dietary considerations field name variations
+  if (structuredRecipe.dietaryConsiderations && !structuredRecipe.dietary) {
+    structuredRecipe.dietary = Array.isArray(structuredRecipe.dietaryConsiderations)
+      ? structuredRecipe.dietaryConsiderations
+      : [structuredRecipe.dietaryConsiderations];
+    delete structuredRecipe.dietaryConsiderations;
   }
 
   return structuredRecipe;
@@ -716,10 +761,35 @@ function buildLLaMAPrompt(requestData, contexts) {
 - Cuisine type
 - Any dietary considerations
 - Helpful cooking tips and variations
-- Estimated nutritional information
-- Storage recommendations
 
 Make the recipe practical for home cooks with commonly available ingredients. Include food safety notes where appropriate and provide measurement conversions when helpful.`;
 
   return prompt;
+}
+
+/**
+ * Normalize ISO 8601 duration format (PT30M) to readable format ("30 minutes")
+ */
+function normalizeISOTime(isoTime) {
+  if (!isoTime || !isoTime.startsWith('PT')) {
+    return isoTime;
+  }
+
+  const match = isoTime.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!match) {
+    return isoTime;
+  }
+
+  const hours = parseInt(match[1] || 0);
+  const minutes = parseInt(match[2] || 0);
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes > 1 ? 's' : ''}`;
+  } else if (hours > 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''}`;
+  } else if (minutes > 0) {
+    return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+  }
+
+  return isoTime;
 }

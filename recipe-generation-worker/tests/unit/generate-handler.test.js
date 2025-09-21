@@ -98,7 +98,7 @@ describe('Generate Handler - Unit Tests', () => {
         };
 
         return Promise.resolve({
-          response: JSON.stringify(mockRecipe)
+          response: mockRecipe
         });
       }
     });
