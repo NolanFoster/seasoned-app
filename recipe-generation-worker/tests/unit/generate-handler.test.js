@@ -719,4 +719,122 @@ describe('Generate Handler - Unit Tests', () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe('Recipe Elevation Integration', () => {
+    it('should elevate recipe when elevate option is true in mock mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeDefined();
+      expect(data.recipe.elevationMethod).toBe('mock-ai');
+      expect(data.recipe.mockMode).toBe(true);
+    });
+
+    it('should not elevate recipe when elevate option is false', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+      expect(data.recipe.elevationMethod).toBeUndefined();
+    });
+
+    it('should not elevate recipe when elevate option is not provided', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+      expect(data.recipe.elevationMethod).toBeUndefined();
+    });
+
+    it('should work with recipeName and elevation', async () => {
+      const requestBody = {
+        recipeName: 'Chicken Teriyaki Bowl',
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should work with complex request and elevation', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice', 'vegetables'],
+        cuisine: 'asian',
+        dietary: ['gluten-free', 'low-sodium'],
+        servings: 4,
+        maxCookTime: 30,
+        mealType: 'dinner',
+        cookingMethod: 'stir-fry',
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.cuisine).toBe('asian');
+      expect(data.recipe.dietary).toEqual(['gluten-free', 'low-sodium']);
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should handle elevation with mixed recipeName and additional constraints', async () => {
+      const requestBody = {
+        recipeName: 'Healthy Pasta Salad',
+        dietary: ['vegetarian'],
+        servings: 6,
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.dietary).toEqual(['vegetarian']);
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+  });
 });
