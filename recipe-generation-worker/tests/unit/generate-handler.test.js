@@ -719,4 +719,615 @@ describe('Generate Handler - Unit Tests', () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe('Recipe Elevation Integration', () => {
+    it('should elevate recipe when elevate option is true in mock mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeDefined();
+      expect(data.recipe.elevationMethod).toBe('mock-ai');
+      expect(data.recipe.mockMode).toBe(true);
+    });
+
+    it('should not elevate recipe when elevate option is false', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+      expect(data.recipe.elevationMethod).toBeUndefined();
+    });
+
+    it('should not elevate recipe when elevate option is not provided', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+      expect(data.recipe.elevationMethod).toBeUndefined();
+    });
+
+    it('should work with recipeName and elevation', async () => {
+      const requestBody = {
+        recipeName: 'Chicken Teriyaki Bowl',
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should work with complex request and elevation', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice', 'vegetables'],
+        cuisine: 'asian',
+        dietary: ['gluten-free', 'low-sodium'],
+        servings: 4,
+        maxCookTime: 30,
+        mealType: 'dinner',
+        cookingMethod: 'stir-fry',
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.cuisine).toBe('asian');
+      expect(data.recipe.dietary).toEqual(['gluten-free', 'low-sodium']);
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should handle elevation with mixed recipeName and additional constraints', async () => {
+      const requestBody = {
+        recipeName: 'Healthy Pasta Salad',
+        dietary: ['vegetarian'],
+        servings: 6,
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.dietary).toEqual(['vegetarian']);
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should handle elevation failure gracefully in mock mode', async () => {
+      // Create an environment that will cause elevateRecipe to fail
+      const failingEnv = {
+        AI: {
+          run: vi.fn().mockRejectedValue(new Error('AI service unavailable'))
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, failingEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.elevationError).toBe('Recipe elevation failed, returning original recipe');
+      expect(data.recipe.elevationFailed).toBe(true);
+      expect(data.recipe.name).not.toContain('Elevated');
+    });
+
+    it('should handle elevation failure gracefully in AI mode', async () => {
+      // Create an environment that allows recipe generation but fails elevation
+      const failingEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            // Allow recipe generation to succeed
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              // Check if this is an elevation call by looking for the culinary expert prompt
+              const systemMessage = _params.messages?.find(m => m.role === 'system')?.content || '';
+              if (systemMessage.includes('expert culinary teacher')) {
+                // This is an elevation call - make it fail
+                return Promise.reject(new Error('Elevation AI service unavailable'));
+              } else {
+                // This is a regular recipe generation call - make it succeed
+                return Promise.resolve({
+                  response: {
+                    name: 'Chicken Rice Bowl',
+                    description: 'A delicious and easy chicken rice bowl',
+                    ingredients: ['2 cups cooked rice', '1 lb chicken breast, diced'],
+                    instructions: ['Heat oil', 'Cook chicken', 'Serve over rice'],
+                    prepTime: '10 minutes',
+                    cookTime: '15 minutes',
+                    totalTime: '25 minutes',
+                    servings: '4 servings',
+                    difficulty: 'Easy',
+                    cuisine: 'Asian',
+                    dietary: []
+                  }
+                });
+              }
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, failingEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.elevationError).toBe('Recipe elevation failed, returning original recipe');
+      expect(data.recipe.elevationFailed).toBe(true);
+      expect(data.recipe.name).not.toContain('Elevated');
+    });
+
+    it('should handle elevation with truthy but non-boolean values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: 'true' // String instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because 'true' !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with numeric values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: 1 // Number instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because 1 !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with null values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: null
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because null !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+  });
+
+  describe('ISO Time Normalization', () => {
+    it('should normalize ISO time formats in recipe generation', async () => {
+      // Create a mock environment that returns a recipe with ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe',
+                  description: 'A test recipe with ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'PT15M', // ISO format
+                  cookTime: 'PT1H30M', // ISO format with hours and minutes
+                  totalTime: 'PT2H', // ISO format with hours only
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('15 minutes');
+      expect(data.recipe.cookTime).toBe('1 hour 30 minutes');
+      expect(data.recipe.totalTime).toBe('2 hours');
+    });
+
+    it('should handle various ISO time format edge cases', async () => {
+      // Create a mock environment that returns a recipe with various ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe 2',
+                  description: 'A test recipe with various ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'PT0M', // Zero minutes
+                  cookTime: 'PT1H', // One hour
+                  totalTime: 'PT30M', // 30 minutes
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('PT0M'); // Should remain unchanged for zero minutes
+      expect(data.recipe.cookTime).toBe('1 hour');
+      expect(data.recipe.totalTime).toBe('30 minutes');
+    });
+
+    it('should handle invalid ISO time formats', async () => {
+      // Create a mock environment that returns a recipe with invalid ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe 3',
+                  description: 'A test recipe with invalid ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'INVALID', // Invalid format
+                  cookTime: 'PT', // Incomplete format
+                  totalTime: 'PT1H30M', // Valid format
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('INVALID'); // Should remain unchanged
+      expect(data.recipe.cookTime).toBe('PT'); // Should remain unchanged
+      expect(data.recipe.totalTime).toBe('1 hour 30 minutes'); // Should be normalized
+    });
+
+    it('should handle ISO time with only minutes and zero hours', async () => {
+      // Create a mock environment that returns a recipe with ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe 4',
+                  description: 'A test recipe with ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'PT45M', // 45 minutes only
+                  cookTime: 'PT0H30M', // 0 hours, 30 minutes
+                  totalTime: 'PT1H15M', // 1 hour 15 minutes
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('45 minutes');
+      expect(data.recipe.cookTime).toBe('30 minutes');
+      expect(data.recipe.totalTime).toBe('1 hour 15 minutes');
+    });
+
+    it('should handle elevation with undefined values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: undefined
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because undefined !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with empty string values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: ''
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because '' !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with false values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because false !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with object values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: {}
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because {} !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with array values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: []
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because [] !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle complex recipe parsing edge cases', async () => {
+      // Create a mock environment that returns a complex recipe with various edge cases
+      const complexEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Complex Test Recipe',
+                  description: 'A complex recipe with various edge cases',
+                  ingredients: [
+                    '1 cup flour',
+                    '2 eggs',
+                    '1/2 cup milk'
+                  ],
+                  instructions: [
+                    'Mix dry ingredients',
+                    'Add wet ingredients',
+                    'Bake at 350°F for 30 minutes'
+                  ],
+                  prepTime: 'PT15M', // ISO format
+                  cookTime: 'PT30M', // ISO format
+                  totalTime: 'PT45M', // ISO format
+                  servings: 6, // Numeric instead of string
+                  difficulty: 'Medium',
+                  cuisine: 'American',
+                  dietary: ['vegetarian'],
+                  tips: [
+                    'Preheat oven before mixing',
+                    'Check doneness with toothpick'
+                  ],
+                  nutrition: {
+                    calories: '250 per serving',
+                    protein: '8g',
+                    carbs: '35g',
+                    fat: '6g'
+                  }
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['flour', 'eggs', 'milk'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, complexEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('15 minutes');
+      expect(data.recipe.cookTime).toBe('30 minutes');
+      expect(data.recipe.totalTime).toBe('45 minutes');
+      expect(data.recipe.servings).toBe('6 servings'); // Should be converted to string
+    });
+  });
 });

@@ -39,26 +39,44 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Check if we're in a local development environment without AI access
     if (!env.AI || !env.RECIPE_VECTORS) {
       // Running in local dev mode - returning mock response
+      const mockRecipe = {
+        name: `Mock Recipe for: ${requestBody.recipeName || requestBody.ingredients?.join(', ') || 'Unknown'}`,
+        description: 'This is a mock recipe generated for local testing',
+        ingredients: ['2 cups mock ingredient 1', '1 lb mock ingredient 2', '1 tbsp mock seasoning'],
+        instructions: ['1. Prepare mock ingredients', '2. Cook according to mock method', '3. Serve hot'],
+        prepTime: '15 minutes',
+        cookTime: '20 minutes',
+        totalTime: '35 minutes',
+        servings: requestBody.servings || '4',
+        difficulty: 'Easy',
+        cuisine: requestBody.cuisine || 'Mock Cuisine',
+        dietary: requestBody.dietary || [],
+        generatedAt: new Date().toISOString(),
+        sourceIngredients: requestBody.ingredients || [],
+        generationTime: 0,
+        similarRecipesFound: 0,
+        mockMode: true
+      };
+
+      // Check if elevation is requested in mock mode
+      let finalRecipe = mockRecipe;
+      if (requestBody.elevate === true) {
+        try {
+          finalRecipe = await elevateRecipe(mockRecipe, env);
+        } catch (elevationError) {
+          // If elevation fails, return the original recipe with a warning
+          console.warn('Recipe elevation failed in mock mode:', elevationError.message);
+          finalRecipe = {
+            ...mockRecipe,
+            elevationError: 'Recipe elevation failed, returning original recipe',
+            elevationFailed: true
+          };
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
-        recipe: {
-          name: `Mock Recipe for: ${requestBody.recipeName || requestBody.ingredients?.join(', ') || 'Unknown'}`,
-          description: 'This is a mock recipe generated for local testing',
-          ingredients: ['2 cups mock ingredient 1', '1 lb mock ingredient 2', '1 tbsp mock seasoning'],
-          instructions: ['1. Prepare mock ingredients', '2. Cook according to mock method', '3. Serve hot'],
-          prepTime: '15 minutes',
-          cookTime: '20 minutes',
-          totalTime: '35 minutes',
-          servings: requestBody.servings || '4',
-          difficulty: 'Easy',
-          cuisine: requestBody.cuisine || 'Mock Cuisine',
-          dietary: requestBody.dietary || [],
-          generatedAt: new Date().toISOString(),
-          sourceIngredients: requestBody.ingredients || [],
-          generationTime: 0,
-          similarRecipesFound: 0,
-          mockMode: true
-        },
+        recipe: finalRecipe,
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -72,9 +90,25 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
 
+    // Check if elevation is requested
+    let finalRecipe = generatedRecipe;
+    if (requestBody.elevate === true) {
+      try {
+        finalRecipe = await elevateRecipe(generatedRecipe, env);
+      } catch (elevationError) {
+        // If elevation fails, return the original recipe with a warning
+        console.warn('Recipe elevation failed:', elevationError.message);
+        finalRecipe = {
+          ...generatedRecipe,
+          elevationError: 'Recipe elevation failed, returning original recipe',
+          elevationFailed: true
+        };
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      recipe: generatedRecipe,
+      recipe: finalRecipe,
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
