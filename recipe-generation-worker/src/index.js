@@ -1,6 +1,6 @@
 import { handleRoot } from './handlers/root-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
-import { handleGenerate, elevateRecipe } from './handlers/generate-handler.js';
+import { handleGenerate } from './handlers/generate-handler.js';
 
 export default {
   async fetch(request, env) {

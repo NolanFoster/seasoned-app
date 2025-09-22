@@ -44,7 +44,7 @@ describe('elevateRecipe', () => {
   describe('Mock Mode (no AI)', () => {
     it('should return elevated recipe in mock mode when AI is not available', async () => {
       const envWithoutAI = {};
-      
+
       const result = await elevateRecipe(mockRecipe, envWithoutAI);
 
       expect(result).toEqual({
@@ -77,7 +77,7 @@ describe('elevateRecipe', () => {
       const recipeWithoutTips = { ...mockRecipe };
       delete recipeWithoutTips.tips;
       const envWithoutAI = {};
-      
+
       const result = await elevateRecipe(recipeWithoutTips, envWithoutAI);
 
       expect(result.tips).toEqual([
@@ -308,7 +308,7 @@ describe('elevateRecipe', () => {
       await elevateRecipe(mockRecipe, mockEnv);
 
       const systemPrompt = mockEnv.AI.run.mock.calls[0][1].messages[0].content;
-      
+
       expect(systemPrompt).toContain('expert culinary teacher');
       expect(systemPrompt).toContain('professional chef');
       expect(systemPrompt).toContain('ingredient specificity');
@@ -325,7 +325,7 @@ describe('elevateRecipe', () => {
       await elevateRecipe(mockRecipe, mockEnv);
 
       const userPrompt = mockEnv.AI.run.mock.calls[0][1].messages[1].content;
-      
+
       expect(userPrompt).toContain('Simple Pasta');
       expect(userPrompt).toContain('A basic pasta dish');
       expect(userPrompt).toContain('2 cups pasta');
@@ -344,7 +344,7 @@ describe('elevateRecipe', () => {
       await elevateRecipe(mockRecipe, mockEnv);
 
       const schema = mockEnv.AI.run.mock.calls[0][1].response_format.json_schema.schema;
-      
+
       expect(schema.type).toBe('object');
       expect(schema.properties).toHaveProperty('name');
       expect(schema.properties).toHaveProperty('description');

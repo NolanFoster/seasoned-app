@@ -761,10 +761,10 @@ export async function elevateRecipe(recipe, env) {
       ...recipe,
       name: `Elevated ${recipe.name}`,
       description: `${recipe.description} (Enhanced with professional culinary techniques)`,
-      ingredients: recipe.ingredients.map(ingredient => 
+      ingredients: recipe.ingredients.map(ingredient =>
         ingredient.includes('(') ? ingredient : `${ingredient} (preferably fresh, high-quality)`
       ),
-      instructions: recipe.instructions.map((instruction, index) => 
+      instructions: recipe.instructions.map((instruction, index) =>
         `${instruction}${index === 0 ? ' (Pro tip: This step is crucial for building flavor layers)' : ''}`
       ),
       tips: [
