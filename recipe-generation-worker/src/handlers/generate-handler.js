@@ -749,6 +749,279 @@ Make the recipe practical for home cooks with commonly available ingredients. In
 }
 
 /**
+ * Elevate a generated recipe using AI with culinary expert guidance
+ * This function takes a generated recipe and enhances it with professional culinary techniques,
+ * better ingredient specificity, and educational cooking insights.
+ */
+export async function elevateRecipe(recipe, env) {
+  try {
+    // Check if we're in a local development environment without AI access
+    if (!env.AI) {
+      // Return mock elevated recipe for local testing
+      return {
+        ...recipe,
+        name: `Elevated ${recipe.name}`,
+        description: `${recipe.description} (Enhanced with professional culinary techniques)`,
+        ingredients: recipe.ingredients.map(ingredient => 
+          ingredient.includes('(') ? ingredient : `${ingredient} (preferably fresh, high-quality)`
+        ),
+        instructions: recipe.instructions.map((instruction, index) => 
+          `${instruction}${index === 0 ? ' (Pro tip: This step is crucial for building flavor layers)' : ''}`
+        ),
+        tips: [
+          ...(recipe.tips || []),
+          'Use high-quality, fresh ingredients for best results',
+          'Taste and adjust seasoning throughout the cooking process',
+          'Let the dish rest for a few minutes before serving to allow flavors to meld'
+        ],
+        elevatedAt: new Date().toISOString(),
+        elevationMethod: 'mock-ai',
+        mockMode: true
+      };
+    }
+
+    // Create the culinary expert system prompt
+    const culinaryExpertPrompt = `You are an expert culinary teacher and professional chef with decades of experience in fine dining and culinary education. Your mission is to elevate recipes by adding professional techniques, ingredient specificity, and educational insights that help home cooks achieve restaurant-quality results.
+
+### Your Expertise Areas:
+- **Ingredient Specificity**: Add precise details about ingredient types, quality grades, and purchasing tips
+- **Technique Enhancement**: Explain the "why" behind cooking methods and suggest professional refinements
+- **Flavor Development**: Guide proper seasoning, layering flavors, and building complexity
+- **Educational Value**: Teach fundamental cooking principles that apply beyond this single recipe
+- **Practical Accessibility**: Ensure suggestions are achievable for home cooks with standard equipment
+
+### Elevation Guidelines:
+
+**1. Add Specificity to Ingredients:**
+- Instead of "dry white wine," suggest: "2 tbsp (30ml) dry white wine (e.g., Pinot Grigio or Sauvignon Blanc)"
+- For canned goods: "2 cups (475ml) canned clams, drained (reserve juice for another use), preferably whole baby clams or sea clams packed in juice, not water"
+- Include quality indicators: "1 lb (450g) boneless, skinless chicken thighs, preferably free-range or organic"
+
+**2. Explain the "Why" in Techniques:**
+- Add instructional notes explaining cooking science
+- Example: "Reserve 1 cup of pasta water before draining. The starchy water helps emulsify the sauce and allows it to cling to the pasta perfectly"
+- Explain temperature importance: "Cook until golden brown (about 3-4 minutes) - this creates the Maillard reaction for deeper flavor"
+
+**3. Professional Refinements:**
+- Suggest mise en place organization
+- Add timing coordination tips
+- Include temperature and texture cues
+- Recommend equipment upgrades where beneficial
+
+**4. Educational Tips:**
+- Explain fundamental cooking principles
+- Suggest variations and substitutions
+- Include troubleshooting advice
+- Add food safety reminders where relevant
+
+### Output Requirements:
+- Maintain the original recipe structure and format
+- Preserve all original information while adding enhancements
+- Use clear, encouraging language that builds confidence
+- Include specific measurements and timing
+- Add 2-3 professional tips that teach broader cooking skills
+- Ensure all suggestions are practical for home kitchens
+
+Remember: Your goal is to transform a good recipe into an exceptional one while teaching valuable cooking skills that will benefit the cook in all their future culinary endeavors.`;
+
+    // Create the user prompt with the recipe to elevate
+    const userPrompt = `Please elevate this recipe with your professional culinary expertise:
+
+**Original Recipe:**
+Name: ${recipe.name}
+Description: ${recipe.description}
+
+Ingredients:
+${recipe.ingredients.map(ing => `- ${ing}`).join('\n')}
+
+Instructions:
+${recipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}
+
+Additional Details:
+- Prep Time: ${recipe.prepTime}
+- Cook Time: ${recipe.cookTime}
+- Total Time: ${recipe.totalTime}
+- Servings: ${recipe.servings}
+- Difficulty: ${recipe.difficulty}
+- Cuisine: ${recipe.cuisine}
+${recipe.dietary ? `- Dietary: ${Array.isArray(recipe.dietary) ? recipe.dietary.join(', ') : recipe.dietary}` : ''}
+${recipe.tips ? `- Tips: ${Array.isArray(recipe.tips) ? recipe.tips.join(', ') : recipe.tips}` : ''}
+
+Please provide the elevated version following the same JSON structure, with enhanced ingredients, improved instructions, and additional professional tips.`;
+
+    // Define the elevated recipe JSON schema
+    const elevatedRecipeSchema = {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Enhanced recipe name that reflects the elevated version'
+        },
+        description: {
+          type: 'string',
+          description: 'Enhanced description highlighting the professional improvements'
+        },
+        ingredients: {
+          type: 'array',
+          items: {
+            type: 'string',
+            description: 'Enhanced ingredient with specific types, quality notes, and purchasing tips'
+          },
+          description: 'Elevated ingredients list with professional specificity'
+        },
+        instructions: {
+          type: 'array',
+          items: {
+            type: 'string',
+            description: 'Enhanced cooking instruction with professional techniques and explanations'
+          },
+          description: 'Step-by-step instructions with culinary expertise and educational insights'
+        },
+        prepTime: {
+          type: 'string',
+          description: 'Preparation time (may be adjusted for professional techniques)'
+        },
+        cookTime: {
+          type: 'string',
+          description: 'Cooking time (may be adjusted for proper technique)'
+        },
+        totalTime: {
+          type: 'string',
+          description: 'Total time including prep and cook time'
+        },
+        servings: {
+          type: 'string',
+          description: 'Number of servings'
+        },
+        difficulty: {
+          type: 'string',
+          enum: ['Easy', 'Medium', 'Hard'],
+          description: 'Difficulty level (may be adjusted based on professional techniques)'
+        },
+        cuisine: {
+          type: 'string',
+          description: 'Type of cuisine'
+        },
+        dietary: {
+          type: 'array',
+          items: {
+            type: 'string'
+          },
+          description: 'Dietary restrictions or preferences'
+        },
+        tips: {
+          type: 'array',
+          items: {
+            type: 'string'
+          },
+          description: 'Professional cooking tips, techniques, and educational insights'
+        },
+        professionalNotes: {
+          type: 'array',
+          items: {
+            type: 'string'
+          },
+          description: 'Additional professional culinary insights and technique explanations'
+        }
+      },
+      required: ['name', 'description', 'ingredients', 'instructions', 'prepTime', 'cookTime', 'totalTime', 'servings', 'difficulty']
+    };
+
+    // Generate elevated recipe using LLaMA with culinary expert guidance
+    const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+      messages: [
+        {
+          role: 'system',
+          content: culinaryExpertPrompt
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'elevated_recipe',
+          schema: elevatedRecipeSchema
+        }
+      },
+      max_tokens: 2048,
+      temperature: 0.7
+    });
+
+    if (!response || !response.response) {
+      throw new Error('Invalid response from LLaMA model for recipe elevation');
+    }
+
+    // Parse the JSON response
+    let elevatedRecipe = response.response;
+
+    // Handle nested recipe structure (flatten recipe.recipe to just recipe)
+    if (elevatedRecipe.recipe && typeof elevatedRecipe.recipe === 'object') {
+      elevatedRecipe = elevatedRecipe.recipe;
+    }
+
+    // Add metadata fields
+    elevatedRecipe.elevatedAt = new Date().toISOString();
+    elevatedRecipe.originalRecipe = recipe;
+    elevatedRecipe.elevationMethod = 'llama-ai-culinary-expert';
+
+    // Ensure required fields have fallback values
+    if (!elevatedRecipe.name) {
+      elevatedRecipe.name = `Elevated ${recipe.name}`;
+    }
+    if (!elevatedRecipe.servings) {
+      elevatedRecipe.servings = recipe.servings || '4 servings';
+    }
+    if (!elevatedRecipe.cuisine) {
+      elevatedRecipe.cuisine = recipe.cuisine || '';
+    }
+    if (!elevatedRecipe.dietary) {
+      elevatedRecipe.dietary = recipe.dietary || [];
+    }
+
+    // Normalize time formats (PT30M -> "30 minutes")
+    if (elevatedRecipe.prepTime && elevatedRecipe.prepTime.startsWith('PT')) {
+      elevatedRecipe.prepTime = normalizeISOTime(elevatedRecipe.prepTime);
+    }
+    if (elevatedRecipe.cookTime && elevatedRecipe.cookTime.startsWith('PT')) {
+      elevatedRecipe.cookTime = normalizeISOTime(elevatedRecipe.cookTime);
+    }
+    if (elevatedRecipe.totalTime && elevatedRecipe.totalTime.startsWith('PT')) {
+      elevatedRecipe.totalTime = normalizeISOTime(elevatedRecipe.totalTime);
+    }
+
+    // Ensure servings is a string
+    if (typeof elevatedRecipe.servings === 'number') {
+      elevatedRecipe.servings = `${elevatedRecipe.servings} servings`;
+    }
+
+    // Handle dietary considerations field name variations
+    if (elevatedRecipe.dietaryConsiderations && !elevatedRecipe.dietary) {
+      elevatedRecipe.dietary = Array.isArray(elevatedRecipe.dietaryConsiderations)
+        ? elevatedRecipe.dietaryConsiderations
+        : [elevatedRecipe.dietaryConsiderations];
+      delete elevatedRecipe.dietaryConsiderations;
+    }
+
+    return elevatedRecipe;
+
+  } catch (error) {
+    // Error in elevateRecipe
+    console.error('Error elevating recipe:', error);
+    
+    // Return the original recipe with a note about the error
+    return {
+      ...recipe,
+      elevatedAt: new Date().toISOString(),
+      elevationError: error.message,
+      elevationMethod: 'error-fallback'
+    };
+  }
+}
+
+/**
  * Normalize ISO 8601 duration format (PT30M) to readable format ("30 minutes")
  */
 function normalizeISOTime(isoTime) {
