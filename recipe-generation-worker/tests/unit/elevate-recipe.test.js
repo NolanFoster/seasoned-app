@@ -156,7 +156,6 @@ describe('elevateRecipe', () => {
       expect(result).toEqual({
         ...mockAIResponse.response,
         elevatedAt: expect.any(String),
-        originalRecipe: mockRecipe,
         elevationMethod: 'llama-ai-culinary-expert'
       });
     });
@@ -184,7 +183,6 @@ describe('elevateRecipe', () => {
 
       expect(result.name).toBe('Nested Recipe');
       expect(result.elevatedAt).toBeDefined();
-      expect(result.originalRecipe).toBe(mockRecipe);
     });
 
     it('should throw error when AI returns invalid response', async () => {

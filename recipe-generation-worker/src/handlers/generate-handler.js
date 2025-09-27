@@ -589,9 +589,39 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   // Parse the JSON response and flatten any nested structure
   let structuredRecipe = response.response;
 
+  // Validate that the response is an object
+  if (!structuredRecipe || typeof structuredRecipe !== 'object') {
+    console.error('Invalid AI response for recipe generation:', structuredRecipe);
+    throw new Error(`AI returned invalid response type: ${typeof structuredRecipe}. Expected object.`);
+  }
+
   // Handle nested recipe structure (flatten recipe.recipe to just recipe)
   if (structuredRecipe.recipe && typeof structuredRecipe.recipe === 'object') {
     structuredRecipe = structuredRecipe.recipe;
+  }
+
+  // Ensure we still have a valid object after flattening
+  if (!structuredRecipe || typeof structuredRecipe !== 'object') {
+    console.error('Invalid recipe object after flattening:', structuredRecipe);
+    throw new Error('Recipe generation failed: Invalid recipe structure returned by AI');
+  }
+
+  // Normalize field names (handle uppercase variants)
+  if (structuredRecipe.Ingredients && !structuredRecipe.ingredients) {
+    structuredRecipe.ingredients = structuredRecipe.Ingredients;
+    delete structuredRecipe.Ingredients;
+  }
+  if (structuredRecipe.Instructions && !structuredRecipe.instructions) {
+    structuredRecipe.instructions = structuredRecipe.Instructions;
+    delete structuredRecipe.Instructions;
+  }
+  if (structuredRecipe.Name && !structuredRecipe.name) {
+    structuredRecipe.name = structuredRecipe.Name;
+    delete structuredRecipe.Name;
+  }
+  if (structuredRecipe.Description && !structuredRecipe.description) {
+    structuredRecipe.description = structuredRecipe.Description;
+    delete structuredRecipe.Description;
   }
 
   // Add metadata fields
@@ -635,6 +665,25 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
       ? structuredRecipe.dietaryConsiderations
       : [structuredRecipe.dietaryConsiderations];
     delete structuredRecipe.dietaryConsiderations;
+  }
+
+  // Ensure ingredients and instructions are arrays (handle object responses)
+  if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
+    console.warn('Converting ingredients object to array:', structuredRecipe.ingredients);
+    structuredRecipe.ingredients = Object.values(structuredRecipe.ingredients).filter(item => typeof item === 'string');
+  } else if (!Array.isArray(structuredRecipe.ingredients)) {
+    structuredRecipe.ingredients = [];
+  }
+
+  if (structuredRecipe.instructions && typeof structuredRecipe.instructions === 'object' && !Array.isArray(structuredRecipe.instructions)) {
+    console.warn('Converting instructions object to array:', structuredRecipe.instructions);
+    structuredRecipe.instructions = Object.values(structuredRecipe.instructions).filter(item => typeof item === 'string');
+  } else if (!Array.isArray(structuredRecipe.instructions)) {
+    structuredRecipe.instructions = [];
+  }
+
+  if (!Array.isArray(structuredRecipe.dietary)) {
+    structuredRecipe.dietary = [];
   }
 
   return structuredRecipe;
@@ -790,19 +839,30 @@ Make the recipe practical for home cooks with commonly available ingredients. In
 export async function elevateRecipe(recipe, env) {
   // Check if we're in a local development environment without AI access
   if (!env.AI) {
+    // Ensure ingredients and instructions are arrays before mapping
+    const safeIngredients = Array.isArray(recipe.ingredients)
+      ? recipe.ingredients
+      : [];
+    const safeInstructions = Array.isArray(recipe.instructions)
+      ? recipe.instructions
+      : [];
+    const safeTips = Array.isArray(recipe.tips)
+      ? recipe.tips
+      : [];
+
     // Return mock elevated recipe for local testing
     return {
       ...recipe,
       name: `Elevated ${recipe.name}`,
       description: `${recipe.description} (Enhanced with professional culinary techniques)`,
-      ingredients: recipe.ingredients.map(ingredient =>
+      ingredients: safeIngredients.map(ingredient =>
         ingredient.includes('(') ? ingredient : `${ingredient} (preferably fresh, high-quality)`
       ),
-      instructions: recipe.instructions.map((instruction, index) =>
+      instructions: safeInstructions.map((instruction, index) =>
         `${instruction}${index === 0 ? ' (Pro tip: This step is crucial for building flavor layers)' : ''}`
       ),
       tips: [
-        ...(recipe.tips || []),
+        ...safeTips,
         'Use high-quality, fresh ingredients for best results',
         'Taste and adjust seasoning throughout the cooking process',
         'Let the dish rest for a few minutes before serving to allow flavors to meld'
@@ -815,6 +875,8 @@ export async function elevateRecipe(recipe, env) {
 
   // Create the culinary expert system prompt
   const culinaryExpertPrompt = `You are an expert culinary teacher and professional chef with decades of experience in fine dining and culinary education. Your mission is to elevate recipes by adding professional techniques, ingredient specificity, and educational insights that help home cooks achieve restaurant-quality results.
+
+IMPORTANT: You must respond with valid JSON only. Do not include any text outside the JSON structure. Use double quotes for all strings and property names.
 
 ### Your Expertise Areas:
 - **Ingredient Specificity**: Add precise details about ingredient types, quality grades, and purchasing tips
@@ -857,30 +919,61 @@ export async function elevateRecipe(recipe, env) {
 
 Remember: Your goal is to transform a good recipe into an exceptional one while teaching valuable cooking skills that will benefit the cook in all their future culinary endeavors.`;
 
+  // Ensure arrays are properly handled for the prompt
+  const safeIngredients = Array.isArray(recipe.ingredients)
+    ? recipe.ingredients
+    : [];
+  const safeInstructions = Array.isArray(recipe.instructions)
+    ? recipe.instructions
+    : [];
+
+  // Sanitize recipe fields to prevent undefined/null values in prompt
+  const safeName = recipe.name || 'Unnamed Recipe';
+  const safeDescription = recipe.description || 'No description available';
+  const safePrepTime = recipe.prepTime || 'Not specified';
+  const safeCookTime = recipe.cookTime || 'Not specified';
+  const safeTotalTime = recipe.totalTime || 'Not specified';
+  const safeServings = recipe.servings || 'Not specified';
+  const safeDifficulty = recipe.difficulty || 'Not specified';
+  const safeCuisine = recipe.cuisine || 'Not specified';
+
+  const safeDietary = recipe.dietary && Array.isArray(recipe.dietary)
+    ? recipe.dietary.join(', ')
+    : (recipe.dietary || 'None specified');
+
+  const safeTips = recipe.tips && Array.isArray(recipe.tips)
+    ? recipe.tips.join(', ')
+    : (recipe.tips || 'None provided');
+
   // Create the user prompt with the recipe to elevate
   const userPrompt = `Please elevate this recipe with your professional culinary expertise:
 
 **Original Recipe:**
-Name: ${recipe.name}
-Description: ${recipe.description}
+name: ${safeName}
+description: ${safeDescription}
 
-Ingredients:
-${recipe.ingredients.map(ing => `- ${ing}`).join('\n')}
+ingredients:
+${safeIngredients.map(ing => `- ${ing}`).join('\n')}
 
-Instructions:
-${recipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}
+instructions:
+${safeInstructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}
 
-Additional Details:
-- Prep Time: ${recipe.prepTime}
-- Cook Time: ${recipe.cookTime}
-- Total Time: ${recipe.totalTime}
-- Servings: ${recipe.servings}
-- Difficulty: ${recipe.difficulty}
-- Cuisine: ${recipe.cuisine}
-${recipe.dietary ? `- Dietary: ${Array.isArray(recipe.dietary) ? recipe.dietary.join(', ') : recipe.dietary}` : ''}
-${recipe.tips ? `- Tips: ${Array.isArray(recipe.tips) ? recipe.tips.join(', ') : recipe.tips}` : ''}
+additionalDetails:
+- prepTime: ${safePrepTime}
+- cookTime: ${safeCookTime}
+- totalTime: ${safeTotalTime}
+- servings: ${safeServings}
+- difficulty: ${safeDifficulty}
+- cuisine: ${safeCuisine}
+- dietary: ${safeDietary}
+- tips: ${safeTips}
 
 Please provide the elevated version following the same JSON structure, with enhanced ingredients, improved instructions, and additional professional tips.`;
+
+  // Validate prompt length and content
+  if (userPrompt.length > 8000) {
+    console.warn('Recipe elevation prompt is very long:', userPrompt.length, 'characters');
+  }
 
   // Use the same recipe schema as the original generated recipe
   const recipeSchema = {
@@ -953,28 +1046,43 @@ Please provide the elevated version following the same JSON structure, with enha
     required: ['name', 'description', 'ingredients', 'instructions', 'prepTime', 'cookTime', 'totalTime', 'servings', 'difficulty']
   };
 
+  // Validate system prompt length
+  if (culinaryExpertPrompt.length > 10000) {
+    console.warn('System prompt is very long:', culinaryExpertPrompt.length, 'characters');
+  }
+
   // Generate elevated recipe using LLaMA with culinary expert guidance
-  const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
-    messages: [
-      {
-        role: 'system',
-        content: culinaryExpertPrompt
+  let response;
+  try {
+    console.log('Making AI call for recipe elevation...');
+    response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+      messages: [
+        {
+          role: 'system',
+          content: culinaryExpertPrompt
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'recipe_generation',
+          schema: recipeSchema
+        }
       },
-      {
-        role: 'user',
-        content: userPrompt
-      }
-    ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'recipe_generation',
-        schema: recipeSchema
-      }
-    },
-    max_tokens: 2048,
-    temperature: 0.7
-  });
+      max_tokens: 2048,
+      temperature: 0.7
+    });
+    console.log('AI elevation call completed successfully');
+  } catch (aiError) {
+    console.error('AI elevation error:', aiError);
+    console.error('System prompt length:', culinaryExpertPrompt.length);
+    console.error('User prompt length:', userPrompt.length);
+    throw new Error(`AI elevation failed: ${aiError.message || aiError.toString()}`);
+  }
 
   if (!response || !response.response) {
     throw new Error('Invalid response from LLaMA model for recipe elevation');
@@ -983,14 +1091,43 @@ Please provide the elevated version following the same JSON structure, with enha
   // Parse the JSON response
   let elevatedRecipe = response.response;
 
+  // Validate that the response is an object
+  if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
+    console.error('Invalid AI response for recipe elevation:', elevatedRecipe);
+    throw new Error(`AI returned invalid response type: ${typeof elevatedRecipe}. Expected object.`);
+  }
+
   // Handle nested recipe structure (flatten recipe.recipe to just recipe)
   if (elevatedRecipe.recipe && typeof elevatedRecipe.recipe === 'object') {
     elevatedRecipe = elevatedRecipe.recipe;
   }
 
+  // Ensure we still have a valid object after flattening
+  if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
+    console.error('Invalid recipe object after flattening:', elevatedRecipe);
+    throw new Error('Recipe elevation failed: Invalid recipe structure returned by AI');
+  }
+
+  // Normalize field names (handle uppercase variants)
+  if (elevatedRecipe.Ingredients && !elevatedRecipe.ingredients) {
+    elevatedRecipe.ingredients = elevatedRecipe.Ingredients;
+    delete elevatedRecipe.Ingredients;
+  }
+  if (elevatedRecipe.Instructions && !elevatedRecipe.instructions) {
+    elevatedRecipe.instructions = elevatedRecipe.Instructions;
+    delete elevatedRecipe.Instructions;
+  }
+  if (elevatedRecipe.Name && !elevatedRecipe.name) {
+    elevatedRecipe.name = elevatedRecipe.Name;
+    delete elevatedRecipe.Name;
+  }
+  if (elevatedRecipe.Description && !elevatedRecipe.description) {
+    elevatedRecipe.description = elevatedRecipe.Description;
+    delete elevatedRecipe.Description;
+  }
+
   // Add metadata fields
   elevatedRecipe.elevatedAt = new Date().toISOString();
-  elevatedRecipe.originalRecipe = recipe;
   elevatedRecipe.elevationMethod = 'llama-ai-culinary-expert';
 
   // Ensure required fields have fallback values
@@ -1005,6 +1142,16 @@ Please provide the elevated version following the same JSON structure, with enha
   }
   if (!elevatedRecipe.dietary) {
     elevatedRecipe.dietary = recipe.dietary || [];
+  }
+
+  // Ensure ingredients and instructions are arrays (handle object responses)
+  if (elevatedRecipe.ingredients && typeof elevatedRecipe.ingredients === 'object' && !Array.isArray(elevatedRecipe.ingredients)) {
+    console.warn('Converting ingredients object to array:', elevatedRecipe.ingredients);
+    elevatedRecipe.ingredients = Object.values(elevatedRecipe.ingredients).filter(item => typeof item === 'string');
+  }
+  if (elevatedRecipe.instructions && typeof elevatedRecipe.instructions === 'object' && !Array.isArray(elevatedRecipe.instructions)) {
+    console.warn('Converting instructions object to array:', elevatedRecipe.instructions);
+    elevatedRecipe.instructions = Object.values(elevatedRecipe.instructions).filter(item => typeof item === 'string');
   }
 
   // Ensure servings is a string
