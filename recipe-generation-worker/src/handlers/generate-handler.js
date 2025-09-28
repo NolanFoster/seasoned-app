@@ -586,6 +586,9 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   // Store LLM response for tracing
   operationData.llmResponse = response.response;
 
+  // Debug: Print raw LLM response
+  console.log('Raw LLM response:', JSON.stringify(response.response, null, 2));
+
   // Parse the JSON response and flatten any nested structure
   let structuredRecipe = response.response;
 
@@ -670,10 +673,16 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   // Ensure ingredients and instructions are arrays (handle object responses)
   if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
     console.warn('Converting ingredients object to array:', structuredRecipe.ingredients);
-    structuredRecipe.ingredients = Object.values(structuredRecipe.ingredients).filter(item => typeof item === 'string');
+    // Convert object to array format: "ingredient name: quantity"
+    structuredRecipe.ingredients = Object.entries(structuredRecipe.ingredients)
+      .map(([name, quantity]) => `${name}: ${quantity}`)
+      .filter(item => typeof item === 'string');
   } else if (!Array.isArray(structuredRecipe.ingredients)) {
     structuredRecipe.ingredients = [];
   }
+
+  // Debug: Print processed ingredients
+  console.log('Processed ingredients:', JSON.stringify(structuredRecipe.ingredients, null, 2));
 
   if (structuredRecipe.instructions && typeof structuredRecipe.instructions === 'object' && !Array.isArray(structuredRecipe.instructions)) {
     console.warn('Converting instructions object to array:', structuredRecipe.instructions);
@@ -1147,7 +1156,10 @@ Please provide the elevated version following the same JSON structure, with enha
   // Ensure ingredients and instructions are arrays (handle object responses)
   if (elevatedRecipe.ingredients && typeof elevatedRecipe.ingredients === 'object' && !Array.isArray(elevatedRecipe.ingredients)) {
     console.warn('Converting ingredients object to array:', elevatedRecipe.ingredients);
-    elevatedRecipe.ingredients = Object.values(elevatedRecipe.ingredients).filter(item => typeof item === 'string');
+    // Convert object to array format: "ingredient name: quantity"
+    elevatedRecipe.ingredients = Object.entries(elevatedRecipe.ingredients)
+      .map(([name, quantity]) => `${name}: ${quantity}`)
+      .filter(item => typeof item === 'string');
   }
   if (elevatedRecipe.instructions && typeof elevatedRecipe.instructions === 'object' && !Array.isArray(elevatedRecipe.instructions)) {
     console.warn('Converting instructions object to array:', elevatedRecipe.instructions);

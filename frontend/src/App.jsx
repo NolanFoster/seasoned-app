@@ -686,6 +686,7 @@ function App() {
   const [userLocation, setUserLocation] = useState(''); // Store user's location from geolocation
   const [previousLocation, setPreviousLocation] = useState(null); // Track previous location to prevent duplicate calls
   const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track if we're resolving location permissions
+  const [isGeneratingAiRecipe, setIsGeneratingAiRecipe] = useState(false); // Track AI recipe generation state
   
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
@@ -1870,6 +1871,94 @@ function App() {
     setEditablePreview(null);
   }
 
+  // Generate AI recipe from search input
+  async function generateAiRecipeFromSearch(searchQuery) {
+    if (!RECIPE_GENERATION_URL) {
+      console.error('❌ RECIPE_GENERATION_URL environment variable is not set!');
+      alert('AI recipe generation is not configured. Please check your environment setup.');
+      return;
+    }
+
+    // Set loading state to trigger glow effect
+    setIsGeneratingAiRecipe(true);
+
+    try {
+      console.log('🚀 Generating AI recipe from search:', searchQuery);
+      
+      const requestBody = {
+        recipeName: searchQuery,
+      };
+      
+      const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        timeout: 30000 // 30 second timeout for AI generation
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📋 AI recipe generation result:', result);
+      
+      if (result.success && result.recipe) {
+        // Create a complete recipe object from the generated data
+        const generatedRecipe = {
+          id: `ai-${Date.now()}`,
+          source: 'ai_generated',
+          name: result.recipe.name,
+          description: result.recipe.description,
+          ingredients: result.recipe.ingredients,
+          instructions: result.recipe.instructions,
+          recipeIngredient: result.recipe.ingredients,
+          prep_time: result.recipe.prepTime,
+          cook_time: result.recipe.cookTime,
+          recipe_yield: result.recipe.servings,
+          prepTime: result.recipe.prepTime,
+          cookTime: result.recipe.cookTime,
+          servings: result.recipe.servings,
+          generatedAt: result.recipe.generatedAt || new Date().toISOString(),
+          mockMode: result.recipe.mockMode || false,
+          generationTime: result.generationTime,
+          similarRecipesFound: result.similarRecipesFound,
+          generationMethod: result.generationMethod
+        };
+
+        // Open the generated recipe directly in fullscreen view
+        setSelectedRecipe(generatedRecipe);
+        window.history.pushState({ recipeView: true }, '', window.location.href);
+        
+        // Clear search input
+        setSearchInput('');
+        setShowSearchResults(false);
+        
+        return true;
+      } else {
+        throw new Error(result.error || 'Failed to generate recipe');
+      }
+    } catch (error) {
+      console.error('Error generating AI recipe from search:', error);
+      
+      let userMessage = 'Failed to generate AI recipe. Please try again.';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        userMessage = 'Network error: Unable to reach the AI recipe generation service. Please check your internet connection and try again.';
+      } else if (error.message.includes('Failed to fetch')) {
+        userMessage = 'Network error: Unable to reach the AI recipe generation service. Please check your internet connection and try again.';
+      } else if (error.message.includes('timeout')) {
+        userMessage = 'Request timed out. The AI recipe generation is taking longer than expected. Please try again.';
+      }
+      
+      alert(userMessage);
+      return false;
+    } finally {
+      // Always clear loading state
+      setIsGeneratingAiRecipe(false);
+    }
+  }
+
   // Handle AI card recipe generation
   async function handleAiCardRecipeGeneration(recipe) {
     // Check if this is an AI card
@@ -2382,6 +2471,8 @@ function App() {
           onSearchRecipes={searchRecipes}
           onRecipeSelect={openRecipeView}
           onClipDialogOpen={() => setIsClipping(true)}
+          onGenerateAiRecipe={generateAiRecipeFromSearch}
+          isGeneratingAiRecipe={isGeneratingAiRecipe}
         />
       
       {/* Mobile FAB - outside header, bottom left */}
