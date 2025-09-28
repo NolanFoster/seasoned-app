@@ -74,6 +74,20 @@ export async function handleGenerate(request, env, corsHeaders) {
         }
       }
 
+      // Check if image generation is requested in mock mode
+      if (requestBody.generateImage === true) {
+        try {
+          const imageUrl = await generateRecipeImage(finalRecipe, env);
+          if (imageUrl) {
+            finalRecipe.image_url = imageUrl;
+          }
+        } catch (imageError) {
+          // If image generation fails, log the error but don't fail the entire request
+          console.warn('Recipe image generation failed in mock mode:', imageError.message);
+          finalRecipe.imageGenerationError = 'Image generation failed, recipe generated without image';
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
         recipe: finalRecipe,
@@ -103,6 +117,20 @@ export async function handleGenerate(request, env, corsHeaders) {
           elevationError: 'Recipe elevation failed, returning original recipe',
           elevationFailed: true
         };
+      }
+    }
+
+    // Check if image generation is requested
+    if (requestBody.generateImage === true) {
+      try {
+        const imageUrl = await generateRecipeImage(finalRecipe, env);
+        if (imageUrl) {
+          finalRecipe.image_url = imageUrl;
+        }
+      } catch (imageError) {
+        // If image generation fails, log the error but don't fail the entire request
+        console.warn('Recipe image generation failed:', imageError.message);
+        finalRecipe.imageGenerationError = 'Image generation failed, recipe generated without image';
       }
     }
 
@@ -1207,4 +1235,54 @@ function normalizeISOTime(isoTime) {
   }
 
   return isoTime;
+}
+
+/**
+ * Generate an image for a recipe using the AI image generation service
+ */
+async function generateRecipeImage(recipe, env) {
+  // Check if image generation service is available
+  if (!env.IMAGE_GENERATION_SERVICE) {
+    throw new Error('Image generation service not available');
+  }
+
+  try {
+    // Prepare the request payload for the image generation service
+    const imageRequestPayload = {
+      recipe: {
+        name: recipe.name,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        cuisine: recipe.cuisine,
+        dietary: recipe.dietary
+      },
+      style: 'realistic',
+      aspectRatio: '1:1'
+    };
+
+    // Call the image generation service
+    const imageResponse = await env.IMAGE_GENERATION_SERVICE.fetch('https://ai-image-generation-worker/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(imageRequestPayload)
+    });
+
+    if (!imageResponse.ok) {
+      throw new Error(`Image generation service returned ${imageResponse.status}: ${imageResponse.statusText}`);
+    }
+
+    const imageResult = await imageResponse.json();
+    
+    if (!imageResult.success || !imageResult.imageUrl) {
+      throw new Error('Image generation service returned unsuccessful response');
+    }
+
+    return imageResult.imageUrl;
+  } catch (error) {
+    console.error('Error calling image generation service:', error);
+    throw error;
+  }
 }

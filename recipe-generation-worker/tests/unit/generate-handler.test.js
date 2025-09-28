@@ -22,11 +22,16 @@ describe('Generate Handler - Unit Tests', () => {
     get: vi.fn()
   };
 
+  const mockImageGenerationService = {
+    fetch: vi.fn()
+  };
+
   const enhancedMockEnv = {
     ...mockEnv,
     AI: mockAI,
     RECIPE_VECTORS: mockVectors,
-    RECIPE_STORAGE: mockKVStorage
+    RECIPE_STORAGE: mockKVStorage,
+    IMAGE_GENERATION_SERVICE: mockImageGenerationService
   };
 
   beforeEach(() => {
@@ -128,6 +133,22 @@ describe('Generate Handler - Unit Tests', () => {
         recipeYield: '4'
       }
     }));
+
+    // Mock image generation service responses
+    mockImageGenerationService.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        imageUrl: 'https://images.seasonedapp.com/recipe-test-image.jpg',
+        imageId: 'recipe-test-123',
+        metadata: {
+          recipeName: 'Test Recipe',
+          style: 'realistic',
+          aspectRatio: '1:1',
+          generatedAt: new Date().toISOString()
+        }
+      })
+    });
   });
 
   describe('Recipe Generation', () => {
@@ -1328,6 +1349,297 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.recipe.cookTime).toBe('30 minutes');
       expect(data.recipe.totalTime).toBe('45 minutes');
       expect(data.recipe.servings).toBe('6 servings'); // Should be converted to string
+    });
+  });
+
+  describe('Image Generation Integration', () => {
+    it('should generate image when generateImage option is true in mock mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+    });
+
+    it('should generate image when generateImage option is true in AI mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+      
+      // Verify image generation service was called
+      expect(mockImageGenerationService.fetch).toHaveBeenCalledWith(
+        'https://ai-image-generation-worker/generate',
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: expect.stringContaining('"recipe"')
+        })
+      );
+    });
+
+    it('should not generate image when generateImage option is false', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      
+      // Verify image generation service was not called
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should not generate image when generateImage option is not provided', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      
+      // Verify image generation service was not called
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle image generation failure gracefully in mock mode', async () => {
+      // Mock image generation service to fail
+      mockImageGenerationService.fetch.mockRejectedValue(new Error('Image service unavailable'));
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should handle image generation failure gracefully in AI mode', async () => {
+      // Mock image generation service to fail
+      mockImageGenerationService.fetch.mockRejectedValue(new Error('Image service unavailable'));
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should handle image generation service returning unsuccessful response', async () => {
+      // Mock image generation service to return unsuccessful response
+      mockImageGenerationService.fetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          success: false,
+          error: 'Image generation failed'
+        })
+      });
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should handle image generation service returning HTTP error', async () => {
+      // Mock image generation service to return HTTP error
+      mockImageGenerationService.fetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should work with image generation and elevation together', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true,
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // In AI mode, elevation works but may not change the name significantly
+      expect(data.recipe.name).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should work with image generation and recipeName', async () => {
+      const requestBody = {
+        recipeName: 'Chicken Teriyaki Bowl',
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+    });
+
+    it('should work with image generation and complex request', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice', 'vegetables'],
+        cuisine: 'asian',
+        dietary: ['gluten-free', 'low-sodium'],
+        servings: 4,
+        maxCookTime: 30,
+        mealType: 'dinner',
+        cookingMethod: 'stir-fry',
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.cuisine).toBe('asian');
+      expect(data.recipe.dietary).toEqual(['gluten-free', 'low-sodium']);
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+    });
+
+    it('should handle image generation with truthy but non-boolean values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: 'true' // String instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not generate image because 'true' !== true
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle image generation with numeric values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: 1 // Number instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not generate image because 1 !== true
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle image generation when service is not available', async () => {
+      const envWithoutImageService = {
+        ...enhancedMockEnv,
+        IMAGE_GENERATION_SERVICE: undefined
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, envWithoutImageService, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
     });
   });
 });

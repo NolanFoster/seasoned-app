@@ -6,9 +6,8 @@ export default defineConfig({
     globals: true,
     environment: 'miniflare',
     environmentOptions: {
-      wranglerConfigPath: './wrangler.toml',
-      packagePath: true,
-      wranglerConfigEnv: 'preview'
+      wranglerConfigPath: './wrangler.test.toml',
+      packagePath: true
     },
     // Test file patterns
     include: [
