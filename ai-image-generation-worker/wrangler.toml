@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 # Default configuration
 [vars]
 ENVIRONMENT = "development"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 
 [observability]
 enabled = true
@@ -16,11 +16,6 @@ enabled = true
 # AI binding for FLUX model
 [ai]
 binding = "AI"
-
-# R2 Bucket for storing generated images
-[[r2_buckets]]
-binding = "RECIPE_IMAGES"
-bucket_name = "recipe-images"
 
 # R2 Bucket for AI-generated recipe images with 7-day expiration
 [[r2_buckets]]
@@ -32,17 +27,13 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
-IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
+IMAGE_DOMAIN = "https://preview-images.seasonedapp.com"
 
 [env.preview.observability]
 enabled = true
 
 [env.preview.ai]
 binding = "AI"
-
-[[env.preview.r2_buckets]]
-binding = "RECIPE_IMAGES"
-bucket_name = "recipe-images"
 
 [[env.preview.r2_buckets]]
 binding = "AI_GENERATED_RECIPE_IMAGES"
@@ -53,17 +44,13 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 
 [env.staging.observability]
 enabled = true
 
 [env.staging.ai]
 binding = "AI"
-
-[[env.staging.r2_buckets]]
-binding = "RECIPE_IMAGES"
-bucket_name = "recipe-images"
 
 [[env.staging.r2_buckets]]
 binding = "AI_GENERATED_RECIPE_IMAGES"
@@ -74,17 +61,13 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker"
 [env.production.vars]
 ENVIRONMENT = "production"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 
 [env.production.observability]
 enabled = true
 
 [env.production.ai]
 binding = "AI"
-
-[[env.production.r2_buckets]]
-binding = "RECIPE_IMAGES"
-bucket_name = "recipe-images"
 
 [[env.production.r2_buckets]]
 binding = "AI_GENERATED_RECIPE_IMAGES"
@@ -95,17 +78,13 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker"
 [env.development.vars]
 ENVIRONMENT = "development"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 
 [env.development.observability]
 enabled = true
 
 [env.development.ai]
 binding = "AI"
-
-[[env.development.r2_buckets]]
-binding = "RECIPE_IMAGES"
-bucket_name = "recipe-images"
 
 [[env.development.r2_buckets]]
 binding = "AI_GENERATED_RECIPE_IMAGES"

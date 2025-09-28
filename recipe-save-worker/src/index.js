@@ -938,7 +938,7 @@ export class RecipeSaver {
       log('info', 'Image stored in R2 successfully', { requestId, recipeId, filename });
 
       // Return the R2 URL
-      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       const r2Url = `${imageDomain}/${filename}`;
       
       const duration = Date.now() - startTime;
@@ -1061,7 +1061,7 @@ export class RecipeSaver {
     if (!url) return false;
     try {
       const parsed = new URL(url);
-      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       return !url.startsWith(imageDomain) && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
     } catch {
       return false;
@@ -1083,7 +1083,7 @@ export class RecipeSaver {
 
   getR2KeyFromUrl(url) {
     try {
-      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       if (url.startsWith(imageDomain)) {
         return url.substring(imageDomain.length + 1); // +1 for the trailing slash
       }

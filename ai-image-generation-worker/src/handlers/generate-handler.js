@@ -59,7 +59,7 @@ export async function handleGenerate(request, env, _ctx) {
     
     // Upload image to R2
     const imageUrl = await uploadImageToR2(
-      env.RECIPE_IMAGES,
+      env.AI_GENERATED_RECIPE_IMAGES,
       imageResponse.image,
       imageId,
       env.IMAGE_DOMAIN
