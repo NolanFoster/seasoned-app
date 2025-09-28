@@ -22,6 +22,11 @@ binding = "AI"
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
 
+# R2 Bucket for AI-generated recipe images with 7-day expiration
+[[r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
+
 # Preview environment (for PR previews)
 [env.preview]
 name = "ai-image-generation-worker-preview"
@@ -38,6 +43,10 @@ binding = "AI"
 [[env.preview.r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
+
+[[env.preview.r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
 
 # Staging environment
 [env.staging]
@@ -56,6 +65,10 @@ binding = "AI"
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
 
+[[env.staging.r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
+
 # Production environment
 [env.production]
 name = "ai-image-generation-worker"
@@ -73,6 +86,10 @@ binding = "AI"
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
 
+[[env.production.r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
+
 # Development environment
 [env.development]
 name = "ai-image-generation-worker"
@@ -89,3 +106,7 @@ binding = "AI"
 [[env.development.r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
+
+[[env.development.r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
