@@ -1275,7 +1275,7 @@ async function generateRecipeImage(recipe, env) {
     }
 
     const imageResult = await imageResponse.json();
-    
+
     if (!imageResult.success || !imageResult.imageUrl) {
       throw new Error('Image generation service returned unsuccessful response');
     }

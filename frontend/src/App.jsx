@@ -1909,6 +1909,7 @@ function App() {
       
       const requestBody = {
         recipeName: searchQuery,
+        generateImage: true,
       };
       
       const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
@@ -1941,6 +1942,8 @@ function App() {
           prepTime: result.recipe.prepTime,
           cookTime: result.recipe.cookTime,
           servings: result.recipe.servings,
+          image: result.recipe.image_url || '',
+          image_url: result.recipe.image_url || '',
           generatedAt: result.recipe.generatedAt || new Date().toISOString(),
           mockMode: result.recipe.mockMode || false,
           generationTime: result.generationTime,
@@ -2052,7 +2055,8 @@ function App() {
         ingredients: recipe.ingredients || [],
         servings: recipe.servings || '4',
         cuisine: recipe.cuisine || 'General',
-        dietary: recipe.dietary || []
+        dietary: recipe.dietary || [],
+        generateImage: true
       };
       
       const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
@@ -2101,6 +2105,8 @@ function App() {
           prepTime: result.recipe.prepTime,
           cookTime: result.recipe.cookTime,
           servings: result.recipe.servings,
+          image: result.recipe.image_url || '',
+          image_url: result.recipe.image_url || '',
           generatedAt: result.recipe.generatedAt || new Date().toISOString(),
           mockMode: result.recipe.mockMode || false,
           // Add metadata from generation

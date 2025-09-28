@@ -1383,7 +1383,7 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.success).toBe(true);
       expect(data.recipe).toBeDefined();
       expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
-      
+
       // Verify image generation service was called
       expect(mockImageGenerationService.fetch).toHaveBeenCalledWith(
         'https://ai-image-generation-worker/generate',
@@ -1411,7 +1411,7 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.success).toBe(true);
       expect(data.recipe).toBeDefined();
       expect(data.recipe.image_url).toBeUndefined();
-      
+
       // Verify image generation service was not called
       expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
     });
@@ -1429,7 +1429,7 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.success).toBe(true);
       expect(data.recipe).toBeDefined();
       expect(data.recipe.image_url).toBeUndefined();
-      
+
       // Verify image generation service was not called
       expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
     });
