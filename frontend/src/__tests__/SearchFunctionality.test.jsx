@@ -95,17 +95,17 @@ describe('Search Functionality', () => {
       });
     });
 
-    it('should show search icon when typing non-URL text', async () => {
+    it('should show AI recipe generation icon when typing non-URL text', async () => {
       const user = userEvent.setup();
       render(<App />);
       
       const searchInput = await screen.findByPlaceholderText('Search recipes or paste a URL to clip...');
       await user.type(searchInput, 'chicken recipe');
       
-      // Should show search icon (not clip icon)
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      expect(searchButton).toBeInTheDocument();
-      expect(searchButton.querySelector('svg')).toBeInTheDocument();
+      // Should show AI recipe generation button (not search button)
+      const aiButton = screen.getByRole('button', { name: /generate ai recipe/i });
+      expect(aiButton).toBeInTheDocument();
+      expect(aiButton.querySelector('svg')).toBeInTheDocument();
     });
 
     it('should show clip icon when typing a valid URL', async () => {
@@ -173,6 +173,42 @@ describe('Search Functionality', () => {
             json: () => Promise.resolve({ status: 'healthy' })
           });
         }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
+          });
+        }
         return Promise.resolve({ ok: false });
       });
       
@@ -224,6 +260,42 @@ describe('Search Functionality', () => {
             json: () => Promise.resolve({ status: 'healthy' })
           });
         }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
+          });
+        }
         return Promise.resolve({ ok: false });
       });
       
@@ -259,6 +331,42 @@ describe('Search Functionality', () => {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ status: 'healthy' })
+          });
+        }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
           });
         }
         return Promise.resolve({ ok: false });
@@ -305,6 +413,42 @@ describe('Search Functionality', () => {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ status: 'healthy' })
+          });
+        }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
           });
         }
         return Promise.resolve({ ok: false });
@@ -367,6 +511,42 @@ describe('Search Functionality', () => {
             json: () => Promise.resolve({ status: 'healthy' })
           });
         }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
+          });
+        }
         return Promise.resolve({ ok: false });
       });
       
@@ -420,6 +600,42 @@ describe('Search Functionality', () => {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ status: 'healthy' })
+          });
+        }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
           });
         }
         return Promise.resolve({ ok: false });
@@ -488,6 +704,42 @@ describe('Search Functionality', () => {
             json: () => Promise.resolve({ status: 'healthy' })
           });
         }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
+          });
+        }
         return Promise.resolve({ ok: false });
       });
       
@@ -544,6 +796,42 @@ describe('Search Functionality', () => {
             json: () => Promise.resolve({ status: 'healthy' })
           });
         }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
+          });
+        }
         return Promise.resolve({ ok: false });
       });
       
@@ -593,6 +881,42 @@ describe('Search Functionality', () => {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ status: 'healthy' })
+          });
+        }
+        if (url.includes('/recipe/search-1')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-1',
+              data: {
+                id: 'search-1',
+                name: 'Chicken Parmesan',
+                description: 'Classic Italian dish',
+                ingredients: ['chicken', 'cheese', 'tomato sauce'],
+                instructions: ['Bread chicken', 'Fry', 'Add sauce and cheese', 'Bake'],
+                prep_time: 'PT20M',
+                cook_time: 'PT40M',
+                recipe_yield: '4 servings'
+              }
+            })
+          });
+        }
+        if (url.includes('/recipe/search-2')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              id: 'search-2',
+              data: {
+                id: 'search-2',
+                name: 'Grilled Chicken Salad',
+                description: 'Healthy salad option',
+                ingredients: ['chicken', 'lettuce', 'tomatoes'],
+                instructions: ['Grill chicken', 'Prepare salad', 'Combine'],
+                prep_time: 'PT15M',
+                cook_time: 'PT20M',
+                recipe_yield: '2 servings'
+              }
+            })
           });
         }
         return Promise.resolve({ ok: false });

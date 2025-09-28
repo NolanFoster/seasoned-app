@@ -6,7 +6,7 @@ const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || pr
 
 function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }) {
   // Debug flag - set to true to enable detailed logging
-  const DEBUG_MODE = true;
+  const DEBUG_MODE = false;
   
   // Helper function for debug logging with emojis
   const debugLogEmoji = (emoji, message, data = {}) => {

@@ -722,6 +722,28 @@ function App() {
     });
   }
 
+  // Helper function to fetch complete recipe data from KV storage
+  async function fetchCompleteRecipeData(recipeId) {
+    try {
+      const response = await fetchWithTimeout(`${API_URL}/recipe/${recipeId}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        timeout: 5000
+      });
+      
+      if (response.ok) {
+        const recipeData = await response.json();
+        return recipeData;
+      } else {
+        console.warn(`Failed to fetch recipe ${recipeId}: ${response.status}`);
+        return null;
+      }
+    } catch (error) {
+      console.warn(`Error fetching recipe ${recipeId}:`, error);
+      return null;
+    }
+  }
+
   // Batch processing utility for parallel fetching with rate limiting
   async function processBatch(items, batchSize, processFunc) {
     const results = [];
