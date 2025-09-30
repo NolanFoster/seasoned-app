@@ -111,8 +111,6 @@ function App() {
   const getRecipeDescription = (recipe) => {
     // For AI-generated recipes, first check the generated description
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      console.log('🔍 AI Recipe - Generated description:', recipe.description);
-      
       // If there's a generated description, use it
       if (recipe.description && recipe.description.trim()) {
         return recipe.description;
@@ -132,7 +130,6 @@ function App() {
                                     .replace(/^description:?\s*/i, '')
                                     .trim();
           if (desc.length > 20 && desc.length < 500) {
-            console.log('🔍 AI Recipe - Extracted description:', desc);
             return desc;
           }
         }
@@ -149,15 +146,11 @@ function App() {
   const getFilteredIngredients = (recipe) => {
     // For AI-generated recipes, use the generated ingredients directly
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      console.log('🔍 AI Recipe - Using generated ingredients:', recipe.ingredients);
-      console.log('🔍 AI Recipe - Recipe object keys:', Object.keys(recipe));
-      
       // Use the ingredients from the generation API response
       const generatedIngredients = recipe.ingredients || [];
       
       // If the generated ingredients array is empty or very short, try to extract from instructions
       if (generatedIngredients.length < 3) {
-        console.log('🔍 AI Recipe - Few ingredients, extracting from instructions');
         const instructions = recipe.instructions || [];
         const additionalIngredients = [];
         
@@ -183,11 +176,9 @@ function App() {
           index === self.findIndex(i => i.toLowerCase().trim() === ingredient.toLowerCase().trim())
         );
         
-        console.log('🔍 AI Recipe - Final combined ingredients:', uniqueIngredients);
         return uniqueIngredients;
       }
       
-      console.log('🔍 AI Recipe - Using generated ingredients as-is:', generatedIngredients);
       return generatedIngredients;
     }
     
@@ -199,10 +190,6 @@ function App() {
   const getFilteredInstructions = (recipe) => {
     // For AI-generated recipes, use the generated instructions directly
     if (recipe.source === 'ai_generated' && recipe.generatedAt) {
-      console.log('🔍 AI Recipe - Using generated instructions:', recipe.instructions);
-      console.log('🔍 AI Recipe - Instructions type:', typeof recipe.instructions);
-      console.log('🔍 AI Recipe - Instructions length:', recipe.instructions?.length);
-      
       const generatedInstructions = recipe.instructions || [];
       
       // For the sample response format where instructions contain everything,
@@ -220,9 +207,6 @@ function App() {
       }).filter(instruction => 
         instruction.length > 5 // Must have some content
       );
-      
-      console.log('🔍 AI Recipe - Final instructions count:', cleanedInstructions.length);
-      console.log('🔍 AI Recipe - Sample instruction:', cleanedInstructions[0]);
       
       return cleanedInstructions.length > 0 ? cleanedInstructions : generatedInstructions;
     }
@@ -1928,11 +1912,6 @@ function App() {
       
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
-        console.log('📦 Raw recipe data from API:', result.recipe);
-        console.log('📦 Recipe ingredients from API:', result.recipe.ingredients);
-        console.log('📦 Recipe ingredients type:', typeof result.recipe.ingredients);
-        console.log('📦 Recipe ingredients is array?', Array.isArray(result.recipe.ingredients));
-        
         const generatedRecipe = {
           id: `ai-${Date.now()}`,
           source: 'ai_generated',
@@ -1955,9 +1934,6 @@ function App() {
           similarRecipesFound: result.similarRecipesFound,
           generationMethod: result.generationMethod
         };
-        
-        console.log('📦 Generated recipe object:', generatedRecipe);
-        console.log('📦 Generated recipe ingredients:', generatedRecipe.ingredients);
 
         // Open the generated recipe directly in fullscreen view
         setSelectedRecipe(generatedRecipe);
@@ -2095,11 +2071,6 @@ function App() {
       
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
-        console.log('🎯 AI Card - Raw recipe data from API:', result.recipe);
-        console.log('🎯 AI Card - Recipe ingredients from API:', result.recipe.ingredients);
-        console.log('🎯 AI Card - Recipe ingredients type:', typeof result.recipe.ingredients);
-        console.log('🎯 AI Card - Recipe ingredients is array?', Array.isArray(result.recipe.ingredients));
-        
         const generatedRecipe = {
           // Only keep essential fields from the original recipe
           id: recipe.id || recipe.name,
@@ -2127,9 +2098,6 @@ function App() {
           similarRecipesFound: result.similarRecipesFound,
           generationMethod: result.generationMethod
         };
-        
-        console.log('🎯 AI Card - Generated recipe object:', generatedRecipe);
-        console.log('🎯 AI Card - Generated recipe ingredients:', generatedRecipe.ingredients);
 
         // Clear loading state
         setAiCardLoadingStates(prev => {
