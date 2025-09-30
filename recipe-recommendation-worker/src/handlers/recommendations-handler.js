@@ -1,5 +1,6 @@
 /**
  * Recommendations endpoint handler - processes recipe recommendation requests
+ * Now with Cloudflare Cache API support for improved performance
  */
 
 import { log, generateRequestId } from '../../../shared/utility-functions.js';
@@ -21,6 +22,60 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
     const recommendationDate = date || new Date().toISOString().split('T')[0];
     const recipesPerCategory = Math.min(Math.max(parseInt(limit) || 3, 1), 10); // Limit between 1-10
     const aiGeneratedCount = Math.min(Math.max(parseInt(aiGenerated) || 0, 0), 10); // AI-generated between 0-10
+    
+    // Generate cache key based on request parameters
+    const cacheKey = new URL(`https://cache.recommendations.com/api/recommendations`);
+    cacheKey.searchParams.set('location', hasLocation ? location.toLowerCase().trim() : 'none');
+    cacheKey.searchParams.set('date', recommendationDate);
+    cacheKey.searchParams.set('limit', recipesPerCategory.toString());
+    cacheKey.searchParams.set('aiGenerated', aiGeneratedCount.toString());
+    
+    // Try to get cached response
+    const cache = caches.default;
+    const cachedResponse = await cache.match(cacheKey);
+    
+    if (cachedResponse) {
+      // Found in cache - return cached response
+      const cachedData = await cachedResponse.json();
+      const duration = Date.now() - startTime;
+      
+      log('info', 'Returning cached recommendations', {
+        requestId,
+        duration: `${duration}ms`,
+        cacheKey: cacheKey.toString(),
+        cachedAt: cachedResponse.headers.get('X-Cached-At')
+      });
+      
+      metrics.increment('recommendations_cache_hit', 1);
+      metrics.timing('recommendations_cache_duration', duration);
+      
+      // Send cache hit analytics
+      await sendAnalytics(env, 'recommendations_cache_hit', {
+        requestId,
+        hasLocation,
+        location: hasLocation ? location : null,
+        date: recommendationDate,
+        duration,
+        recipesPerCategory,
+        aiGeneratedCount
+      });
+      
+      // Return cached response with updated headers
+      return new Response(JSON.stringify({
+        ...cachedData,
+        requestId,
+        processingTime: `${duration}ms`,
+        cached: true,
+        cachedAt: cachedResponse.headers.get('X-Cached-At')
+      }), {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=3600', // 1 hour
+          'X-Cache': 'HIT'
+        },
+      });
+    }
     
     log('info', 'Recommendation parameters parsed', {
       requestId,
@@ -69,14 +124,53 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
       season: recommendations.season
     });
 
-    return new Response(JSON.stringify({
+    // Cache the successful response
+    const responseData = {
       ...recommendations,
       requestId,
       processingTime: `${duration}ms`,
       recipesPerCategory,
       aiGeneratedCount
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    };
+    
+    const responseToCache = new Response(JSON.stringify(responseData), {
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600', // 1 hour cache
+        'X-Cached-At': new Date().toISOString()
+      },
+    });
+    
+    // Store in cache asynchronously (don't wait for it)
+    const cachePromise = cache.put(cacheKey, responseToCache.clone());
+    
+    log('info', 'Caching recommendations response', {
+      requestId,
+      cacheKey: cacheKey.toString(),
+      ttl: '3600s'
+    });
+    
+    metrics.increment('recommendations_cache_write', 1);
+    
+    // Don't wait for cache write to complete, but log any errors
+    cachePromise.catch(error => {
+      log('error', 'Failed to cache recommendations', {
+        requestId,
+        cacheKey: cacheKey.toString(),
+        error: error.message
+      });
+      metrics.increment('recommendations_cache_write_error', 1);
+    });
+    
+    // Return response with cache headers
+    return new Response(JSON.stringify(responseData), {
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600', // 1 hour
+        'X-Cache': 'MISS'
+      },
     });
   } catch (error) {
     const duration = Date.now() - startTime;
