@@ -1928,6 +1928,11 @@ function App() {
       
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
+        console.log('📦 Raw recipe data from API:', result.recipe);
+        console.log('📦 Recipe ingredients from API:', result.recipe.ingredients);
+        console.log('📦 Recipe ingredients type:', typeof result.recipe.ingredients);
+        console.log('📦 Recipe ingredients is array?', Array.isArray(result.recipe.ingredients));
+        
         const generatedRecipe = {
           id: `ai-${Date.now()}`,
           source: 'ai_generated',
@@ -1950,6 +1955,9 @@ function App() {
           similarRecipesFound: result.similarRecipesFound,
           generationMethod: result.generationMethod
         };
+        
+        console.log('📦 Generated recipe object:', generatedRecipe);
+        console.log('📦 Generated recipe ingredients:', generatedRecipe.ingredients);
 
         // Open the generated recipe directly in fullscreen view
         setSelectedRecipe(generatedRecipe);
@@ -2087,6 +2095,11 @@ function App() {
       
       if (result.success && result.recipe) {
         // Create a complete recipe object from the generated data
+        console.log('🎯 AI Card - Raw recipe data from API:', result.recipe);
+        console.log('🎯 AI Card - Recipe ingredients from API:', result.recipe.ingredients);
+        console.log('🎯 AI Card - Recipe ingredients type:', typeof result.recipe.ingredients);
+        console.log('🎯 AI Card - Recipe ingredients is array?', Array.isArray(result.recipe.ingredients));
+        
         const generatedRecipe = {
           // Only keep essential fields from the original recipe
           id: recipe.id || recipe.name,
@@ -2114,6 +2127,9 @@ function App() {
           similarRecipesFound: result.similarRecipesFound,
           generationMethod: result.generationMethod
         };
+        
+        console.log('🎯 AI Card - Generated recipe object:', generatedRecipe);
+        console.log('🎯 AI Card - Generated recipe ingredients:', generatedRecipe.ingredients);
 
         // Clear loading state
         setAiCardLoadingStates(prev => {

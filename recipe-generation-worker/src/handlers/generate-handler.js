@@ -74,6 +74,12 @@ export async function handleGenerate(request, env, corsHeaders) {
         }
       }
 
+      // Final safety check for mock mode - ensure ingredients are always an array
+      if (!finalRecipe.ingredients || !Array.isArray(finalRecipe.ingredients)) {
+        console.error('Mock recipe has invalid ingredients, using fallback:', finalRecipe.ingredients);
+        finalRecipe.ingredients = mockRecipe.ingredients || [];
+      }
+      
       // Check if image generation is requested in mock mode
       if (requestBody.generateImage === true) {
         try {
@@ -104,21 +110,27 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
 
-    // Check if elevation is requested
-    let finalRecipe = generatedRecipe;
-    if (requestBody.elevate === true) {
-      try {
-        finalRecipe = await elevateRecipe(generatedRecipe, env);
-      } catch (elevationError) {
-        // If elevation fails, return the original recipe with a warning
-        console.warn('Recipe elevation failed:', elevationError.message);
-        finalRecipe = {
-          ...generatedRecipe,
-          elevationError: 'Recipe elevation failed, returning original recipe',
-          elevationFailed: true
-        };
+      // Check if elevation is requested
+      let finalRecipe = generatedRecipe;
+      if (requestBody.elevate === true) {
+        try {
+          finalRecipe = await elevateRecipe(generatedRecipe, env);
+        } catch (elevationError) {
+          // If elevation fails, return the original recipe with a warning
+          console.warn('Recipe elevation failed:', elevationError.message);
+          finalRecipe = {
+            ...generatedRecipe,
+            elevationError: 'Recipe elevation failed, returning original recipe',
+            elevationFailed: true
+          };
+        }
       }
-    }
+      
+      // Final safety check - ensure ingredients are always an array
+      if (!finalRecipe.ingredients || !Array.isArray(finalRecipe.ingredients)) {
+        console.error('Final recipe has invalid ingredients, using fallback:', finalRecipe.ingredients);
+        finalRecipe.ingredients = generatedRecipe.ingredients || [];
+      }
 
     // Check if image generation is requested
     if (requestBody.generateImage === true) {
@@ -329,6 +341,15 @@ async function generateRecipeWithAI(requestData, env) {
         await opikClient.flush();
       }
     }
+
+    // Final validation of ingredients before returning
+    if (!generatedRecipe.ingredients || !Array.isArray(generatedRecipe.ingredients)) {
+      console.error('WARNING: Generated recipe has invalid ingredients:', generatedRecipe.ingredients);
+      generatedRecipe.ingredients = [];
+    }
+    
+    console.log('Final recipe ingredients:', generatedRecipe.ingredients);
+    console.log('Final recipe ingredients count:', generatedRecipe.ingredients.length);
 
     return {
       ...generatedRecipe,
@@ -616,9 +637,23 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
 
   // Debug: Print raw LLM response
   console.log('Raw LLM response:', JSON.stringify(response.response, null, 2));
+  console.log('Raw LLM response type:', typeof response.response);
 
   // Parse the JSON response and flatten any nested structure
   let structuredRecipe = response.response;
+  
+  // If response is a string, try to parse it as JSON
+  if (typeof structuredRecipe === 'string') {
+    try {
+      console.log('Response is string, attempting to parse as JSON...');
+      structuredRecipe = JSON.parse(structuredRecipe);
+      console.log('Successfully parsed JSON response');
+    } catch (parseError) {
+      console.error('Failed to parse string response as JSON:', parseError);
+      console.error('String content:', structuredRecipe);
+      throw new Error('AI returned invalid JSON string response');
+    }
+  }
 
   // Validate that the response is an object
   if (!structuredRecipe || typeof structuredRecipe !== 'object') {
@@ -699,6 +734,10 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   }
 
   // Ensure ingredients and instructions are arrays (handle object responses)
+  console.log('Pre-processing ingredients:', structuredRecipe.ingredients);
+  console.log('Ingredients type:', typeof structuredRecipe.ingredients);
+  console.log('Is array?', Array.isArray(structuredRecipe.ingredients));
+  
   if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
     console.warn('Converting ingredients object to array:', structuredRecipe.ingredients);
     // Convert object to array format: "ingredient name: quantity"
@@ -706,11 +745,13 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
       .map(([name, quantity]) => `${name}: ${quantity}`)
       .filter(item => typeof item === 'string');
   } else if (!Array.isArray(structuredRecipe.ingredients)) {
+    console.warn('Ingredients is not an array, setting to empty array. Value was:', structuredRecipe.ingredients);
     structuredRecipe.ingredients = [];
   }
 
   // Debug: Print processed ingredients
   console.log('Processed ingredients:', JSON.stringify(structuredRecipe.ingredients, null, 2));
+  console.log('Number of ingredients:', structuredRecipe.ingredients.length);
 
   if (structuredRecipe.instructions && typeof structuredRecipe.instructions === 'object' && !Array.isArray(structuredRecipe.instructions)) {
     console.warn('Converting instructions object to array:', structuredRecipe.instructions);
