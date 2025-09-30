@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js'
+import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js';
 import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
 import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
