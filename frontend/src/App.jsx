@@ -725,7 +725,7 @@ function App() {
   // Helper function to fetch complete recipe data from KV storage
   async function fetchCompleteRecipeData(recipeId) {
     try {
-      const response = await fetchWithTimeout(`${API_URL}/recipe/${recipeId}`, {
+      const response = await fetchWithTimeout(`${API_URL}/recipe/get?id=${recipeId}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         timeout: 5000
