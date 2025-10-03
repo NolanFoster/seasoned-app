@@ -260,9 +260,9 @@ async function generateRecipeWithAI(requestData, env) {
           {
             metadata: {
               queryLength: queryText.length,
-              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
-            },
-            duration: queryDuration
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
+              duration: queryDuration
+            }
           },
           operationData.queryStartTime,
           operationData.queryEndTime
@@ -278,9 +278,9 @@ async function generateRecipeWithAI(requestData, env) {
             provider: 'cloudflare',
             metadata: {
               textLength: queryText.length,
-              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
-            },
-            duration: embeddingDuration
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
+              duration: embeddingDuration
+            }
           },
           operationData.embeddingStartTime,
           operationData.embeddingEndTime
@@ -294,9 +294,9 @@ async function generateRecipeWithAI(requestData, env) {
           {
             metadata: {
               embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
-              resultsFound: similarRecipes.length
-            },
-            duration: searchDuration
+              resultsFound: similarRecipes.length,
+              duration: searchDuration
+            }
           },
           operationData.searchStartTime,
           operationData.searchEndTime
@@ -314,9 +314,9 @@ async function generateRecipeWithAI(requestData, env) {
               metadata: {
                 similarRecipesCount: similarRecipes.length,
                 promptLength: operationData.prompt.length,
-                responseLength: operationData.llmResponse.length
-              },
-              duration: llmDuration
+                responseLength: operationData.llmResponse.length,
+                duration: llmDuration
+              }
             },
             operationData.llmStartTime,
             operationData.llmEndTime
