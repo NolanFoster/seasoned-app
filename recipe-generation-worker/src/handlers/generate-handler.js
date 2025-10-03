@@ -437,7 +437,7 @@ async function generateQueryEmbedding(text, aiBinding) {
 async function findSimilarRecipes(queryEmbedding, vectorStorage, env) {
   try {
     const result = await vectorStorage.query(queryEmbedding, {
-      topK: 7,
+      topK: 3,
       returnMetadata: true
     });
 
