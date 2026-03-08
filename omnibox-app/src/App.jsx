@@ -15,9 +15,10 @@ function isValidUrl(str) {
   }
 }
 
-// Debounce helper
+// Debounce helper — cancels pending timer on unmount to prevent leaks
 function useDebounce(fn, delay) {
   const timer = useRef(null)
+  useEffect(() => () => clearTimeout(timer.current), [])
   return useCallback((...args) => {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => fn(...args), delay)
