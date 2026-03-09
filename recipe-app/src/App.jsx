@@ -282,11 +282,18 @@ export default function App() {
   }
 
   const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
+  // Only disable input for operations that replace the UI (clip/generate/elevate).
+  // Searching runs in the background so the input stays live and the keyboard stays open.
+  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
 
-  // Restore focus after any async action completes (busy → not busy)
+  // Restore focus after a blocking async action completes, but don't steal focus
+  // from elements the user has intentionally focused.
   useEffect(() => {
-    if (!busy) inputRef.current?.focus()
-  }, [busy])
+    if (!inputBusy) {
+      const active = document.activeElement
+      if (!active || active === document.body) inputRef.current?.focus()
+    }
+  }, [inputBusy])
 
   return (
     <div className="app">
@@ -310,7 +317,7 @@ export default function App() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              disabled={busy}
+              disabled={inputBusy}
               autoFocus
               autoComplete="off"
               spellCheck="false"
@@ -323,7 +330,7 @@ export default function App() {
                   className="action-btn generate-btn"
                   title="Generate AI recipe"
                   onClick={() => doGenerate(input.trim())}
-                  disabled={busy}
+                  disabled={inputBusy}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
@@ -332,32 +339,29 @@ export default function App() {
                 </button>
               )}
 
-              {/* Primary action button */}
-              <button
-                className={`action-btn primary-btn ${getPrimaryAction()}`}
-                title={isUrl ? 'Clip recipe from URL' : hasText ? 'Search recipes' : 'Search'}
-                onClick={handleSubmit}
-                disabled={busy || getPrimaryAction() === 'idle'}
-              >
-                {busy ? (
-                  <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                  </svg>
-                ) : isUrl ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
-                    <path d="M20 4H8.12a2 2 0 00-1.99 1.78c-.07.81.83 2.22.83 2.22"/>
-                    <path d="M14 12l-2.5 2.5L9 12"/>
-                    <path d="M20 20H8.12a2 2 0 01-1.99-1.78c-.07-.81.83-2.22.83-2.22"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
-                )}
-                <span>{isUrl ? 'Clip' : 'Search'}</span>
-              </button>
+              {/* Primary action button — only shown for URL clipping */}
+              {isUrl && (
+                <button
+                  className={`action-btn primary-btn clip`}
+                  title="Clip recipe from URL"
+                  onClick={handleSubmit}
+                  disabled={busy}
+                >
+                  {busy ? (
+                    <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+                      <path d="M20 4H8.12a2 2 0 00-1.99 1.78c-.07.81.83 2.22.83 2.22"/>
+                      <path d="M14 12l-2.5 2.5L9 12"/>
+                      <path d="M20 20H8.12a2 2 0 01-1.99-1.78c-.07-.81.83-2.22.83-2.22"/>
+                    </svg>
+                  )}
+                  <span>Clip</span>
+                </button>
+              )}
             </div>
           </div>
 
