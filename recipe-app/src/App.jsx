@@ -7,6 +7,13 @@ const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 const API_URL = import.meta.env.VITE_API_URL
 
+// Fail fast in dev if backend URLs are not configured (e.g. missing .env.development)
+if (import.meta.env.DEV && [SEARCH_DB_URL, CLIPPER_API_URL, RECIPE_GENERATION_URL, API_URL].some((u) => !u || u === 'undefined')) {
+  console.error(
+    'Recipe app: missing backend URLs. Copy recipe-app/.env.example to .env.development or .env.local and set VITE_API_URL, VITE_SEARCH_DB_URL, VITE_CLIPPER_API_URL, VITE_RECIPE_GENERATION_URL to your Cloudflare Worker URLs.'
+  )
+}
+
 function isValidUrl(str) {
   try {
     const url = new URL(str)
