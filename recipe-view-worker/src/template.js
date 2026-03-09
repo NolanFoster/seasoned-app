@@ -19,6 +19,15 @@ export function generateRecipeHTML(recipe) {
   // Generate styles
   const styles = generateStyles();
 
+  // Determine source badge
+  const source = recipe.source || 'recipe';
+  const sourceBadgeMap = {
+    clipped: { label: 'Clipped', color: '#5bb87a' },
+    ai_generated: { label: 'AI Generated', color: '#c8a96e' },
+    elevated: { label: 'Elevated', color: '#e8c87a' },
+  };
+  const sourceBadge = sourceBadgeMap[source] || { label: 'Recipe', color: '#4a6e52' };
+
   // Generate the HTML
   return `<!DOCTYPE html>
 <html lang="en">
@@ -27,106 +36,67 @@ export function generateRecipeHTML(recipe) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(name)} - Recipe</title>
   <meta name="description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
-  
+
   <!-- Open Graph meta tags for social sharing -->
   <meta property="og:title" content="${escapeHtml(name)}">
   <meta property="og:description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
   <meta property="og:type" content="website">
   ${imageUrl ? `<meta property="og:image" content="${escapeHtml(imageUrl)}">` : ''}
-  
+
   <!-- Twitter Card meta tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(name)}">
   <meta name="twitter:description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
   ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ''}
-  
+
   <style>${styles}</style>
 </head>
 <body>
-  <div class="recipe-fullscreen">
-    <!-- Background Image -->
-    <div class="recipe-full-background">
-      ${imageUrl ? 
-        `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" class="recipe-full-background-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-         <div class="recipe-full-background-placeholder" style="display:none;"><div class="placeholder-gradient"></div></div>` : 
-        `<div class="recipe-full-background-placeholder"><div class="placeholder-gradient"></div></div>`
-      }
-    </div>
-
-    <!-- Title Section -->
-    <div class="recipe-title-section">
-      <h1 class="recipe-fullscreen-title">${escapeHtml(name)}</h1>
-      
-      <!-- Recipe Timing Info -->
-      ${(prepTime || cookTime || totalTime || recipeYield) ? `
-        <div class="recipe-timing-info">
-          ${prepTime ? `
-            <div class="timing-item">
-              <span class="timing-icon">⏱️</span>
-              <span class="timing-label">Prep:<span class="timing-value">${formatDuration(prepTime)}</span></span>
-            </div>
-          ` : ''}
-          ${cookTime ? `
-            <div class="timing-item">
-              <span class="timing-icon">🔥</span>
-              <span class="timing-label">Cook:<span class="timing-value">${formatDuration(cookTime)}</span></span>
-            </div>
-          ` : ''}
-          ${totalTime ? `
-            <div class="timing-item">
-              <span class="timing-icon">⏰</span>
-              <span class="timing-label">Total:<span class="timing-value">${formatDuration(totalTime)}</span></span>
-            </div>
-          ` : ''}
-          ${recipeYield ? `
-            <div class="timing-item">
-              <span class="timing-icon">🍽️</span>
-              <span class="timing-label">Servings:<span class="timing-value">${escapeHtml(recipeYield)}</span></span>
-            </div>
-          ` : ''}
-        </div>
-      ` : ''}
-      
-      <!-- Recipe Links -->
-      <div class="recipe-links">
+  <div class="page-wrapper">
+    <div class="recipe-card">
+      <!-- Header -->
+      <div class="recipe-card-header">
+        <span class="recipe-badge" style="background:${sourceBadge.color}">${sourceBadge.label}</span>
+        <h2 class="recipe-title">${escapeHtml(name)}</h2>
         ${sourceUrl ? `
-          <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="recipe-link source-link">
-            <span>🔗</span>
-            <span>View Original</span>
-          </a>
-        ` : ''}
-        ${videoUrl ? `
-          <a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="recipe-link video-link">
-            <span>🎥</span>
-            <span>Watch Video</span>
-          </a>
-        ` : ''}
+        <div class="recipe-header-actions">
+          <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>
+        </div>` : ''}
       </div>
-    </div>
-    
-    <!-- Recipe Content -->
-    <div class="recipe-fullscreen-content">
-      <!-- Ingredients Panel -->
-      <div class="recipe-panel">
-        <h2>Ingredients</h2>
-        <ul class="ingredients-list">
-          ${ingredients.map(ingredient => {
-            const formatted = formatIngredientAmount(ingredient);
-            return `<li>${escapeHtml(formatted)}</li>`;
-          }).join('')}
-        </ul>
+
+      ${imageUrl ? `<img class="recipe-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}">` : ''}
+
+      ${description ? `<p class="recipe-description">${escapeHtml(description)}</p>` : ''}
+
+      <!-- Meta -->
+      <div class="recipe-meta">
+        ${prepTime ? `<span class="recipe-meta-pill"><strong>Prep</strong> ${escapeHtml(formatDuration(prepTime))}</span>` : ''}
+        ${cookTime ? `<span class="recipe-meta-pill"><strong>Cook</strong> ${escapeHtml(formatDuration(cookTime))}</span>` : ''}
+        ${recipeYield ? `<span class="recipe-meta-pill"><strong>Serves</strong> ${escapeHtml(recipeYield)}</span>` : ''}
+        ${videoUrl ? `<a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="meta-link">Watch Video ↗</a>` : ''}
       </div>
-      
-      <!-- Instructions Panel -->
-      <div class="recipe-panel">
-        <h2>Instructions</h2>
-        <ol class="instructions-list">
-          ${instructions.map((instruction, index) => {
-            const text = typeof instruction === 'string' ? instruction : 
-                       (instruction.text || instruction.name || String(instruction));
-            return `<li>${renderInstructionWithTimers(escapeHtml(text))}</li>`;
-          }).join('')}
-        </ol>
+
+      <!-- Body -->
+      <div class="recipe-body">
+        <div class="recipe-section">
+          <h3>Ingredients</h3>
+          <ul>
+            ${ingredients.map(ingredient => {
+              const formatted = formatIngredientAmount(ingredient);
+              return `<li>${escapeHtml(formatted)}</li>`;
+            }).join('')}
+          </ul>
+        </div>
+        <div class="recipe-section">
+          <h3>Instructions</h3>
+          <ol>
+            ${instructions.map((instruction) => {
+              const text = typeof instruction === 'string' ? instruction :
+                         (instruction.text || instruction.name || String(instruction));
+              return `<li>${renderInstructionWithTimers(escapeHtml(text))}</li>`;
+            }).join('')}
+          </ol>
+        </div>
       </div>
     </div>
   </div>
@@ -398,383 +368,202 @@ function renderInstructionWithTimers(text) {
 function generateStyles() {
   return `
     /* Reset and Base Styles */
-    * {
+    *, *::before, *::after {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #000;
-      overflow-x: hidden;
+    :root {
+      --bg: #0d1a0f;
+      --surface: #142016;
+      --surface2: #1b2c1d;
+      --border: #2a3d2c;
+      --text: #e8f0e4;
+      --text-muted: #7a9b80;
+      --accent: #c8a96e;
+      --radius: 14px;
+      --radius-sm: 8px;
     }
 
-    /* Full Screen Recipe View */
-    .recipe-fullscreen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: transparent;
-      overflow-y: auto;
-      color: white;
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Page wrapper — centers the card like the recipe-app */
+    .page-wrapper {
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
-    }
-
-    /* Recipe Title Section */
-    .recipe-title-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      padding-top: 60px;
-      z-index: 2;
-      text-align: center;
-      padding-left: 40px;
-      padding-right: 40px;
-      padding-bottom: 20px;
-    }
-
-    .recipe-fullscreen-title {
-      color: white;
-      font-size: 2.5em;
-      font-weight: 600;
-      margin: 0 auto;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-      padding: 15px 25px;
-      display: inline-block;
-      width: fit-content;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
-    }
-
-    /* Recipe Timing Info */
-    .recipe-timing-info {
-      display: flex;
-      gap: 2rem;
+      align-items: flex-start;
       justify-content: center;
-      align-items: center;
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
-      flex-wrap: wrap;
+      padding: 40px 16px 60px;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% -10%, rgba(91,184,122,0.08) 0%, transparent 70%),
+        var(--bg);
     }
 
-    .timing-item {
+    /* Recipe Card */
+    .recipe-card {
+      width: 100%;
+      max-width: 720px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    /* Card Header */
+    .recipe-card-header {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      align-items: flex-start;
+      gap: 12px;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
     }
 
-    .timing-icon {
-      font-size: 1.2em;
-    }
-
-    .timing-label {
-      font-size: 0.9em;
+    .recipe-badge {
+      flex-shrink: 0;
+      margin-top: 3px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      opacity: 0.9;
+      color: #fff;
+      border-left: 3px solid rgba(255,255,255,0.3);
+    }
+
+    .recipe-title {
+      flex: 1;
+      font-size: 1.375rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    .recipe-header-actions {
+      flex-shrink: 0;
+    }
+
+    .source-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
       font-weight: 500;
+      padding: 4px 8px;
+    }
+    .source-link:hover {
+      text-decoration: underline;
     }
 
-    .timing-value {
-      font-weight: 600;
-      margin-left: 0.25rem;
+    /* Recipe Image */
+    .recipe-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      display: block;
     }
 
-    /* Recipe Links */
-    .recipe-links {
+    /* Description */
+    .recipe-description {
+      padding: 16px 20px 0;
+      font-size: 0.9375rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Meta pills */
+    .recipe-meta {
       display: flex;
-      gap: 1rem;
-      margin-top: 0.5rem;
       flex-wrap: wrap;
-      justify-content: center;
+      gap: 8px 12px;
+      padding: 14px 20px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
     }
 
-    .recipe-link {
+    .recipe-meta-pill {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
+      gap: 4px;
+      background: var(--surface2);
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-size: 0.85rem;
+    }
+
+    .recipe-meta-pill strong {
+      color: var(--text);
+    }
+
+    .meta-link {
+      color: var(--accent);
       text-decoration: none;
-      border-radius: 25px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
-      cursor: pointer;
+      padding: 3px 10px;
+    }
+    .meta-link:hover {
+      text-decoration: underline;
     }
 
-    .recipe-link:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
-    }
-
-    .recipe-link.source-link {
-      background: rgba(52, 152, 219, 0.2);
-      border: 1px solid rgba(52, 152, 219, 0.3);
-    }
-
-    .recipe-link.source-link:hover {
-      background: rgba(52, 152, 219, 0.4);
-      border-color: rgba(52, 152, 219, 0.5);
-    }
-
-    .recipe-link.video-link {
-      background: rgba(231, 76, 60, 0.2);
-      border: 1px solid rgba(231, 76, 60, 0.3);
-    }
-
-    .recipe-link.video-link:hover {
-      background: rgba(231, 76, 60, 0.4);
-      border-color: rgba(231, 76, 60, 0.5);
-    }
-
-    /* Recipe Content */
-    .recipe-fullscreen-content {
+    /* Recipe Body — two-column grid */
+    .recipe-body {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      padding: 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-      margin-top: 30px;
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      box-sizing: border-box;
+      grid-template-columns: 1fr 2fr;
     }
 
-    /* Recipe Panels */
-    .recipe-panel {
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 15px;
-      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
-      overflow: hidden;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      min-width: 0;
-    }
-
-    .recipe-panel h2 {
-      color: white;
-      margin: 0 0 20px 0;
-      font-size: 1.5em;
-      font-weight: 600;
-    }
-
-    .ingredients-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .ingredients-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-      color: white;
-      font-size: 1.1em;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-    }
-
-    .ingredients-list li:last-child {
-      border-bottom: none;
-    }
-
-    .instructions-list {
-      padding-left: 20px;
-      margin: 0;
-    }
-
-    .instructions-list li {
-      padding: 15px 0;
-      color: white;
-      font-size: 1.1em;
-      line-height: 1.6;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-    }
-
-    .instructions-list li:last-child {
-      border-bottom: none;
-    }
-
-    /* Full Background Image */
-    .recipe-full-background {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: -1;
-    }
-
-    .recipe-full-background::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.3);
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .recipe-full-background-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .recipe-full-background-placeholder {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
-
-    .placeholder-gradient {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    /* Mobile responsiveness */
-    @media (max-width: 1024px) {
-      .recipe-fullscreen-content {
+    @media (max-width: 560px) {
+      .recipe-body {
         grid-template-columns: 1fr;
-        gap: 25px;
-        padding: 30px;
-        max-width: 800px;
       }
     }
 
-    @media (max-width: 768px) {
-      .recipe-fullscreen-content {
-        padding: 0 20px 20px;
-        margin-top: 20px;
-        gap: 20px;
-        max-width: 600px;
-      }
-      
-      .recipe-title-section {
-        padding: 40px 20px 20px 20px;
-      }
-      
-      .recipe-fullscreen-title {
-        font-size: 1.8em;
-        line-height: 1.2;
-      }
-      
-      .recipe-timing-info {
-        gap: 1.5rem;
-        margin-top: 0.8rem;
-        margin-bottom: 0.4rem;
-      }
-      
-      .timing-item {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.9em;
-      }
-      
-      .timing-icon {
-        font-size: 1em;
-      }
-      
-      .timing-label {
-        font-size: 0.85em;
-      }
-      
-      .recipe-links {
-        margin-top: 0.5rem;
-      }
-      
-      .recipe-link {
-        padding: 0.5rem 1rem;
-        font-size: 0.85rem;
+    .recipe-section {
+      padding: 20px;
+    }
+    .recipe-section + .recipe-section {
+      border-left: 1px solid var(--border);
+    }
+
+    @media (max-width: 560px) {
+      .recipe-section + .recipe-section {
+        border-left: none;
+        border-top: 1px solid var(--border);
       }
     }
 
-    @media (max-width: 480px) {
-      .recipe-fullscreen-title {
-        font-size: 1.5em;
-      }
-      
-      .recipe-title-section {
-        padding: 30px 15px 15px 15px;
-      }
-      
-      .recipe-timing-info {
-        gap: 1rem;
-        margin-top: 0.6rem;
-      }
-      
-      .timing-item {
-        padding: 0.3rem 0.6rem;
-        font-size: 0.8em;
-      }
-      
-      .timing-icon {
-        font-size: 0.9em;
-      }
-      
-      .timing-label {
-        font-size: 0.8em;
-      }
-      
-      .recipe-fullscreen-content {
-        padding: 0 15px 15px;
-        margin-top: 15px;
-        gap: 15px;
-        max-width: 100%;
-        width: 100%;
-      }
-      
-      .recipe-panel {
-        padding: 20px;
-        margin: 0 auto;
-        width: 100%;
-        max-width: 500px;
-      }
-      
-      .recipe-panel h2 {
-        font-size: 1.3em;
-        margin-bottom: 15px;
-      }
-      
-      .ingredients-list li,
-      .instructions-list li {
-        font-size: 1em;
-        padding: 10px 0;
-      }
-      
-      .instructions-list {
-        padding-left: 15px;
-      }
+    .recipe-section h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .recipe-section:first-child h3 {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .recipe-section ul,
+    .recipe-section ol {
+      padding-left: 18px;
+    }
+
+    .recipe-section li {
+      font-size: 0.9rem;
+      line-height: 1.75;
+      color: var(--text);
+      margin-bottom: 6px;
     }
 
     /* Timer Button Styles */
@@ -785,33 +574,27 @@ function generateStyles() {
       justify-content: center;
       padding: 4px 8px;
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      background: var(--surface2);
+      border: 1px solid var(--border);
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: background 0.15s;
       vertical-align: middle;
-      color: white;
+      color: var(--accent);
       margin-left: 4px;
     }
 
     .timer-button-inline:hover {
-      background: rgba(255, 255, 255, 0.25);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      background: var(--border);
     }
 
     .timer-button-inline:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      opacity: 0.8;
     }
 
     .timer-icon-inline {
       width: 16px;
       height: 16px;
-      fill: white;
+      fill: var(--accent);
     }
 
     /* Active Timer Styles */
@@ -819,24 +602,17 @@ function generateStyles() {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: var(--surface2);
+      border: 1px solid var(--accent);
       border-radius: 20px;
       padding: 6px 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
       animation: timer-pulse 2s ease-in-out infinite;
       margin-left: 8px;
     }
 
     @keyframes timer-pulse {
-      0%, 100% {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-      }
-      50% {
-        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
-      }
+      0%, 100% { box-shadow: 0 0 0 1px rgba(200,169,110,0.2); }
+      50%       { box-shadow: 0 0 0 2px rgba(200,169,110,0.4); }
     }
 
     .timer-display {
@@ -849,13 +625,13 @@ function generateStyles() {
     .timer-time {
       font-size: 1.1em;
       font-weight: 600;
-      color: white;
+      color: var(--text);
       font-variant-numeric: tabular-nums;
     }
 
     .timer-label {
       font-size: 0.75em;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--text-muted);
       white-space: nowrap;
     }
 
@@ -866,22 +642,21 @@ function generateStyles() {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: var(--border);
+      border: 1px solid var(--border);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.15s;
       padding: 0;
     }
 
     .timer-control-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: scale(1.1);
+      background: var(--accent);
     }
 
     .timer-control-btn svg {
       width: 16px;
       height: 16px;
-      fill: white;
+      fill: var(--text);
     }
 
     .play-pause-btn svg {
@@ -896,26 +671,17 @@ function generateStyles() {
 
     /* Timer Complete State */
     .timer-active-container.timer-complete {
-      background: rgba(76, 175, 80, 0.3);
-      border-color: rgba(76, 175, 80, 0.5);
-      animation: timer-complete 0.5s ease;
+      border-color: #4CAF50;
     }
 
     @keyframes timer-complete {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.1);
-      }
-      100% {
-        transform: scale(1);
-      }
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.1); }
+      100% { transform: scale(1); }
     }
 
     .timer-complete .timer-time {
       color: #4CAF50;
-      text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
     }
 
     /* Mobile Timer Styles */
@@ -924,51 +690,33 @@ function generateStyles() {
         padding: 3px 6px;
         font-size: 12px;
       }
-      
+
       .timer-icon-inline {
         width: 14px;
         height: 14px;
       }
-      
+
       .timer-active-container {
         padding: 4px 8px;
         gap: 6px;
       }
-      
+
       .timer-time {
         font-size: 0.9em;
       }
-      
+
       .timer-label {
         font-size: 0.7em;
       }
-      
+
       .timer-control-btn {
         width: 24px;
         height: 24px;
       }
-      
+
       .timer-control-btn svg {
         width: 14px;
         height: 14px;
-      }
-    }
-
-    /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-      .recipe-panel {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .recipe-link {
-        background: rgba(0, 0, 0, 0.3);
-        border-color: rgba(255, 255, 255, 0.2);
-      }
-      
-      .recipe-link:hover {
-        background: rgba(0, 0, 0, 0.4);
-        border-color: rgba(255, 255, 255, 0.3);
       }
     }
   `;
