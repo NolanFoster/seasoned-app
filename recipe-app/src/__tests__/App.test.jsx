@@ -504,8 +504,9 @@ describe('Recipe card lifecycle', () => {
 
     await waitFor(() => screen.getByText(/Generation failed: 503/i));
 
-    // A new successful generation clears the error
+    // Re-type and start a new successful generation — the error should clear
     mockFetchOk(GENERATE_RESPONSE);
+    setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
     await waitFor(() => screen.getByRole('heading', { name: /AI Omelette/i }));
