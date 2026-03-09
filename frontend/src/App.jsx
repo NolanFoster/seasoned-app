@@ -19,7 +19,7 @@ import TimerManager from './components/TimerManager.jsx'
 const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL; // Search database worker
-// SAVE_WORKER_URL removed - no longer needed for recommendations processing
+const SAVE_WORKER_URL = import.meta.env.VITE_SAVE_WORKER_URL; // Recipe save worker
 const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL; // Recipe view worker for shareable pages
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL; // Recipe generation worker for AI cards
 
