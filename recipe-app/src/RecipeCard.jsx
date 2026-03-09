@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 export function parseDuration(val) {
   if (!val) return null
@@ -14,7 +14,76 @@ export function parseDuration(val) {
   return parts.length ? parts.join(' ') : val
 }
 
+function parseDurationToMinutes(val) {
+  if (!val) return 0
+  if (typeof val === 'number') return val
+  const str = String(val).trim().toUpperCase()
+  if (!str.startsWith('PT') && !str.startsWith('P')) return 0
+  let mins = 0
+  const h = str.match(/(\d+)H/); if (h) mins += parseInt(h[1]) * 60
+  const m = str.match(/(\d+)M/); if (m) mins += parseInt(m[1])
+  return mins
+}
+
 export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState }) {
+  const [wakeLockActive, setWakeLockActive] = useState(false)
+  const wakeLockRef = useRef(null)
+  const wakeLockTimerRef = useRef(null)
+
+  const recipeDurationMins =
+    parseDurationToMinutes(recipe.prep_time) + parseDurationToMinutes(recipe.cook_time)
+
+  async function acquireWakeLock(autoOffMinutes = 0) {
+    try {
+      if (!('wakeLock' in navigator)) return
+      wakeLockRef.current = await navigator.wakeLock.request('screen')
+      setWakeLockActive(true)
+      wakeLockRef.current.addEventListener('release', () => {
+        setWakeLockActive(false)
+        wakeLockRef.current = null
+      })
+      if (autoOffMinutes > 0) {
+        clearTimeout(wakeLockTimerRef.current)
+        wakeLockTimerRef.current = setTimeout(() => releaseWakeLock(), autoOffMinutes * 60 * 1000)
+      }
+    } catch {
+      // Permission denied or API unavailable
+    }
+  }
+
+  function releaseWakeLock() {
+    clearTimeout(wakeLockTimerRef.current)
+    wakeLockTimerRef.current = null
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release()
+      wakeLockRef.current = null
+    }
+    setWakeLockActive(false)
+  }
+
+  function handleWakeLockToggle() {
+    if (wakeLockActive) {
+      releaseWakeLock()
+    } else {
+      const autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0
+      acquireWakeLock(autoOff)
+    }
+  }
+
+  // Release on unmount
+  useEffect(() => () => releaseWakeLock(), [])
+
+  // Re-acquire after tab switch
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && wakeLockActive && !wakeLockRef.current) {
+        acquireWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [wakeLockActive])
+
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
     return inst.text || inst.name || JSON.stringify(inst)
@@ -74,6 +143,18 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               </svg>
             )}
           </button>
+          {'wakeLock' in navigator && (
+            <button
+              className={`wake-lock-btn${wakeLockActive ? ' active' : ''}`}
+              onClick={handleWakeLockToggle}
+              title={wakeLockActive ? 'Screen is staying on – tap to disable' : 'Keep screen on while cooking'}
+            >
+              <span className="wake-lock-icon">{wakeLockActive ? '☀️' : '🌙'}</span>
+              {wakeLockActive && recipeDurationMins > 0 && (
+                <span className="wake-lock-label">{recipeDurationMins + 15}m</span>
+              )}
+            </button>
+          )}
           <button className="close-btn" onClick={onClose} title="Close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12"/>
