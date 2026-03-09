@@ -381,10 +381,12 @@ export function generateRecipeHTML(recipe) {
       )};
 
       var currentStep = 0;
-      var cnTimers = {}; // id -> { label, remainingSeconds, isPaused, isDone, intervalId }
+      var cnTimers = {};
 
-      var TIME_RE = /(\d+)(?:-(\d+))?\s*(second|minute|min|hour|hr)s?/gi;
-      var QTY_RE = /^(\d+[\d\/.,]*|[¼½¾⅓⅔⅛⅜⅝⅞]|tbsp|tsp|cup|oz|lb|g|kg|ml|l|liter|litre|tablespoon|teaspoon|pinch|handful|bunch|clove|cloves|can|cans|slice|slices|piece|pieces|sprig|sprigs)s?$/i;
+      // Use [0-9] instead of \d and space literals instead of \s —
+      // template-literal escape processing strips backslashes in the output.
+      var TIME_RE = /([0-9]+)(?:-([0-9]+))? *(second|minute|min|hour|hr)s?/gi;
+      var QTY_RE = /^([0-9][0-9/.,]*|[¼½¾⅓⅔⅛⅜⅝⅞]|tbsp|tsp|cup|oz|lb|g|kg|ml|l|liter|litre|tablespoon|teaspoon|pinch|handful|bunch|clove|cloves|can|cans|slice|slices|piece|pieces|sprig|sprigs)s?$/i;
 
       function parseTimers(text) {
         TIME_RE.lastIndex = 0;
@@ -401,7 +403,7 @@ export function generateRecipeHTML(recipe) {
       function matchIngredients(stepText) {
         var lower = stepText.toLowerCase();
         return rawIngredients.map(function(ing) {
-          var tokens = ing.toLowerCase().split(/\s+/);
+          var tokens = ing.toLowerCase().split(' ');
           var nameTokens = tokens.filter(function(t) { return !QTY_RE.test(t); });
           var relevant = nameTokens.length > 0 && nameTokens.some(function(t) { return t.length > 2 && lower.indexOf(t) !== -1; });
           return { text: ing, relevant: relevant };
@@ -425,9 +427,11 @@ export function generateRecipeHTML(recipe) {
           if (t.start > cursor) html += esc(stepText.slice(cursor, t.start));
           var id = 'cn-t-' + stepIdx + '-' + mi;
           var active = !!cnTimers[id];
+          // Use data-cn-action — no quoted string args needed in event handlers
           html += '<button class="cn-timer-btn' + (active ? ' cn-timer-btn--active' : '') + '"' +
-            ' id="' + id + '" data-label="' + esc(t.label) + '" data-secs="' + t.seconds + '"' +
-            (active ? ' disabled' : '') + '>⏱ ' + esc(t.label) + '</button>';
+            ' data-cn-action="timer-start" data-cn-id="' + id +
+            '" data-label="' + esc(t.label) + '" data-secs="' + t.seconds + '"' +
+            (active ? ' disabled' : '') + '>&#9201; ' + esc(t.label) + '</button>';
           cursor = t.end;
         });
         if (cursor < stepText.length) html += esc(stepText.slice(cursor));
@@ -441,17 +445,17 @@ export function generateRecipeHTML(recipe) {
         ids.forEach(function(id) {
           var t = cnTimers[id];
           var cls = 'cn-timer-pill' + (t.isPaused ? ' cn-timer-pill--paused' : '') + (t.isDone ? ' cn-timer-pill--done' : '');
-          html += '<div class="' + cls + '" id="cn-pill-' + id + '">';
+          html += '<div class="' + cls + '">';
           html += '<span class="cn-timer-pill-label">' + esc(t.label) + '</span>';
           html += '<span class="cn-timer-pill-time" id="cn-pt-' + id + '">' + fmtTime(t.remainingSeconds) + '</span>';
           if (t.isDone) {
-            html += '<button class="cn-timer-pill-action" onclick="cnNav.timerDismiss(\'' + id + '\')">✓</button>';
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-stop" data-cn-id="' + id + '">&#10003;</button>';
           } else if (t.isPaused) {
-            html += '<button class="cn-timer-pill-action" onclick="cnNav.timerResume(\'' + id + '\')">▶</button>';
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-resume" data-cn-id="' + id + '">&#9654;</button>';
           } else {
-            html += '<button class="cn-timer-pill-action" onclick="cnNav.timerPause(\'' + id + '\')">⏸</button>';
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-pause" data-cn-id="' + id + '">&#9208;</button>';
           }
-          html += '<button class="cn-timer-pill-stop" onclick="cnNav.timerStop(\'' + id + '\')">✕</button>';
+          html += '<button class="cn-timer-pill-stop" data-cn-action="timer-stop" data-cn-id="' + id + '">&#10005;</button>';
           html += '</div>';
         });
         return html + '</div>';
@@ -463,11 +467,11 @@ export function generateRecipeHTML(recipe) {
         var total = rawInstructions.length;
         var stepText = rawInstructions[currentStep] || '';
         var chips = matchIngredients(stepText);
-        var html = buildTimerStrip();
         var pct = ((currentStep + 1) / total * 100).toFixed(1);
+        var html = buildTimerStrip();
         html += '<div class="cn-progress-bar"><div class="cn-progress-fill" style="width:' + pct + '%"></div></div>';
         html += '<div class="cn-header"><span class="cn-step-counter">Step ' + (currentStep + 1) + ' of ' + total + '</span>' +
-          '<button class="cn-close-btn" onclick="cnNav.close()">✕</button></div>';
+          '<button class="cn-close-btn" data-cn-action="close">&#10005;</button></div>';
         html += '<div class="cn-step-body"><p class="cn-step-text">' + buildStepHTML(stepText, currentStep) + '</p></div>';
         if (chips.length) {
           html += '<div class="cn-ingredients"><span class="cn-ingredients-label">Ingredients this step</span><div class="cn-ingredient-chips">';
@@ -477,66 +481,60 @@ export function generateRecipeHTML(recipe) {
           html += '</div></div>';
         }
         html += '<div class="cn-nav">' +
-          '<button class="cn-nav-btn cn-nav-btn--prev"' + (currentStep === 0 ? ' disabled' : '') + ' onclick="cnNav.prev()">← Prev</button>' +
-          '<button class="cn-nav-btn cn-nav-btn--next"' + (currentStep === total - 1 ? ' disabled' : '') + ' onclick="cnNav.next()">Next →</button>' +
+          '<button class="cn-nav-btn cn-nav-btn--prev" data-cn-action="prev"' + (currentStep === 0 ? ' disabled' : '') + '>&#8592; Prev</button>' +
+          '<button class="cn-nav-btn cn-nav-btn--next" data-cn-action="next"' + (currentStep === total - 1 ? ' disabled' : '') + '>Next &#8594;</button>' +
           '</div>';
         overlay.innerHTML = html;
-        // Attach timer-start handlers to inline buttons
-        overlay.querySelectorAll('.cn-timer-btn:not([disabled])').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            cnNav.timerStart(btn.id, btn.getAttribute('data-label'), parseInt(btn.getAttribute('data-secs')));
-          });
-        });
       }
 
-      function startInterval(id) {
-        cnTimers[id].intervalId = setInterval(function() {
-          var t = cnTimers[id];
-          if (!t || t.isPaused) return;
-          t.remainingSeconds--;
-          var el = document.getElementById('cn-pt-' + id);
-          if (el) el.textContent = fmtTime(t.remainingSeconds);
-          if (t.remainingSeconds <= 0) {
-            clearInterval(t.intervalId);
-            t.isDone = true;
-            render();
-          }
-        }, 1000);
-      }
-
-      window.cnNav = {
-        close: function() {
-          Object.keys(cnTimers).forEach(function(id) { clearInterval(cnTimers[id].intervalId); });
+      // Single delegated listener on overlay — avoids inline onclick with quoted args
+      function handleOverlayClick(e) {
+        var btn = e.target.closest('[data-cn-action]');
+        if (!btn || btn.disabled) return;
+        var action = btn.getAttribute('data-cn-action');
+        var id = btn.getAttribute('data-cn-id');
+        if (action === 'close') {
+          Object.keys(cnTimers).forEach(function(tid) { clearInterval(cnTimers[tid].intervalId); });
           cnTimers = {};
-          var overlay = document.getElementById('cn-overlay');
-          if (overlay) overlay.remove();
-        },
-        prev: function() { if (currentStep > 0) { currentStep--; render(); } },
-        next: function() { if (currentStep < rawInstructions.length - 1) { currentStep++; render(); } },
-        timerStart: function(id, label, seconds) {
-          cnTimers[id] = { label: label, remainingSeconds: seconds, isPaused: false, isDone: false, intervalId: null };
-          startInterval(id);
+          var ov = document.getElementById('cn-overlay');
+          if (ov) ov.remove();
+        } else if (action === 'prev') {
+          if (currentStep > 0) { currentStep--; render(); }
+        } else if (action === 'next') {
+          if (currentStep < rawInstructions.length - 1) { currentStep++; render(); }
+        } else if (action === 'timer-start') {
+          if (cnTimers[id]) return;
+          var label = btn.getAttribute('data-label');
+          var secs = parseInt(btn.getAttribute('data-secs'));
+          cnTimers[id] = { label: label, remainingSeconds: secs, isPaused: false, isDone: false, intervalId: null };
+          cnTimers[id].intervalId = setInterval(function() {
+            var t = cnTimers[id];
+            if (!t || t.isPaused) return;
+            t.remainingSeconds--;
+            var el = document.getElementById('cn-pt-' + id);
+            if (el) el.textContent = fmtTime(t.remainingSeconds);
+            if (t.remainingSeconds <= 0) { clearInterval(t.intervalId); t.isDone = true; render(); }
+          }, 1000);
           render();
-        },
-        timerPause: function(id) {
-          if (!cnTimers[id]) return;
-          clearInterval(cnTimers[id].intervalId);
-          cnTimers[id].isPaused = true;
+        } else if (action === 'timer-pause') {
+          if (cnTimers[id]) { clearInterval(cnTimers[id].intervalId); cnTimers[id].isPaused = true; render(); }
+        } else if (action === 'timer-resume') {
+          var t = cnTimers[id];
+          if (!t) return;
+          t.isPaused = false;
+          t.intervalId = setInterval(function() {
+            var ct = cnTimers[id];
+            if (!ct || ct.isPaused) return;
+            ct.remainingSeconds--;
+            var el = document.getElementById('cn-pt-' + id);
+            if (el) el.textContent = fmtTime(ct.remainingSeconds);
+            if (ct.remainingSeconds <= 0) { clearInterval(ct.intervalId); ct.isDone = true; render(); }
+          }, 1000);
           render();
-        },
-        timerResume: function(id) {
-          if (!cnTimers[id]) return;
-          cnTimers[id].isPaused = false;
-          startInterval(id);
-          render();
-        },
-        timerStop: function(id) {
-          if (cnTimers[id]) clearInterval(cnTimers[id].intervalId);
-          delete cnTimers[id];
-          render();
-        },
-        timerDismiss: function(id) { cnNav.timerStop(id); }
-      };
+        } else if (action === 'timer-stop') {
+          if (cnTimers[id]) { clearInterval(cnTimers[id].intervalId); delete cnTimers[id]; render(); }
+        }
+      }
 
       cookBtn.addEventListener('click', function() {
         currentStep = 0;
@@ -545,6 +543,7 @@ export function generateRecipeHTML(recipe) {
         var overlay = document.createElement('div');
         overlay.className = 'cn-overlay';
         overlay.id = 'cn-overlay';
+        overlay.addEventListener('click', handleOverlayClick);
         document.querySelector('.recipe-card').appendChild(overlay);
         render();
       });
