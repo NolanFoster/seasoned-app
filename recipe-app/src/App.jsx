@@ -235,8 +235,7 @@ export default function App() {
 
   function handleResultSelect(result) {
     setRecipe(result)
-    setSaveState('idle')
-    setSavedRecipeId(result.id || null)
+    setSaveState('saved')
     setShowDropdown(false)
     setInput('')
   }
@@ -246,7 +245,7 @@ export default function App() {
     setSaveState('saving')
     const recipeUrl = r.source_url || `https://seasoned.app/ai/${r.id}`
     try {
-      const res = await fetch(`${API_URL}/save`, {
+      const res = await fetch(`${API_URL}/recipe/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
