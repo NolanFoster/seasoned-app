@@ -94,7 +94,7 @@ export default {
       try {
         // Fetch recipe data from the recipe save worker
         const apiUrl = env.RECIPE_SAVE_WORKER_URL || 'https://recipe-save-worker.nolanfoster.workers.dev';
-        const recipeResponse = await fetch(`${apiUrl}/recipe/get?id=${recipeId}`, {
+        const recipeResponse = await fetch(`${apiUrl}/api/recipes/${recipeId}`, {
           headers: {
             'Accept': 'application/json'
           }
