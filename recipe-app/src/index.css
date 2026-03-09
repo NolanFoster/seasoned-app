@@ -324,6 +324,7 @@ html, body {
   border-radius: var(--radius);
   overflow: hidden;
   animation: slide-up 0.25s ease;
+  position: relative;
 }
 
 @keyframes slide-up {
@@ -685,4 +686,279 @@ html, body {
   font-size: 0.75rem;
   color: var(--text-muted);
   margin-top: -4px;
+}
+
+/* ── CookingNavigator ── */
+
+.cook-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(91,184,122,0.12);
+  border: 1px solid rgba(91,184,122,0.3);
+  border-radius: var(--radius-sm);
+  color: var(--clip-color);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cook-btn:hover {
+  background: rgba(91,184,122,0.22);
+}
+.cook-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+@keyframes cn-slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cn-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  border-radius: var(--radius);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  animation: cn-slide-up 0.28s ease;
+}
+
+.cn-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Timer strip */
+.cn-timer-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+
+.cn-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(200,169,110,0.12);
+  border: 1px solid rgba(200,169,110,0.35);
+  border-radius: 99px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  animation: cn-timer-pulse 2s ease-in-out infinite;
+}
+
+@keyframes cn-timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200,169,110,0); }
+  50%       { box-shadow: 0 0 0 3px rgba(200,169,110,0.25); }
+}
+
+.cn-timer-pill--paused {
+  animation: none;
+  opacity: 0.65;
+}
+
+.cn-timer-pill--done {
+  border-color: var(--clip-color);
+  color: var(--clip-color);
+  background: rgba(91,184,122,0.1);
+  animation: none;
+}
+
+.cn-timer-pill-label {
+  font-weight: 500;
+}
+
+.cn-timer-pill-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.cn-timer-pill-action,
+.cn-timer-pill-stop {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 0.75rem;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.cn-timer-pill-action:hover,
+.cn-timer-pill-stop:hover {
+  opacity: 1;
+}
+
+/* Progress bar */
+.cn-progress-bar {
+  height: 3px;
+  background: var(--border);
+}
+
+.cn-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+/* Header */
+.cn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 8px;
+}
+
+.cn-step-counter {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+.cn-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s, color 0.15s;
+}
+.cn-close-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Step body */
+.cn-step-body {
+  flex: 1;
+  padding: 16px 24px 8px;
+  overflow-y: auto;
+}
+
+.cn-step-text {
+  font-size: 1.1rem;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+/* Timer buttons inline in step text */
+.cn-timer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  margin: 0 2px;
+  background: rgba(200,169,110,0.12);
+  border: 1px solid rgba(200,169,110,0.4);
+  border-radius: 99px;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cn-timer-btn:hover:not(:disabled) {
+  background: rgba(200,169,110,0.22);
+}
+.cn-timer-btn--active {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Ingredient chips */
+.cn-ingredients {
+  padding: 8px 24px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.cn-ingredients-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.cn-ingredient-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cn-ingredient-chip {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--text-muted);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.cn-ingredient-chip--active {
+  border-color: var(--accent);
+  background: rgba(200,169,110,0.1);
+  color: var(--text);
+}
+
+/* Navigation */
+.cn-nav {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+
+.cn-nav-btn {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.cn-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.cn-nav-btn:not(:disabled):hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.cn-nav-btn--next {
+  color: var(--accent);
+  border-color: rgba(200,169,110,0.4);
+}
+.cn-nav-btn--next:not(:disabled):hover {
+  background: rgba(200,169,110,0.1);
+  color: var(--accent);
+  border-color: var(--accent);
 }

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import CookingNavigator from './CookingNavigator.jsx'
 
 export function parseDuration(val) {
   if (!val) return null
@@ -27,6 +28,7 @@ function parseDurationToMinutes(val) {
 
 export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
   const [shareCopied, setShareCopied] = useState(false)
+  const [isCooking, setIsCooking] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
@@ -118,6 +120,18 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               </>
             )}
           </button>
+          {instructions.length > 0 && (
+            <button
+              className="cook-btn"
+              onClick={() => setIsCooking(true)}
+              title="Step-by-step cooking mode"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 3l14 9-14 9V3z"/>
+              </svg>
+              Cook
+            </button>
+          )}
           <button
             className={`save-btn ${saveState}`}
             onClick={onSave}
@@ -233,6 +247,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
           </div>
         )}
       </div>
+      {isCooking && <CookingNavigator recipe={recipe} onClose={() => setIsCooking(false)} />}
     </div>
   )
 }
