@@ -656,7 +656,7 @@ function generateStyles() {
 
     /* Wake Lock Button */
     .wake-lock-btn {
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -669,6 +669,9 @@ function generateStyles() {
       transition: background 0.2s, box-shadow 0.2s;
       padding: 0;
       line-height: 1;
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .wake-lock-btn { display: flex; }
     }
     .wake-lock-btn:hover {
       background: var(--border);
