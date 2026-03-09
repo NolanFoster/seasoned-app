@@ -1,5 +1,5 @@
 {
-  "name": "seasoned-omnibox",
+  "name": "recipe-app",
   "private": true,
   "version": "0.1.0",
   "scripts": {
@@ -8,7 +8,10 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy:staging": "npm run build && wrangler pages deploy dist --branch staging",
+    "deploy:production": "npm run build && wrangler pages deploy dist --branch main"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -25,6 +28,7 @@
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
-    "vite": "^7.1.4"
+    "vite": "^7.1.4",
+    "wrangler": "^4.28.1"
   }
 }

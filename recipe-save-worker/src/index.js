@@ -1353,6 +1353,21 @@ export default {
         return response;
       }
 
+      // Support GET /api/recipes/:id for recipe-app frontend
+      if (path.startsWith('/api/recipes/') && method === 'GET') {
+        const recipeId = path.slice('/api/recipes/'.length);
+        log('info', 'Routing /api/recipes/:id to Durable Object', { requestId, recipeId });
+        const doId = env.RECIPE_SAVER.idFromName('global-recipe-saver');
+        const stub = env.RECIPE_SAVER.get(doId);
+        const doUrl = new URL(request.url);
+        doUrl.pathname = '/get';
+        doUrl.searchParams.set('id', recipeId);
+        const doResponse = await stub.fetch(new Request(doUrl, request));
+        const newHeaders = new Headers(doResponse.headers);
+        Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+        return new Response(doResponse.body, { status: doResponse.status, headers: newHeaders });
+      }
+
       // Route to Durable Object for all recipe operations
       if (path.startsWith('/recipe')) {
         log('info', 'Routing to Durable Object', { requestId, path });
