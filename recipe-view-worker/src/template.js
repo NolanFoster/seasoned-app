@@ -3,7 +3,7 @@ import { formatDuration, formatIngredientAmount } from '../../shared/utility-fun
 // Generate the HTML template for the recipe page
 export function generateRecipeHTML(recipe) {
   // Extract recipe data
-  const name = recipe.name || 'Untitled Recipe';
+  const name = recipe.name || recipe.title || 'Untitled Recipe';
   const description = recipe.description || '';
   const prepTime = recipe.prep_time || recipe.prepTime;
   const cookTime = recipe.cook_time || recipe.cookTime;

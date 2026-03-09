@@ -6,6 +6,11 @@ compatibility_date = "2024-01-10"
 [vars]
 RECIPE_SAVE_WORKER_URL = "https://recipe-save-worker.nolanfoster.workers.dev"
 
+# Service binding to recipe-save-worker (avoids workers.dev subrequest restriction)
+[[services]]
+binding = "RECIPE_SAVE_WORKER"
+service = "recipe-save-worker"
+
 # Development settings
 [env.preview]
 name = "preview-recipe-view-worker"
@@ -17,6 +22,10 @@ RECIPE_SAVE_WORKER_URL = "https://preview-recipe-save-worker.nolanfoster.workers
 name = "staging-recipe-view-worker"
 [env.staging.vars]
 RECIPE_SAVE_WORKER_URL = "https://staging-recipe-save-worker.nolanfoster.workers.dev"
+
+[[env.staging.services]]
+binding = "RECIPE_SAVE_WORKER"
+service = "staging-recipe-save-worker"
 
 [observability]
 enabled = true
