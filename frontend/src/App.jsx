@@ -692,7 +692,12 @@ function App() {
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
   const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
   const [floatingTimer, setFloatingTimer] = useState(null); // Currently active floating timer
-  
+
+  // Screen wake lock state
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const wakeLockRef = useRef(null);      // WakeLockSentinel
+  const wakeLockTimerRef = useRef(null); // auto-off setTimeout id
+
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -1688,6 +1693,80 @@ function App() {
       alert('Error updating recipe. Please try again.');
     }
   }
+
+  // ── Screen Wake Lock ──────────────────────────────────────────────────────
+
+  function parseDurationToMinutes(duration) {
+    if (!duration || typeof duration !== 'string' || !duration.startsWith('PT')) return 0;
+    let mins = 0;
+    const h = duration.match(/(\d+)H/); if (h) mins += parseInt(h[1]) * 60;
+    const m = duration.match(/(\d+)M/); if (m) mins += parseInt(m[1]);
+    return mins;
+  }
+
+  function getRecipeDurationMinutes(recipe) {
+    if (!recipe) return 0;
+    const total = recipe.total_time || recipe.totalTime;
+    if (total) return parseDurationToMinutes(total);
+    return parseDurationToMinutes(recipe.prep_time || recipe.prepTime)
+         + parseDurationToMinutes(recipe.cook_time || recipe.cookTime);
+  }
+
+  async function acquireWakeLock(autoOffMinutes = 0) {
+    try {
+      if (!('wakeLock' in navigator)) return;
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+      setWakeLockActive(true);
+      wakeLockRef.current.addEventListener('release', () => {
+        setWakeLockActive(false);
+        wakeLockRef.current = null;
+      });
+      if (autoOffMinutes > 0) {
+        clearTimeout(wakeLockTimerRef.current);
+        wakeLockTimerRef.current = setTimeout(() => releaseWakeLock(), autoOffMinutes * 60 * 1000);
+      }
+    } catch (e) {
+      // Permission denied or API unavailable
+    }
+  }
+
+  function releaseWakeLock() {
+    clearTimeout(wakeLockTimerRef.current);
+    wakeLockTimerRef.current = null;
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release();
+      wakeLockRef.current = null;
+    }
+    setWakeLockActive(false);
+  }
+
+  function handleWakeLockToggle() {
+    if (wakeLockActive) {
+      releaseWakeLock();
+    } else {
+      const recipeMins = getRecipeDurationMinutes(selectedRecipe);
+      const autoOff = recipeMins > 0 ? recipeMins + 15 : 0;
+      acquireWakeLock(autoOff);
+    }
+  }
+
+  // Release wake lock when the recipe view closes
+  useEffect(() => {
+    if (!selectedRecipe) releaseWakeLock();
+  }, [selectedRecipe]);
+
+  // Re-acquire wake lock after page becomes visible again (e.g. user switches tabs)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && wakeLockActive && !wakeLockRef.current) {
+        acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [wakeLockActive]);
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   async function deleteRecipe(id) {
     if (!confirm('Are you sure you want to delete this recipe?')) return;
@@ -2718,9 +2797,23 @@ function App() {
               />
             )}
             
+            {/* Screen Wake Lock Button - keep screen on while cooking */}
+            {'wakeLock' in navigator && (
+              <button
+                className={`fab-wake-lock-trigger${wakeLockActive ? ' wake-lock-active' : ''}`}
+                onClick={handleWakeLockToggle}
+                title={wakeLockActive ? 'Screen is staying on – tap to disable' : 'Keep screen on while cooking'}
+              >
+                <span className="wake-lock-icon">{wakeLockActive ? '☀️' : '🌙'}</span>
+                {wakeLockActive && getRecipeDurationMinutes(selectedRecipe) > 0 && (
+                  <span className="wake-lock-label">{getRecipeDurationMinutes(selectedRecipe) + 15}m</span>
+                )}
+              </button>
+            )}
+
             {/* Nutrition FAB - only show if nutrition data exists */}
             {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
-              <button 
+              <button
                 className="fab-nutrition-trigger"
                 onClick={() => setShowNutrition(!showNutrition)}
                 title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
