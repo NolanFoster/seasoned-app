@@ -1,0 +1,407 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import RecipeCard, { parseDuration } from './RecipeCard.jsx'
+
+const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
+const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
+const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
+const API_URL = import.meta.env.VITE_API_URL
+
+function isValidUrl(str) {
+  try {
+    const url = new URL(str)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+// Debounce helper — cancels pending timer on unmount to prevent leaks
+function useDebounce(fn, delay) {
+  const timer = useRef(null)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  return useCallback((...args) => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => fn(...args), delay)
+  }, [fn, delay])
+}
+
+export default function App() {
+  const [input, setInput] = useState('')
+  const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
+  const [errorMsg, setErrorMsg] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [recipe, setRecipe] = useState(null) // currently displayed recipe
+  const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
+  const inputRef = useRef(null)
+  const dropdownRef = useRef(null)
+
+  const isUrl = isValidUrl(input.trim())
+  const hasText = input.trim().length >= 2 && !isUrl
+
+  // Determine the action the primary button will take
+  function getPrimaryAction() {
+    if (isUrl) return 'clip'
+    if (hasText) return 'search'
+    return 'idle'
+  }
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  // --- Search ---
+  async function doSearch(query) {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([])
+      setShowDropdown(false)
+      return
+    }
+    setStatus('searching')
+    setShowDropdown(true)
+    try {
+      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=recipe&limit=10`)
+      if (!res.ok) throw new Error(`Search failed: ${res.status}`)
+      const data = await res.json()
+
+      // Fetch full recipe data for each result
+      const results = await Promise.all(
+        (data.results || []).map(async (node) => {
+          try {
+            const r = await fetch(`${API_URL}/api/recipes/${node.id}`)
+            if (!r.ok) return null
+            const full = await r.json()
+            const d = full.data || full
+            return {
+              id: node.id,
+              name: d.name || d.title || 'Untitled',
+              description: d.description || '',
+              image: d.image || d.imageUrl || d.image_url || '',
+              prep_time: d.prepTime || d.prep_time || null,
+              cook_time: d.cookTime || d.cook_time || null,
+              recipe_yield: d.servings || d.recipeYield || d.recipe_yield || null,
+              ingredients: d.ingredients || d.recipeIngredient || [],
+              instructions: d.instructions || d.recipeInstructions || [],
+              source_url: d.url || d.source_url || '',
+            }
+          } catch {
+            return null
+          }
+        })
+      )
+      setSearchResults(results.filter(Boolean))
+    } catch (e) {
+      setErrorMsg(e.message)
+      setStatus('error')
+      return
+    }
+    setStatus('idle')
+  }
+
+  const debouncedSearch = useDebounce(doSearch, 300)
+
+  function handleInputChange(e) {
+    const val = e.target.value
+    setInput(val)
+    setErrorMsg('')
+    if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
+      debouncedSearch(val.trim())
+    } else {
+      setSearchResults([])
+      setShowDropdown(false)
+    }
+  }
+
+  // --- Clip ---
+  async function doClip(url) {
+    setStatus('clipping')
+    setShowDropdown(false)
+    setRecipe(null)
+    setSaveState('idle')
+    try {
+      const res = await fetch(`${CLIPPER_API_URL}/clip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      if (!res.ok) throw new Error(`Clip failed: ${res.status}`)
+      const data = await res.json()
+      const d = data.recipe || data
+      setRecipe({
+        id: `clip-${Date.now()}`,
+        source: 'clipped',
+        name: d.name || d.title || 'Clipped Recipe',
+        description: d.description || '',
+        image: d.image || d.imageUrl || d.image_url || '',
+        prep_time: d.prepTime || d.prep_time || null,
+        cook_time: d.cookTime || d.cook_time || null,
+        recipe_yield: d.servings || d.recipeYield || d.recipe_yield || null,
+        ingredients: d.ingredients || d.recipeIngredient || [],
+        instructions: d.instructions || d.recipeInstructions || [],
+        source_url: url,
+      })
+      setInput('')
+    } catch (e) {
+      setErrorMsg(e.message)
+      setStatus('error')
+      return
+    }
+    setStatus('idle')
+  }
+
+  // --- Generate ---
+  async function doGenerate(query, { elevate = false, baseRecipe = null } = {}) {
+    setStatus(elevate ? 'elevating' : 'generating')
+    setShowDropdown(false)
+    setSaveState('idle')
+    try {
+      const body = {
+        recipeName: elevate && baseRecipe ? baseRecipe.name : query,
+        generateImage: true,
+        elevate: elevate,
+      }
+      if (elevate && baseRecipe) {
+        body.ingredients = baseRecipe.ingredients
+      }
+
+      const res = await fetch(`${RECIPE_GENERATION_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error(`Generation failed: ${res.status}`)
+      const data = await res.json()
+      if (!data.success || !data.recipe) throw new Error(data.error || 'Generation returned no recipe')
+
+      const r = data.recipe
+      setRecipe({
+        id: `ai-${Date.now()}`,
+        source: elevate ? 'elevated' : 'ai_generated',
+        name: r.name,
+        description: r.description || '',
+        image: r.image_url || '',
+        prep_time: r.prepTime || null,
+        cook_time: r.cookTime || null,
+        recipe_yield: r.servings || null,
+        ingredients: r.ingredients || [],
+        instructions: r.instructions || [],
+      })
+      if (!elevate) setInput('')
+    } catch (e) {
+      setErrorMsg(e.message)
+      setStatus('error')
+      return
+    }
+    setStatus('idle')
+  }
+
+  // --- Primary action on Enter / button click ---
+  function handleSubmit() {
+    const action = getPrimaryAction()
+    if (action === 'clip') doClip(input.trim())
+    else if (action === 'search') doSearch(input.trim())
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleSubmit()
+    if (e.key === 'Escape') {
+      setShowDropdown(false)
+      setSearchResults([])
+    }
+  }
+
+  function handleResultSelect(result) {
+    setRecipe(result)
+    setSaveState('idle')
+    setShowDropdown(false)
+    setInput('')
+  }
+
+  // --- Save ---
+  async function doSave(r) {
+    setSaveState('saving')
+    const recipeUrl = r.source_url || `https://seasoned.app/ai/${r.id}`
+    try {
+      const res = await fetch(`${API_URL}/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: {
+            url: recipeUrl,
+            title: r.name,
+            description: r.description || '',
+            imageUrl: r.image || '',
+            prepTime: r.prep_time || null,
+            cookTime: r.cook_time || null,
+            servings: r.recipe_yield || null,
+            ingredients: r.ingredients || [],
+            instructions: r.instructions || [],
+          },
+          options: { overwrite: false },
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        // 409 = already exists — treat as saved
+        if (res.status === 409) { setSaveState('saved'); return }
+        throw new Error(body.error || `Save failed: ${res.status}`)
+      }
+      setSaveState('saved')
+    } catch (e) {
+      setSaveState('error')
+    }
+  }
+
+  function handleClose() {
+    setRecipe(null)
+    setErrorMsg('')
+    setStatus('idle')
+    setSaveState('idle')
+  }
+
+  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
+
+  // Restore focus after any async action completes (busy → not busy)
+  useEffect(() => {
+    if (!busy) inputRef.current?.focus()
+  }, [busy])
+
+  return (
+    <div className="app">
+      <div className="omnibox-wrapper">
+        <div className="brand">
+          <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+            <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+            <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+          </svg>
+          <span className="brand-name">Seasoned</span>
+        </div>
+
+        <div className="omnibox">
+          <div className={`omnibox-inner ${busy ? 'busy' : ''} ${status === 'error' ? 'has-error' : ''}`}>
+            <input
+              ref={inputRef}
+              className="omnibox-input"
+              type="text"
+              placeholder="Search recipes, paste a URL, or describe a dish…"
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              disabled={busy}
+              autoFocus
+              autoComplete="off"
+              spellCheck="false"
+            />
+
+            <div className="omnibox-actions">
+              {/* Generate button — always visible when there's text and it's not a URL */}
+              {hasText && (
+                <button
+                  className="action-btn generate-btn"
+                  title="Generate AI recipe"
+                  onClick={() => doGenerate(input.trim())}
+                  disabled={busy}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                  </svg>
+                  <span>Generate</span>
+                </button>
+              )}
+
+              {/* Primary action button */}
+              <button
+                className={`action-btn primary-btn ${getPrimaryAction()}`}
+                title={isUrl ? 'Clip recipe from URL' : hasText ? 'Search recipes' : 'Search'}
+                onClick={handleSubmit}
+                disabled={busy || getPrimaryAction() === 'idle'}
+              >
+                {busy ? (
+                  <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                  </svg>
+                ) : isUrl ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+                    <path d="M20 4H8.12a2 2 0 00-1.99 1.78c-.07.81.83 2.22.83 2.22"/>
+                    <path d="M14 12l-2.5 2.5L9 12"/>
+                    <path d="M20 20H8.12a2 2 0 01-1.99-1.78c-.07-.81.83-2.22.83-2.22"/>
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                )}
+                <span>{isUrl ? 'Clip' : 'Search'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Loading label */}
+          {busy && (
+            <div className="status-label">
+              {status === 'searching' && 'Searching…'}
+              {status === 'clipping' && 'Clipping recipe…'}
+              {status === 'generating' && 'Generating recipe with AI…'}
+              {status === 'elevating' && 'Elevating recipe with AI…'}
+            </div>
+          )}
+
+          {/* Error */}
+          {status === 'error' && errorMsg && (
+            <div className="error-label">{errorMsg}</div>
+          )}
+
+          {/* Search dropdown */}
+          {showDropdown && (
+            <div className="dropdown" ref={dropdownRef}>
+              {status === 'searching' ? (
+                [0, 1, 2].map((i) => (
+                  <div key={i} className="skeleton-item">
+                    <div className="skeleton-line title" />
+                    <div className="skeleton-line meta" />
+                  </div>
+                ))
+              ) : searchResults.length > 0 ? (
+                searchResults.map((r) => (
+                  <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
+                    <span className="dropdown-name">{r.name}</span>
+                    <span className="dropdown-meta">
+                      {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                      {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                      {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="dropdown-empty">No recipes found for "{input}"</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Recipe card */}
+        {recipe && (
+          <RecipeCard
+            recipe={recipe}
+            onClose={handleClose}
+            onElevate={() => doGenerate(recipe.name, { elevate: true, baseRecipe: recipe })}
+            isElevating={status === 'elevating'}
+            onSave={() => doSave(recipe)}
+            saveState={saveState}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
