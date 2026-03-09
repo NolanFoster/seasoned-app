@@ -8,6 +8,9 @@ dist/
 .env.development
 .env.production
 .env.staging
+# Allow recipe-app env templates (so frontend works with workers out of the box)
+!recipe-app/.env.example
+!recipe-app/.env.development
 
 # Wrangler temporary files
 .wrangler/

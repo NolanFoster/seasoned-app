@@ -551,3 +551,77 @@ html, body {
   color: var(--text);
   margin-bottom: 6px;
 }
+
+/* ── GeneratingCard ── */
+.generating-card {
+  background: var(--surface);
+  border: 1px solid rgba(232,200,122,0.4);
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: slide-up 0.25s ease, gen-glow 2s ease-in-out infinite;
+  padding: 32px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+@keyframes gen-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(232,200,122,0.2), 0 0 16px rgba(232,200,122,0.06); }
+  50%       { box-shadow: 0 0 0 2px rgba(232,200,122,0.5), 0 0 36px rgba(232,200,122,0.16); }
+}
+
+.generating-visual {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 40px;
+}
+
+.generating-bubble {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--generate-color);
+  opacity: 0;
+  animation: bubble-rise 1.8s ease-in-out infinite alternate;
+}
+
+.generating-bubble:nth-child(1) { animation-delay: 0s; }
+.generating-bubble:nth-child(2) { animation-delay: 0.3s; }
+.generating-bubble:nth-child(3) { animation-delay: 0.6s; }
+.generating-bubble:nth-child(4) { animation-delay: 0.9s; }
+.generating-bubble:nth-child(5) { animation-delay: 1.2s; }
+
+@keyframes bubble-rise {
+  0%   { opacity: 0;   transform: translateY(0); }
+  30%  { opacity: 0.9; }
+  100% { opacity: 0.2; transform: translateY(-18px); }
+}
+
+.generating-dish-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.generating-phrase {
+  font-size: 0.9rem;
+  color: var(--generate-color);
+  font-style: italic;
+  animation: phrase-fade-in 0.4s ease;
+}
+
+@keyframes phrase-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.generating-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: -4px;
+}

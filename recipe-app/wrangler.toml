@@ -1,3 +1,6 @@
-name = "recipe-app"
+# recipe-app/wrangler.toml
+name = "omni-recipe"
 compatibility_date = "2025-03-07"
-pages_build_output_dir = "dist"
+
+[assets]
+directory = "./dist"
