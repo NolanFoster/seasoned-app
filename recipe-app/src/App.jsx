@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
+import GeneratingCard from './GeneratingCard.jsx'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -33,6 +34,7 @@ export default function App() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [recipe, setRecipe] = useState(null) // currently displayed recipe
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
+  const [generatingName, setGeneratingName] = useState('')
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
 
@@ -159,12 +161,15 @@ export default function App() {
 
   // --- Generate ---
   async function doGenerate(query, { elevate = false, baseRecipe = null } = {}) {
+    const dishName = elevate && baseRecipe ? baseRecipe.name : query
+    setGeneratingName(dishName)
+    setInput('')
     setStatus(elevate ? 'elevating' : 'generating')
     setShowDropdown(false)
     setSaveState('idle')
     try {
       const body = {
-        recipeName: elevate && baseRecipe ? baseRecipe.name : query,
+        recipeName: dishName,
         generateImage: true,
         elevate: elevate,
       }
@@ -194,8 +199,9 @@ export default function App() {
         ingredients: r.ingredients || [],
         instructions: r.instructions || [],
       })
-      if (!elevate) setInput('')
+      setGeneratingName('')
     } catch (e) {
+      setGeneratingName('')
       setErrorMsg(e.message)
       setStatus('error')
       return
@@ -262,6 +268,7 @@ export default function App() {
 
   function handleClose() {
     setRecipe(null)
+    setGeneratingName('')
     setErrorMsg('')
     setStatus('idle')
     setSaveState('idle')
@@ -347,13 +354,11 @@ export default function App() {
             </div>
           </div>
 
-          {/* Loading label */}
-          {busy && (
+          {/* Loading label — for search/clip only; generate/elevate use GeneratingCard */}
+          {busy && (status === 'searching' || status === 'clipping') && (
             <div className="status-label">
               {status === 'searching' && 'Searching…'}
               {status === 'clipping' && 'Clipping recipe…'}
-              {status === 'generating' && 'Generating recipe with AI…'}
-              {status === 'elevating' && 'Elevating recipe with AI…'}
             </div>
           )}
 
@@ -390,8 +395,13 @@ export default function App() {
           )}
         </div>
 
+        {/* GeneratingCard — shown while generate/elevate is in-flight */}
+        {(status === 'generating' || status === 'elevating') && generatingName && (
+          <GeneratingCard dishName={generatingName} />
+        )}
+
         {/* Recipe card */}
-        {recipe && (
+        {recipe && !(status === 'generating') && (
           <RecipeCard
             recipe={recipe}
             onClose={handleClose}
