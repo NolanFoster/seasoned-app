@@ -59,7 +59,6 @@ export function generateRecipeHTML(recipe) {
     <div class="recipe-card">
       <!-- Header -->
       <div class="recipe-card-header">
-        <span class="recipe-badge" style="background:${sourceBadge.color}">${sourceBadge.label}</span>
         <h2 class="recipe-title">${escapeHtml(name)}</h2>
         <div class="recipe-header-actions">
           ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>` : ''}
@@ -508,6 +507,11 @@ function generateStyles() {
       gap: 12px;
       padding: 20px 20px 16px;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 480px) {
+      .recipe-title { width: 100%; flex-basis: 100%; }
     }
 
     .recipe-badge {
