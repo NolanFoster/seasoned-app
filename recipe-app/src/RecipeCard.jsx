@@ -84,6 +84,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [wakeLockActive])
 
+
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
     return inst.text || inst.name || JSON.stringify(inst)
