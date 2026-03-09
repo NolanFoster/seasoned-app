@@ -96,7 +96,7 @@ describe('Recipe View Worker', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('text/html;charset=UTF-8');
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=300');
 
       const html = await response.text();
       expect(html).toContain(mockRecipe.title);

@@ -137,7 +137,8 @@ export default {
           headers: {
             ...corsHeaders,
             'Content-Type': 'text/html;charset=UTF-8',
-            'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+            'Cache-Control': 'public, max-age=300',
+            'Permissions-Policy': 'screen-wake-lock=*'
           }
         });
       } catch (error) {
