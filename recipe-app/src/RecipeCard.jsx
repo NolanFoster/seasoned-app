@@ -25,7 +25,7 @@ function parseDurationToMinutes(val) {
   return mins
 }
 
-export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState }) {
+export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
   const [wakeLockActive, setWakeLockActive] = useState(false)
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
@@ -143,6 +143,25 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               </svg>
             )}
           </button>
+          {shareUrl && (
+            <button
+              className="share-btn"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: recipe.name, url: shareUrl }).catch(() => {
+                    navigator.clipboard.writeText(shareUrl)
+                  })
+                } else {
+                  navigator.clipboard.writeText(shareUrl)
+                }
+              }}
+              title="Share recipe"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+              </svg>
+            </button>
+          )}
           {'wakeLock' in navigator && (
             <button
               className={`wake-lock-btn${wakeLockActive ? ' active' : ''}`}
