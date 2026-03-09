@@ -63,7 +63,7 @@ export function generateRecipeHTML(recipe) {
         <h2 class="recipe-title">${escapeHtml(name)}</h2>
         <div class="recipe-header-actions">
           ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>` : ''}
-          <button class="wake-lock-btn" id="wake-lock-btn" onclick="handleWakeLockToggle()" title="Keep screen on while cooking">
+          <button class="wake-lock-btn" id="wake-lock-btn" title="Keep screen on while cooking">
             <span class="wake-lock-icon" id="wake-lock-icon">🌙</span>
             <span class="wake-lock-label" id="wake-lock-label"></span>
           </button>
@@ -114,12 +114,12 @@ export function generateRecipeHTML(recipe) {
       let wakeLockTimer = null;
       const recipeDurationMins = ${recipeDurationMins};
 
+      const icon = document.getElementById('wake-lock-icon');
+      const label = document.getElementById('wake-lock-label');
+
       async function acquireWakeLock(autoOffMinutes) {
         try {
           wakeLock = await navigator.wakeLock.request('screen');
-          const btn = document.getElementById('wake-lock-btn');
-          const icon = document.getElementById('wake-lock-icon');
-          const label = document.getElementById('wake-lock-label');
           btn.classList.add('active');
           btn.title = 'Screen is staying on – tap to disable';
           icon.textContent = '☀️';
@@ -139,21 +139,24 @@ export function generateRecipeHTML(recipe) {
 
       function releaseWakeLock() {
         clearTimeout(wakeLockTimer);
+        wakeLockTimer = null;
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
       }
 
-      window.handleWakeLockToggle = function() {
-        if (wakeLock) {
-          releaseWakeLock();
-        } else {
-          const autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
-          acquireWakeLock(autoOff);
-        }
-      };
+      const btn = document.getElementById('wake-lock-btn');
 
       // Hide button if API not supported
       if (!('wakeLock' in navigator)) {
-        document.getElementById('wake-lock-btn').style.display = 'none';
+        btn.style.display = 'none';
+      } else {
+        btn.addEventListener('click', function() {
+          if (wakeLock) {
+            releaseWakeLock();
+          } else {
+            const autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
+            acquireWakeLock(autoOff);
+          }
+        });
       }
 
       // Re-acquire after tab switch
@@ -523,6 +526,9 @@ function generateStyles() {
     }
 
     .recipe-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       flex-shrink: 0;
     }
 
