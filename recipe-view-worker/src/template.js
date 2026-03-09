@@ -110,60 +110,66 @@ export function generateRecipeHTML(recipe) {
   <script>
     // Wake Lock
     (function() {
-      let wakeLock = null;
-      let wakeLockTimer = null;
-      const recipeDurationMins = ${recipeDurationMins};
+      var btn = document.getElementById('wake-lock-btn');
+      var icon = document.getElementById('wake-lock-icon');
+      var label = document.getElementById('wake-lock-label');
+      if (!btn) return;
 
-      const icon = document.getElementById('wake-lock-icon');
-      const label = document.getElementById('wake-lock-label');
+      if (!('wakeLock' in navigator)) {
+        btn.style.display = 'none';
+        return;
+      }
 
-      async function acquireWakeLock(autoOffMinutes) {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
+      var wakeLock = null;
+      var wakeLockTimer = null;
+      var recipeDurationMins = ${recipeDurationMins};
+
+      function setActive(active) {
+        if (active) {
           btn.classList.add('active');
           btn.title = 'Screen is staying on – tap to disable';
           icon.textContent = '☀️';
-          if (autoOffMinutes > 0) {
-            label.textContent = autoOffMinutes + 'm';
-            wakeLockTimer = setTimeout(releaseWakeLock, autoOffMinutes * 60 * 1000);
-          }
-          wakeLock.addEventListener('release', () => {
-            wakeLock = null;
-            btn.classList.remove('active');
-            btn.title = 'Keep screen on while cooking';
-            icon.textContent = '🌙';
-            label.textContent = '';
-          });
-        } catch(e) {}
+        } else {
+          btn.classList.remove('active');
+          btn.title = 'Keep screen on while cooking';
+          icon.textContent = '🌙';
+          label.textContent = '';
+        }
       }
 
       function releaseWakeLock() {
         clearTimeout(wakeLockTimer);
         wakeLockTimer = null;
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        setActive(false);
       }
 
-      const btn = document.getElementById('wake-lock-btn');
-
-      // Hide button if API not supported
-      if (!('wakeLock' in navigator)) {
-        btn.style.display = 'none';
-      } else {
-        btn.addEventListener('click', function() {
-          if (wakeLock) {
-            releaseWakeLock();
-          } else {
-            const autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
-            acquireWakeLock(autoOff);
+      async function acquireWakeLock() {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          setActive(true);
+          var autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
+          if (autoOff > 0) {
+            label.textContent = autoOff + 'm';
+            wakeLockTimer = setTimeout(releaseWakeLock, autoOff * 60 * 1000);
           }
-        });
+          wakeLock.addEventListener('release', function() {
+            wakeLock = null;
+            setActive(false);
+          });
+        } catch(e) {
+          console.error('Wake Lock failed:', e);
+          setActive(false);
+        }
       }
 
-      // Re-acquire after tab switch
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && !wakeLock &&
-            document.getElementById('wake-lock-btn').classList.contains('active')) {
-          acquireWakeLock(0);
+      btn.addEventListener('click', function() {
+        if (wakeLock) { releaseWakeLock(); } else { acquireWakeLock(); }
+      });
+
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && !wakeLock && btn.classList.contains('active')) {
+          acquireWakeLock();
         }
       });
     })();
