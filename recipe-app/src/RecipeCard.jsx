@@ -1,5 +1,19 @@
 import React from 'react'
 
+export function parseDuration(val) {
+  if (!val) return null
+  if (typeof val === 'number') return `${val} min`
+  const str = String(val).trim().toUpperCase()
+  // Already human-readable (no PT prefix)
+  if (!str.startsWith('PT') && !str.startsWith('P')) return val
+  const hours = str.match(/(\d+)H/)?.[1]
+  const minutes = str.match(/(\d+)M/)?.[1]
+  const parts = []
+  if (hours) parts.push(`${hours} hr`)
+  if (minutes) parts.push(`${minutes} min`)
+  return parts.length ? parts.join(' ') : val
+}
+
 export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) {
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
@@ -58,10 +72,10 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) 
 
       <div className="recipe-meta">
         {recipe.prep_time && (
-          <span className="recipe-meta-pill"><strong>Prep</strong> {recipe.prep_time}</span>
+          <span className="recipe-meta-pill"><strong>Prep</strong> {parseDuration(recipe.prep_time)}</span>
         )}
         {recipe.cook_time && (
-          <span className="recipe-meta-pill"><strong>Cook</strong> {recipe.cook_time}</span>
+          <span className="recipe-meta-pill"><strong>Cook</strong> {parseDuration(recipe.cook_time)}</span>
         )}
         {recipe.recipe_yield && (
           <span className="recipe-meta-pill"><strong>Serves</strong> {recipe.recipe_yield}</span>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import RecipeCard from './RecipeCard.jsx'
+import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -337,8 +337,8 @@ export default function App() {
                   <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
                     <span className="dropdown-name">{r.name}</span>
                     <span className="dropdown-meta">
-                      {r.prep_time && <span className="dropdown-pill">Prep: {r.prep_time}</span>}
-                      {r.cook_time && <span className="dropdown-pill">Cook: {r.cook_time}</span>}
+                      {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                      {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
                       {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
                     </span>
                   </button>
