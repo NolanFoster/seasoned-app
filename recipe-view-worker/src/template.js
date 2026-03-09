@@ -217,12 +217,12 @@ export function generateRecipeHTML(recipe) {
           '<span class="timer-time">' + formatTime(duration) + '</span>' +
           '<span class="timer-label">' + timeText + '</span>' +
         '</div>' +
-        '<button class="timer-control-btn play-pause-btn" data-timer-id="' + timerId + '" onclick="window.toggleTimer(\'' + timerId + '\')">' +
+        '<button class="timer-control-btn play-pause-btn" data-timer-id="' + timerId + '" onclick="window.toggleTimer(this.dataset.timerId)">' +
           '<svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">' +
             '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' +
           '</svg>' +
         '</button>' +
-        '<button class="timer-control-btn stop-btn" onclick="window.stopTimer(\'' + timerId + '\')">' +
+        '<button class="timer-control-btn stop-btn" data-timer-id="' + timerId + '" onclick="window.stopTimer(this.dataset.timerId)">' +
           '<svg viewBox="0 0 24 24" fill="currentColor">' +
             '<path d="M6 6h12v12H6z"/>' +
           '</svg>' +
