@@ -236,6 +236,7 @@ export default function App() {
   function handleResultSelect(result) {
     setRecipe(result)
     setSaveState('saved')
+    setSavedRecipeId(result.id)
     setShowDropdown(false)
     setInput('')
   }
