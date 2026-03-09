@@ -16,6 +16,9 @@ export function generateRecipeHTML(recipe) {
   const videoUrl = recipe.video_url || recipe.videoUrl || '';
   const nutrition = recipe.nutrition || {};
 
+  // Compute total cook duration for wake lock auto-off
+  const recipeDurationMins = parseDurationToMinutes(prepTime) + parseDurationToMinutes(cookTime);
+
   // Generate styles
   const styles = generateStyles();
 
@@ -58,10 +61,13 @@ export function generateRecipeHTML(recipe) {
       <div class="recipe-card-header">
         <span class="recipe-badge" style="background:${sourceBadge.color}">${sourceBadge.label}</span>
         <h2 class="recipe-title">${escapeHtml(name)}</h2>
-        ${sourceUrl ? `
         <div class="recipe-header-actions">
-          <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>
-        </div>` : ''}
+          ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>` : ''}
+          <button class="wake-lock-btn" id="wake-lock-btn" onclick="handleWakeLockToggle()" title="Keep screen on while cooking">
+            <span class="wake-lock-icon" id="wake-lock-icon">🌙</span>
+            <span class="wake-lock-label" id="wake-lock-label"></span>
+          </button>
+        </div>
       </div>
 
       ${imageUrl ? `<img class="recipe-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}">` : ''}
@@ -102,6 +108,63 @@ export function generateRecipeHTML(recipe) {
   </div>
   
   <script>
+    // Wake Lock
+    (function() {
+      let wakeLock = null;
+      let wakeLockTimer = null;
+      const recipeDurationMins = ${recipeDurationMins};
+
+      async function acquireWakeLock(autoOffMinutes) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          const btn = document.getElementById('wake-lock-btn');
+          const icon = document.getElementById('wake-lock-icon');
+          const label = document.getElementById('wake-lock-label');
+          btn.classList.add('active');
+          btn.title = 'Screen is staying on – tap to disable';
+          icon.textContent = '☀️';
+          if (autoOffMinutes > 0) {
+            label.textContent = autoOffMinutes + 'm';
+            wakeLockTimer = setTimeout(releaseWakeLock, autoOffMinutes * 60 * 1000);
+          }
+          wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+            btn.classList.remove('active');
+            btn.title = 'Keep screen on while cooking';
+            icon.textContent = '🌙';
+            label.textContent = '';
+          });
+        } catch(e) {}
+      }
+
+      function releaseWakeLock() {
+        clearTimeout(wakeLockTimer);
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+      }
+
+      window.handleWakeLockToggle = function() {
+        if (wakeLock) {
+          releaseWakeLock();
+        } else {
+          const autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
+          acquireWakeLock(autoOff);
+        }
+      };
+
+      // Hide button if API not supported
+      if (!('wakeLock' in navigator)) {
+        document.getElementById('wake-lock-btn').style.display = 'none';
+      }
+
+      // Re-acquire after tab switch
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !wakeLock &&
+            document.getElementById('wake-lock-btn').classList.contains('active')) {
+          acquireWakeLock(0);
+        }
+      });
+    })();
+
     // Timer state management
     window.activeTimers = new Map();
     
@@ -296,6 +359,18 @@ export function generateRecipeHTML(recipe) {
   </script>
 </body>
 </html>`;
+}
+
+// Server-side duration parser (minutes) for wake lock auto-off
+function parseDurationToMinutes(val) {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  const str = String(val).trim().toUpperCase();
+  if (!str.startsWith('PT') && !str.startsWith('P')) return 0;
+  let mins = 0;
+  const h = str.match(/(\d+)H/); if (h) mins += parseInt(h[1]) * 60;
+  const m = str.match(/(\d+)M/); if (m) mins += parseInt(m[1]);
+  return mins;
 }
 
 // Server-side HTML escaping
@@ -564,6 +639,42 @@ function generateStyles() {
       line-height: 1.75;
       color: var(--text);
       margin-bottom: 6px;
+    }
+
+    /* Wake Lock Button */
+    .wake-lock-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+    .wake-lock-btn:hover {
+      background: var(--border);
+    }
+    .wake-lock-btn.active {
+      background: rgba(255, 200, 0, 0.15);
+      border-color: rgba(255, 200, 0, 0.4);
+      box-shadow: 0 0 8px rgba(255, 200, 0, 0.3);
+    }
+    .wake-lock-icon {
+      font-size: 0.95em;
+      line-height: 1;
+    }
+    .wake-lock-label {
+      font-size: 0.5em;
+      font-weight: 600;
+      color: var(--text-muted);
+      line-height: 1;
+      margin-top: 1px;
     }
 
     /* Timer Button Styles */
