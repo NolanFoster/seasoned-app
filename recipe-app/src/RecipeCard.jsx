@@ -7,10 +7,10 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) 
   })
 
   const sourceBadge = {
-    clipped: { label: 'Clipped', color: '#4caf50' },
-    ai_generated: { label: 'AI Generated', color: '#7c3aed' },
-    elevated: { label: 'Elevated', color: '#f59e0b' },
-  }[recipe.source] || { label: 'Recipe', color: '#6b7280' }
+    clipped: { label: 'Clipped', color: '#6aad5b' },
+    ai_generated: { label: 'AI Generated', color: '#c17d3c' },
+    elevated: { label: 'Elevated', color: '#e8b84b' },
+  }[recipe.source] || { label: 'Recipe', color: '#7a6e5c' }
 
   return (
     <div className="recipe-card">
@@ -57,9 +57,15 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) 
       )}
 
       <div className="recipe-meta">
-        {recipe.prep_time && <span><strong>Prep:</strong> {recipe.prep_time}</span>}
-        {recipe.cook_time && <span><strong>Cook:</strong> {recipe.cook_time}</span>}
-        {recipe.recipe_yield && <span><strong>Serves:</strong> {recipe.recipe_yield}</span>}
+        {recipe.prep_time && (
+          <span className="recipe-meta-pill"><strong>Prep</strong> {recipe.prep_time}</span>
+        )}
+        {recipe.cook_time && (
+          <span className="recipe-meta-pill"><strong>Cook</strong> {recipe.cook_time}</span>
+        )}
+        {recipe.recipe_yield && (
+          <span className="recipe-meta-pill"><strong>Serves</strong> {recipe.recipe_yield}</span>
+        )}
         {recipe.source_url && (
           <a href={recipe.source_url} target="_blank" rel="noopener noreferrer">Source ↗</a>
         )}

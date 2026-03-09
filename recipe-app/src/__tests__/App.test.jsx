@@ -156,7 +156,7 @@ describe('Search behaviour', () => {
     pressEnter();
 
     await waitFor(() =>
-      expect(screen.getByText(/No results for/i)).toBeInTheDocument()
+      expect(screen.getByText(/No recipes found for/i)).toBeInTheDocument()
     );
   });
 

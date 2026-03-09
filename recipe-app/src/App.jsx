@@ -247,7 +247,7 @@ export default function App() {
               ref={inputRef}
               className="omnibox-input"
               type="text"
-              placeholder="Search recipes, paste a URL to clip, or describe a dish to generate…"
+              placeholder="Search recipes, paste a URL, or describe a dish…"
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -321,18 +321,25 @@ export default function App() {
           {showDropdown && (
             <div className="dropdown" ref={dropdownRef}>
               {status === 'searching' ? (
-                <div className="dropdown-loading">Searching…</div>
+                [0, 1, 2].map((i) => (
+                  <div key={i} className="skeleton-item">
+                    <div className="skeleton-line title" />
+                    <div className="skeleton-line meta" />
+                  </div>
+                ))
               ) : searchResults.length > 0 ? (
                 searchResults.map((r) => (
                   <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
                     <span className="dropdown-name">{r.name}</span>
                     <span className="dropdown-meta">
-                      {[r.prep_time && `Prep: ${r.prep_time}`, r.cook_time && `Cook: ${r.cook_time}`, r.recipe_yield && `Serves: ${r.recipe_yield}`].filter(Boolean).join(' · ')}
+                      {r.prep_time && <span className="dropdown-pill">Prep: {r.prep_time}</span>}
+                      {r.cook_time && <span className="dropdown-pill">Cook: {r.cook_time}</span>}
+                      {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
                     </span>
                   </button>
                 ))
               ) : (
-                <div className="dropdown-empty">No results for "{input}"</div>
+                <div className="dropdown-empty">No recipes found for "{input}"</div>
               )}
             </div>
           )}
