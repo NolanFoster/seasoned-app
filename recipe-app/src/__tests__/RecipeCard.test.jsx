@@ -125,6 +125,43 @@ describe('RecipeCard — source badges', () => {
   });
 });
 
+describe('RecipeCard — share button', () => {
+  const shareUrl = 'https://recipe-view-worker.example.workers.dev/recipe/abc123';
+
+  test('share button is not rendered when shareUrl is not provided', () => {
+    renderCard();
+    expect(screen.queryByTitle('Share recipe')).not.toBeInTheDocument();
+  });
+
+  test('share button is rendered when shareUrl is provided', () => {
+    renderCard({}, { shareUrl });
+    expect(screen.getByTitle('Share recipe')).toBeInTheDocument();
+  });
+
+  test('share button calls navigator.share when available', () => {
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('Share recipe'));
+    expect(shareMock).toHaveBeenCalledWith({
+      title: baseRecipe.name,
+      url: shareUrl,
+    });
+    delete navigator.share;
+  });
+
+  test('share button copies to clipboard when navigator.share is unavailable', () => {
+    const writeTextMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('Share recipe'));
+    expect(writeTextMock).toHaveBeenCalledWith(shareUrl);
+  });
+});
+
 describe('RecipeCard — interactions', () => {
   test('calls onClose when close button is clicked', () => {
     const { onClose } = renderCard();

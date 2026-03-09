@@ -6,6 +6,7 @@ const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 const API_URL = import.meta.env.VITE_API_URL
+const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL
 
 // Fail fast in dev if backend URLs are not configured (e.g. missing .env.development)
 if (import.meta.env.DEV && [SEARCH_DB_URL, CLIPPER_API_URL, RECIPE_GENERATION_URL, API_URL].some((u) => !u || u === 'undefined')) {
@@ -41,6 +42,7 @@ export default function App() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [recipe, setRecipe] = useState(null) // currently displayed recipe
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
+  const [savedRecipeId, setSavedRecipeId] = useState(null) // persisted KV id for share URL
   const [generatingName, setGeneratingName] = useState('')
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
@@ -264,9 +266,15 @@ export default function App() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         // 409 = already exists — treat as saved
-        if (res.status === 409) { setSaveState('saved'); return }
+        if (res.status === 409) {
+          if (body.id) setSavedRecipeId(body.id)
+          setSaveState('saved')
+          return
+        }
         throw new Error(body.error || `Save failed: ${res.status}`)
       }
+      const data = await res.json().catch(() => ({}))
+      if (data.id) setSavedRecipeId(data.id)
       setSaveState('saved')
     } catch (e) {
       setSaveState('error')
@@ -279,7 +287,12 @@ export default function App() {
     setErrorMsg('')
     setStatus('idle')
     setSaveState('idle')
+    setSavedRecipeId(null)
   }
+
+  const shareUrl = savedRecipeId && RECIPE_VIEW_URL
+    ? `${RECIPE_VIEW_URL}/recipe/${savedRecipeId}`
+    : null
 
   const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
   // Only disable input for operations that replace the UI (clip/generate/elevate).
@@ -420,6 +433,7 @@ export default function App() {
             isElevating={status === 'elevating'}
             onSave={() => doSave(recipe)}
             saveState={saveState}
+            shareUrl={shareUrl}
           />
         )}
       </div>
