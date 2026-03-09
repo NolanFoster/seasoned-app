@@ -32,6 +32,7 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [recipe, setRecipe] = useState(null) // currently displayed recipe
+  const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
 
@@ -124,6 +125,7 @@ export default function App() {
     setStatus('clipping')
     setShowDropdown(false)
     setRecipe(null)
+    setSaveState('idle')
     try {
       const res = await fetch(`${CLIPPER_API_URL}/clip`, {
         method: 'POST',
@@ -159,6 +161,7 @@ export default function App() {
   async function doGenerate(query, { elevate = false, baseRecipe = null } = {}) {
     setStatus(elevate ? 'elevating' : 'generating')
     setShowDropdown(false)
+    setSaveState('idle')
     try {
       const body = {
         recipeName: elevate && baseRecipe ? baseRecipe.name : query,
@@ -217,14 +220,51 @@ export default function App() {
 
   function handleResultSelect(result) {
     setRecipe(result)
+    setSaveState('idle')
     setShowDropdown(false)
     setInput('')
+  }
+
+  // --- Save ---
+  async function doSave(r) {
+    setSaveState('saving')
+    const recipeUrl = r.source_url || `https://seasoned.app/ai/${r.id}`
+    try {
+      const res = await fetch(`${API_URL}/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: {
+            url: recipeUrl,
+            title: r.name,
+            description: r.description || '',
+            imageUrl: r.image || '',
+            prepTime: r.prep_time || null,
+            cookTime: r.cook_time || null,
+            servings: r.recipe_yield || null,
+            ingredients: r.ingredients || [],
+            instructions: r.instructions || [],
+          },
+          options: { overwrite: false },
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        // 409 = already exists — treat as saved
+        if (res.status === 409) { setSaveState('saved'); return }
+        throw new Error(body.error || `Save failed: ${res.status}`)
+      }
+      setSaveState('saved')
+    } catch (e) {
+      setSaveState('error')
+    }
   }
 
   function handleClose() {
     setRecipe(null)
     setErrorMsg('')
     setStatus('idle')
+    setSaveState('idle')
   }
 
   const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
@@ -357,6 +397,8 @@ export default function App() {
             onClose={handleClose}
             onElevate={() => doGenerate(recipe.name, { elevate: true, baseRecipe: recipe })}
             isElevating={status === 'elevating'}
+            onSave={() => doSave(recipe)}
+            saveState={saveState}
           />
         )}
       </div>

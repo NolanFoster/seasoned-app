@@ -14,7 +14,7 @@ export function parseDuration(val) {
   return parts.length ? parts.join(' ') : val
 }
 
-export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) {
+export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState }) {
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
     return inst.text || inst.name || JSON.stringify(inst)
@@ -52,6 +52,26 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) 
                 </svg>
                 Elevate
               </>
+            )}
+          </button>
+          <button
+            className={`save-btn ${saveState}`}
+            onClick={onSave}
+            disabled={saveState === 'saving' || saveState === 'saved'}
+            title={saveState === 'saved' ? 'Recipe saved' : 'Save recipe'}
+          >
+            {saveState === 'saving' ? (
+              <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+              </svg>
+            ) : saveState === 'saved' ? (
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5 3a2 2 0 00-2 2v16l9-4 9 4V5a2 2 0 00-2-2H5z"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21l-7-3-7 3V5a2 2 0 012-2h10a2 2 0 012 2v16z"/>
+              </svg>
             )}
           </button>
           <button className="close-btn" onClick={onClose} title="Close">

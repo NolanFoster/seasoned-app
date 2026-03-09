@@ -393,6 +393,39 @@ html, body {
   height: 14px;
 }
 
+.save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.save-btn:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.save-btn.saved {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(200,169,110,0.1);
+  cursor: default;
+}
+.save-btn.error {
+  color: var(--error);
+  border-color: var(--error);
+}
+.save-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .close-btn {
   display: flex;
   align-items: center;
