@@ -426,6 +426,40 @@ html, body {
   height: 16px;
 }
 
+.wake-lock-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+.wake-lock-btn:hover {
+  background: var(--border);
+}
+.wake-lock-btn.active {
+  background: rgba(255, 200, 0, 0.15);
+  border-color: rgba(255, 200, 0, 0.4);
+  box-shadow: 0 0 8px rgba(255, 200, 0, 0.3);
+}
+.wake-lock-icon {
+  font-size: 0.95em;
+  line-height: 1;
+}
+.wake-lock-label {
+  font-size: 0.5em;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
+  margin-top: 1px;
+}
 .close-btn {
   display: flex;
   align-items: center;
