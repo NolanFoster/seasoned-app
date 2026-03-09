@@ -91,16 +91,9 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     return inst.text || inst.name || JSON.stringify(inst)
   })
 
-  const sourceBadge = {
-    clipped: { label: 'Clipped', color: '#5bb87a' },
-    ai_generated: { label: 'AI Generated', color: '#c8a96e' },
-    elevated: { label: 'Elevated', color: '#e8c87a' },
-  }[recipe.source] || { label: 'Recipe', color: '#4a6e52' }
-
   return (
     <div className="recipe-card">
       <div className="recipe-card-header">
-        <span className="recipe-badge" style={{ background: sourceBadge.color }}>{sourceBadge.label}</span>
         <h2 className="recipe-title">{recipe.name}</h2>
         <div className="recipe-header-actions">
           <button
