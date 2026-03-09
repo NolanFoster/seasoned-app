@@ -26,6 +26,7 @@ function parseDurationToMinutes(val) {
 }
 
 export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
+  const [shareCopied, setShareCopied] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
@@ -146,21 +147,31 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
           </button>
           {shareUrl && (
             <button
-              className="share-btn"
+              className={`share-btn${shareCopied ? ' copied' : ''}`}
               onClick={() => {
-                if (navigator.share) {
-                  navigator.share({ title: recipe.name, url: shareUrl }).catch(() => {
-                    navigator.clipboard.writeText(shareUrl)
+                const copyToClipboard = () => {
+                  navigator.clipboard.writeText(shareUrl).then(() => {
+                    setShareCopied(true)
+                    setTimeout(() => setShareCopied(false), 2000)
                   })
+                }
+                if (navigator.share) {
+                  navigator.share({ title: recipe.name, url: shareUrl }).catch(copyToClipboard)
                 } else {
-                  navigator.clipboard.writeText(shareUrl)
+                  copyToClipboard()
                 }
               }}
-              title="Share recipe"
+              title={shareCopied ? 'Copied!' : 'Share recipe'}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
-              </svg>
+              {shareCopied ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+                </svg>
+              )}
             </button>
           )}
           {'wakeLock' in navigator && (
