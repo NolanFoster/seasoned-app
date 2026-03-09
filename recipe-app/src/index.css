@@ -5,17 +5,17 @@
 }
 
 :root {
-  --bg: #131109;
-  --surface: #1d1a13;
-  --surface2: #272219;
-  --border: #38321f;
-  --text: #f5ede0;
-  --text-muted: #9e8f72;
-  --accent: #c17d3c;
-  --accent-hover: #a86830;
-  --clip-color: #6aad5b;
-  --generate-color: #e8b84b;
-  --elevate-color: #d4692a;
+  --bg: #0d1a0f;
+  --surface: #142016;
+  --surface2: #1b2c1d;
+  --border: #2a3d2c;
+  --text: #e8f0e4;
+  --text-muted: #7a9b80;
+  --accent: #c8a96e;
+  --accent-hover: #b8934e;
+  --clip-color: #5bb87a;
+  --generate-color: #e8c87a;
+  --elevate-color: #c4634a;
   --error: #d94f4f;
   --radius: 14px;
   --radius-sm: 8px;
@@ -42,7 +42,7 @@ html, body {
   justify-content: center;
   padding: 80px 16px 40px;
   background:
-    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(193,125,60,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(91,184,122,0.08) 0%, transparent 70%),
     var(--bg);
 }
 
@@ -94,12 +94,12 @@ html, body {
 
 .omnibox-inner:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(193,125,60,0.15);
+  box-shadow: 0 0 0 4px rgba(200,169,110,0.15);
 }
 
 .omnibox-inner.busy {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(193,125,60,0.12), 0 0 24px rgba(193,125,60,0.08);
+  box-shadow: 0 0 0 4px rgba(200,169,110,0.12), 0 0 24px rgba(200,169,110,0.08);
   animation: pulse-border 1.5s ease-in-out infinite;
 }
 
@@ -109,8 +109,8 @@ html, body {
 }
 
 @keyframes pulse-border {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(193,125,60,0.12); }
-  50% { box-shadow: 0 0 0 5px rgba(193,125,60,0.24), 0 0 32px rgba(193,125,60,0.12); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(200,169,110,0.12); }
+  50% { box-shadow: 0 0 0 5px rgba(200,169,110,0.26), 0 0 32px rgba(200,169,110,0.10); }
 }
 
 .omnibox-input {
@@ -169,13 +169,13 @@ html, body {
   color: #fff;
 }
 .primary-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--accent-hover), #8f5822);
+  background: linear-gradient(135deg, var(--accent-hover), #9a7838);
 }
 .primary-btn.clip {
   background: var(--clip-color);
 }
 .primary-btn.clip:hover:not(:disabled) {
-  background: #59944a;
+  background: #4aa367;
 }
 .primary-btn.idle {
   background: var(--surface2);
@@ -185,10 +185,10 @@ html, body {
 .generate-btn {
   background: var(--surface2);
   color: var(--generate-color);
-  border: 1px solid rgba(232,184,75,0.25);
+  border: 1px solid rgba(232,200,122,0.25);
 }
 .generate-btn:hover:not(:disabled) {
-  background: rgba(232,184,75,0.1);
+  background: rgba(232,200,122,0.1);
 }
 
 /* ── Status / error labels ── */
@@ -372,8 +372,8 @@ html, body {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  background: rgba(212,105,42,0.12);
-  border: 1px solid rgba(212,105,42,0.3);
+  background: rgba(196,99,74,0.12);
+  border: 1px solid rgba(196,99,74,0.3);
   border-radius: var(--radius-sm);
   color: var(--elevate-color);
   font-size: 0.875rem;
@@ -382,7 +382,7 @@ html, body {
   transition: background 0.15s;
 }
 .elevate-btn:hover:not(:disabled) {
-  background: rgba(212,105,42,0.22);
+  background: rgba(196,99,74,0.22);
 }
 .elevate-btn:disabled {
   opacity: 0.5;

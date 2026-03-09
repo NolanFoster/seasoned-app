@@ -7,10 +7,10 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating }) 
   })
 
   const sourceBadge = {
-    clipped: { label: 'Clipped', color: '#6aad5b' },
-    ai_generated: { label: 'AI Generated', color: '#c17d3c' },
-    elevated: { label: 'Elevated', color: '#e8b84b' },
-  }[recipe.source] || { label: 'Recipe', color: '#7a6e5c' }
+    clipped: { label: 'Clipped', color: '#5bb87a' },
+    ai_generated: { label: 'AI Generated', color: '#c8a96e' },
+    elevated: { label: 'Elevated', color: '#e8c87a' },
+  }[recipe.source] || { label: 'Recipe', color: '#4a6e52' }
 
   return (
     <div className="recipe-card">

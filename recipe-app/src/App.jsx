@@ -229,6 +229,11 @@ export default function App() {
 
   const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
 
+  // Restore focus after any async action completes (busy → not busy)
+  useEffect(() => {
+    if (!busy) inputRef.current?.focus()
+  }, [busy])
+
   return (
     <div className="app">
       <div className="omnibox-wrapper">
