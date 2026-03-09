@@ -212,22 +212,21 @@ export function generateRecipeHTML(recipe) {
       // Transform button into timer display
       const timerContainer = document.createElement('div');
       timerContainer.className = 'timer-active-container';
-      timerContainer.innerHTML = \\\`
-        <div class="timer-display">
-          <span class="timer-time">\\\${formatTime(duration)}</span>
-          <span class="timer-label">\\\${timeText}</span>
-        </div>
-        <button class="timer-control-btn play-pause-btn" data-timer-id="\\\${timerId}" onclick="window.toggleTimer('\\\${timerId}')">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-          </svg>
-        </button>
-        <button class="timer-control-btn stop-btn" onclick="window.stopTimer('\\\${timerId}')">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 6h12v12H6z"/>
-          </svg>
-        </button>
-      \\\`;
+      timerContainer.innerHTML =
+        '<div class="timer-display">' +
+          '<span class="timer-time">' + formatTime(duration) + '</span>' +
+          '<span class="timer-label">' + timeText + '</span>' +
+        '</div>' +
+        '<button class="timer-control-btn play-pause-btn" data-timer-id="' + timerId + '" onclick="window.toggleTimer(\'' + timerId + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">' +
+            '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' +
+          '</svg>' +
+        '</button>' +
+        '<button class="timer-control-btn stop-btn" onclick="window.stopTimer(\'' + timerId + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="currentColor">' +
+            '<path d="M6 6h12v12H6z"/>' +
+          '</svg>' +
+        '</button>';
       
       // Store reference to original button in container
       const hiddenButton = button.cloneNode(true);
@@ -280,11 +279,10 @@ export function generateRecipeHTML(recipe) {
       
       // Update button icon to play
       const playPauseBtn = timer.container.querySelector('.play-pause-btn');
-      playPauseBtn.innerHTML = \\\`
-        <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon">
-          <path d="M8 5v14l11-7z"/>
-        </svg>
-      \\\`;
+      playPauseBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="currentColor" class="play-icon">' +
+          '<path d="M8 5v14l11-7z"/>' +
+        '</svg>';
     }
     
     function resumeTimer(timerId) {
@@ -296,11 +294,10 @@ export function generateRecipeHTML(recipe) {
       
       // Update button icon to pause
       const playPauseBtn = timer.container.querySelector('.play-pause-btn');
-      playPauseBtn.innerHTML = \\\`
-        <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-        </svg>
-      \\\`;
+      playPauseBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">' +
+          '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' +
+        '</svg>';
     }
     
     window.stopTimer = function(timerId) {
@@ -335,9 +332,9 @@ export function generateRecipeHTML(recipe) {
       const secs = seconds % 60;
       
       if (hours > 0) {
-        return \\\`\\\${hours}:\\\${minutes.toString().padStart(2, '0')}:\\\${secs.toString().padStart(2, '0')}\\\`;
+        return hours + ':' + minutes.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
       } else {
-        return \\\`\\\${minutes}:\\\${secs.toString().padStart(2, '0')}\\\`;
+        return minutes + ':' + secs.toString().padStart(2, '0');
       }
     }
     
