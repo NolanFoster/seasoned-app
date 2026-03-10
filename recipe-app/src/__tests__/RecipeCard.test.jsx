@@ -135,11 +135,13 @@ describe('RecipeCard — share button', () => {
 
   test('share button is not rendered when shareUrl is not provided', () => {
     renderCard();
+    fireEvent.click(screen.getByTitle('More options'));
     expect(screen.queryByTitle('Share recipe')).not.toBeInTheDocument();
   });
 
   test('share button is rendered when shareUrl is provided', () => {
     renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('More options'));
     expect(screen.getByTitle('Share recipe')).toBeInTheDocument();
   });
 
@@ -147,6 +149,7 @@ describe('RecipeCard — share button', () => {
     const shareMock = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
     renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Share recipe'));
     expect(shareMock).toHaveBeenCalledWith({
       title: baseRecipe.name,
@@ -162,6 +165,7 @@ describe('RecipeCard — share button', () => {
       configurable: true,
     });
     renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Share recipe'));
     expect(writeTextMock).toHaveBeenCalledWith(shareUrl);
   });
@@ -170,6 +174,7 @@ describe('RecipeCard — share button', () => {
 describe('RecipeCard — interactions', () => {
   test('calls onClose when close button is clicked', () => {
     const { onClose } = renderCard();
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Close'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

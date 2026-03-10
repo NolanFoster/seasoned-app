@@ -490,6 +490,7 @@ describe('Recipe card lifecycle', () => {
     fireEvent.click(screen.getByText('Generate'));
 
     await waitFor(() => screen.getByRole('heading', { name: /AI Omelette/i }));
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Close'));
 
     expect(screen.queryByRole('heading', { name: /AI Omelette/i })).not.toBeInTheDocument();
@@ -656,6 +657,7 @@ describe('Recently viewed recipes', () => {
     // View the same recipe again
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Close'));
     setInputValue('cake');
     pressEnter();
