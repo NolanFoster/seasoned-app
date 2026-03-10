@@ -233,7 +233,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
         {recipe.recipe_yield && (
           <span className="recipe-meta-pill"><strong>Serves</strong> {recipe.recipe_yield}</span>
         )}
-        {recipe.source_url && (
+        {recipe.source_url && recipe.source !== 'ai_generated' && (
           <a href={recipe.source_url} target="_blank" rel="noopener noreferrer">Source ↗</a>
         )}
       </div>

@@ -62,6 +62,11 @@ describe('RecipeCard — rendering', () => {
     expect(screen.queryByRole('link', { name: /source/i })).not.toBeInTheDocument();
   });
 
+  test('does not render source link for ai_generated recipes', () => {
+    renderCard({ source: 'ai_generated', source_url: 'https://seasoned.app/ai/ai-1773098213967' });
+    expect(screen.queryByRole('link', { name: /source/i })).not.toBeInTheDocument();
+  });
+
   test('renders image when present', () => {
     renderCard();
     const img = screen.getByRole('img', { name: /Spaghetti Carbonara/i });
