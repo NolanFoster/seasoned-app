@@ -95,6 +95,11 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
 
   return (
     <div className="recipe-card">
+      <button className="close-btn" onClick={onClose} title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
       <div className="recipe-card-header">
         <h2 className="recipe-title">{recipe.name}</h2>
         <div className="recipe-header-actions">
@@ -193,11 +198,6 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               )}
             </button>
           )}
-          <button className="close-btn" onClick={onClose} title="Close">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
         </div>
       </div>
 
