@@ -430,80 +430,26 @@ html, body {
   height: 14px;
 }
 
-.save-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.save-btn:hover:not(:disabled) {
-  background: var(--border);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.save-btn.saved {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: rgba(200,169,110,0.1);
-  cursor: default;
-}
-.save-btn.error {
-  color: var(--error);
-  border-color: var(--error);
-}
-.save-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.wake-lock-btn {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-  padding: 0;
-  line-height: 1;
-}
-@media (hover: none) and (pointer: coarse) {
-  .wake-lock-btn { display: flex; }
-}
-.wake-lock-btn:hover {
-  background: var(--border);
-}
-.wake-lock-btn.active {
-  background: rgba(255, 200, 0, 0.15);
-  border-color: rgba(255, 200, 0, 0.4);
-  box-shadow: 0 0 8px rgba(255, 200, 0, 0.3);
-}
 .wake-lock-icon {
   font-size: 0.95em;
   line-height: 1;
 }
 .wake-lock-label {
-  font-size: 0.5em;
+  font-size: 0.7em;
   font-weight: 600;
   color: var(--text-muted);
   line-height: 1;
-  margin-top: 1px;
 }
-.close-btn {
+
+/* ── Action menu (top-right of card) ── */
+.action-menu {
   position: absolute;
   top: 12px;
   right: 12px;
+  z-index: 1;
+}
+
+.action-menu-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -515,43 +461,74 @@ html, body {
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
-  z-index: 1;
 }
-.close-btn:hover {
+.action-menu-btn:hover {
   background: var(--border);
   color: var(--text);
 }
-.close-btn svg {
+.action-menu-btn svg {
   width: 16px;
   height: 16px;
 }
 
-.share-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+.action-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  min-width: 140px;
+  overflow: hidden;
+  animation: dropdown-slide-in 0.12s ease;
+  z-index: 10;
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
   color: var(--text-muted);
-  text-decoration: none;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
 }
-.share-btn:hover {
+.action-menu-item:last-child {
+  border-bottom: none;
+}
+.action-menu-item:hover:not(:disabled) {
   background: var(--border);
+  color: var(--text);
+}
+.action-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.action-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.action-menu-item.saved {
   color: var(--accent);
-  border-color: var(--accent);
 }
-.share-btn.copied {
+.action-menu-item.error {
+  color: var(--error);
+}
+.action-menu-item.copied {
   color: var(--clip-color);
-  border-color: var(--clip-color);
-  background: rgba(91,184,122,0.1);
 }
-.share-btn svg {
-  width: 16px;
-  height: 16px;
+.action-menu-item.active {
+  color: var(--generate-color);
 }
 
 .recipe-image {
