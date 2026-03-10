@@ -40,6 +40,7 @@ export default function App() {
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [lastSearchQuery, setLastSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [recipe, setRecipe] = useState(null) // currently displayed recipe
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
@@ -111,6 +112,7 @@ export default function App() {
         })
       )
       setSearchResults(results.filter(Boolean))
+      setLastSearchQuery(query)
     } catch (e) {
       setErrorMsg(e.message)
       setStatus('error')
@@ -128,8 +130,7 @@ export default function App() {
     if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
       debouncedSearch(val.trim())
     } else {
-      setSearchResults([])
-      setShowDropdown(val.trim().length === 0 && recentRecipes.length > 0)
+      setShowDropdown(val.trim().length === 0 && (recentRecipes.length > 0 || searchResults.length > 0))
     }
   }
 
@@ -236,6 +237,7 @@ export default function App() {
     if (e.key === 'Escape') {
       setShowDropdown(false)
       setSearchResults([])
+      setLastSearchQuery('')
     }
   }
 
@@ -262,7 +264,7 @@ export default function App() {
   }
 
   function handleInputFocus() {
-    if (!input.trim() && recentRecipes.length > 0) setShowDropdown(true)
+    if (!input.trim() && (recentRecipes.length > 0 || searchResults.length > 0)) setShowDropdown(true)
   }
 
   // --- Save ---
@@ -427,27 +429,10 @@ export default function App() {
                     <div className="skeleton-line meta" />
                   </div>
                 ))
-              ) : searchResults.length > 0 ? (
-                searchResults.map((r) => (
-                  <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
-                    <span className="dropdown-name">{r.name}</span>
-                    <span className="dropdown-meta">
-                      {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
-                      {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
-                      {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
-                    </span>
-                  </button>
-                ))
               ) : input.trim().length >= 2 ? (
-                <div className="dropdown-empty">No recipes found for "{input}"</div>
-              ) : recentRecipes.length > 0 ? (
-                <>
-                  <div className="dropdown-section-label">
-                    <span>Recently Viewed</span>
-                    <button className="dropdown-clear-btn" onClick={clearRecentRecipes}>Clear</button>
-                  </div>
-                  {recentRecipes.map((r) => (
-                    <button key={r.id} className="dropdown-item" onClick={() => handleRecentSelect(r)}>
+                searchResults.length > 0 ? (
+                  searchResults.map((r) => (
+                    <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
                       <span className="dropdown-name">{r.name}</span>
                       <span className="dropdown-meta">
                         {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
@@ -455,9 +440,49 @@ export default function App() {
                         {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
                       </span>
                     </button>
-                  ))}
+                  ))
+                ) : (
+                  <div className="dropdown-empty">No recipes found for "{input}"</div>
+                )
+              ) : (
+                <>
+                  {recentRecipes.length > 0 && (
+                    <>
+                      <div className="dropdown-section-label">
+                        <span>Recently Viewed</span>
+                        <button className="dropdown-clear-btn" onClick={clearRecentRecipes}>Clear</button>
+                      </div>
+                      {recentRecipes.map((r) => (
+                        <button key={r.id} className="dropdown-item" onClick={() => handleRecentSelect(r)}>
+                          <span className="dropdown-name">{r.name}</span>
+                          <span className="dropdown-meta">
+                            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {searchResults.length > 0 && (
+                    <>
+                      <div className="dropdown-section-label">
+                        <span>Last Search{lastSearchQuery ? `: "${lastSearchQuery}"` : ''}</span>
+                      </div>
+                      {searchResults.map((r) => (
+                        <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
+                          <span className="dropdown-name">{r.name}</span>
+                          <span className="dropdown-meta">
+                            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </>
-              ) : null}
+              )}
             </div>
           )}
         </div>
