@@ -116,14 +116,48 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   const [currentStep, setCurrentStep] = useState(0)
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
-  const timerIntervalsRef = useRef({}) // { id: intervalId }
+  const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
+  const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
 
   // Cleanup all intervals on unmount
   useEffect(() => {
     return () => {
       Object.values(timerIntervalsRef.current).forEach(clearInterval)
+      Object.values(soundIntervalsRef.current).forEach(clearInterval)
     }
   }, [])
+
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 800
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.6)
+    } catch {}
+  }
+
+  function startRepeatingSound(id) {
+    clearInterval(soundIntervalsRef.current[id])
+    playBeep()
+    soundIntervalsRef.current[id] = setInterval(playBeep, 5000)
+    // Auto-stop after 2 minutes
+    setTimeout(() => {
+      clearInterval(soundIntervalsRef.current[id])
+      delete soundIntervalsRef.current[id]
+    }, 120000)
+  }
+
+  function stopSound(id) {
+    clearInterval(soundIntervalsRef.current[id])
+    delete soundIntervalsRef.current[id]
+  }
 
   function startInterval(id) {
     clearInterval(timerIntervalsRef.current[id])
@@ -135,6 +169,7 @@ export default function CookingNavigator({ recipe, onClose }) {
         if (next <= 0) {
           clearInterval(timerIntervalsRef.current[id])
           delete timerIntervalsRef.current[id]
+          startRepeatingSound(id)
           return { ...prev, [id]: { ...timer, remainingSeconds: 0, isDone: true, isPaused: false } }
         }
         return { ...prev, [id]: { ...timer, remainingSeconds: next } }
@@ -164,6 +199,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   function handleTimerStop(id) {
     clearInterval(timerIntervalsRef.current[id])
     delete timerIntervalsRef.current[id]
+    stopSound(id)
     setActiveTimers((prev) => {
       const next = { ...prev }
       delete next[id]

@@ -193,6 +193,38 @@ export function generateRecipeHTML(recipe) {
 
       var currentStep = 0;
       var cnTimers = {};
+      var cnSoundIntervals = {};
+
+      function playBeep() {
+        try {
+          var ctx = new (window.AudioContext || window.webkitAudioContext)();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 800;
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.6);
+        } catch(e) {}
+      }
+
+      function startRepeatingSound(id) {
+        clearInterval(cnSoundIntervals[id]);
+        playBeep();
+        cnSoundIntervals[id] = setInterval(playBeep, 5000);
+        setTimeout(function() {
+          clearInterval(cnSoundIntervals[id]);
+          delete cnSoundIntervals[id];
+        }, 120000);
+      }
+
+      function stopSound(id) {
+        clearInterval(cnSoundIntervals[id]);
+        delete cnSoundIntervals[id];
+      }
 
       // Use [0-9] instead of \d and space literals instead of \s —
       // template-literal escape processing strips backslashes in the output.
@@ -305,7 +337,7 @@ export function generateRecipeHTML(recipe) {
         var action = btn.getAttribute('data-cn-action');
         var id = btn.getAttribute('data-cn-id');
         if (action === 'close') {
-          Object.keys(cnTimers).forEach(function(tid) { clearInterval(cnTimers[tid].intervalId); });
+          Object.keys(cnTimers).forEach(function(tid) { clearInterval(cnTimers[tid].intervalId); stopSound(tid); });
           cnTimers = {};
           var ov = document.getElementById('cn-overlay');
           if (ov) ov.remove();
@@ -324,7 +356,7 @@ export function generateRecipeHTML(recipe) {
             t.remainingSeconds--;
             var el = document.getElementById('cn-pt-' + id);
             if (el) el.textContent = fmtTime(t.remainingSeconds);
-            if (t.remainingSeconds <= 0) { clearInterval(t.intervalId); t.isDone = true; render(); }
+            if (t.remainingSeconds <= 0) { clearInterval(t.intervalId); t.isDone = true; startRepeatingSound(id); render(); }
           }, 1000);
           render();
         } else if (action === 'timer-pause') {
@@ -339,11 +371,11 @@ export function generateRecipeHTML(recipe) {
             ct.remainingSeconds--;
             var el = document.getElementById('cn-pt-' + id);
             if (el) el.textContent = fmtTime(ct.remainingSeconds);
-            if (ct.remainingSeconds <= 0) { clearInterval(ct.intervalId); ct.isDone = true; render(); }
+            if (ct.remainingSeconds <= 0) { clearInterval(ct.intervalId); ct.isDone = true; startRepeatingSound(id); render(); }
           }, 1000);
           render();
         } else if (action === 'timer-stop') {
-          if (cnTimers[id]) { clearInterval(cnTimers[id].intervalId); delete cnTimers[id]; render(); }
+          if (cnTimers[id]) { clearInterval(cnTimers[id].intervalId); delete cnTimers[id]; stopSound(id); render(); }
         }
       }
 
