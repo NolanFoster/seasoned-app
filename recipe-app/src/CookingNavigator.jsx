@@ -194,9 +194,9 @@ export default function CookingNavigator({ recipe, onClose }) {
                 {timer.isDone ? (
                   <button className="cn-timer-pill-action" onClick={() => handleTimerStop(id)} title="Dismiss">✓</button>
                 ) : timer.isPaused ? (
-                  <button className="cn-timer-pill-action" onClick={() => handleTimerResume(id)} title="Resume">▶</button>
+                  <button className="cn-timer-pill-action" onClick={() => handleTimerResume(id)} title="Resume">{'▶\uFE0E'}</button>
                 ) : (
-                  <button className="cn-timer-pill-action" onClick={() => handleTimerPause(id)} title="Pause">⏸</button>
+                  <button className="cn-timer-pill-action" onClick={() => handleTimerPause(id)} title="Pause">{'⏸\uFE0E'}</button>
                 )}
                 <button className="cn-timer-pill-stop" onClick={() => handleTimerStop(id)} title="Stop timer">✕</button>
               </div>
