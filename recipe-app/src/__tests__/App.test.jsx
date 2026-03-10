@@ -583,6 +583,42 @@ describe('Recently viewed recipes', () => {
     expect(screen.getByText('Chocolate Cake')).toBeInTheDocument();
   });
 
+  test('shows last search results below recently viewed when input is cleared', async () => {
+    seedLocalStorage([{ id: 'recent1', name: 'Saved Pasta', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
+
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    render(<App />);
+    setInputValue('cake');
+    pressEnter();
+    await waitFor(() => screen.getByText('Chocolate Cake'));
+
+    // Clear the input — dropdown should now show both sections
+    setInputValue('');
+    fireEvent.focus(screen.getByRole('textbox'));
+
+    expect(screen.getByText('Recently Viewed')).toBeInTheDocument();
+    expect(screen.getByText('Saved Pasta')).toBeInTheDocument();
+    expect(screen.getByText(/Last Search/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Chocolate Cake').length).toBeGreaterThan(0);
+  });
+
+  test('shows only search results when input has 2+ characters, not the combined view', async () => {
+    seedLocalStorage([{ id: 'recent1', name: 'Saved Pasta', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
+
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    render(<App />);
+    setInputValue('cake');
+    pressEnter();
+    await waitFor(() => screen.getByText('Chocolate Cake'));
+
+    expect(screen.queryByText('Recently Viewed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Saved Pasta')).not.toBeInTheDocument();
+  });
+
   test('does not show Recently Viewed section when input has 2+ characters', async () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
