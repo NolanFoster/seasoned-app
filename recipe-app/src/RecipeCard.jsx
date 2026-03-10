@@ -277,20 +277,20 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
         {recipe.source_url && recipe.source !== 'ai_generated' && (
           <a href={recipe.source_url} target="_blank" rel="noopener noreferrer">Source ↗</a>
         )}
+        {instructions.length > 0 && (
+          <button
+            className="cook-btn"
+            onClick={() => setIsCooking(true)}
+            title="Step-by-step cooking mode"
+            style={{ marginLeft: 'auto' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 3l14 9-14 9V3z"/>
+            </svg>
+            Cook
+          </button>
+        )}
       </div>
-
-      {instructions.length > 0 && (
-        <button
-          className="cook-btn"
-          onClick={() => setIsCooking(true)}
-          title="Step-by-step cooking mode"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 3l14 9-14 9V3z"/>
-          </svg>
-          Cook
-        </button>
-      )}
 
       <div className="recipe-body">
         {recipe.ingredients?.length > 0 && (
