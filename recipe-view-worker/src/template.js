@@ -262,9 +262,9 @@ export function generateRecipeHTML(recipe) {
           if (t.isDone) {
             html += '<button class="cn-timer-pill-action" data-cn-action="timer-stop" data-cn-id="' + id + '">&#10003;</button>';
           } else if (t.isPaused) {
-            html += '<button class="cn-timer-pill-action" data-cn-action="timer-resume" data-cn-id="' + id + '">&#9654;</button>';
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-resume" data-cn-id="' + id + '">&#9654;&#xFE0E;</button>';
           } else {
-            html += '<button class="cn-timer-pill-action" data-cn-action="timer-pause" data-cn-id="' + id + '">&#9208;</button>';
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-pause" data-cn-id="' + id + '">&#9208;&#xFE0E;</button>';
           }
           html += '<button class="cn-timer-pill-stop" data-cn-action="timer-stop" data-cn-id="' + id + '">&#10005;</button>';
           html += '</div>';
