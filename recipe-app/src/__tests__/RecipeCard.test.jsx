@@ -176,27 +176,32 @@ describe('RecipeCard — interactions', () => {
 
   test('calls onElevate when elevate button is clicked', () => {
     const { onElevate } = renderCard();
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
     expect(onElevate).toHaveBeenCalledTimes(1);
   });
 
   test('elevate button is disabled while isElevating', () => {
     renderCard({}, { isElevating: true });
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByTitle(/Elevate this recipe/i)).toBeDisabled();
   });
 
   test('elevate button shows "Elevating…" text while isElevating', () => {
     renderCard({}, { isElevating: true });
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByText('Elevating…')).toBeInTheDocument();
   });
 
   test('elevate button is enabled when not elevating', () => {
     renderCard();
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByTitle(/Elevate this recipe/i)).not.toBeDisabled();
   });
 
   test('elevate button shows "Elevate" text when not elevating', () => {
     renderCard();
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByText('Elevate')).toBeInTheDocument();
   });
 });
