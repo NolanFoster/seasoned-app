@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
+import { useRecentRecipes } from './useRecentRecipes.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -39,6 +40,7 @@ export default function App() {
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [lastSearchQuery, setLastSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [recipe, setRecipe] = useState(null) // currently displayed recipe
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
@@ -46,6 +48,7 @@ export default function App() {
   const [generatingName, setGeneratingName] = useState('')
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
+  const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
 
   const isUrl = isValidUrl(input.trim())
   const hasText = input.trim().length >= 2 && !isUrl
@@ -109,6 +112,7 @@ export default function App() {
         })
       )
       setSearchResults(results.filter(Boolean))
+      setLastSearchQuery(query)
     } catch (e) {
       setErrorMsg(e.message)
       setStatus('error')
@@ -126,8 +130,7 @@ export default function App() {
     if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
       debouncedSearch(val.trim())
     } else {
-      setSearchResults([])
-      setShowDropdown(false)
+      setShowDropdown(val.trim().length === 0 && (recentRecipes.length > 0 || searchResults.length > 0))
     }
   }
 
@@ -146,7 +149,7 @@ export default function App() {
       if (!res.ok) throw new Error(`Clip failed: ${res.status}`)
       const data = await res.json()
       const d = data.recipe || data
-      setRecipe({
+      const clippedRecipe = {
         id: `clip-${Date.now()}`,
         source: 'clipped',
         name: d.name || d.title || 'Clipped Recipe',
@@ -158,7 +161,9 @@ export default function App() {
         ingredients: d.ingredients || d.recipeIngredient || [],
         instructions: d.instructions || d.recipeInstructions || [],
         source_url: url,
-      })
+      }
+      setRecipe(clippedRecipe)
+      addRecentRecipe(clippedRecipe)
       setInput('')
     } catch (e) {
       setErrorMsg(e.message)
@@ -196,7 +201,7 @@ export default function App() {
       if (!data.success || !data.recipe) throw new Error(data.error || 'Generation returned no recipe')
 
       const r = data.recipe
-      setRecipe({
+      const generatedRecipe = {
         id: `ai-${Date.now()}`,
         source: elevate ? 'elevated' : 'ai_generated',
         name: r.name,
@@ -207,7 +212,9 @@ export default function App() {
         recipe_yield: r.servings || null,
         ingredients: r.ingredients || [],
         instructions: r.instructions || [],
-      })
+      }
+      setRecipe(generatedRecipe)
+      addRecentRecipe(generatedRecipe)
       setGeneratingName('')
     } catch (e) {
       setGeneratingName('')
@@ -230,15 +237,34 @@ export default function App() {
     if (e.key === 'Escape') {
       setShowDropdown(false)
       setSearchResults([])
+      setLastSearchQuery('')
     }
   }
 
   function handleResultSelect(result) {
     setRecipe(result)
+    addRecentRecipe(result)
     setSaveState('saved')
     setSavedRecipeId(result.id)
     setShowDropdown(false)
     setInput('')
+  }
+
+  function handleRecentSelect(r) {
+    setRecipe(r)
+    setShowDropdown(false)
+    setInput('')
+    // Only mark as saved for real DB recipes (not temporary clip-* / ai-* ids)
+    if (r.id && !r.id.startsWith('clip-') && !r.id.startsWith('ai-')) {
+      setSaveState('saved')
+      setSavedRecipeId(r.id)
+    } else {
+      setSaveState('idle')
+    }
+  }
+
+  function handleInputFocus() {
+    if (!input.trim() && (recentRecipes.length > 0 || searchResults.length > 0)) setShowDropdown(true)
   }
 
   // --- Save ---
@@ -331,6 +357,7 @@ export default function App() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
+              onFocus={handleInputFocus}
               disabled={inputBusy}
               autoFocus
               autoComplete="off"
@@ -402,19 +429,59 @@ export default function App() {
                     <div className="skeleton-line meta" />
                   </div>
                 ))
-              ) : searchResults.length > 0 ? (
-                searchResults.map((r) => (
-                  <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
-                    <span className="dropdown-name">{r.name}</span>
-                    <span className="dropdown-meta">
-                      {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
-                      {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
-                      {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
-                    </span>
-                  </button>
-                ))
+              ) : input.trim().length >= 2 ? (
+                searchResults.length > 0 ? (
+                  searchResults.map((r) => (
+                    <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
+                      <span className="dropdown-name">{r.name}</span>
+                      <span className="dropdown-meta">
+                        {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                        {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                        {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="dropdown-empty">No recipes found for "{input}"</div>
+                )
               ) : (
-                <div className="dropdown-empty">No recipes found for "{input}"</div>
+                <>
+                  {recentRecipes.length > 0 && (
+                    <>
+                      <div className="dropdown-section-label">
+                        <span>Recently Viewed</span>
+                        <button className="dropdown-clear-btn" onClick={clearRecentRecipes}>Clear</button>
+                      </div>
+                      {recentRecipes.map((r) => (
+                        <button key={r.id} className="dropdown-item" onClick={() => handleRecentSelect(r)}>
+                          <span className="dropdown-name">{r.name}</span>
+                          <span className="dropdown-meta">
+                            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {searchResults.length > 0 && (
+                    <>
+                      <div className="dropdown-section-label">
+                        <span>Last Search{lastSearchQuery ? `: "${lastSearchQuery}"` : ''}</span>
+                      </div>
+                      {searchResults.map((r) => (
+                        <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
+                          <span className="dropdown-name">{r.name}</span>
+                          <span className="dropdown-meta">
+                            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </>
               )}
             </div>
           )}
