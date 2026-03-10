@@ -421,6 +421,7 @@ describe('Elevate behaviour', () => {
       recipe: { ...GENERATE_RESPONSE.recipe, name: 'Elevated Chocolate Cake' },
     });
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() => {
@@ -442,6 +443,7 @@ describe('Elevate behaviour', () => {
       recipe: { ...GENERATE_RESPONSE.recipe, name: 'Elevated Chocolate Cake' },
     });
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() => {
@@ -461,6 +463,7 @@ describe('Elevate behaviour', () => {
       recipe: { ...GENERATE_RESPONSE.recipe, name: 'Elevated Chocolate Cake' },
     });
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() => screen.getByText('Elevated'));
@@ -471,6 +474,7 @@ describe('Elevate behaviour', () => {
     await loadRecipe();
     mockFetchFail(500);
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() =>
@@ -490,6 +494,7 @@ describe('Recipe card lifecycle', () => {
     fireEvent.click(screen.getByText('Generate'));
 
     await waitFor(() => screen.getByRole('heading', { name: /AI Omelette/i }));
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Close'));
 
     expect(screen.queryByRole('heading', { name: /AI Omelette/i })).not.toBeInTheDocument();
@@ -656,6 +661,7 @@ describe('Recently viewed recipes', () => {
     // View the same recipe again
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Close'));
     setInputValue('cake');
     pressEnter();
