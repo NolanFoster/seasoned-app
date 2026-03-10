@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
+import { useRecentRecipes } from './useRecentRecipes.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -46,6 +47,12 @@ export default function App() {
   const [generatingName, setGeneratingName] = useState('')
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
+  const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
+
+  // Track every recipe that gets displayed in the recently viewed list
+  useEffect(() => {
+    if (recipe) addRecentRecipe(recipe)
+  }, [recipe])
 
   const isUrl = isValidUrl(input.trim())
   const hasText = input.trim().length >= 2 && !isUrl
@@ -127,7 +134,7 @@ export default function App() {
       debouncedSearch(val.trim())
     } else {
       setSearchResults([])
-      setShowDropdown(false)
+      setShowDropdown(val.trim().length === 0 && recentRecipes.length > 0)
     }
   }
 
@@ -241,6 +248,23 @@ export default function App() {
     setInput('')
   }
 
+  function handleRecentSelect(r) {
+    setRecipe(r)
+    setShowDropdown(false)
+    setInput('')
+    // Only mark as saved for real DB recipes (not temporary clip-* / ai-* ids)
+    if (r.id && !r.id.startsWith('clip-') && !r.id.startsWith('ai-')) {
+      setSaveState('saved')
+      setSavedRecipeId(r.id)
+    } else {
+      setSaveState('idle')
+    }
+  }
+
+  function handleInputFocus() {
+    if (!input.trim() && recentRecipes.length > 0) setShowDropdown(true)
+  }
+
   // --- Save ---
   async function doSave(r) {
     setSaveState('saving')
@@ -331,6 +355,7 @@ export default function App() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
+              onFocus={handleInputFocus}
               disabled={inputBusy}
               autoFocus
               autoComplete="off"
@@ -413,9 +438,26 @@ export default function App() {
                     </span>
                   </button>
                 ))
-              ) : (
+              ) : input.trim().length >= 2 ? (
                 <div className="dropdown-empty">No recipes found for "{input}"</div>
-              )}
+              ) : recentRecipes.length > 0 ? (
+                <>
+                  <div className="dropdown-section-label">
+                    <span>Recently Viewed</span>
+                    <button className="dropdown-clear-btn" onClick={clearRecentRecipes}>Clear</button>
+                  </div>
+                  {recentRecipes.map((r) => (
+                    <button key={r.id} className="dropdown-item" onClick={() => handleRecentSelect(r)}>
+                      <span className="dropdown-name">{r.name}</span>
+                      <span className="dropdown-meta">
+                        {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+                        {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+                        {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+                      </span>
+                    </button>
+                  ))}
+                </>
+              ) : null}
             </div>
           )}
         </div>
