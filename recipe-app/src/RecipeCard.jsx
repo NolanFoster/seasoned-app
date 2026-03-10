@@ -93,6 +93,13 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     return inst.text || inst.name || JSON.stringify(inst)
   })
 
+  const sourceBadgeMap = {
+    clipped: { label: 'Clipped', color: '#5bb87a' },
+    ai_generated: { label: 'AI Generated', color: '#c8a96e' },
+    elevated: { label: 'Elevated', color: '#e8c87a' },
+  }
+  const sourceBadge = sourceBadgeMap[recipe.source] || { label: 'Recipe', color: '#888' }
+
   return (
     <div className="recipe-card">
       <button className="close-btn" onClick={onClose} title="Close">
@@ -101,7 +108,12 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
         </svg>
       </button>
       <div className="recipe-card-header">
-        <h2 className="recipe-title">{recipe.name}</h2>
+        <div className="recipe-title-row">
+          <h2 className="recipe-title">{recipe.name}</h2>
+          <span className="recipe-source-badge" style={{ backgroundColor: sourceBadge.color }}>
+            {sourceBadge.label}
+          </span>
+        </div>
         <div className="recipe-header-actions">
           <button
             className="elevate-btn"
