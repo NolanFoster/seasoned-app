@@ -663,11 +663,10 @@ function generateStyles() {
     }
 
     .cn-overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
       background: var(--surface);
-      border-radius: var(--radius);
-      z-index: 10;
+      z-index: 200;
       display: flex;
       flex-direction: column;
       animation: cn-slide-up 0.28s ease;
