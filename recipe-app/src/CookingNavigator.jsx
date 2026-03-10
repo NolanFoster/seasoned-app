@@ -146,7 +146,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   function startRepeatingSound(id) {
     clearInterval(soundIntervalsRef.current[id])
     playBeep()
-    soundIntervalsRef.current[id] = setInterval(playBeep, 5000)
+    soundIntervalsRef.current[id] = setInterval(playBeep, 2000)
     // Auto-stop after 2 minutes
     setTimeout(() => {
       clearInterval(soundIntervalsRef.current[id])

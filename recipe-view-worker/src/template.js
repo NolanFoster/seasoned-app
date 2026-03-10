@@ -214,7 +214,7 @@ export function generateRecipeHTML(recipe) {
       function startRepeatingSound(id) {
         clearInterval(cnSoundIntervals[id]);
         playBeep();
-        cnSoundIntervals[id] = setInterval(playBeep, 5000);
+        cnSoundIntervals[id] = setInterval(playBeep, 2000);
         setTimeout(function() {
           clearInterval(cnSoundIntervals[id]);
           delete cnSoundIntervals[id];
