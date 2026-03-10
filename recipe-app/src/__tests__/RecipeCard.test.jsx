@@ -119,9 +119,9 @@ describe('RecipeCard — source badges', () => {
     expect(screen.getByText('Elevated')).toBeInTheDocument();
   });
 
-  test('shows fallback "Recipe" badge for unknown source', () => {
+  test('shows no badge for unknown source', () => {
     renderCard({ source: 'unknown' });
-    expect(screen.getByText('Recipe')).toBeInTheDocument();
+    expect(screen.queryByText('Recipe')).not.toBeInTheDocument();
   });
 });
 
