@@ -61,7 +61,7 @@ export function generateRecipeHTML(recipe) {
       <div class="recipe-card-header">
         <h2 class="recipe-title">${escapeHtml(name)}</h2>
         <div class="recipe-header-actions">
-          ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>` : ''}
+          ${sourceUrl && source !== 'ai_generated' ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>` : ''}
           ${instructions.length > 0 ? `<button class="cook-btn" id="cook-btn" title="Step-by-step cooking mode">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="flex-shrink:0">
               <path d="M5 3l14 9-14 9V3z"/>

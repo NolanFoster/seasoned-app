@@ -168,6 +168,32 @@ describe('generateRecipeHTML', () => {
     // Video URL should be included if the template supports it
   });
 
+  it('should not show source link for ai_generated recipes', () => {
+    const recipe = {
+      name: 'AI Recipe',
+      source: 'ai_generated',
+      source_url: 'https://seasoned.app/ai/ai-1773098213967'
+    };
+
+    const html = generateRecipeHTML(recipe);
+
+    expect(html).not.toContain('class="source-link"');
+    expect(html).not.toContain('https://seasoned.app/ai/ai-1773098213967');
+  });
+
+  it('should show source link for clipped recipes', () => {
+    const recipe = {
+      name: 'Clipped Recipe',
+      source: 'clipped',
+      source_url: 'https://example.com/original-recipe'
+    };
+
+    const html = generateRecipeHTML(recipe);
+
+    expect(html).toContain('class="source-link"');
+    expect(html).toContain('https://example.com/original-recipe');
+  });
+
   it('should generate valid HTML structure', () => {
     const recipe = {
       name: 'Valid HTML Recipe',
