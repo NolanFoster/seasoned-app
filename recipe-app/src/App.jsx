@@ -49,11 +49,6 @@ export default function App() {
   const dropdownRef = useRef(null)
   const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
 
-  // Track every recipe that gets displayed in the recently viewed list
-  useEffect(() => {
-    if (recipe) addRecentRecipe(recipe)
-  }, [recipe])
-
   const isUrl = isValidUrl(input.trim())
   const hasText = input.trim().length >= 2 && !isUrl
 
@@ -153,7 +148,7 @@ export default function App() {
       if (!res.ok) throw new Error(`Clip failed: ${res.status}`)
       const data = await res.json()
       const d = data.recipe || data
-      setRecipe({
+      const clippedRecipe = {
         id: `clip-${Date.now()}`,
         source: 'clipped',
         name: d.name || d.title || 'Clipped Recipe',
@@ -165,7 +160,9 @@ export default function App() {
         ingredients: d.ingredients || d.recipeIngredient || [],
         instructions: d.instructions || d.recipeInstructions || [],
         source_url: url,
-      })
+      }
+      setRecipe(clippedRecipe)
+      addRecentRecipe(clippedRecipe)
       setInput('')
     } catch (e) {
       setErrorMsg(e.message)
@@ -203,7 +200,7 @@ export default function App() {
       if (!data.success || !data.recipe) throw new Error(data.error || 'Generation returned no recipe')
 
       const r = data.recipe
-      setRecipe({
+      const generatedRecipe = {
         id: `ai-${Date.now()}`,
         source: elevate ? 'elevated' : 'ai_generated',
         name: r.name,
@@ -214,7 +211,9 @@ export default function App() {
         recipe_yield: r.servings || null,
         ingredients: r.ingredients || [],
         instructions: r.instructions || [],
-      })
+      }
+      setRecipe(generatedRecipe)
+      addRecentRecipe(generatedRecipe)
       setGeneratingName('')
     } catch (e) {
       setGeneratingName('')
@@ -242,6 +241,7 @@ export default function App() {
 
   function handleResultSelect(result) {
     setRecipe(result)
+    addRecentRecipe(result)
     setSaveState('saved')
     setSavedRecipeId(result.id)
     setShowDropdown(false)

@@ -632,6 +632,68 @@ describe('Recently viewed recipes', () => {
     expect(names.filter((n) => n === 'Chocolate Cake')).toHaveLength(1);
   });
 
+  test('both recipes remain in recent after selecting two different search results', async () => {
+    const SOUP_SEARCH = { results: [{ id: 'soup456' }] };
+    const SOUP_RECIPE = {
+      data: {
+        name: 'Tomato Soup',
+        description: 'A classic soup.',
+        image: '',
+        prepTime: '5 minutes',
+        cookTime: '20 minutes',
+        servings: '4',
+        ingredients: ['tomatoes', 'salt'],
+        instructions: ['Blend.', 'Simmer.'],
+        url: '',
+      },
+    };
+
+    // Select first recipe
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+    render(<App />);
+    setInputValue('cake');
+    pressEnter();
+    await waitFor(() => screen.getByText('Chocolate Cake'));
+    fireEvent.click(screen.getByText('Chocolate Cake'));
+    await waitFor(() => screen.getByRole('heading', { name: /Chocolate Cake/i }));
+
+    // Select second recipe
+    mockFetchOk(SOUP_SEARCH);
+    mockFetchOk(SOUP_RECIPE);
+    setInputValue('soup');
+    pressEnter();
+    await waitFor(() => screen.getByText('Tomato Soup'));
+    fireEvent.click(screen.getByText('Tomato Soup'));
+    await waitFor(() => screen.getByRole('heading', { name: /Tomato Soup/i }));
+
+    const stored = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY));
+    const names = stored.map((r) => r.name);
+    expect(names).toContain('Chocolate Cake');
+    expect(names).toContain('Tomato Soup');
+    expect(stored).toHaveLength(2);
+  });
+
+  test('re-opening a recipe from recently viewed does not change the recent list', async () => {
+    const recipe1 = { id: 'r1', name: 'Recipe One', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [], source_url: '' };
+    const recipe2 = { id: 'r2', name: 'Recipe Two', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [], source_url: '' };
+    seedLocalStorage([recipe2, recipe1]); // recipe2 is more recent
+
+    render(<App />);
+    fireEvent.focus(screen.getByRole('textbox'));
+
+    // Re-open the older recipe from recent
+    await waitFor(() => screen.getByText('Recipe One'));
+    fireEvent.click(screen.getByText('Recipe One'));
+    await waitFor(() => screen.getByRole('heading', { name: /Recipe One/i }));
+
+    const stored = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY));
+    // Order and length should be unchanged
+    expect(stored).toHaveLength(2);
+    expect(stored[0].id).toBe('r2');
+    expect(stored[1].id).toBe('r1');
+  });
+
   test('Clear button removes all recent entries and hides the section', async () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
