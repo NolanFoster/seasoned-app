@@ -30,10 +30,11 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  // null | 'remix' | 'options'
+  const [openMenu, setOpenMenu] = useState(null)
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
-  const menuRef = useRef(null)
+  const menusRef = useRef(null)
 
   const recipeDurationMins =
     parseDurationToMinutes(recipe.prep_time) + parseDurationToMinutes(recipe.cook_time)
@@ -89,18 +90,17 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [wakeLockActive])
 
-  // Close menu on outside click
+  // Close menus on outside click
   useEffect(() => {
-    if (!menuOpen) return
+    if (!openMenu) return
     function handleClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false)
+      if (menusRef.current && !menusRef.current.contains(e.target)) {
+        setOpenMenu(null)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [menuOpen])
-
+  }, [openMenu])
 
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
@@ -116,96 +116,133 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
 
   return (
     <div className="recipe-card">
-      <div className="action-menu" ref={menuRef}>
-        <button
-          className="action-menu-btn"
-          onClick={() => setMenuOpen(o => !o)}
-          title="More options"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-          </svg>
-        </button>
-        {menuOpen && (
-          <div className="action-menu-dropdown">
-            <button
-              className="action-menu-item"
-              onClick={() => { setMenuOpen(false); onClose(); }}
-              title="Close"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-              Close
-            </button>
-            <button
-              className={`action-menu-item${saveState === 'saved' ? ' saved' : saveState === 'error' ? ' error' : ''}`}
-              onClick={() => { if (saveState !== 'saving' && saveState !== 'saved') { onSave(); setMenuOpen(false); } }}
-              disabled={saveState === 'saving' || saveState === 'saved'}
-              title={saveState === 'saved' ? 'Recipe saved' : 'Save recipe'}
-            >
-              {saveState === 'saving' ? (
-                <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                </svg>
-              ) : saveState === 'saved' ? (
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M5 3a2 2 0 00-2 2v16l9-4 9 4V5a2 2 0 00-2-2H5z"/>
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 21l-7-3-7 3V5a2 2 0 012-2h10a2 2 0 012 2v16z"/>
-                </svg>
-              )}
-              {saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : 'Save'}
-            </button>
-            {shareUrl && (
+      <div className="card-menus" ref={menusRef}>
+        {/* Remix menu */}
+        <div className="action-menu">
+          <button
+            className="action-menu-btn"
+            onClick={() => setOpenMenu(o => o === 'remix' ? null : 'remix')}
+            title="Remix with AI"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z"/>
+            </svg>
+          </button>
+          {openMenu === 'remix' && (
+            <div className="action-menu-dropdown">
               <button
-                className={`action-menu-item${shareCopied ? ' copied' : ''}`}
-                onClick={() => {
-                  const copyToClipboard = () => {
-                    navigator.clipboard.writeText(shareUrl).then(() => {
-                      setShareCopied(true)
-                      setTimeout(() => setShareCopied(false), 2000)
-                    })
-                  }
-                  if (navigator.share) {
-                    navigator.share({ title: recipe.name, url: shareUrl }).catch(copyToClipboard)
-                  } else {
-                    copyToClipboard()
-                  }
-                }}
-                title={shareCopied ? 'Copied!' : 'Share recipe'}
+                className="action-menu-item elevate-item"
+                onClick={() => { if (!isElevating) { onElevate(); setOpenMenu(null); } }}
+                disabled={isElevating}
+                title="Elevate this recipe with AI — improve instructions, suggest variations, add tips"
               >
-                {shareCopied ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6L9 17l-5-5"/>
+                {isElevating ? (
+                  <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
                   </svg>
                 ) : (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+                    <path d="M5 3l14 9-14 9V3z"/>
                   </svg>
                 )}
-                {shareCopied ? 'Copied!' : 'Share'}
+                {isElevating ? 'Elevating…' : 'Elevate'}
               </button>
-            )}
-            {'wakeLock' in navigator && (
+            </div>
+          )}
+        </div>
+
+        {/* More options menu */}
+        <div className="action-menu">
+          <button
+            className="action-menu-btn"
+            onClick={() => setOpenMenu(o => o === 'options' ? null : 'options')}
+            title="More options"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+          {openMenu === 'options' && (
+            <div className="action-menu-dropdown">
               <button
-                className={`action-menu-item${wakeLockActive ? ' active' : ''}`}
-                onClick={handleWakeLockToggle}
-                title={wakeLockActive ? 'Screen is staying on – tap to disable' : 'Keep screen on while cooking'}
+                className="action-menu-item"
+                onClick={() => { setOpenMenu(null); onClose(); }}
+                title="Close"
               >
-                <span className="wake-lock-icon">{wakeLockActive ? '☀️' : '🌙'}</span>
-                {wakeLockActive ? (
-                  <>
-                    Screen on
-                    {recipeDurationMins > 0 && <span className="wake-lock-label">{recipeDurationMins + 15}m</span>}
-                  </>
-                ) : 'Keep awake'}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+                Close
               </button>
-            )}
-          </div>
-        )}
+              <button
+                className={`action-menu-item${saveState === 'saved' ? ' saved' : saveState === 'error' ? ' error' : ''}`}
+                onClick={() => { if (saveState !== 'saving' && saveState !== 'saved') { onSave(); setOpenMenu(null); } }}
+                disabled={saveState === 'saving' || saveState === 'saved'}
+                title={saveState === 'saved' ? 'Recipe saved' : 'Save recipe'}
+              >
+                {saveState === 'saving' ? (
+                  <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                  </svg>
+                ) : saveState === 'saved' ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M5 3a2 2 0 00-2 2v16l9-4 9 4V5a2 2 0 00-2-2H5z"/>
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 21l-7-3-7 3V5a2 2 0 012-2h10a2 2 0 012 2v16z"/>
+                  </svg>
+                )}
+                {saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : 'Save'}
+              </button>
+              {shareUrl && (
+                <button
+                  className={`action-menu-item${shareCopied ? ' copied' : ''}`}
+                  onClick={() => {
+                    const copyToClipboard = () => {
+                      navigator.clipboard.writeText(shareUrl).then(() => {
+                        setShareCopied(true)
+                        setTimeout(() => setShareCopied(false), 2000)
+                      })
+                    }
+                    if (navigator.share) {
+                      navigator.share({ title: recipe.name, url: shareUrl }).catch(copyToClipboard)
+                    } else {
+                      copyToClipboard()
+                    }
+                  }}
+                  title={shareCopied ? 'Copied!' : 'Share recipe'}
+                >
+                  {shareCopied ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+                    </svg>
+                  )}
+                  {shareCopied ? 'Copied!' : 'Share'}
+                </button>
+              )}
+              {'wakeLock' in navigator && (
+                <button
+                  className={`action-menu-item${wakeLockActive ? ' active' : ''}`}
+                  onClick={handleWakeLockToggle}
+                  title={wakeLockActive ? 'Screen is staying on – tap to disable' : 'Keep screen on while cooking'}
+                >
+                  <span className="wake-lock-icon">{wakeLockActive ? '☀️' : '🌙'}</span>
+                  {wakeLockActive ? (
+                    <>
+                      Screen on
+                      {recipeDurationMins > 0 && <span className="wake-lock-label">{recipeDurationMins + 15}m</span>}
+                    </>
+                  ) : 'Keep awake'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="recipe-card-header">
@@ -217,42 +254,18 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
             </span>
           )}
         </div>
-        <div className="recipe-header-actions">
+        {instructions.length > 0 && (
           <button
-            className="elevate-btn"
-            onClick={onElevate}
-            disabled={isElevating}
-            title="Elevate this recipe with AI — improve instructions, suggest variations, add tips"
+            className="cook-btn"
+            onClick={() => setIsCooking(true)}
+            title="Step-by-step cooking mode"
           >
-            {isElevating ? (
-              <>
-                <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                </svg>
-                Elevating…
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 3l14 9-14 9V3z"/>
-                </svg>
-                Elevate
-              </>
-            )}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 3l14 9-14 9V3z"/>
+            </svg>
+            Cook
           </button>
-          {instructions.length > 0 && (
-            <button
-              className="cook-btn"
-              onClick={() => setIsCooking(true)}
-              title="Step-by-step cooking mode"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 3l14 9-14 9V3z"/>
-              </svg>
-              Cook
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {recipe.image && (

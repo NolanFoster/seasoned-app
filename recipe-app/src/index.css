@@ -356,11 +356,10 @@ html, body {
 
 .recipe-card-header {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 20px 60px 16px 20px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 80px 16px 20px;
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 
 .recipe-title {
@@ -441,12 +440,18 @@ html, body {
   line-height: 1;
 }
 
-/* ── Action menu (top-right of card) ── */
-.action-menu {
+/* ── Action menus (top-right of card) ── */
+.card-menus {
   position: absolute;
   top: 12px;
   right: 12px;
+  display: flex;
+  gap: 6px;
   z-index: 1;
+}
+
+.action-menu {
+  position: relative;
 }
 
 .action-menu-btn {
@@ -529,6 +534,13 @@ html, body {
 }
 .action-menu-item.active {
   color: var(--generate-color);
+}
+.action-menu-item.elevate-item {
+  color: var(--elevate-color);
+}
+.action-menu-item.elevate-item:hover:not(:disabled) {
+  background: rgba(196,99,74,0.1);
+  color: var(--elevate-color);
 }
 
 .recipe-image {

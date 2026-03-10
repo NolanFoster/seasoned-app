@@ -421,6 +421,7 @@ describe('Elevate behaviour', () => {
       recipe: { ...GENERATE_RESPONSE.recipe, name: 'Elevated Chocolate Cake' },
     });
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() => {
@@ -442,6 +443,7 @@ describe('Elevate behaviour', () => {
       recipe: { ...GENERATE_RESPONSE.recipe, name: 'Elevated Chocolate Cake' },
     });
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() => {
@@ -461,6 +463,7 @@ describe('Elevate behaviour', () => {
       recipe: { ...GENERATE_RESPONSE.recipe, name: 'Elevated Chocolate Cake' },
     });
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() => screen.getByText('Elevated'));
@@ -471,6 +474,7 @@ describe('Elevate behaviour', () => {
     await loadRecipe();
     mockFetchFail(500);
 
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
 
     await waitFor(() =>
