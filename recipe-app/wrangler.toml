@@ -3,8 +3,9 @@ name = "omni-recipe"
 compatibility_date = "2025-03-07"
 main = "src/worker.js"
 
-[vars]
-FLAGGLY_URL = "https://flaggly.nolanfoster.workers.dev"
+[[services]]
+binding = "FLAGGLY"
+service = "flaggly"
 
 [observability]
 enabled = false
