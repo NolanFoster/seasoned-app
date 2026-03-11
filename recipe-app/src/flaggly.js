@@ -11,12 +11,14 @@ export const flaggly = new Flaggly({
   apiKey: '',
   workerFetch: fetch.bind(globalThis),
   bootstrap: {
-    'voice-control': false,
+    'voice-control': true,
   },
 })
 
 export const useFlag = (key) => {
   const store = flaggly.store
   const data = useSyncExternalStore(store.subscribe.bind(store), store.get.bind(store))
-  return data?.[key]?.result ?? false
+  console.log('[flaggly] store data:', data)
+  console.log('[flaggly] flag', key, ':', data?.[key])
+  return data?.[key]?.result ?? true
 }
