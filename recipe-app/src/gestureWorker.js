@@ -2,9 +2,9 @@
 // The main thread sends ImageBitmap frames; this worker detects hand waves and posts
 // WAVE messages back. Inference never blocks the UI thread.
 
-import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision'
+importScripts('/mediapipe/vision_bundle.js')
 
-const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+const WASM_CDN = '/mediapipe/wasm'
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task'
 
@@ -25,6 +25,7 @@ let inCooldown = false
 
 async function init() {
   try {
+    const { GestureRecognizer, FilesetResolver } = self
     const vision = await FilesetResolver.forVisionTasks(WASM_CDN)
 
     // Try GPU first; fall back to CPU if WebGL is unavailable in this worker context.
