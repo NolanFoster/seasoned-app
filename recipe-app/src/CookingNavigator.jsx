@@ -134,7 +134,7 @@ export default function CookingNavigator({ recipe, onClose }) {
     useGestureMode({
       videoRef,
       onNext: () => { setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
-      onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeep() },
+      onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeepBack() },
     })
 
   function toggleGestureMode() {
@@ -168,6 +168,23 @@ export default function CookingNavigator({ recipe, onClose }) {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6)
       osc.start(ctx.currentTime)
       osc.stop(ctx.currentTime + 0.6)
+    } catch {}
+  }
+
+  function playBeepBack() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(600, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.4)
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.4)
     } catch {}
   }
 
