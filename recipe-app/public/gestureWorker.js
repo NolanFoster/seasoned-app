@@ -57,7 +57,7 @@ function processFrame(bitmap, timestamp) {
     ctx2d.drawImage(bitmap, 0, 0, 320, 240)
     bitmap.close()
 
-    const results = recognizer.detectForVideo(offscreen, timestamp)
+    const results = recognizer.recognizeForVideo(offscreen, timestamp)
 
     if (!results.landmarks || results.landmarks.length === 0) {
       xBuffer = []
