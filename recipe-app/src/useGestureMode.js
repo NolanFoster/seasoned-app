@@ -57,9 +57,9 @@ export default function useGestureMode({ videoRef, onNext, onPrev }) {
     const worker = new Worker(new URL('./gestureWorker.js', import.meta.url))
     workerRef.current = worker
 
-    worker.onerror = () => { stop(); setStatus('unsupported') }
+    worker.onerror = (e) => { console.error('[gesture] worker error:', e.message); stop(); setStatus('unsupported') }
     worker.onmessage = (e) => {
-      const { type, direction } = e.data
+      const { type, direction, message } = e.data
       if (type === 'READY') {
         setStatus('active')
         startInterval()
@@ -68,6 +68,7 @@ export default function useGestureMode({ videoRef, onNext, onPrev }) {
           ? callbacksRef.current.onNext()
           : callbacksRef.current.onPrev()
       } else if (type === 'ERROR') {
+        console.error('[gesture] worker init error:', message)
         stop()
         setStatus('unsupported')
       }
