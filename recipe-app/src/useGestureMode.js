@@ -54,7 +54,7 @@ export default function useGestureMode({ videoRef, onNext, onPrev }) {
     await video.play()
 
     // 3. Spawn the worker and wait for its READY signal before sampling frames.
-    const worker = new Worker(new URL('./gestureWorker.js', import.meta.url), { type: 'module' })
+    const worker = new Worker(new URL('./gestureWorker.js', import.meta.url))
     workerRef.current = worker
 
     worker.onerror = (e) => { console.error('[gesture] worker error:', e.message); stop(); setStatus('unsupported') }
