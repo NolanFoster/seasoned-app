@@ -6,5 +6,8 @@ main = "src/worker.js"
 [vars]
 FLAGGLY_URL = "https://flaggly.nolanfoster.workers.dev"
 
+[observability]
+enabled = true
+
 [assets]
 directory = "./dist"
