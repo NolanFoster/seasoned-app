@@ -11,7 +11,7 @@ try {
   flaggly = new Flaggly({
     url: FLAGGLY_PROXY_URL,
     apiKey: '',
-    workerFetch: (url, init) => fetch(url, init),
+    lazy: true, // prevent SDK's internal fetch which has binding issues in Vite modules
     bootstrap: {
       'voice-control': true,
       'gesture-support': true,
@@ -19,11 +19,22 @@ try {
   })
 } catch (err) {
   console.error('[flaggly] SDK failed to initialize — all flags will default to true:', err)
-  // Minimal no-op store so consumers render safely with defaults
   flaggly = { store: { subscribe: () => () => {}, get: () => ({}) } }
 }
 
 export { flaggly }
+
+// Manually fetch flags and push into the store — bypasses SDK's internal fetch entirely
+if (typeof window !== 'undefined') {
+  fetch('/api/eval', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ page: { url: window.location.href } }),
+  })
+    .then((r) => r.json())
+    .then((data) => flaggly.store.set(data))
+    .catch(() => {}) // bootstrap values remain on error
+}
 
 // Log each flag's resolved value once when the store updates.
 const _logged = new Set()
