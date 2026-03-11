@@ -1,8 +1,9 @@
 // gestureWorker.js — MediaPipe GestureRecognizer running in a dedicated Web Worker.
 // The main thread sends ImageBitmap frames; this worker detects hand waves and posts
 // WAVE messages back. Inference never blocks the UI thread.
-
-const { GestureRecognizer, FilesetResolver } = await import(/* @vite-ignore */ '/mediapipe/vision_bundle.mjs')
+//
+// Served from /public so Vite never bundles it — allows native browser import()
+// to load the self-hosted MediaPipe ESM bundle without bundler interference.
 
 const WASM_CDN = '/mediapipe/wasm'
 const MODEL_URL =
@@ -25,6 +26,7 @@ let inCooldown = false
 
 async function init() {
   try {
+    const { GestureRecognizer, FilesetResolver } = await import('/mediapipe/vision_bundle.mjs')
     const vision = await FilesetResolver.forVisionTasks(WASM_CDN)
 
     // Try GPU first; fall back to CPU if WebGL is unavailable in this worker context.
