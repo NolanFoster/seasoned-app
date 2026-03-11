@@ -994,3 +994,69 @@ html, body {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* Hands-free mode */
+.cn-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cn-hands-free-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.cn-hands-free-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.cn-hands-free-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.cn-hands-free-btn--active {
+  background: rgba(200,169,110,0.12);
+  border-color: rgba(200,169,110,0.5);
+  color: var(--accent);
+  animation: cn-mic-pulse 2s ease-in-out infinite;
+}
+@keyframes cn-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200,169,110,0); }
+  50%       { box-shadow: 0 0 0 4px rgba(200,169,110,0.2); }
+}
+
+.cn-hands-free-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.cn-hands-free-bar--listening {
+  color: var(--accent);
+}
+
+.cn-hands-free-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: cn-dot-blink 1.2s ease-in-out infinite;
+}
+@keyframes cn-dot-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}

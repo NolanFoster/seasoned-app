@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -119,6 +119,10 @@ export default function CookingNavigator({ recipe, onClose }) {
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
 
+  const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
+  const recognitionRef = useRef(null)
+
   // Cleanup all intervals on unmount
   useEffect(() => {
     return () => {
@@ -207,6 +211,77 @@ export default function CookingNavigator({ recipe, onClose }) {
     })
   }
 
+  const handleVoiceResult = useCallback((transcript) => {
+    const cmd = transcript.toLowerCase().trim()
+    if (cmd.includes('next')) {
+      setCurrentStep((s) => Math.min(s + 1, total - 1))
+    } else if (cmd.includes('back') || cmd.includes('prev')) {
+      setCurrentStep((s) => Math.max(s - 1, 0))
+    } else if (cmd.includes('stop') || cmd.includes('close') || cmd.includes('exit') || cmd.includes('done')) {
+      stopHandsFreeMode()
+      onClose()
+    }
+  }, [total, onClose]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startHandsFreeMode() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setVoiceStatus('unsupported')
+      setHandsFreeModeActive(true)
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = false
+    recognition.lang = 'en-US'
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .slice(e.resultIndex)
+        .map((r) => r[0].transcript)
+        .join(' ')
+      handleVoiceResult(transcript)
+    }
+    recognition.onerror = () => {
+      setVoiceStatus('idle')
+    }
+    recognition.onend = () => {
+      // Auto-restart if still active (browser stops after silence)
+      if (recognitionRef.current === recognition) {
+        try { recognition.start() } catch {}
+      }
+    }
+    recognitionRef.current = recognition
+    try {
+      recognition.start()
+      setVoiceStatus('listening')
+      setHandsFreeModeActive(true)
+    } catch {
+      setVoiceStatus('unsupported')
+      setHandsFreeModeActive(true)
+    }
+  }
+
+  function stopHandsFreeMode() {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    setVoiceStatus('idle')
+    setHandsFreeModeActive(false)
+  }
+
+  function toggleHandsFreeMode() {
+    if (handsFreeModeActive) {
+      stopHandsFreeMode()
+    } else {
+      startHandsFreeMode()
+    }
+  }
+
+  // Stop voice on unmount
+  useEffect(() => () => stopHandsFreeMode(), [])
+
   const stepText = instructions[currentStep] || ''
   const timerEntries = Object.entries(activeTimers)
   const chipData = matchIngredientsToStep(ingredients, stepText)
@@ -251,8 +326,38 @@ export default function CookingNavigator({ recipe, onClose }) {
         {/* Header */}
         <div className="cn-header">
           <span className="cn-step-counter">Step {currentStep + 1} of {total}</span>
-          <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
+          <div className="cn-header-actions">
+            <button
+              className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
+              onClick={toggleHandsFreeMode}
+              title={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free voice navigation'}
+              aria-pressed={handsFreeModeActive}
+              aria-label={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free mode'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
+          </div>
         </div>
+
+        {/* Hands-free status bar */}
+        {handsFreeModeActive && (
+          <div className={`cn-hands-free-bar${voiceStatus === 'listening' ? ' cn-hands-free-bar--listening' : ''}`} role="status" aria-live="polite">
+            {voiceStatus === 'unsupported' ? (
+              <span>Voice not supported — use Prev / Next buttons</span>
+            ) : (
+              <>
+                <span className="cn-hands-free-dot" aria-hidden="true"/>
+                <span>Listening — say &ldquo;next&rdquo;, &ldquo;back&rdquo;, or &ldquo;stop&rdquo;</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Step text */}
         <div className="cn-step-body">
