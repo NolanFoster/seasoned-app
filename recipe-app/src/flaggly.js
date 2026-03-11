@@ -11,6 +11,7 @@ export const flaggly = new Flaggly({
   lazy: true,
   bootstrap: {
     'voice-control': false,
+    'gesture-support': false,
   },
 })
 

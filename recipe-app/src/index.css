@@ -1060,3 +1060,52 @@ html, body {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }
 }
+
+/* ── Gesture mode ───────────────────────────────────────────────────────── */
+
+/* Hidden video element — always in DOM when CookingNavigator is mounted so
+   the ref is ready before start() is called; visually absent and out of layout. */
+.cn-gesture-video {
+  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Active state for the gesture toggle button — uses green (--clip-color) to
+   visually distinguish it from the amber voice-control button. */
+.cn-gesture-btn--active {
+  background: rgba(91, 184, 122, 0.12);
+  border-color: rgba(91, 184, 122, 0.5);
+  color: var(--clip-color);
+  animation: cn-wave-pulse 2s ease-in-out infinite;
+}
+
+@keyframes cn-wave-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 184, 122, 0); }
+  50%       { box-shadow: 0 0 0 4px rgba(91, 184, 122, 0.2); }
+}
+
+.cn-gesture-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.cn-gesture-bar--active { color: var(--clip-color); }
+
+/* Animated dot — reuses the existing cn-dot-blink keyframe, green variant. */
+.cn-gesture-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clip-color);
+  flex-shrink: 0;
+  animation: cn-dot-blink 1.2s ease-in-out infinite;
+}
