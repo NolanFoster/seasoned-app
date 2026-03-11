@@ -18,7 +18,5 @@ export const flaggly = new Flaggly({
 export const useFlag = (key) => {
   const store = flaggly.store
   const data = useSyncExternalStore(store.subscribe.bind(store), store.get.bind(store))
-  console.log('[flaggly] store data:', data)
-  console.log('[flaggly] flag', key, ':', data?.[key])
   return data?.[key]?.result ?? true
 }
