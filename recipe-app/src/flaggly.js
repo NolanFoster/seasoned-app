@@ -16,6 +16,7 @@ export const flaggly = new Flaggly({
 })
 
 export const useFlag = (key) => {
-  const data = useSyncExternalStore(flaggly.store.subscribe, flaggly.store.get)
+  const store = flaggly.store
+  const data = useSyncExternalStore(store.subscribe.bind(store), store.get.bind(store))
   return data?.[key]?.result ?? false
 }
