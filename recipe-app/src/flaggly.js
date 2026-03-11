@@ -9,7 +9,6 @@ const FLAGGLY_PROXY_URL =
 export const flaggly = new Flaggly({
   url: FLAGGLY_PROXY_URL,
   apiKey: '',
-  lazy: true,
   bootstrap: {
     'voice-control': false,
   },
