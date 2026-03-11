@@ -2,10 +2,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url)
 
-    // Proxy /api/flaggly/* to Flaggly service — auth token never reaches the client
-    if (url.pathname.startsWith('/api/flaggly')) {
-      const flagglyPath = url.pathname.slice('/api/flaggly'.length) || '/'
-      const flagglyUrl = new URL(flagglyPath + url.search, env.FLAGGLY_URL)
+    // Proxy /api/eval/* to Flaggly service — auth token never reaches the client
+    if (url.pathname.startsWith('/api/eval')) {
+      const flagglyUrl = new URL(url.pathname + url.search, env.FLAGGLY_URL)
 
       const headers = new Headers(request.headers)
       headers.set('Authorization', `Bearer ${env.FLAGGLY_API_KEY}`)
