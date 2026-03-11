@@ -11,7 +11,7 @@ try {
   flaggly = new Flaggly({
     url: FLAGGLY_PROXY_URL,
     apiKey: '',
-    workerFetch: fetch.bind(globalThis),
+    workerFetch: (url, init) => fetch(url, init),
     bootstrap: {
       'voice-control': true,
       'gesture-support': true,
