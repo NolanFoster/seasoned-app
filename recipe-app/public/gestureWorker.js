@@ -1,24 +1,19 @@
 // gestureWorker.js — MediaPipe GestureRecognizer running in a dedicated Web Worker.
-// Served from /public so Vite never bundles it.
-// Loaded as a module worker — static import is fully supported and avoids
-// dynamic import() compatibility issues across browsers.
+// Loaded as a classic worker — importScripts runs scripts in global scope,
+// which is required for vision_wasm_internal.js to set ModuleFactory on self.
 
-// MediaPipe internally calls self.import() to load its WASM JS wrapper in worker contexts.
-// Polyfill it with a dynamic import expression (valid in module workers).
-if (!self.import) {
-  self.import = (url) => import(url)
-}
+importScripts('/mediapipe/mediapipe.iife.js')
 
-import { GestureRecognizer, FilesetResolver } from '/mediapipe/vision_bundle.mjs'
+const { GestureRecognizer, FilesetResolver } = self.mpTasks
 
 const WASM_CDN = '/mediapipe/wasm'
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task'
 
 // Wave detection tuning
-const BUFFER_SIZE = 8      // number of frames to accumulate before checking delta
-const WAVE_THRESHOLD = 0.18 // normalised X delta (0–1 range) required to count as a wave
-const COOLDOWN_MS = 1500   // ignore new waves for this many ms after one fires
+const BUFFER_SIZE = 8
+const WAVE_THRESHOLD = 0.18
+const COOLDOWN_MS = 1500
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
