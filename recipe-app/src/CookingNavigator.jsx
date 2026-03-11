@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
+import useGestureMode from './useGestureMode.js'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -121,10 +122,30 @@ export default function CookingNavigator({ recipe, onClose }) {
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
 
   const voiceControlEnabled = useFlag('voice-control')
+  const gestureSupportEnabled = useFlag('gesture-support')
 
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
   const recognitionRef = useRef(null)
+
+  const [gestureModeActive, setGestureModeActive] = useState(false)
+  const videoRef = useRef(null)
+  const { isSupported: gestureSupported, status: gestureStatus, start: startGesture, stop: stopGesture } =
+    useGestureMode({
+      videoRef,
+      onNext: () => { setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
+      onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeep() },
+    })
+
+  function toggleGestureMode() {
+    if (gestureModeActive) {
+      stopGesture()
+      setGestureModeActive(false)
+    } else {
+      startGesture()
+      setGestureModeActive(true)
+    }
+  }
 
   // Cleanup all intervals on unmount
   useEffect(() => {
@@ -295,6 +316,9 @@ export default function CookingNavigator({ recipe, onClose }) {
     <div className="cn-overlay" role="dialog" aria-label="Cooking navigator">
       <div className="cn-card">
 
+        {/* Hidden video element for gesture-mode camera capture */}
+        <video ref={videoRef} className="cn-gesture-video" autoPlay playsInline muted aria-hidden="true" />
+
         {/* Floating timer strip */}
         {timerEntries.length > 0 && (
           <div className="cn-timer-strip">
@@ -330,6 +354,22 @@ export default function CookingNavigator({ recipe, onClose }) {
         <div className="cn-header">
           <span className="cn-step-counter">Step {currentStep + 1} of {total}</span>
           <div className="cn-header-actions">
+            {gestureSupportEnabled && gestureSupported && (
+              <button
+                className={`cn-hands-free-btn${gestureModeActive ? ' cn-gesture-btn--active' : ''}`}
+                onClick={toggleGestureMode}
+                title={gestureModeActive ? 'Stop gesture mode' : 'Wave to navigate steps'}
+                aria-pressed={gestureModeActive}
+                aria-label={gestureModeActive ? 'Stop gesture mode' : 'Start gesture mode'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M18 11V6a2 2 0 00-4 0v5"/>
+                  <path d="M14 10V4a2 2 0 00-4 0v6"/>
+                  <path d="M10 10.5V6a2 2 0 00-4 0v8"/>
+                  <path d="M18 11a2 2 0 012 2v1a8 8 0 01-16 0v-3"/>
+                </svg>
+              </button>
+            )}
             {voiceControlEnabled && (
               <button
                 className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
@@ -349,6 +389,25 @@ export default function CookingNavigator({ recipe, onClose }) {
             <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
           </div>
         </div>
+
+        {/* Gesture mode status bar */}
+        {gestureSupportEnabled && gestureModeActive && (
+          <div
+            className={`cn-gesture-bar${gestureStatus === 'active' ? ' cn-gesture-bar--active' : ''}`}
+            role="status"
+            aria-live="polite"
+          >
+            {gestureStatus === 'requesting' && <span>Allowing camera access…</span>}
+            {gestureStatus === 'active' && (
+              <>
+                <span className="cn-gesture-dot" aria-hidden="true" />
+                <span>Wave left for Prev, right for Next</span>
+              </>
+            )}
+            {gestureStatus === 'denied' && <span>Camera access denied — use Prev / Next buttons</span>}
+            {gestureStatus === 'unsupported' && <span>Gesture mode unavailable in this browser</span>}
+          </div>
+        )}
 
         {/* Hands-free status bar */}
         {voiceControlEnabled && handsFreeModeActive && (

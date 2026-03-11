@@ -2,6 +2,15 @@ import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import CookingNavigator from '../CookingNavigator'
 
+// Default flag values for all tests in this file.
+// voice-control: true  — keeps existing hands-free voice tests passing.
+// gesture-support: false — gesture feature is off by default; enable per-test as needed.
+const flagOverrides = { 'voice-control': true, 'gesture-support': false }
+jest.mock('../flaggly.js', () => ({
+  useFlag: (key) => flagOverrides[key] ?? false,
+  flaggly: {},
+}))
+
 const baseRecipe = {
   name: 'Test Recipe',
   ingredients: ['200g flour', '2 eggs', '100ml milk'],
