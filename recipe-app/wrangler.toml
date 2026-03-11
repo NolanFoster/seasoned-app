@@ -7,7 +7,9 @@ main = "src/worker.js"
 FLAGGLY_URL = "https://flaggly.nolanfoster.workers.dev"
 
 [observability]
-enabled = true
+[observability.logs]
+enabled = false
+invocation_logs = true
 
 [assets]
 directory = "./dist"
