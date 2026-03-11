@@ -3,6 +3,12 @@
 // Loaded as a module worker — static import is fully supported and avoids
 // dynamic import() compatibility issues across browsers.
 
+// MediaPipe internally calls self.import() to load its WASM JS wrapper in worker contexts.
+// Polyfill it with a dynamic import expression (valid in module workers).
+if (!self.import) {
+  self.import = (url) => import(url)
+}
+
 import { GestureRecognizer, FilesetResolver } from '/mediapipe/vision_bundle.mjs'
 
 const WASM_CDN = '/mediapipe/wasm'
