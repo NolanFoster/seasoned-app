@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useFlag } from './flaggly.js'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -118,6 +119,8 @@ export default function CookingNavigator({ recipe, onClose }) {
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
+
+  const voiceControlEnabled = useFlag('voice-control')
 
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
@@ -327,26 +330,28 @@ export default function CookingNavigator({ recipe, onClose }) {
         <div className="cn-header">
           <span className="cn-step-counter">Step {currentStep + 1} of {total}</span>
           <div className="cn-header-actions">
-            <button
-              className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
-              onClick={toggleHandsFreeMode}
-              title={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free voice navigation'}
-              aria-pressed={handsFreeModeActive}
-              aria-label={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free mode'}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-            </button>
+            {voiceControlEnabled && (
+              <button
+                className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
+                onClick={toggleHandsFreeMode}
+                title={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free voice navigation'}
+                aria-pressed={handsFreeModeActive}
+                aria-label={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free mode'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+            )}
             <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
           </div>
         </div>
 
         {/* Hands-free status bar */}
-        {handsFreeModeActive && (
+        {voiceControlEnabled && handsFreeModeActive && (
           <div className={`cn-hands-free-bar${voiceStatus === 'listening' ? ' cn-hands-free-bar--listening' : ''}`} role="status" aria-live="polite">
             {voiceStatus === 'unsupported' ? (
               <span>Voice not supported — use Prev / Next buttons</span>
