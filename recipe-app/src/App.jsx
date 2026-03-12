@@ -2,12 +2,16 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
+import AuthCard from './AuthCard.jsx'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 const API_URL = import.meta.env.VITE_API_URL
 const RECIPE_VIEW_URL = import.meta.env.VITE_RECIPE_VIEW_URL
+
+const AUTH_TOKEN_STORAGE_KEY = 'seasoned_auth_token'
+const AUTH_USER_STORAGE_KEY = 'seasoned_auth_user'
 
 // Fail fast in dev if backend URLs are not configured (e.g. missing .env.development)
 if (import.meta.env.DEV && [SEARCH_DB_URL, CLIPPER_API_URL, RECIPE_GENERATION_URL, API_URL].some((u) => !u || u === 'undefined')) {
@@ -25,6 +29,37 @@ function isValidUrl(str) {
   }
 }
 
+function isValidEmail(str) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str)
+}
+
+function getStoredAuthUser() {
+  if (typeof window === 'undefined') return null
+  const stored = window.localStorage.getItem(AUTH_USER_STORAGE_KEY)
+  if (!stored) return null
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return null
+  }
+}
+
+function clearStoredAuthSession() {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+  window.localStorage.removeItem(AUTH_USER_STORAGE_KEY)
+}
+
+function persistAuthSession(token, user) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+  window.localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user))
+}
+
+function getAuthWorkerUrl() {
+  return import.meta.env.VITE_AUTH_WORKER_URL
+}
+
 // Debounce helper — cancels pending timer on unmount to prevent leaks
 function useDebounce(fn, delay) {
   const timer = useRef(null)
@@ -36,6 +71,22 @@ function useDebounce(fn, delay) {
 }
 
 export default function App() {
+  const authWorkerUrl = getAuthWorkerUrl()
+  const authEnabled = Boolean(authWorkerUrl && authWorkerUrl !== 'undefined')
+  const [authToken, setAuthToken] = useState(() => {
+    if (!authEnabled || typeof window === 'undefined') return ''
+    return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || ''
+  })
+  const [authUser, setAuthUser] = useState(() => (authEnabled ? getStoredAuthUser() : null))
+  const [authReady, setAuthReady] = useState(!authEnabled || !authToken)
+  const [authMode, setAuthMode] = useState('signin') // signin | signup
+  const [authStep, setAuthStep] = useState('email') // email | otp
+  const [authEmail, setAuthEmail] = useState('')
+  const [authOtp, setAuthOtp] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [authMessage, setAuthMessage] = useState('')
+
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -49,6 +100,7 @@ export default function App() {
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
   const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
+  const isAuthenticated = !authEnabled || Boolean(authToken)
 
   const isUrl = isValidUrl(input.trim())
   const hasText = input.trim().length >= 2 && !isUrl
@@ -71,6 +123,172 @@ export default function App() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  // Validate existing auth session when a token is present.
+  useEffect(() => {
+    if (!authEnabled) return
+    if (!authToken) {
+      setAuthReady(true)
+      return
+    }
+
+    let cancelled = false
+
+    async function validateSession() {
+      setAuthReady(false)
+      try {
+        const res = await fetch(`${authWorkerUrl}/auth/validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: authToken }),
+        })
+        const data = await res.json().catch(() => ({}))
+
+        if (!cancelled && res.ok && data.valid) {
+          if (data.user) {
+            setAuthUser(data.user)
+            persistAuthSession(authToken, data.user)
+          }
+          setAuthError('')
+          setAuthMessage('')
+          setAuthReady(true)
+          return
+        }
+
+        if (!cancelled) {
+          clearStoredAuthSession()
+          setAuthToken('')
+          setAuthUser(null)
+          setAuthError('Your session expired. Please sign in again.')
+          setAuthReady(true)
+        }
+      } catch {
+        if (!cancelled) {
+          clearStoredAuthSession()
+          setAuthToken('')
+          setAuthUser(null)
+          setAuthError('Could not validate your session. Please sign in again.')
+          setAuthReady(true)
+        }
+      }
+    }
+
+    validateSession()
+    return () => {
+      cancelled = true
+    }
+  }, [authEnabled, authToken, authWorkerUrl])
+
+  async function requestOtp(email) {
+    if (!authEnabled) return
+
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!isValidEmail(normalizedEmail)) {
+      setAuthError('Please enter a valid email address.')
+      return
+    }
+
+    setAuthBusy(true)
+    setAuthError('')
+    setAuthMessage('')
+
+    try {
+      const res = await fetch(`${authWorkerUrl}/otp/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `Unable to send verification code (${res.status}).`)
+      }
+
+      setAuthEmail(normalizedEmail)
+      setAuthStep('otp')
+      setAuthOtp('')
+      setAuthMessage(data.message || 'Verification code sent. Check your email.')
+    } catch (error) {
+      setAuthError(error.message || 'Unable to send verification code.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  async function handleRequestCode(e) {
+    e.preventDefault()
+    await requestOtp(authEmail)
+  }
+
+  async function handleVerifyCode(e) {
+    e.preventDefault()
+    if (!authEnabled) return
+
+    const cleanedOtp = authOtp.replace(/\D/g, '').slice(0, 6)
+    if (cleanedOtp.length !== 6) {
+      setAuthError('Enter the 6-digit verification code from your email.')
+      return
+    }
+
+    setAuthBusy(true)
+    setAuthError('')
+
+    try {
+      const res = await fetch(`${authWorkerUrl}/otp/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, otp: cleanedOtp }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `Verification failed (${res.status}).`)
+      }
+      if (!data.token) {
+        throw new Error('Verification succeeded, but no session token was returned.')
+      }
+
+      const nextUser = data.user || { email: authEmail }
+      setAuthToken(data.token)
+      setAuthUser(nextUser)
+      persistAuthSession(data.token, nextUser)
+      setAuthOtp('')
+      setAuthStep('email')
+      setAuthMessage('')
+    } catch (error) {
+      setAuthError(error.message || 'Verification failed.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  function handleSignOut() {
+    clearStoredAuthSession()
+    setAuthToken('')
+    setAuthUser(null)
+    setAuthEmail('')
+    setAuthOtp('')
+    setAuthStep('email')
+    setAuthError('')
+    setAuthMessage('You have been signed out.')
+  }
+
+  function handleAuthModeChange(mode) {
+    setAuthMode(mode)
+    setAuthStep('email')
+    setAuthOtp('')
+    setAuthError('')
+    setAuthMessage('')
+  }
+
+  function handleBackToEmail() {
+    setAuthStep('email')
+    setAuthOtp('')
+    setAuthError('')
+    setAuthMessage('')
+  }
+
+  async function handleResendCode() {
+    await requestOtp(authEmail)
+  }
 
   // --- Search ---
   async function doSearch(query) {
@@ -335,16 +553,75 @@ export default function App() {
     }
   }, [inputBusy])
 
+  if (authEnabled && !authReady) {
+    return (
+      <div className="app">
+        <div className="omnibox-wrapper">
+          <div className="brand">
+            <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+            </svg>
+            <span className="brand-name">Seasoned</span>
+          </div>
+          <div className="auth-loading-card">Validating your session…</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app">
+        <div className="omnibox-wrapper">
+          <div className="brand">
+            <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+            </svg>
+            <span className="brand-name">Seasoned</span>
+          </div>
+          <AuthCard
+            mode={authMode}
+            step={authStep}
+            email={authEmail}
+            otp={authOtp}
+            busy={authBusy}
+            error={authError}
+            message={authMessage}
+            onModeChange={handleAuthModeChange}
+            onEmailChange={setAuthEmail}
+            onOtpChange={(value) => setAuthOtp(value.replace(/\D/g, '').slice(0, 6))}
+            onRequestCode={handleRequestCode}
+            onVerifyCode={handleVerifyCode}
+            onBackToEmail={handleBackToEmail}
+            onResendCode={handleResendCode}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <div className="omnibox-wrapper">
-        <div className="brand">
-          <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
-            <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
-            <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
-          </svg>
-          <span className="brand-name">Seasoned</span>
+        <div className={`brand ${authEnabled ? 'brand-authed' : ''}`}>
+          <div className="brand-main">
+            <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+            </svg>
+            <span className="brand-name">Seasoned</span>
+          </div>
+          {authEnabled && (
+            <div className="brand-auth">
+              {authUser?.email && <span className="brand-auth-email">{authUser.email}</span>}
+              <button className="brand-signout-btn" onClick={handleSignOut}>Sign out</button>
+            </div>
+          )}
         </div>
 
         <div className="omnibox">
