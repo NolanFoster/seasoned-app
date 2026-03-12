@@ -8,9 +8,9 @@ This runbook documents the migration of `auth-worker` OTP emails from AWS SES to
 - Outbound sends now use:
   - `EmailMessage` from `cloudflare:email`
   - `env.send_email.send(message)` binding
-  - MIME body generation via `mimetext`
+  - raw MIME body generation in `EmailService`
 - Health check changed from `services.ses` to `services.email`.
-- AWS SDK dependencies were removed and replaced with `mimetext`.
+- AWS SDK dependencies were removed.
 
 ## 2) Cloudflare Dashboard setup steps
 
@@ -37,12 +37,12 @@ For each worker environment (preview/staging/production):
 2. Open **Settings** -> **Bindings**.
 3. Add binding type **Send email**.
 4. Set binding name: `send_email`.
-5. Configure sender restriction to match `FROM_EMAIL` (for example `verify@seasonedapp.com`).
+5. Optionally configure sender restrictions to match `FROM_EMAIL` if your Wrangler/plan supports this field in config.
 6. Save binding and deploy.
 
 ### D. Keep sender address aligned
 
-Ensure `FROM_EMAIL` in worker vars exactly matches an allowed sender address for the binding.
+Ensure `FROM_EMAIL` in worker vars matches your Cloudflare Email Routing sender policy.
 
 ## 3) Wrangler configuration required
 
@@ -56,7 +56,6 @@ Ensure `FROM_EMAIL` in worker vars exactly matches an allowed sender address for
 Current config uses:
 
 - `name = "send_email"`
-- `allowed_sender_addresses = ["verify@seasonedapp.com"]`
 
 ## 4) Rollout plan by environment
 

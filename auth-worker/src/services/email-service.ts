@@ -1,5 +1,4 @@
 import { EmailMessage } from 'cloudflare:email';
-import { createMimeMessage } from 'mimetext';
 import { Env } from '../types/env';
 
 export interface EmailOptions {
@@ -42,24 +41,12 @@ export class EmailService {
         };
       }
 
-      const message = createMimeMessage();
-      message.setSender(this.fromEmail);
-      message.setRecipient(to);
-      message.setSubject(subject);
-
-      if (textBody) {
-        message.addMessage({
-          contentType: 'text/plain',
-          data: textBody
-        });
-      }
-
-      message.addMessage({
-        contentType: 'text/html',
-        data: htmlBody
+      const rawMessage = this.buildRawMimeMessage({
+        to,
+        subject,
+        htmlBody,
+        textBody
       });
-
-      const rawMessage = message.asRaw();
       const emailMessage = new EmailMessage(this.fromEmail, to, rawMessage);
       await this.sendEmailBinding.send(emailMessage);
 
@@ -102,6 +89,45 @@ export class EmailService {
 
   private generateMessageId(): string {
     return `cf-email-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private buildRawMimeMessage(options: EmailOptions): string {
+    const { to, subject, htmlBody, textBody } = options;
+    const boundary = `cf-boundary-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const plainTextBody = this.normalizeLineEndings(textBody || this.stripHtml(htmlBody));
+    const normalizedHtmlBody = this.normalizeLineEndings(htmlBody);
+
+    return [
+      `From: ${this.fromEmail}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      `Date: ${new Date().toUTCString()}`,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: 8bit',
+      '',
+      plainTextBody,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: 8bit',
+      '',
+      normalizedHtmlBody,
+      '',
+      `--${boundary}--`,
+      ''
+    ].join('\r\n');
+  }
+
+  private stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private normalizeLineEndings(value: string): string {
+    return value.replace(/\r?\n/g, '\r\n');
   }
 
   /**

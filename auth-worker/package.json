@@ -49,7 +49,6 @@
   },
   "dependencies": {
     "hono": "^4.5.0",
-    "jose": "^5.2.3",
-    "mimetext": "^3.0.28"
+    "jose": "^5.2.3"
   }
 }
