@@ -1103,7 +1103,7 @@ html, body {
 }
 
 /* Active state for the gesture toggle button — uses green (--clip-color) to
-   visually distinguish it from the amber voice-control button. */
+   visually distinguish it from the amber dictation button. */
 .cn-gesture-btn--active {
   background: rgba(91, 184, 122, 0.12);
   border-color: rgba(91, 184, 122, 0.5);

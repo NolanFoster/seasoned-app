@@ -26,7 +26,7 @@ function parseDurationToMinutes(val) {
   return mins
 }
 
-export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
+export default function RecipeCard({ recipe, onClose, onElevate, enableElevate = true, isElevating, onSave, saveState, shareUrl }) {
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
@@ -118,38 +118,40 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     <div className="recipe-card">
       <div className="card-menus" ref={menusRef}>
         {/* Remix menu */}
-        <div className="action-menu">
-          <button
-            className="action-menu-btn"
-            onClick={() => setOpenMenu(o => o === 'remix' ? null : 'remix')}
-            title="Remix with AI"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z"/>
-            </svg>
-          </button>
-          {openMenu === 'remix' && (
-            <div className="action-menu-dropdown">
-              <button
-                className="action-menu-item elevate-item"
-                onClick={() => { if (!isElevating) { onElevate(); setOpenMenu(null); } }}
-                disabled={isElevating}
-                title="Elevate this recipe with AI — improve instructions, suggest variations, add tips"
-              >
-                {isElevating ? (
-                  <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 3l14 9-14 9V3z"/>
-                  </svg>
-                )}
-                {isElevating ? 'Elevating…' : 'Elevate'}
-              </button>
-            </div>
-          )}
-        </div>
+        {enableElevate && (
+          <div className="action-menu">
+            <button
+              className="action-menu-btn"
+              onClick={() => setOpenMenu(o => o === 'remix' ? null : 'remix')}
+              title="Remix with AI"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z"/>
+              </svg>
+            </button>
+            {openMenu === 'remix' && (
+              <div className="action-menu-dropdown">
+                <button
+                  className="action-menu-item elevate-item"
+                  onClick={() => { if (!isElevating) { onElevate?.(); setOpenMenu(null); } }}
+                  disabled={isElevating}
+                  title="Elevate this recipe with AI — improve instructions, suggest variations, add tips"
+                >
+                  {isElevating ? (
+                    <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 3l14 9-14 9V3z"/>
+                    </svg>
+                  )}
+                  {isElevating ? 'Elevating…' : 'Elevate'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* More options menu */}
         <div className="action-menu">

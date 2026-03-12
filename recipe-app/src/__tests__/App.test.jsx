@@ -3,6 +3,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 
+const flagOverrides = { 'elevate-recipe': true };
+jest.mock('../flaggly.js', () => ({
+  useFlag: (key) => flagOverrides[key] ?? true,
+  flaggly: {},
+}));
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function mockFetchOk(responseBody) {
@@ -79,11 +85,11 @@ const GENERATE_RESPONSE = {
 // ── isValidUrl (tested via omnibox UI behaviour) ───────────────────────────
 
 describe('Omnibox input mode detection', () => {
-  test('shows Search + Generate buttons for plain text input', () => {
+  test('shows Generate button for plain text input', () => {
     render(<App />);
     setInputValue('pasta');
-    expect(screen.getByText('Search')).toBeInTheDocument();
     expect(screen.getByText('Generate')).toBeInTheDocument();
+    expect(screen.queryByText('Clip')).not.toBeInTheDocument();
   });
 
   test('shows Clip button when input is a valid https URL', () => {
@@ -99,9 +105,10 @@ describe('Omnibox input mode detection', () => {
     expect(screen.getByText('Clip')).toBeInTheDocument();
   });
 
-  test('primary button is disabled for empty input', () => {
+  test('shows no action buttons for empty input', () => {
     render(<App />);
-    expect(screen.getByText('Search').closest('button')).toBeDisabled();
+    expect(screen.queryByText('Generate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Clip')).not.toBeInTheDocument();
   });
 
   test('Generate button is not shown for URL input', () => {
@@ -399,6 +406,10 @@ describe('Generate behaviour', () => {
 // ── Elevate ────────────────────────────────────────────────────────────────
 
 describe('Elevate behaviour', () => {
+  beforeEach(() => {
+    flagOverrides['elevate-recipe'] = true;
+  });
+
   // Display a recipe card by searching and selecting a result
   async function loadRecipe() {
     mockFetchOk(SEARCH_RESPONSE);
@@ -480,6 +491,12 @@ describe('Elevate behaviour', () => {
     await waitFor(() =>
       expect(screen.getByText(/Generation failed: 500/i)).toBeInTheDocument()
     );
+  });
+
+  test('does not render remix/elevate controls when elevate flag is disabled', async () => {
+    flagOverrides['elevate-recipe'] = false;
+    await loadRecipe();
+    expect(screen.queryByTitle('Remix with AI')).not.toBeInTheDocument();
   });
 });
 

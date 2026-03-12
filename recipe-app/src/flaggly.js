@@ -13,7 +13,8 @@ try {
     apiKey: '',
     lazy: true, // prevent SDK's internal fetch which has binding issues in Vite modules
     bootstrap: {
-      'voice-control': true,
+      dictation: true,
+      'elevate-recipe': true,
       'gesture-support': true,
     },
   })
@@ -25,7 +26,8 @@ try {
 export { flaggly }
 
 // Manually fetch flags and push into the store — bypasses SDK's internal fetch entirely
-if (typeof window !== 'undefined') {
+const isTestEnv = typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
+if (typeof window !== 'undefined' && !isTestEnv) {
   fetch('/api/eval', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

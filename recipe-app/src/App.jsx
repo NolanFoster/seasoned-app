@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
+import { useFlag } from './flaggly.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -36,6 +37,7 @@ function useDebounce(fn, delay) {
 }
 
 export default function App() {
+  const elevateRecipeEnabled = useFlag('elevate-recipe')
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -175,6 +177,8 @@ export default function App() {
 
   // --- Generate ---
   async function doGenerate(query, { elevate = false, baseRecipe = null } = {}) {
+    if (elevate && !elevateRecipeEnabled) return
+
     const dishName = elevate && baseRecipe ? baseRecipe.name : query
     setGeneratingName(dishName)
     setInput('')
@@ -497,7 +501,8 @@ export default function App() {
           <RecipeCard
             recipe={recipe}
             onClose={handleClose}
-            onElevate={() => doGenerate(recipe.name, { elevate: true, baseRecipe: recipe })}
+            onElevate={elevateRecipeEnabled ? () => doGenerate(recipe.name, { elevate: true, baseRecipe: recipe }) : undefined}
+            enableElevate={elevateRecipeEnabled}
             isElevating={status === 'elevating'}
             onSave={() => doSave(recipe)}
             saveState={saveState}
