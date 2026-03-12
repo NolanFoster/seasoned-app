@@ -538,6 +538,7 @@ export default function CookingNavigator({ recipe, onClose }) {
                 return (
                   <button
                     key={i}
+                    type="button"
                     className={className}
                     onClick={() => handleIngredientToggle(i)}
                     title={isUsed ? 'Mark as not used' : 'Mark as used'}

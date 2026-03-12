@@ -941,6 +941,9 @@ html, body {
 }
 
 .cn-ingredient-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
   font-size: 0.8rem;
   padding: 3px 10px;
   background: var(--surface2);
