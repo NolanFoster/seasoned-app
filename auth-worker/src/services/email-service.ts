@@ -157,166 +157,190 @@ export class EmailService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Seasoned - Email Verification</title>
         <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
-            line-height: 1.6; 
-            color: #333; 
-            margin: 0; 
-            padding: 0; 
-            background-color: #f5f5f5;
+          body {
+            margin: 0;
+            padding: 0;
+            background-color: #0d1a0f;
+            color: #e8f0e4;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
           }
-          .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background-color: #ffffff;
-            border-radius: 15px;
+          .wrapper {
+            padding: 28px 14px;
+          }
+          .container {
+            max-width: 620px;
+            margin: 0 auto;
+            background: #142016;
+            border: 1px solid #2a3d2c;
+            border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
           }
-          .header { 
-            background: linear-gradient(-45deg, #ff6b6b, #ff8e53, #ff6b35, #ff8e53);
-            padding: 40px 20px; 
-            text-align: center; 
-            color: white;
+          .header {
+            padding: 34px 24px 24px;
+            text-align: center;
+            border-bottom: 1px solid #2a3d2c;
+            background:
+              radial-gradient(ellipse 70% 65% at 50% -35%, rgba(91, 184, 122, 0.16) 0%, rgba(91, 184, 122, 0) 72%),
+              #142016;
           }
-          .logo { 
-            width: 60px; 
-            height: 60px; 
-            margin: 0 auto 20px; 
-            background-color: white; 
-            border-radius: 50%; 
-            padding: 15px;
+          .logo {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            background: #1b2c1d;
+            border: 1px solid #2a3d2c;
             display: flex;
             align-items: center;
             justify-content: center;
           }
-          .logo svg { 
-            width: 30px; 
-            height: 30px; 
-            fill: #ff6b6b;
+          .logo svg {
+            width: 28px;
+            height: 28px;
+            fill: #c8a96e;
           }
-          .app-name { 
-            font-size: 2.5rem; 
-            font-weight: bold; 
-            margin: 0; 
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          .app-name {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #e8f0e4;
           }
-          .content { 
-            padding: 40px 30px; 
-            background: #ffffff; 
+          .tagline {
+            margin: 8px 0 0;
+            color: #7a9b80;
+            font-size: 14px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
           }
-          .greeting { 
-            font-size: 1.25rem; 
-            color: #333; 
-            margin-bottom: 20px; 
+          .content {
+            padding: 28px 24px 14px;
           }
-          .email-highlight { 
-            color: #ff6b6b; 
-            font-weight: 600; 
+          .greeting {
+            margin: 0 0 14px;
+            color: #e8f0e4;
+            font-size: 20px;
           }
-          .otp-section { 
-            text-align: center; 
-            margin: 30px 0; 
+          p {
+            margin: 0 0 14px;
+            color: #c8d5c6;
           }
-          .otp-box { 
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-            padding: 30px; 
-            border-radius: 15px; 
-            border: 2px solid #ff6b6b;
-            margin: 20px 0; 
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.1);
+          .email-highlight {
+            color: #c8a96e;
+            font-weight: 600;
           }
-          .otp-code { 
-            font-size: 36px; 
-            font-weight: bold; 
-            color: #ff6b6b; 
-            letter-spacing: 6px; 
-            margin: 10px 0;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          .otp-section {
+            margin: 24px 0;
           }
-          .otp-label { 
-            font-size: 1.1rem; 
-            color: #666; 
-            margin: 10px 0; 
+          .otp-box {
+            border-radius: 10px;
+            background: #1b2c1d;
+            border: 1px solid rgba(200, 169, 110, 0.5);
+            padding: 24px 18px;
+            text-align: center;
           }
-          .warning { 
-            background: #fff3cd; 
-            border: 1px solid #ffeaa7; 
-            padding: 20px; 
-            border-radius: 10px; 
-            margin: 30px 0; 
-            border-left: 4px solid #ff6b6b;
+          .otp-code {
+            margin: 0;
+            font-size: 42px;
+            line-height: 1;
+            letter-spacing: 8px;
+            font-weight: 700;
+            color: #c8a96e;
+            font-variant-numeric: tabular-nums;
           }
-          .warning strong { 
-            color: #ff6b6b; 
+          .otp-label {
+            margin: 12px 0 0;
+            color: #7a9b80;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
           }
-          .footer { 
-            background: #f8f9fa; 
-            padding: 30px 20px; 
-            text-align: center; 
-            border-radius: 0 0 15px 15px; 
-            font-size: 14px; 
-            color: #6c757d; 
-            border-top: 1px solid #e9ecef;
+          .warning {
+            margin: 22px 0 0;
+            padding: 14px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(217, 79, 79, 0.5);
+            background: rgba(217, 79, 79, 0.1);
+            color: #f6cfcb;
+            font-size: 14px;
           }
-          .signature { 
-            margin: 30px 0; 
-            color: #333; 
+          .warning strong {
+            color: #ffb1a8;
           }
-          .signature strong { 
-            color: #ff6b6b; 
+          .signature {
+            margin: 24px 0 0;
+            color: #c8d5c6;
           }
-          .support-link { 
-            color: #ff6b6b; 
-            text-decoration: none; 
-            font-weight: 600; 
+          .signature strong {
+            color: #e8f0e4;
           }
-          .support-link:hover { 
-            text-decoration: underline; 
+          .footer {
+            margin-top: 24px;
+            border-top: 1px solid #2a3d2c;
+            background: #1b2c1d;
+            padding: 18px 24px 22px;
+            text-align: center;
+            font-size: 13px;
+            color: #7a9b80;
+          }
+          .support-link {
+            color: #c8a96e;
+            text-decoration: none;
+            font-weight: 600;
+          }
+          .support-link:hover {
+            text-decoration: underline;
+          }
+          .copyright {
+            margin-top: 14px;
+            color: #5f7d64;
+            font-size: 12px;
           }
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">
-              <svg viewBox="0 0 301.913 301.913" xmlns="http://www.w3.org/2000/svg">
-                <g>
-                  <path d="m280.968,156.717c-6.244,0-264.634,0-272.439,0-2.638,0-5.129,1.22-6.744,3.306-1.615,2.086-2.174,4.802-1.512,7.356 5.863,22.631 30.002,39.588 58.891,39.588 25.916,0 48.006-13.649 56.511-32.797l162.201,24.209c6.028,0.9 12.149-0.871 16.766-4.85 4.617-3.979 7.272-9.772 7.272-15.866-0.001-11.569-9.378-20.946-20.946-20.946z"/>
-                  <path d="m59.707,94.947c-13,0-36.77,36.77-36.77,36.77h73.539c0,0-23.769-36.77-36.769-36.77z"/>
-                </g>
-              </svg>
+        <div class="wrapper">
+          <div class="container">
+            <div class="header">
+              <div class="logo">
+                <svg viewBox="0 0 301.913 301.913" xmlns="http://www.w3.org/2000/svg">
+                  <g>
+                    <path d="m280.968,156.717c-6.244,0-264.634,0-272.439,0-2.638,0-5.129,1.22-6.744,3.306-1.615,2.086-2.174,4.802-1.512,7.356 5.863,22.631 30.002,39.588 58.891,39.588 25.916,0 48.006-13.649 56.511-32.797l162.201,24.209c6.028,0.9 12.149-0.871 16.766-4.85 4.617-3.979 7.272-9.772 7.272-15.866-0.001-11.569-9.378-20.946-20.946-20.946z"/>
+                    <path d="m59.707,94.947c-13,0-36.77,36.77-36.77,36.77h73.539c0,0-23.769-36.77-36.769-36.77z"/>
+                  </g>
+                </svg>
+              </div>
+              <h1 class="app-name">Seasoned</h1>
+              <p class="tagline">Omni Kitchen</p>
             </div>
-            <h1 class="app-name">Seasoned</h1>
-          </div>
-          <div class="content">
-            <p class="greeting">Hello there! 👋</p>
-            <p>We received a request to verify your email address: <span class="email-highlight">${email}</span></p>
-            <p>Please use the verification code below to complete your verification and start exploring delicious recipes:</p>
-            
-            <div class="otp-section">
-              <div class="otp-box">
-                <div class="otp-code">${otp}</div>
-                <p class="otp-label"><strong>Verification Code</strong></p>
+            <div class="content">
+              <p class="greeting">Hello there! 👋</p>
+              <p>We received a request to verify your email address: <span class="email-highlight">${email}</span></p>
+              <p>Use the code below to sign in and continue finding your next meal.</p>
+
+              <div class="otp-section">
+                <div class="otp-box">
+                  <p class="otp-code">${otp}</p>
+                  <p class="otp-label">Verification Code</p>
+                </div>
+              </div>
+
+              <div class="warning">
+                <strong>⚠️ Important:</strong> This code expires in ${expiryMinutes} minutes. If you did not request this, you can safely ignore this email.
+              </div>
+
+              <div class="signature">
+                <p>Happy cooking! 🍳<br>
+                <strong>The Seasoned Team</strong></p>
               </div>
             </div>
-            
-            <div class="warning">
-              <strong>⚠️ Important:</strong> This code will expire in ${expiryMinutes} minutes.
-              If you didn't request this verification, please ignore this email.
+            <div class="footer">
+              <p>This is an automated message, please do not reply.</p>
+              <p>If you need help, <a href="mailto:support@seasonedapp.com" class="support-link">contact support</a>.</p>
+              <p class="copyright">© ${new Date().getFullYear()} Seasoned Recipe App. All rights reserved.</p>
             </div>
-            
-            <div class="signature">
-              <p>Happy cooking! 🍳<br>
-              <strong>The Seasoned Team</strong></p>
-            </div>
-          </div>
-          <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
-            <p>If you have any questions, please <a href="mailto:support@seasonedapp.com" class="support-link">contact our support team</a>.</p>
-            <p style="margin-top: 20px; font-size: 12px; color: #999;">
-              © ${new Date().getFullYear()} Seasoned Recipe App. All rights reserved.
-            </p>
           </div>
         </div>
       </body>
