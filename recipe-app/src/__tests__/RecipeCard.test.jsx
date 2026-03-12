@@ -2,6 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeCard from '../RecipeCard';
 
+const flagOverrides = { 'elevate-recipe': true }
+jest.mock('../flaggly.js', () => ({
+  useFlag: (key) => flagOverrides[key] ?? true,
+  flaggly: {},
+}))
+
 const baseRecipe = {
   id: 'r1',
   source: 'clipped',
@@ -208,5 +214,23 @@ describe('RecipeCard — interactions', () => {
     renderCard();
     fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByText('Elevate')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeCard — elevate-recipe feature flag', () => {
+  afterEach(() => {
+    flagOverrides['elevate-recipe'] = true;
+  });
+
+  test('hides remix menu when elevate-recipe flag is disabled', () => {
+    flagOverrides['elevate-recipe'] = false;
+    renderCard();
+    expect(screen.queryByTitle('Remix with AI')).not.toBeInTheDocument();
+  });
+
+  test('shows remix menu when elevate-recipe flag is enabled', () => {
+    flagOverrides['elevate-recipe'] = true;
+    renderCard();
+    expect(screen.getByTitle('Remix with AI')).toBeInTheDocument();
   });
 });

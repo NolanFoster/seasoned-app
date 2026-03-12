@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import CookingNavigator from './CookingNavigator.jsx'
+import { useFlag } from './flaggly.js'
 
 export function parseDuration(val) {
   if (!val) return null
@@ -27,6 +28,7 @@ function parseDurationToMinutes(val) {
 }
 
 export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
+  const elevateRecipeEnabled = useFlag('elevate-recipe')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
@@ -118,6 +120,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     <div className="recipe-card">
       <div className="card-menus" ref={menusRef}>
         {/* Remix menu */}
+        {elevateRecipeEnabled && (
         <div className="action-menu">
           <button
             className="action-menu-btn"
@@ -150,6 +153,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
             </div>
           )}
         </div>
+        )}
 
         {/* More options menu */}
         <div className="action-menu">

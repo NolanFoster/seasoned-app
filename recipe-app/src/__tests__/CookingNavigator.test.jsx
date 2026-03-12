@@ -8,7 +8,7 @@ jest.mock('../useGestureMode.js')
 // Default flag values for all tests in this file.
 // voice-control: true  — keeps existing hands-free voice tests passing.
 // gesture-support: false — gesture feature is off by default; enable per-test as needed.
-const flagOverrides = { 'voice-control': true, 'gesture-support': false }
+const flagOverrides = { 'voice-control': true, 'gesture-support': false, 'dictation': true }
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => flagOverrides[key] ?? false,
   flaggly: {},
@@ -339,6 +339,26 @@ describe('CookingNavigator — gesture mode', () => {
     })
     renderNavigator()
     expect(screen.getByText('Previous Step')).toBeInTheDocument()
+  })
+})
+
+// ── Dictation feature flag ────────────────────────────────────────────────────
+
+describe('CookingNavigator — dictation feature flag', () => {
+  afterEach(() => {
+    flagOverrides['dictation'] = true
+  })
+
+  test('hides mic button when dictation flag is disabled', () => {
+    flagOverrides['dictation'] = false
+    renderNavigator()
+    expect(screen.queryByTitle('Start hands-free voice navigation')).not.toBeInTheDocument()
+  })
+
+  test('shows mic button when dictation flag is enabled', () => {
+    flagOverrides['dictation'] = true
+    renderNavigator()
+    expect(screen.getByTitle('Start hands-free voice navigation')).toBeInTheDocument()
   })
 })
 
