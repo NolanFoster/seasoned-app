@@ -193,6 +193,19 @@ export default function CookingNavigator({ recipe, onClose }) {
   useEffect(() => { currentStepRef.current = currentStep }, [currentStep])
 
   const [gestureModeActive, setGestureModeActive] = useState(false)
+
+  const TEXT_SIZES = ['normal', 'large', 'xl']
+  const [textSize, setTextSize] = useState(() => {
+    const saved = localStorage.getItem('cn-text-size')
+    return TEXT_SIZES.includes(saved) ? saved : 'normal'
+  })
+  function cycleTextSize() {
+    setTextSize((prev) => {
+      const next = TEXT_SIZES[(TEXT_SIZES.indexOf(prev) + 1) % TEXT_SIZES.length]
+      localStorage.setItem('cn-text-size', next)
+      return next
+    })
+  }
   const videoRef = useRef(null)
   const { isSupported: gestureSupported, status: gestureStatus, start: startGesture,
           stop: stopGesture, gestureProgress } =
@@ -450,7 +463,7 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   return (
     <div className="cn-overlay" role="dialog" aria-label="Cooking navigator">
-      <div className="cn-card">
+      <div className={`cn-card${textSize !== 'normal' ? ` cn-card--text-${textSize}` : ''}`}>
 
         {/* Hidden video element for gesture-mode camera capture */}
         <video ref={videoRef} className="cn-gesture-video" autoPlay playsInline muted aria-hidden="true" />
@@ -534,6 +547,14 @@ export default function CookingNavigator({ recipe, onClose }) {
                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
               </svg>
+            </button>
+            <button
+              className={`cn-hands-free-btn cn-text-size-btn${textSize !== 'normal' ? ' cn-text-size-btn--active' : ''}`}
+              onClick={cycleTextSize}
+              title={`Text size: ${textSize}. Click to increase.`}
+              aria-label={`Text size ${textSize}, click to cycle`}
+            >
+              {textSize === 'normal' ? 'A' : textSize === 'large' ? 'A+' : 'A++'}
             </button>
             <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
           </div>
