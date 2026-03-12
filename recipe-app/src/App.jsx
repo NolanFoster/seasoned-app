@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
+import AuthScreen from './AuthScreen.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
+import { useAuth } from './useAuth.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -35,7 +37,49 @@ function useDebounce(fn, delay) {
   }, [fn, delay])
 }
 
+function UserMenu({ user, onSignOut }) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const initial = user?.email ? user.email[0] : '?'
+
+  return (
+    <div className="user-menu" ref={menuRef}>
+      <button
+        className="user-avatar-btn"
+        onClick={() => setOpen((o) => !o)}
+        title={user?.email || 'Account'}
+        aria-label="Account menu"
+      >
+        {initial}
+      </button>
+      {open && (
+        <div className="user-menu-dropdown">
+          <div className="user-menu-info">
+            <div className="user-menu-email">{user?.email}</div>
+          </div>
+          <button className="user-menu-item" onClick={() => { setOpen(false); onSignOut() }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function App() {
+  const auth = useAuth()
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -49,6 +93,30 @@ export default function App() {
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
   const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
+
+  if (auth.loading) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-card" style={{ textAlign: 'center' }}>
+          <div className="auth-brand">
+            <svg className="auth-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+            </svg>
+            <span className="auth-brand-name">Seasoned</span>
+          </div>
+          <svg className="auth-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--accent)', width: 28, height: 28 }}>
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+          </svg>
+        </div>
+      </div>
+    )
+  }
+
+  if (!auth.isAuthenticated) {
+    return <AuthScreen onRequestOTP={auth.requestOTP} onVerifyOTP={auth.verifyOTP} />
+  }
 
   const isUrl = isValidUrl(input.trim())
   const hasText = input.trim().length >= 2 && !isUrl
@@ -345,6 +413,7 @@ export default function App() {
             <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
           </svg>
           <span className="brand-name">Seasoned</span>
+          <UserMenu user={auth.user} onSignOut={auth.signOut} />
         </div>
 
         <div className="omnibox">

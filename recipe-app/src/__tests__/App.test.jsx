@@ -8,6 +8,18 @@ jest.mock('../flaggly.js', () => ({
   flaggly: {},
 }))
 
+jest.mock('../useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com' },
+    token: 'mock-jwt-token',
+    loading: false,
+    isAuthenticated: true,
+    requestOTP: jest.fn(),
+    verifyOTP: jest.fn(),
+    signOut: jest.fn(),
+  }),
+}));
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function mockFetchOk(responseBody) {
