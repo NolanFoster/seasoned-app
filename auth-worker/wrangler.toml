@@ -15,7 +15,6 @@ USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers
 # Cloudflare Email Workers send_email binding
 [[send_email]]
 name = "send_email"
-allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 # JWT configuration
 # JWT_SECRET must be set as a Cloudflare secret using:
@@ -30,9 +29,12 @@ enabled = true
 [env.preview]
 name = "auth-worker-preview"
 
+[env.preview.vars]
+FROM_EMAIL = "verify@seasonedapp.com"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+
 [[env.preview.send_email]]
 name = "send_email"
-allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 [[env.preview.kv_namespaces]]
 binding = "OTP_KV"
@@ -51,7 +53,6 @@ USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers
 
 [[env.production.send_email]]
 name = "send_email"
-allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 [[env.production.kv_namespaces]]
 binding = "OTP_KV"
@@ -70,7 +71,6 @@ USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers
 
 [[env.staging.send_email]]
 name = "send_email"
-allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 [[env.staging.kv_namespaces]]
 binding = "OTP_KV"

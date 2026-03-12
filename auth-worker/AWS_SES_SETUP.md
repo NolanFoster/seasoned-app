@@ -26,7 +26,6 @@ FROM_EMAIL = "verify@seasonedapp.com"
 
 [[send_email]]
 name = "send_email"
-allowed_sender_addresses = ["verify@seasonedapp.com"]
 ```
 
 Repeat the same binding under each environment (`[[env.preview.send_email]]`, `[[env.staging.send_email]]`, `[[env.production.send_email]]`).
@@ -69,6 +68,6 @@ The `/health` endpoint now reports email service status under:
 1. **`send_email` binding missing**
    - Ensure binding exists in the deployed environment block.
 2. **Sender rejected**
-   - Ensure `FROM_EMAIL` is allowed by `allowed_sender_addresses`.
+   - Ensure `FROM_EMAIL` matches your Cloudflare Email Routing sender policy.
 3. **No email delivered**
    - Verify Email Routing domain setup and destination configuration in Cloudflare.
