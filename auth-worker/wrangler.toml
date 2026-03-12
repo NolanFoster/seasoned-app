@@ -7,9 +7,11 @@ compatibility_date = "2024-01-01"
 binding = "OTP_KV"
 id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after creation
 
-# AWS SES environment variables
+# Cloudflare Email binding for sending verification emails
+[[send_email]]
+name = "SEND_EMAIL"
+
 [vars]
-AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 
@@ -38,7 +40,6 @@ enabled = true
 name = "auth-worker-production"
 
 [env.production.vars]
-AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 
@@ -54,7 +55,6 @@ enabled = true
 name = "auth-worker-staging"
 
 [env.staging.vars]
-AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 

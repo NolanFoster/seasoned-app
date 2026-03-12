@@ -1,3 +1,7 @@
+interface SendEmail {
+  send(message: import('cloudflare:email').EmailMessage): Promise<void>;
+}
+
 export interface Env {
   // KV Namespace binding
   OTP_KV: KVNamespace;
@@ -6,10 +10,8 @@ export interface Env {
   ENVIRONMENT: 'development' | 'preview' | 'staging' | 'production';
   USER_MANAGEMENT_WORKER_URL: string;
   
-  // AWS SES configuration
-  AWS_ACCESS_KEY_ID: string;
-  AWS_SECRET_ACCESS_KEY: string;
-  AWS_REGION?: string;
+  // Cloudflare Email binding
+  SEND_EMAIL: SendEmail;
   FROM_EMAIL?: string;
   
   // JWT configuration

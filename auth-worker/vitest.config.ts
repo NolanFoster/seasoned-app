@@ -4,12 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node', // Changed from 'miniflare' to fix timeout issues
-    // environmentOptions: {
-    //   wranglerConfigPath: './wrangler.toml',
-    //   packagePath: true,
-    //   wranglerConfigEnv: 'preview'
-    // },
+    environment: 'node',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -32,7 +27,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'cloudflare:email': path.resolve(__dirname, './tests/__mocks__/cloudflare-email.ts')
     }
   }
 });

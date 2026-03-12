@@ -29,8 +29,8 @@ describe('OTP Endpoints', () => {
       } as unknown as KVNamespace,
       USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
       ENVIRONMENT: 'preview',
-      AWS_ACCESS_KEY_ID: 'test-access-key',
-      AWS_SECRET_ACCESS_KEY: 'test-secret-key',
+      SEND_EMAIL: { send: vi.fn() },
+      FROM_EMAIL: 'verify@seasonedapp.com',
       JWT_SECRET: 'test-jwt-secret'
     };
 

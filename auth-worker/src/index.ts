@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { Env } from './types/env';
 import { storeOTP, verifyOTPForEmail, hasOTP, deleteOTP, getOTPStats } from './utils/otp-manager';
-import { SESService } from './services/ses-service';
+import { EmailService } from './services/email-service';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,7 +21,7 @@ app.get('/health', async (c) => {
     services: {
       otp_kv: 'unknown',
       user_management: 'unknown',
-      ses: 'unknown'
+      email: 'unknown'
     }
   };
 
@@ -57,17 +57,16 @@ app.get('/health', async (c) => {
   }
 
   try {
-    // Test AWS SES configuration
-    if (env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY) {
-      health.services.ses = 'healthy';
+    if (env.SEND_EMAIL && env.FROM_EMAIL) {
+      health.services.email = 'healthy';
     } else {
-      health.services.ses = 'unhealthy';
+      health.services.email = 'unhealthy';
       health.status = 'degraded';
     }
   } catch (error) {
-    health.services.ses = 'unhealthy';
+    health.services.email = 'unhealthy';
     health.status = 'degraded';
-    console.error('SES configuration check failed:', error);
+    console.error('Email configuration check failed:', error);
   }
 
   // Determine overall health
@@ -113,8 +112,8 @@ app.post('/otp/generate', async (c) => {
       let emailSent = false;
       if (result.otp) {
         try {
-          const sesService = new SESService(c.env);
-          const emailResult = await sesService.sendVerificationEmail(email, result.otp, 10);
+          const emailService = new EmailService(c.env);
+          const emailResult = await emailService.sendVerificationEmail(email, result.otp, 10);
           
           if (emailResult.success) {
             emailSent = true;
@@ -487,10 +486,10 @@ app.post('/email/send-verification', async (c) => {
       }, 400);
     }
 
-    console.log('✅ Request validation passed, calling SES service with email:', email);
+    console.log('✅ Request validation passed, calling email service with email:', email);
 
-    const sesService = new SESService(c.env);
-    const result = await sesService.sendVerificationEmail(email, otp, expiryMinutes);
+    const emailService = new EmailService(c.env);
+    const result = await emailService.sendVerificationEmail(email, otp, expiryMinutes);
     
     if (result.success) {
       return c.json({

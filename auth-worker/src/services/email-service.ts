@@ -1,5 +1,6 @@
 import { Env } from '../types/env';
-import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
+import { EmailMessage } from 'cloudflare:email';
+import { createMimeMessage } from 'mimetext';
 
 export interface EmailOptions {
   to: string;
@@ -14,36 +15,23 @@ export interface SendEmailResult {
   error?: string;
 }
 
-export class SESService {
-  private sesClient: SESClient;
+export class EmailService {
   private fromEmail: string;
+  private env: Env;
 
   constructor(env: Env) {
-    // Validate AWS credentials
-    if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
-      throw new Error('AWS credentials not configured');
+    if (!env.SEND_EMAIL) {
+      throw new Error('SEND_EMAIL binding not configured');
     }
-    
-    this.fromEmail = env.FROM_EMAIL || 'noreply@yourdomain.com';
-    
-    // Initialize SES client with credentials
-    this.sesClient = new SESClient({
-      region: env.AWS_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
+
+    this.env = env;
+    this.fromEmail = env.FROM_EMAIL || 'verify@seasonedapp.com';
   }
 
-  /**
-   * Send an email using AWS SES
-   */
   async sendEmail(options: EmailOptions): Promise<SendEmailResult> {
     try {
       const { to, subject, htmlBody, textBody } = options;
 
-      // Validate inputs
       if (!to || !subject || !htmlBody) {
         return {
           success: false,
@@ -51,75 +39,44 @@ export class SESService {
         };
       }
 
-      // Prepare the email request
-      const emailParams: SendEmailCommandInput = {
-        Source: this.fromEmail,
-        Destination: {
-          ToAddresses: [to]
-        },
-        Message: {
-          Subject: {
-            Data: subject,
-            Charset: 'UTF-8'
-          },
-          Body: {
-            Html: {
-              Data: htmlBody,
-              Charset: 'UTF-8'
-            },
-            ...(textBody && {
-              Text: {
-                Data: textBody,
-                Charset: 'UTF-8'
-              }
-            })
-          }
-        }
-      };
+      const msg = createMimeMessage();
+      msg.setSender({ name: 'Seasoned', addr: this.fromEmail });
+      msg.setRecipient(to);
+      msg.setSubject(subject);
+      msg.addMessage({
+        contentType: 'text/html',
+        data: htmlBody,
+      });
 
-      // Send the email using AWS SES
-      const command = new SendEmailCommand(emailParams);
-      const response = await this.sesClient.send(command);
-
-      if (response.MessageId) {
-        return {
-          success: true,
-          messageId: response.MessageId
-        };
-      } else {
-        return {
-          success: false,
-          error: 'No message ID returned from SES'
-        };
+      if (textBody) {
+        msg.addMessage({
+          contentType: 'text/plain',
+          data: textBody,
+        });
       }
+
+      const message = new EmailMessage(
+        this.fromEmail,
+        to,
+        msg.asRaw(),
+      );
+
+      await this.env.SEND_EMAIL.send(message);
+
+      return {
+        success: true,
+        messageId: `cf-${Date.now()}`
+      };
     } catch (error) {
       console.error('Error sending email:', error);
-      
-      // Handle specific AWS errors
+
       if (error instanceof Error) {
-        if (error.name === 'MessageRejected') {
-          return {
-            success: false,
-            error: 'Email rejected by SES: Message content not allowed'
-          };
-        } else if (error.name === 'MailFromDomainNotVerified') {
-          return {
-            success: false,
-            error: 'Sender email domain not verified in SES'
-          };
-        } else if (error.name === 'ConfigurationSetDoesNotExist') {
-          return {
-            success: false,
-            error: 'SES configuration set not found'
-          };
-        } else {
-          return {
-            success: false,
-            error: `SES error: ${error.message}`
-          };
-        }
+        return {
+          success: false,
+          error: `Email sending failed: ${error.message}`
+        };
       }
-      
+
       return {
         success: false,
         error: 'Unknown error occurred while sending email'
@@ -127,9 +84,6 @@ export class SESService {
     }
   }
 
-  /**
-   * Send a verification email with OTP
-   */
   async sendVerificationEmail(to: string, otp: string, otpExpiryMinutes: number = 10): Promise<SendEmailResult> {
     const subject = 'Seasoned - Verify Your Email Address';
     const htmlBody = this.generateVerificationEmailHTML(to, otp, otpExpiryMinutes);
@@ -143,9 +97,6 @@ export class SESService {
     });
   }
 
-  /**
-   * Generate HTML version of verification email
-   */
   private generateVerificationEmailHTML(email: string, otp: string, expiryMinutes: number): string {
     return `
       <!DOCTYPE html>
@@ -288,7 +239,7 @@ export class SESService {
             <h1 class="app-name">Seasoned</h1>
           </div>
           <div class="content">
-            <p class="greeting">Hello there! 👋</p>
+            <p class="greeting">Hello there! \u{1F44B}</p>
             <p>We received a request to verify your email address: <span class="email-highlight">${email}</span></p>
             <p>Please use the verification code below to complete your verification and start exploring delicious recipes:</p>
             
@@ -300,12 +251,12 @@ export class SESService {
             </div>
             
             <div class="warning">
-              <strong>⚠️ Important:</strong> This code will expire in ${expiryMinutes} minutes.
+              <strong>\u26A0\uFE0F Important:</strong> This code will expire in ${expiryMinutes} minutes.
               If you didn't request this verification, please ignore this email.
             </div>
             
             <div class="signature">
-              <p>Happy cooking! 🍳<br>
+              <p>Happy cooking! \u{1F373}<br>
               <strong>The Seasoned Team</strong></p>
             </div>
           </div>
@@ -313,7 +264,7 @@ export class SESService {
             <p>This is an automated message. Please do not reply to this email.</p>
             <p>If you have any questions, please <a href="mailto:support@seasonedapp.com" class="support-link">contact our support team</a>.</p>
             <p style="margin-top: 20px; font-size: 12px; color: #999;">
-              © ${new Date().getFullYear()} Seasoned Recipe App. All rights reserved.
+              \u00A9 ${new Date().getFullYear()} Seasoned Recipe App. All rights reserved.
             </p>
           </div>
         </div>
@@ -322,14 +273,11 @@ export class SESService {
     `;
   }
 
-  /**
-   * Generate text version of verification email
-   */
   private generateVerificationEmailText(email: string, otp: string, expiryMinutes: number): string {
     return `
 Seasoned Recipe App - Email Verification
 
-Hello there! 👋
+Hello there! \u{1F44B}
 
 We received a request to verify your email address: ${email}
 
@@ -340,14 +288,14 @@ Verification Code: ${otp}
 IMPORTANT: This code will expire in ${expiryMinutes} minutes.
 If you didn't request this verification, please ignore this email.
 
-Happy cooking! 🍳
+Happy cooking! \u{1F373}
 The Seasoned Team
 
 ---
 This is an automated message. Please do not reply to this email.
 If you have any questions, please contact our support team at support@seasonedapp.com
 
-© ${new Date().getFullYear()} Seasoned Recipe App. All rights reserved.
+\u00A9 ${new Date().getFullYear()} Seasoned Recipe App. All rights reserved.
     `.trim();
   }
 }
