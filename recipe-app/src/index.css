@@ -950,6 +950,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 99px;
   color: var(--text-muted);
+  text-decoration: none;
   transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
   cursor: pointer;
 }

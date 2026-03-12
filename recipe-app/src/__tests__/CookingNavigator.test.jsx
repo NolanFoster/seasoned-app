@@ -379,6 +379,54 @@ describe('CookingNavigator — ingredient matching', () => {
   })
 })
 
+// ── Ingredient quantity disambiguation ────────────────────────────────────────
+
+describe('CookingNavigator — ingredient quantity disambiguation', () => {
+  test('highlights only .5 cup sugar when step mentions .5', () => {
+    const recipe = {
+      name: 'Sugar Test',
+      ingredients: ['.5 cup of sugar', '.25 cup sugar'],
+      instructions: ['Add .5 cup sugar to bowl.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByRole('button', { name: /\.5 cup of sugar/i })).toHaveClass('cn-ingredient-chip--active')
+    expect(screen.getByRole('button', { name: /\.25 cup sugar/i })).not.toHaveClass('cn-ingredient-chip--active')
+  })
+
+  test('highlights only .25 cup sugar when step mentions .25', () => {
+    const recipe = {
+      name: 'Sugar Test',
+      ingredients: ['.5 cup of sugar', '.25 cup sugar'],
+      instructions: ['Add .25 cup sugar to bowl.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByRole('button', { name: /\.5 cup of sugar/i })).not.toHaveClass('cn-ingredient-chip--active')
+    expect(screen.getByRole('button', { name: /\.25 cup sugar/i })).toHaveClass('cn-ingredient-chip--active')
+  })
+
+  test('highlights both sugar ingredients when step specifies no quantity', () => {
+    const recipe = {
+      name: 'Sugar Test',
+      ingredients: ['.5 cup of sugar', '.25 cup sugar'],
+      instructions: ['Add the sugar to the bowl.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByRole('button', { name: /\.5 cup of sugar/i })).toHaveClass('cn-ingredient-chip--active')
+    expect(screen.getByRole('button', { name: /\.25 cup sugar/i })).toHaveClass('cn-ingredient-chip--active')
+  })
+
+  test('handles fraction notation: 1/2 cup matches .5 cup ingredient', () => {
+    const recipe = {
+      name: 'Fraction Test',
+      ingredients: ['1/2 cup butter', '1/4 cup butter'],
+      instructions: ['Melt 1/2 cup butter in a pan.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByRole('button', { name: /1\/2 cup butter/i })).toHaveClass('cn-ingredient-chip--active')
+    expect(screen.getByRole('button', { name: /1\/4 cup butter/i })).not.toHaveClass('cn-ingredient-chip--active')
+  })
+})
+
 // ── Ingredient usage tracking ─────────────────────────────────────────────────
 
 describe('CookingNavigator — ingredient usage tracking', () => {
