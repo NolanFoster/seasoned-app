@@ -96,6 +96,10 @@ function renderStepWithTimers(stepText, stepIndex, activeTimers, onTimerStart) {
 
 const QUANTITY_TOKENS = /^(\d+[\d/.,]*|[¼½¾⅓⅔⅛⅜⅝⅞]|tbsp|tsp|cup|oz|lb|g|kg|ml|l|liter|litre|tablespoon|teaspoon|pinch|handful|bunch|clove|cloves|can|cans|slice|slices|piece|pieces|sprig|sprigs)s?$/i
 
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function matchIngredientsToStep(ingredients, stepText) {
   const lower = stepText.toLowerCase()
   return ingredients.map((ing) => {
@@ -104,7 +108,7 @@ function matchIngredientsToStep(ingredients, stepText) {
     const nameTokens = tokens.filter((t) => !QUANTITY_TOKENS.test(t))
     const relevant =
       nameTokens.length > 0 &&
-      nameTokens.some((token) => token.length > 2 && lower.includes(token))
+      nameTokens.some((token) => token.length > 2 && new RegExp(`\\b${escapeRegex(token)}\\b`).test(lower))
     return { text: ing, relevant }
   })
 }
@@ -125,6 +129,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   const total = instructions.length
 
   const [currentStep, setCurrentStep] = useState(0)
+  const [usedIngredients, setUsedIngredients] = useState(new Set())
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
@@ -147,6 +152,15 @@ export default function CookingNavigator({ recipe, onClose }) {
       onNext: () => { setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
       onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeepBack() },
     })
+
+  function handleIngredientToggle(index) {
+    setUsedIngredients((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
 
   function toggleGestureMode() {
     if (gestureModeActive) {
@@ -514,14 +528,25 @@ export default function CookingNavigator({ recipe, onClose }) {
           <div className="cn-ingredients">
             <span className="cn-ingredients-label">Ingredients this step</span>
             <div className="cn-ingredient-chips">
-              {allChips.map((chip, i) => (
-                <span
-                  key={i}
-                  className={`cn-ingredient-chip${chip.relevant ? ' cn-ingredient-chip--active' : ''}`}
-                >
-                  {chip.text}
-                </span>
-              ))}
+              {allChips.map((chip, i) => {
+                const isUsed = usedIngredients.has(i)
+                const className = [
+                  'cn-ingredient-chip',
+                  chip.relevant ? 'cn-ingredient-chip--active' : '',
+                  isUsed ? 'cn-ingredient-chip--used' : '',
+                ].filter(Boolean).join(' ')
+                return (
+                  <button
+                    key={i}
+                    className={className}
+                    onClick={() => handleIngredientToggle(i)}
+                    title={isUsed ? 'Mark as not used' : 'Mark as used'}
+                    aria-pressed={isUsed}
+                  >
+                    {chip.text}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

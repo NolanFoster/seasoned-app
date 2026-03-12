@@ -341,3 +341,92 @@ describe('CookingNavigator — gesture mode', () => {
     expect(screen.getByText('Previous Step')).toBeInTheDocument()
   })
 })
+
+// ── Ingredient matching (word-boundary fix) ───────────────────────────────────
+
+describe('CookingNavigator — ingredient matching', () => {
+  test('does not highlight "cheddar cheese" when step only mentions cheesecloth', () => {
+    const recipe = {
+      name: 'Strain Recipe',
+      ingredients: ['1 cup cheddar cheese'],
+      instructions: ['Strain the mixture through cheesecloth.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    const chip = screen.getByRole('button', { name: /cheddar cheese/i })
+    expect(chip).not.toHaveClass('cn-ingredient-chip--active')
+  })
+
+  test('highlights "cheddar cheese" when step mentions cheese directly', () => {
+    const recipe = {
+      name: 'Cheese Recipe',
+      ingredients: ['1 cup cheddar cheese'],
+      instructions: ['Add the cheddar cheese and stir.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    const chip = screen.getByRole('button', { name: /cheddar cheese/i })
+    expect(chip).toHaveClass('cn-ingredient-chip--active')
+  })
+
+  test('does not highlight "peas" when step only mentions "peanut butter"', () => {
+    const recipe = {
+      name: 'Peanut Recipe',
+      ingredients: ['1 cup peas'],
+      instructions: ['Spread peanut butter on toast.', 'Done.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    const chip = screen.getByRole('button', { name: /peas/i })
+    expect(chip).not.toHaveClass('cn-ingredient-chip--active')
+  })
+})
+
+// ── Ingredient usage tracking ─────────────────────────────────────────────────
+
+describe('CookingNavigator — ingredient usage tracking', () => {
+  const trackingRecipe = {
+    name: 'Tracking Recipe',
+    ingredients: ['200g flour', '2 eggs'],
+    instructions: ['Mix flour and eggs.', 'Add more flour and knead.'],
+  }
+
+  test('ingredient chips render as buttons', () => {
+    render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    const chips = screen.getAllByRole('button', { name: /flour|eggs/i })
+    expect(chips.length).toBeGreaterThan(0)
+  })
+
+  test('chips start with aria-pressed=false', () => {
+    render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
+    expect(flourChip).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('clicking a chip marks it as used (aria-pressed=true and --used class)', () => {
+    render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
+    fireEvent.click(flourChip)
+    expect(flourChip).toHaveAttribute('aria-pressed', 'true')
+    expect(flourChip).toHaveClass('cn-ingredient-chip--used')
+  })
+
+  test('clicking a used chip toggles it back to unused', () => {
+    render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
+    fireEvent.click(flourChip)
+    fireEvent.click(flourChip)
+    expect(flourChip).toHaveAttribute('aria-pressed', 'false')
+    expect(flourChip).not.toHaveClass('cn-ingredient-chip--used')
+  })
+
+  test('used ingredient chip still shows --active if relevant in current step (partial use)', () => {
+    // Step 1: "Mix flour and eggs." — flour is relevant
+    render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
+    // Mark flour as used on step 1
+    fireEvent.click(flourChip)
+    // Advance to step 2: "Add more flour and knead." — flour is still relevant
+    fireEvent.click(screen.getByText('Next →'))
+    const flourChipStep2 = screen.getAllByRole('button', { name: /flour/i })[0]
+    expect(flourChipStep2).toHaveClass('cn-ingredient-chip--used')
+    expect(flourChipStep2).toHaveClass('cn-ingredient-chip--active')
+  })
+})
