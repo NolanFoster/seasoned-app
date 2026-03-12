@@ -137,6 +137,8 @@ export default function CookingNavigator({ recipe, onClose }) {
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
   const recognitionRef = useRef(null)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const currentStepRef = useRef(currentStep)
+  useEffect(() => { currentStepRef.current = currentStep }, [currentStep])
 
   const [gestureModeActive, setGestureModeActive] = useState(false)
   const videoRef = useRef(null)
@@ -344,14 +346,15 @@ export default function CookingNavigator({ recipe, onClose }) {
   function speakCurrentStep() {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
-    const stepInstructions = instructions[currentStep] || ''
+    const step = currentStepRef.current
+    const stepInstructions = instructions[step] || ''
     const relevantIngredients = matchIngredientsToStep(ingredients, stepInstructions)
       .filter((c) => c.relevant)
       .map((c) => c.text)
     const ingredientLine = relevantIngredients.length > 0
       ? ` Ingredients for this step: ${relevantIngredients.join(', ')}.`
       : ''
-    const text = `Step ${currentStep + 1} of ${total}. ${stepInstructions}.${ingredientLine}`
+    const text = `Step ${step + 1} of ${total}. ${stepInstructions}.${ingredientLine}`
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
