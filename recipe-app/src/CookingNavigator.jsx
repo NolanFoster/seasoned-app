@@ -20,6 +20,15 @@ function normalizeInstructions(instructions) {
   })
 }
 
+// ── Gesture emoji map ─────────────────────────────────────────────────────────
+
+const GESTURE_EMOJI = {
+  Victory:     '✌️',
+  Thumb_Up:    '👍',
+  Thumb_Down:  '👎',
+  Pointing_Up: '☝️',
+}
+
 // ── Timer parsing ─────────────────────────────────────────────────────────────
 
 const TIME_REGEX = /(\d+)(?:-(\d+))?\s*(second|minute|min|hour|hr)s?/gi
@@ -130,7 +139,8 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   const [gestureModeActive, setGestureModeActive] = useState(false)
   const videoRef = useRef(null)
-  const { isSupported: gestureSupported, status: gestureStatus, start: startGesture, stop: stopGesture } =
+  const { isSupported: gestureSupported, status: gestureStatus, start: startGesture,
+          stop: stopGesture, gestureProgress } =
     useGestureMode({
       videoRef,
       onNext: () => { setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
@@ -407,6 +417,28 @@ export default function CookingNavigator({ recipe, onClose }) {
           </div>
         </div>
 
+        {/* Gesture Target Lock overlay — shown while user holds a recognised gesture */}
+        {gestureSupportEnabled && gestureStatus === 'active' && gestureProgress && (
+          <div className="cn-gesture-lock" aria-live="assertive" aria-atomic="true">
+            <div className="cn-gesture-lock-ring-wrap">
+              <svg className="cn-gesture-lock-ring" viewBox="0 0 56 56" aria-hidden="true">
+                <circle cx="28" cy="28" r="24" className="cn-gesture-lock-track" />
+                <circle
+                  cx="28" cy="28" r="24"
+                  className="cn-gesture-lock-fill"
+                  style={{ strokeDashoffset: 150.8 * (1 - gestureProgress.progress) }}
+                />
+              </svg>
+              <span className="cn-gesture-lock-icon" aria-hidden="true">
+                {GESTURE_EMOJI[gestureProgress.gestureName] ?? '🖐️'}
+              </span>
+            </div>
+            <span className="cn-gesture-lock-label">
+              {gestureProgress.direction === 'next' ? 'Next Step' : 'Previous Step'}
+            </span>
+          </div>
+        )}
+
         {/* Gesture mode status bar */}
         {gestureSupportEnabled && gestureModeActive && (
           <div
@@ -418,7 +450,7 @@ export default function CookingNavigator({ recipe, onClose }) {
             {gestureStatus === 'active' && (
               <>
                 <span className="cn-gesture-dot" aria-hidden="true" />
-                <span>Wave left for Prev, right for Next</span>
+                <span>Hold ✌️ or 👍 for Next · 👎 or ☝️ for Prev</span>
               </>
             )}
             {gestureStatus === 'denied' && <span>Camera access denied — use Prev / Next buttons</span>}

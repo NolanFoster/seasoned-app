@@ -1,6 +1,9 @@
 import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import CookingNavigator from '../CookingNavigator'
+import useGestureMode from '../useGestureMode.js'
+
+jest.mock('../useGestureMode.js')
 
 // Default flag values for all tests in this file.
 // voice-control: true  — keeps existing hands-free voice tests passing.
@@ -10,6 +13,16 @@ jest.mock('../flaggly.js', () => ({
   useFlag: (key) => flagOverrides[key] ?? false,
   flaggly: {},
 }))
+
+// Default stub for useGestureMode — overridden per-test in the gesture suite.
+const defaultGestureHook = {
+  isSupported: false,
+  status: 'idle',
+  start: jest.fn(),
+  stop: jest.fn(),
+  gestureProgress: null,
+}
+useGestureMode.mockReturnValue(defaultGestureHook)
 
 const baseRecipe = {
   name: 'Test Recipe',
@@ -244,5 +257,87 @@ describe('CookingNavigator — voice commands', () => {
     renderNavigator()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     expect(instance.continuous).toBe(true)
+  })
+})
+
+// ── Gesture mode ──────────────────────────────────────────────────────────────
+
+describe('CookingNavigator — gesture mode', () => {
+  beforeEach(() => {
+    flagOverrides['gesture-support'] = true
+    useGestureMode.mockReturnValue({
+      isSupported: true,
+      status: 'idle',
+      start: jest.fn(),
+      stop: jest.fn(),
+      gestureProgress: null,
+    })
+  })
+
+  afterEach(() => {
+    flagOverrides['gesture-support'] = false
+  })
+
+  test('renders gesture toggle button when flag and support are enabled', () => {
+    renderNavigator()
+    expect(screen.getByTitle('Wave to navigate steps')).toBeInTheDocument()
+  })
+
+  test('gesture button shows aria-pressed=false initially', () => {
+    renderNavigator()
+    expect(screen.getByLabelText('Start gesture mode')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('clicking gesture button calls start() and shows status bar', () => {
+    const start = jest.fn()
+    useGestureMode.mockReturnValue({
+      isSupported: true, status: 'idle', start, stop: jest.fn(), gestureProgress: null,
+    })
+    renderNavigator()
+    fireEvent.click(screen.getByTitle('Wave to navigate steps'))
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  test('status bar shows updated instruction text when gesture mode is active', () => {
+    useGestureMode.mockReturnValue({
+      isSupported: true, status: 'active', start: jest.fn(), stop: jest.fn(), gestureProgress: null,
+    })
+    renderNavigator()
+    fireEvent.click(screen.getByTitle('Wave to navigate steps'))
+    expect(screen.getByText(/Hold.*for Next/i)).toBeInTheDocument()
+    expect(screen.getByText(/for Prev/i)).toBeInTheDocument()
+  })
+
+  test('Target Lock overlay is not shown when gestureProgress is null', () => {
+    useGestureMode.mockReturnValue({
+      isSupported: true, status: 'active', start: jest.fn(), stop: jest.fn(), gestureProgress: null,
+    })
+    renderNavigator()
+    expect(screen.queryByText('Next Step')).not.toBeInTheDocument()
+    expect(screen.queryByText('Previous Step')).not.toBeInTheDocument()
+  })
+
+  test('Target Lock overlay appears with correct label for next direction', () => {
+    useGestureMode.mockReturnValue({
+      isSupported: true,
+      status: 'active',
+      start: jest.fn(),
+      stop: jest.fn(),
+      gestureProgress: { gestureName: 'Victory', direction: 'next', progress: 0.5 },
+    })
+    renderNavigator()
+    expect(screen.getByText('Next Step')).toBeInTheDocument()
+  })
+
+  test('Target Lock overlay appears with correct label for prev direction', () => {
+    useGestureMode.mockReturnValue({
+      isSupported: true,
+      status: 'active',
+      start: jest.fn(),
+      stop: jest.fn(),
+      gestureProgress: { gestureName: 'Thumb_Down', direction: 'prev', progress: 0.4 },
+    })
+    renderNavigator()
+    expect(screen.getByText('Previous Step')).toBeInTheDocument()
   })
 })

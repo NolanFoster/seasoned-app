@@ -1,6 +1,7 @@
 // gestureWorker.js — MediaPipe GestureRecognizer running in a dedicated Web Worker.
-// Loaded as a classic worker — importScripts runs scripts in global scope,
-// which is required for vision_wasm_internal.js to set ModuleFactory on self.
+// The main thread sends ImageBitmap frames; this worker classifies static hand gestures,
+// applies hold-to-confirm timing and Z-axis filtering, then posts GESTURE_CONFIRMED
+// messages back. Inference never blocks the UI thread.
 
 importScripts('/mediapipe/mediapipe.iife.js')
 
@@ -10,20 +11,28 @@ const WASM_CDN = '/mediapipe/wasm'
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task'
 
-// Wave detection tuning
-const BUFFER_SIZE = 6
-const WAVE_THRESHOLD = 0.10
-const COOLDOWN_MS = 1500
-const MISS_TOLERANCE = 6  // frames without detection before resetting buffer
+// Hold-to-confirm tuning
+const HOLD_FRAMES   = 15    // consecutive matching frames required to fire (~1.25 s at 12 fps)
+const COOLDOWN_MS   = 2500  // ignore all gestures for this many ms after one fires
+const MIN_HAND_SIZE = 0.15  // min wrist→middle-finger-tip distance (normalised 0–1); filters far-away hands
+
+// Gesture → navigation direction mapping.
+// Uses MediaPipe's built-in static gesture names.
+const GESTURE_MAP = {
+  Victory:     'next',   // ✌️
+  Thumb_Up:    'next',   // 👍
+  Thumb_Down:  'prev',   // 👎
+  Pointing_Up: 'prev',   // ☝️
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let recognizer = null
-let offscreen = null
-let ctx2d = null
-let xBuffer = []
-let inCooldown = false
-let missCount = 0
+let recognizer  = null
+let offscreen   = null   // OffscreenCanvas reused every frame
+let ctx2d       = null
+let holdGesture = null   // name of the gesture currently being held
+let holdCount   = 0      // consecutive frames with the same gesture
+let inCooldown  = false
 
 // ── Initialisation ────────────────────────────────────────────────────────────
 
@@ -52,6 +61,24 @@ async function init() {
   }
 }
 
+// ── Hold-to-confirm helpers ───────────────────────────────────────────────────
+
+function resetHold() {
+  if (holdGesture !== null) {
+    holdGesture = null
+    holdCount   = 0
+    self.postMessage({ type: 'GESTURE_CANCELLED' })
+  }
+}
+
+function fireGesture(direction) {
+  holdGesture = null
+  holdCount   = 0
+  inCooldown  = true
+  self.postMessage({ type: 'GESTURE_CONFIRMED', direction })
+  setTimeout(() => { inCooldown = false }, COOLDOWN_MS)
+}
+
 // ── Frame processing ──────────────────────────────────────────────────────────
 
 let _debugFrameCount = 0
@@ -67,45 +94,51 @@ function processFrame(bitmap, timestamp) {
     _debugFrameCount++
     const now = Date.now()
 
+    // No hand detected — cancel any in-progress hold.
     if (!results.landmarks || results.landmarks.length === 0) {
-      missCount++
-      if (missCount >= MISS_TOLERANCE) xBuffer = []
-      if (now - _lastDebugLog > 3000) {
-        console.log('[gesture] no hand detected, frames processed:', _debugFrameCount, 'result keys:', Object.keys(results))
-        _lastDebugLog = now
-      }
+      resetHold()
       return
     }
-    missCount = 0
 
-    const wristX = results.landmarks[0][0].x
-    xBuffer.push(wristX)
-    if (xBuffer.length > BUFFER_SIZE) xBuffer.shift()
-
-    if (now - _lastDebugLog > 500) {
-      const delta = xBuffer.length >= 2 ? xBuffer[xBuffer.length - 1] - xBuffer[0] : 0
-      console.log('[gesture] hand detected, wristX:', wristX.toFixed(3), 'bufLen:', xBuffer.length, 'delta:', delta.toFixed(3), 'gestures:', results.gestures?.[0]?.[0]?.categoryName)
-      _lastDebugLog = now
+    // Z-axis filter: compute approximate hand size as the normalised distance
+    // between the wrist (landmark 0) and the middle finger tip (landmark 12).
+    // Hands that are too far from the camera appear small and should be ignored.
+    const wrist  = results.landmarks[0][0]
+    const midTip = results.landmarks[0][12]
+    const dx = midTip.x - wrist.x
+    const dy = midTip.y - wrist.y
+    const handSize = Math.sqrt(dx * dx + dy * dy)
+    if (handSize < MIN_HAND_SIZE) {
+      resetHold()
+      return
     }
 
-    if (xBuffer.length === BUFFER_SIZE) {
-      const delta = xBuffer[BUFFER_SIZE - 1] - xBuffer[0]
-      if (delta > WAVE_THRESHOLD) {
-        fireWave('prev')
-      } else if (delta < -WAVE_THRESHOLD) {
-        fireWave('next')
-      }
+    // Read MediaPipe's built-in static gesture classification.
+    const detectedName = results.gestures[0]?.[0]?.categoryName ?? null
+    const direction    = detectedName ? (GESTURE_MAP[detectedName] ?? null) : null
+
+    // Unrecognised or irrelevant gesture — cancel hold.
+    if (!direction) {
+      resetHold()
+      return
+    }
+
+    // Gesture changed mid-hold — restart counter from scratch.
+    if (detectedName !== holdGesture) {
+      holdCount   = 0
+      holdGesture = detectedName
+    }
+
+    holdCount++
+    const progress = Math.min(holdCount / HOLD_FRAMES, 1)
+    self.postMessage({ type: 'GESTURE_PROGRESS', gestureName: holdGesture, direction, progress })
+
+    if (holdCount >= HOLD_FRAMES) {
+      fireGesture(direction)
     }
   } catch (err) {
     self.postMessage({ type: 'ERROR', message: String(err.message ?? err) })
   }
-}
-
-function fireWave(direction) {
-  xBuffer = []
-  inCooldown = true
-  self.postMessage({ type: 'WAVE', direction })
-  setTimeout(() => { inCooldown = false }, COOLDOWN_MS)
 }
 
 // ── Message handler ───────────────────────────────────────────────────────────

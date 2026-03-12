@@ -21,6 +21,9 @@ export default function useGestureMode({ videoRef, onNext, onPrev }) {
   const [status, setStatus] = useState('idle')
   // 'idle' | 'requesting' | 'active' | 'denied' | 'unsupported'
 
+  const [gestureProgress, setGestureProgress] = useState(null)
+  // null when idle; { gestureName, direction, progress } while user holds a gesture
+
   const workerRef    = useRef(null)
   const streamRef    = useRef(null)
   const intervalRef  = useRef(null)
@@ -59,14 +62,19 @@ export default function useGestureMode({ videoRef, onNext, onPrev }) {
 
     worker.onerror = (e) => { console.error('[gesture] worker error:', e.message); stop(); setStatus('unsupported') }
     worker.onmessage = (e) => {
-      const { type, direction, message } = e.data
+      const { type, direction, gestureName, progress } = e.data
       if (type === 'READY') {
         setStatus('active')
         startInterval()
-      } else if (type === 'WAVE') {
+      } else if (type === 'GESTURE_PROGRESS') {
+        setGestureProgress({ gestureName, direction, progress })
+      } else if (type === 'GESTURE_CONFIRMED') {
+        setGestureProgress(null)
         direction === 'next'
           ? callbacksRef.current.onNext()
           : callbacksRef.current.onPrev()
+      } else if (type === 'GESTURE_CANCELLED') {
+        setGestureProgress(null)
       } else if (type === 'ERROR') {
         console.error('[gesture] worker init error:', message)
         stop()
@@ -127,11 +135,12 @@ export default function useGestureMode({ videoRef, onNext, onPrev }) {
     try { wakeLockRef.current?.release() } catch {}
     wakeLockRef.current = null
 
+    setGestureProgress(null)
     setStatus('idle')
   }
 
   // Release all resources on unmount regardless of mode state.
   useEffect(() => () => stop(), []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { isSupported, status, start, stop }
+  return { isSupported, status, start, stop, gestureProgress }
 }
