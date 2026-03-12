@@ -1125,6 +1125,12 @@ html, body {
   user-select: none;
 }
 
+.cn-gesture-lock-ring-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
 .cn-gesture-lock-ring {
   width: 72px;
   height: 72px;
