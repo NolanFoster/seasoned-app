@@ -39,6 +39,7 @@ function useDebounce(fn, delay) {
 
 function UserMenu({ user, onSignOut }) {
   const [open, setOpen] = useState(false)
+  const [opacity, setOpacity] = useState(1)
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -49,10 +50,25 @@ function UserMenu({ user, onSignOut }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    function handleScroll() {
+      const y = window.scrollY
+      const fade = Math.max(0.15, 1 - y / 200)
+      setOpacity(fade)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const initial = user?.email ? user.email[0] : '?'
+  const resolvedOpacity = open ? 1 : opacity
 
   return (
-    <div className="user-menu" ref={menuRef}>
+    <div
+      className="user-menu"
+      ref={menuRef}
+      style={{ opacity: resolvedOpacity }}
+    >
       <button
         className="user-avatar-btn"
         onClick={() => setOpen((o) => !o)}

@@ -1538,6 +1538,11 @@ html, body {
   top: 16px;
   right: 16px;
   z-index: 150;
+  transition: opacity 0.25s ease;
+}
+
+.user-menu:hover {
+  opacity: 1 !important;
 }
 
 .user-avatar-btn {
