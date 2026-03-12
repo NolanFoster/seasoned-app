@@ -16,6 +16,7 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'tests/',
+        'src/types/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData.ts',
@@ -32,7 +33,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'cloudflare:email': path.resolve(__dirname, './tests/mocks/cloudflare-email.ts')
     }
   }
 });

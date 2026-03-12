@@ -7,9 +7,10 @@ describe('Root Endpoint', () => {
     OTP_KV: {} as KVNamespace,
     USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
     ENVIRONMENT: 'preview',
-    AWS_ACCESS_KEY_ID: 'test-access-key',
-    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
-    JWT_SECRET: 'test-jwt-secret'
+    JWT_SECRET: 'test-jwt-secret',
+    send_email: {
+      send: async () => {}
+    }
   };
 
   it('should return worker information', async () => {
@@ -30,9 +31,10 @@ describe('404 Handler', () => {
     OTP_KV: {} as KVNamespace,
     USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
     ENVIRONMENT: 'preview',
-    AWS_ACCESS_KEY_ID: 'test-access-key',
-    AWS_SECRET_ACCESS_KEY: 'test-secret-key',
-    JWT_SECRET: 'test-jwt-secret'
+    JWT_SECRET: 'test-jwt-secret',
+    send_email: {
+      send: async () => {}
+    }
   };
 
   it('should return 404 for unknown endpoints', async () => {
