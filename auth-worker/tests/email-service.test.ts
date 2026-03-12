@@ -69,7 +69,7 @@ describe('EmailService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toMatch(/^cf-email-/);
+      expect(result.messageId).toMatch(/^<cf-email-.*@example\.com>$/);
       expect(mockEnv.send_email.send).toHaveBeenCalledTimes(1);
 
       const sentMessage = vi.mocked(mockEnv.send_email.send).mock.calls[0][0] as EmailMessage;
@@ -77,6 +77,7 @@ describe('EmailService', () => {
       expect((sentMessage as any).from).toBe('test@example.com');
       expect((sentMessage as any).to).toBe('test@example.com');
       expect((sentMessage as any).raw).toContain('Subject:');
+      expect((sentMessage as any).raw).toContain(`Message-ID: ${result.messageId}`);
       expect((sentMessage as any).raw).toContain('Test text');
       expect((sentMessage as any).raw).toContain('Test HTML');
     });

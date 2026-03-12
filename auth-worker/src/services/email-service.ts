@@ -41,18 +41,20 @@ export class EmailService {
         };
       }
 
+      const messageId = this.generateMessageId();
       const rawMessage = this.buildRawMimeMessage({
         to,
         subject,
         htmlBody,
-        textBody
+        textBody,
+        messageId
       });
       const emailMessage = new EmailMessage(this.fromEmail, to, rawMessage);
       await this.sendEmailBinding.send(emailMessage);
 
       return {
         success: true,
-        messageId: this.generateMessageId()
+        messageId
       };
     } catch (error) {
       console.error('Error sending email:', error);
@@ -88,11 +90,23 @@ export class EmailService {
   }
 
   private generateMessageId(): string {
-    return `cf-email-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const fromDomain = this.getFromAddressDomain();
+    return `<cf-email-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@${fromDomain}>`;
   }
 
-  private buildRawMimeMessage(options: EmailOptions): string {
-    const { to, subject, htmlBody, textBody } = options;
+  private getFromAddressDomain(): string {
+    const emailMatch = this.fromEmail.match(/<?([^\s<>@]+@[^\s<>@]+)>?/);
+    if (!emailMatch) {
+      return 'workers.dev';
+    }
+
+    const [, address] = emailMatch;
+    const domain = address.split('@')[1];
+    return domain || 'workers.dev';
+  }
+
+  private buildRawMimeMessage(options: EmailOptions & { messageId: string }): string {
+    const { to, subject, htmlBody, textBody, messageId } = options;
     const boundary = `cf-boundary-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const plainTextBody = this.normalizeLineEndings(textBody || this.stripHtml(htmlBody));
     const normalizedHtmlBody = this.normalizeLineEndings(htmlBody);
@@ -101,6 +115,7 @@ export class EmailService {
       `From: ${this.fromEmail}`,
       `To: ${to}`,
       `Subject: ${subject}`,
+      `Message-ID: ${messageId}`,
       'MIME-Version: 1.0',
       `Date: ${new Date().toUTCString()}`,
       `Content-Type: multipart/alternative; boundary="${boundary}"`,
