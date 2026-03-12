@@ -17,8 +17,11 @@ beforeAll(async () => {
 
 describe('OTP Endpoints', () => {
   let mockEnv: Env;
+  let sendEmailMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    sendEmailMock = vi.fn().mockResolvedValue(undefined);
+
     mockEnv = {
       OTP_KV: {
         put: vi.fn(),
@@ -29,9 +32,11 @@ describe('OTP Endpoints', () => {
       } as unknown as KVNamespace,
       USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
       ENVIRONMENT: 'preview',
-      AWS_ACCESS_KEY_ID: 'test-access-key',
-      AWS_SECRET_ACCESS_KEY: 'test-secret-key',
-      JWT_SECRET: 'test-jwt-secret'
+      JWT_SECRET: 'test-jwt-secret',
+      FROM_EMAIL: 'verify@seasonedapp.com',
+      send_email: {
+        send: sendEmailMock
+      }
     };
 
     // Mock User Management Worker integration
@@ -84,6 +89,7 @@ describe('OTP Endpoints', () => {
       expect(result.message).toBe('OTP generated successfully. Please check your email for the verification code.');
       expect(result.otp).toBeUndefined();
       expect(result.emailSent).toBeDefined();
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
     });
 
     it('should reject request without email', async () => {

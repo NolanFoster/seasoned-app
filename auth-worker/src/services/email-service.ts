@@ -1,5 +1,6 @@
+import { EmailMessage } from 'cloudflare:email';
+import { createMimeMessage } from 'mimetext';
 import { Env } from '../types/env';
-import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 
 export interface EmailOptions {
   to: string;
@@ -14,36 +15,26 @@ export interface SendEmailResult {
   error?: string;
 }
 
-export class SESService {
-  private sesClient: SESClient;
-  private fromEmail: string;
+export class EmailService {
+  private readonly sendEmailBinding: Env['send_email'];
+  private readonly fromEmail: string;
 
   constructor(env: Env) {
-    // Validate AWS credentials
-    if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
-      throw new Error('AWS credentials not configured');
+    if (!env.send_email || typeof env.send_email.send !== 'function') {
+      throw new Error('Cloudflare send_email binding not configured');
     }
-    
+
+    this.sendEmailBinding = env.send_email;
     this.fromEmail = env.FROM_EMAIL || 'noreply@yourdomain.com';
-    
-    // Initialize SES client with credentials
-    this.sesClient = new SESClient({
-      region: env.AWS_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
   }
 
   /**
-   * Send an email using AWS SES
+   * Send an email using Cloudflare Email Workers send_email binding.
    */
   async sendEmail(options: EmailOptions): Promise<SendEmailResult> {
     try {
       const { to, subject, htmlBody, textBody } = options;
 
-      // Validate inputs
       if (!to || !subject || !htmlBody) {
         return {
           success: false,
@@ -51,75 +42,41 @@ export class SESService {
         };
       }
 
-      // Prepare the email request
-      const emailParams: SendEmailCommandInput = {
-        Source: this.fromEmail,
-        Destination: {
-          ToAddresses: [to]
-        },
-        Message: {
-          Subject: {
-            Data: subject,
-            Charset: 'UTF-8'
-          },
-          Body: {
-            Html: {
-              Data: htmlBody,
-              Charset: 'UTF-8'
-            },
-            ...(textBody && {
-              Text: {
-                Data: textBody,
-                Charset: 'UTF-8'
-              }
-            })
-          }
-        }
-      };
+      const message = createMimeMessage();
+      message.setSender(this.fromEmail);
+      message.setRecipient(to);
+      message.setSubject(subject);
 
-      // Send the email using AWS SES
-      const command = new SendEmailCommand(emailParams);
-      const response = await this.sesClient.send(command);
-
-      if (response.MessageId) {
-        return {
-          success: true,
-          messageId: response.MessageId
-        };
-      } else {
-        return {
-          success: false,
-          error: 'No message ID returned from SES'
-        };
+      if (textBody) {
+        message.addMessage({
+          contentType: 'text/plain',
+          data: textBody
+        });
       }
+
+      message.addMessage({
+        contentType: 'text/html',
+        data: htmlBody
+      });
+
+      const rawMessage = message.asRaw();
+      const emailMessage = new EmailMessage(this.fromEmail, to, rawMessage);
+      await this.sendEmailBinding.send(emailMessage);
+
+      return {
+        success: true,
+        messageId: this.generateMessageId()
+      };
     } catch (error) {
       console.error('Error sending email:', error);
-      
-      // Handle specific AWS errors
+
       if (error instanceof Error) {
-        if (error.name === 'MessageRejected') {
-          return {
-            success: false,
-            error: 'Email rejected by SES: Message content not allowed'
-          };
-        } else if (error.name === 'MailFromDomainNotVerified') {
-          return {
-            success: false,
-            error: 'Sender email domain not verified in SES'
-          };
-        } else if (error.name === 'ConfigurationSetDoesNotExist') {
-          return {
-            success: false,
-            error: 'SES configuration set not found'
-          };
-        } else {
-          return {
-            success: false,
-            error: `SES error: ${error.message}`
-          };
-        }
+        return {
+          success: false,
+          error: `Email send error: ${error.message}`
+        };
       }
-      
+
       return {
         success: false,
         error: 'Unknown error occurred while sending email'
@@ -128,7 +85,7 @@ export class SESService {
   }
 
   /**
-   * Send a verification email with OTP
+   * Send a verification email with OTP.
    */
   async sendVerificationEmail(to: string, otp: string, otpExpiryMinutes: number = 10): Promise<SendEmailResult> {
     const subject = 'Seasoned - Verify Your Email Address';
@@ -143,8 +100,12 @@ export class SESService {
     });
   }
 
+  private generateMessageId(): string {
+    return `cf-email-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
   /**
-   * Generate HTML version of verification email
+   * Generate HTML version of verification email.
    */
   private generateVerificationEmailHTML(email: string, otp: string, expiryMinutes: number): string {
     return `
@@ -323,7 +284,7 @@ export class SESService {
   }
 
   /**
-   * Generate text version of verification email
+   * Generate text version of verification email.
    */
   private generateVerificationEmailText(email: string, otp: string, expiryMinutes: number): string {
     return `

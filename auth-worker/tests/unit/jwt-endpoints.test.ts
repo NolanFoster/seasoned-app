@@ -11,10 +11,10 @@ const mockEnv = {
   USER_MANAGEMENT_WORKER_URL: 'http://localhost:8787',
   ENVIRONMENT: 'preview' as const,
   JWT_SECRET: 'test-secret-key-for-jwt-signing-32-chars-long',
-  AWS_ACCESS_KEY_ID: 'test-key',
-  AWS_SECRET_ACCESS_KEY: 'test-secret',
-  AWS_REGION: 'us-east-2',
-  FROM_EMAIL: 'test@example.com'
+  FROM_EMAIL: 'test@example.com',
+  send_email: {
+    send: vi.fn().mockResolvedValue(undefined)
+  }
 };
 
 describe('JWT Endpoints', () => {
