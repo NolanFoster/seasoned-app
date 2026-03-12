@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
+import AuthScreen from './AuthScreen.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
+import { useAuth } from './useAuth.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -35,7 +37,65 @@ function useDebounce(fn, delay) {
   }, [fn, delay])
 }
 
+function UserMenu({ user, onSignOut }) {
+  const [open, setOpen] = useState(false)
+  const [opacity, setOpacity] = useState(1)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  useEffect(() => {
+    function handleScroll() {
+      const y = window.scrollY
+      setOpacity(Math.max(0, 1 - y / 150))
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const initial = user?.email ? user.email[0] : '?'
+  const resolvedOpacity = open ? 1 : opacity
+  const hidden = resolvedOpacity === 0
+
+  return (
+    <div
+      className="user-menu"
+      ref={menuRef}
+      style={{ opacity: resolvedOpacity, pointerEvents: hidden ? 'none' : undefined }}
+    >
+      <button
+        className="user-avatar-btn"
+        onClick={() => setOpen((o) => !o)}
+        title={user?.email || 'Account'}
+        aria-label="Account menu"
+      >
+        {initial}
+      </button>
+      {open && (
+        <div className="user-menu-dropdown">
+          <div className="user-menu-info">
+            <div className="user-menu-email">{user?.email}</div>
+          </div>
+          <button className="user-menu-item" onClick={() => { setOpen(false); onSignOut() }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function App() {
+  const auth = useAuth()
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -59,18 +119,6 @@ export default function App() {
     if (hasText) return 'search'
     return 'idle'
   }
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-          inputRef.current && !inputRef.current.contains(e.target)) {
-        setShowDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
 
   // --- Search ---
   async function doSearch(query) {
@@ -122,6 +170,56 @@ export default function App() {
   }
 
   const debouncedSearch = useDebounce(doSearch, 300)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
+  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
+
+  // Restore focus after a blocking async action completes, but don't steal focus
+  // from elements the user has intentionally focused.
+  useEffect(() => {
+    if (!inputBusy) {
+      const active = document.activeElement
+      if (!active || active === document.body) inputRef.current?.focus()
+    }
+  }, [inputBusy])
+
+  // --- Auth gates (after all hooks) ---
+
+  if (auth.loading) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-card" style={{ textAlign: 'center' }}>
+          <div className="auth-brand">
+            <svg className="auth-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+            </svg>
+            <span className="auth-brand-name">Seasoned</span>
+          </div>
+          <svg className="auth-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--accent)', width: 28, height: 28 }}>
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+          </svg>
+        </div>
+      </div>
+    )
+  }
+
+  if (!auth.isAuthenticated) {
+    return <AuthScreen onRequestOTP={auth.requestOTP} onVerifyOTP={auth.verifyOTP} />
+  }
 
   function handleInputChange(e) {
     const val = e.target.value
@@ -321,22 +419,9 @@ export default function App() {
     ? `${RECIPE_VIEW_URL}/recipe/${savedRecipeId}`
     : null
 
-  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
-  // Only disable input for operations that replace the UI (clip/generate/elevate).
-  // Searching runs in the background so the input stays live and the keyboard stays open.
-  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
-
-  // Restore focus after a blocking async action completes, but don't steal focus
-  // from elements the user has intentionally focused.
-  useEffect(() => {
-    if (!inputBusy) {
-      const active = document.activeElement
-      if (!active || active === document.body) inputRef.current?.focus()
-    }
-  }, [inputBusy])
-
   return (
     <div className="app">
+      <UserMenu user={auth.user} onSignOut={auth.signOut} />
       <div className="omnibox-wrapper">
         <div className="brand">
           <svg className="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
