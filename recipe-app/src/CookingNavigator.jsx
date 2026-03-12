@@ -136,6 +136,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
   const recognitionRef = useRef(null)
+  const [isSpeaking, setIsSpeaking] = useState(false)
 
   const [gestureModeActive, setGestureModeActive] = useState(false)
   const videoRef = useRef(null)
@@ -262,17 +263,19 @@ export default function CookingNavigator({ recipe, onClose }) {
     })
   }
 
-  const handleVoiceResult = useCallback((transcript) => {
+  function handleVoiceResult(transcript) {
     const cmd = transcript.toLowerCase().trim()
     if (cmd.includes('next')) {
       setCurrentStep((s) => Math.min(s + 1, total - 1))
     } else if (cmd.includes('back') || cmd.includes('prev')) {
       setCurrentStep((s) => Math.max(s - 1, 0))
+    } else if (cmd.includes('read')) {
+      speakCurrentStep()
     } else if (cmd.includes('stop') || cmd.includes('close') || cmd.includes('exit') || cmd.includes('done')) {
       stopHandsFreeMode()
       onClose()
     }
-  }, [total, onClose]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   function startHandsFreeMode() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -332,6 +335,35 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   // Stop voice on unmount
   useEffect(() => () => stopHandsFreeMode(), [])
+
+  function stopSpeaking() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel()
+    setIsSpeaking(false)
+  }
+
+  function speakCurrentStep() {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const stepInstructions = instructions[currentStep] || ''
+    const relevantIngredients = matchIngredientsToStep(ingredients, stepInstructions)
+      .filter((c) => c.relevant)
+      .map((c) => c.text)
+    const ingredientLine = relevantIngredients.length > 0
+      ? ` Ingredients for this step: ${relevantIngredients.join(', ')}.`
+      : ''
+    const text = `Step ${currentStep + 1} of ${total}. ${stepInstructions}.${ingredientLine}`
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => setIsSpeaking(false)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // Cancel speech when navigating steps
+  useEffect(() => { stopSpeaking() }, [currentStep]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Stop speech on unmount
+  useEffect(() => () => stopSpeaking(), [])
 
   const stepText = instructions[currentStep] || ''
   const timerEntries = Object.entries(activeTimers)
@@ -413,6 +445,19 @@ export default function CookingNavigator({ recipe, onClose }) {
                 </svg>
               </button>
             )}
+            <button
+              className={`cn-hands-free-btn${isSpeaking ? ' cn-speak-btn--active' : ''}`}
+              onClick={isSpeaking ? stopSpeaking : speakCurrentStep}
+              title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
+              aria-pressed={isSpeaking}
+              aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+            </button>
             <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
           </div>
         </div>
@@ -466,7 +511,7 @@ export default function CookingNavigator({ recipe, onClose }) {
             ) : (
               <>
                 <span className="cn-hands-free-dot" aria-hidden="true"/>
-                <span>Listening — say &ldquo;next&rdquo;, &ldquo;back&rdquo;, or &ldquo;stop&rdquo;</span>
+                <span>Listening — say &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;read&rdquo;, or &ldquo;stop&rdquo;</span>
               </>
             )}
           </div>
