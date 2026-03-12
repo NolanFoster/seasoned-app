@@ -465,16 +465,27 @@ describe('CookingNavigator — ingredient usage tracking', () => {
     expect(flourChip).not.toHaveClass('cn-ingredient-chip--used')
   })
 
-  test('used ingredient chip still shows --active if relevant in current step (partial use)', () => {
+  test('used ingredient chip is not highlighted even when relevant to current step', () => {
     // Step 1: "Mix flour and eggs." — flour is relevant
     render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
     const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
-    // Mark flour as used on step 1
+    // Mark flour as used manually on step 1
     fireEvent.click(flourChip)
-    // Advance to step 2: "Add more flour and knead." — flour is still relevant
+    // Advance to step 2: "Add more flour and knead." — flour is still relevant but already used
     fireEvent.click(screen.getByText('Next →'))
     const flourChipStep2 = screen.getAllByRole('button', { name: /flour/i })[0]
     expect(flourChipStep2).toHaveClass('cn-ingredient-chip--used')
-    expect(flourChipStep2).toHaveClass('cn-ingredient-chip--active')
+    expect(flourChipStep2).not.toHaveClass('cn-ingredient-chip--active')
+  })
+
+  test('auto-marks relevant ingredients as used when advancing to next step', () => {
+    // Step 1: "Mix flour and eggs." — both are relevant
+    render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    // Advance without manually clicking anything
+    fireEvent.click(screen.getByText('Next →'))
+    // Both should now be marked as used (auto-crossed from step 1)
+    const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
+    expect(flourChip).toHaveClass('cn-ingredient-chip--used')
+    expect(flourChip).not.toHaveClass('cn-ingredient-chip--active')
   })
 })
