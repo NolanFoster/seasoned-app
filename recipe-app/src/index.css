@@ -1200,3 +1200,32 @@ html, body {
   border-radius: 12px;
   white-space: nowrap;
 }
+
+/* ── Text size modes ─────────────────────────────────────────────────── */
+.cn-text-size-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: auto;
+  min-width: 28px;
+  padding: 0 5px;
+  letter-spacing: -0.02em;
+}
+.cn-text-size-btn--active {
+  background: rgba(200,169,110,0.12);
+  border-color: rgba(200,169,110,0.5);
+  color: var(--accent);
+}
+
+.cn-card--text-large .cn-step-text        { font-size: 1.5rem; }
+.cn-card--text-large .cn-ingredient-chip  { font-size: 1.05rem; }
+.cn-card--text-large .cn-ingredients-label { font-size: 0.85rem; }
+.cn-card--text-large .cn-nav-btn          { font-size: 1.1rem; }
+.cn-card--text-large .cn-timer-pill       { font-size: 0.95rem; }
+.cn-card--text-large .cn-step-counter     { font-size: 0.85rem; }
+
+.cn-card--text-xl .cn-step-text           { font-size: 2rem; }
+.cn-card--text-xl .cn-ingredient-chip     { font-size: 1.25rem; }
+.cn-card--text-xl .cn-ingredients-label  { font-size: 1rem; }
+.cn-card--text-xl .cn-nav-btn             { font-size: 1.3rem; }
+.cn-card--text-xl .cn-timer-pill          { font-size: 1.1rem; }
+.cn-card--text-xl .cn-step-counter        { font-size: 1rem; }
