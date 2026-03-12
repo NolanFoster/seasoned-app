@@ -100,16 +100,63 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+// Parse a single token to a numeric quantity value, or return null.
+function parseQuantityToken(token) {
+  const unicode = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1/3, '⅔': 2/3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 }
+  if (Object.prototype.hasOwnProperty.call(unicode, token)) return unicode[token]
+  const frac = token.match(/^(\d+)\/(\d+)$/)
+  if (frac) return parseInt(frac[1]) / parseInt(frac[2])
+  // Handles "0.5", ".5", ".25", "200", "2", etc.
+  const n = parseFloat(token)
+  return isNaN(n) ? null : n
+}
+
+// Return the first numeric quantity found in an ingredient's token list, or null.
+function extractIngredientQuantity(tokens) {
+  for (const t of tokens) {
+    const q = parseQuantityToken(t)
+    if (q !== null) return q
+  }
+  return null
+}
+
+// Return the set of all numeric quantities mentioned in a step's text.
+function extractStepQuantities(stepText) {
+  const quantities = new Set()
+  const unicode = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1/3, '⅔': 2/3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 }
+  for (const [ch, val] of Object.entries(unicode)) {
+    if (stepText.includes(ch)) quantities.add(val)
+  }
+  // Match fractions (1/2), dot-led decimals (.5), and regular numbers (200, 2.5)
+  const re = /\d+\/\d+|\.\d+|\d+(?:\.\d+)?/g
+  let m
+  while ((m = re.exec(stepText)) !== null) {
+    const q = parseQuantityToken(m[0])
+    if (q !== null) quantities.add(q)
+  }
+  return quantities
+}
+
 function matchIngredientsToStep(ingredients, stepText) {
   const lower = stepText.toLowerCase()
+  const stepQuantities = extractStepQuantities(lower)
   return ingredients.map((ing) => {
     const tokens = ing.toLowerCase().split(/\s+/)
-    // Drop leading quantity/unit tokens
+    // Drop leading quantity/unit tokens to get the ingredient name
     const nameTokens = tokens.filter((t) => !QUANTITY_TOKENS.test(t))
-    const relevant =
+    const nameMatch =
       nameTokens.length > 0 &&
       nameTokens.some((token) => token.length > 2 && new RegExp(`\\b${escapeRegex(token)}\\b`).test(lower))
-    return { text: ing, relevant }
+    if (!nameMatch) return { text: ing, relevant: false }
+    // When the ingredient has a quantity AND the step mentions quantities,
+    // only match if the ingredient's quantity appears among the step's quantities.
+    // If the step mentions no quantities at all, accept all name matches (e.g. "add the sugar").
+    const ingQuantity = extractIngredientQuantity(tokens)
+    if (ingQuantity !== null && stepQuantities.size > 0) {
+      const found = [...stepQuantities].some(q => Math.abs(q - ingQuantity) < 0.01)
+      if (!found) return { text: ing, relevant: false }
+    }
+    return { text: ing, relevant: true }
   })
 }
 
