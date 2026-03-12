@@ -15,7 +15,7 @@ graph TB
     subgraph "Authentication Layer"
         D[Auth Worker]
         E[OTP KV Storage]
-        F[AWS SES Service]
+        F[Cloudflare Email Service]
     end
     
     subgraph "User Management Layer"
@@ -52,7 +52,7 @@ sequenceDiagram
     participant F as Frontend
     participant A as Auth Worker
     participant K as OTP KV
-    participant S as SES Service
+    participant S as Email Service
     participant UMW as User Management Worker
     participant DB as User Database
     
@@ -138,7 +138,7 @@ graph LR
   - OTP generation and verification
   - Rate limiting and security
   - Integration with User Management Worker
-  - Email delivery via AWS SES
+  - Email delivery via Cloudflare Email Workers
 - **Technologies**: Cloudflare Workers, Hono.js, KV Storage
 
 ### 2. **OTP Management System**
@@ -154,7 +154,7 @@ graph LR
 - **Security**: Environment-specific URLs and authentication
 
 ### 4. **Email Service Integration**
-- **Provider**: AWS SES for reliable email delivery
+- **Provider**: Cloudflare Email Workers send_email binding
 - **Templates**: Professional OTP delivery emails
 - **Fallback**: Graceful degradation if email service unavailable
 - **Security**: No sensitive data in email content
@@ -171,7 +171,7 @@ flowchart TD
     C --> E[Generate Secure OTP]
     E --> F[Hash with Salt]
     F --> G[Store in KV with TTL]
-    G --> H[Send via SES]
+    G --> H[Send via Cloudflare Email]
     H --> I[Return Success]
     
     D --> J{{OTP Exists?}}
@@ -213,7 +213,7 @@ graph TB
     subgraph "Configuration"
         D[KV Namespaces]
         E[Worker URLs]
-        F[SES Settings]
+        F[Email Settings]
         G[Rate Limits]
     end
     
@@ -273,7 +273,7 @@ graph LR
     subgraph "Health Checks"
         A[KV Connectivity]
         B[User Management Worker]
-        C[SES Configuration]
+        C[Email Binding Configuration]
         D[Overall Status]
     end
     

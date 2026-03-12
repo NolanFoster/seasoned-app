@@ -32,7 +32,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'cloudflare:email': path.resolve(__dirname, './tests/mocks/cloudflare-email.ts')
     }
   }
 });

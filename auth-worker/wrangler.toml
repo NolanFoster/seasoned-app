@@ -7,11 +7,15 @@ compatibility_date = "2024-01-01"
 binding = "OTP_KV"
 id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after creation
 
-# AWS SES environment variables
+# Environment variables
 [vars]
-AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+
+# Cloudflare Email Workers send_email binding
+[[send_email]]
+name = "send_email"
+allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 # JWT configuration
 # JWT_SECRET must be set as a Cloudflare secret using:
@@ -26,6 +30,10 @@ enabled = true
 [env.preview]
 name = "auth-worker-preview"
 
+[[env.preview.send_email]]
+name = "send_email"
+allowed_sender_addresses = ["verify@seasonedapp.com"]
+
 [[env.preview.kv_namespaces]]
 binding = "OTP_KV"
 id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
@@ -38,9 +46,12 @@ enabled = true
 name = "auth-worker-production"
 
 [env.production.vars]
-AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+
+[[env.production.send_email]]
+name = "send_email"
+allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 [[env.production.kv_namespaces]]
 binding = "OTP_KV"
@@ -54,9 +65,12 @@ enabled = true
 name = "auth-worker-staging"
 
 [env.staging.vars]
-AWS_REGION = "us-east-2"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+
+[[env.staging.send_email]]
+name = "send_email"
+allowed_sender_addresses = ["verify@seasonedapp.com"]
 
 [[env.staging.kv_namespaces]]
 binding = "OTP_KV"
