@@ -182,6 +182,8 @@ export default function CookingNavigator({ recipe, onClose }) {
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
 
   const voiceControlEnabled = useFlag('voice-control')
+  const gestureSupportEnabled = useFlag('gesture-support')
+  const dictationEnabled = useFlag('dictation')
 
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
@@ -501,7 +503,23 @@ export default function CookingNavigator({ recipe, onClose }) {
         <div className="cn-header">
           <span className="cn-step-counter">Step {currentStep + 1} of {total}</span>
           <div className="cn-header-actions">
-            {voiceControlEnabled && (
+            {gestureSupportEnabled && gestureSupported && (
+              <button
+                className={`cn-hands-free-btn${gestureModeActive ? ' cn-gesture-btn--active' : ''}`}
+                onClick={toggleGestureMode}
+                title={gestureModeActive ? 'Stop gesture mode' : 'Wave to navigate steps'}
+                aria-pressed={gestureModeActive}
+                aria-label={gestureModeActive ? 'Stop gesture mode' : 'Start gesture mode'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M18 11V6a2 2 0 00-4 0v5"/>
+                  <path d="M14 10V4a2 2 0 00-4 0v6"/>
+                  <path d="M10 10.5V6a2 2 0 00-4 0v8"/>
+                  <path d="M18 11a2 2 0 012 2v1a8 8 0 01-16 0v-3"/>
+                </svg>
+              </button>
+            )}
+            {voiceControlEnabled && dictationEnabled && (
               <button
                 className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
                 onClick={toggleHandsFreeMode}
@@ -584,7 +602,7 @@ export default function CookingNavigator({ recipe, onClose }) {
         )}
 
         {/* Hands-free status bar */}
-        {voiceControlEnabled && handsFreeModeActive && (
+        {voiceControlEnabled && dictationEnabled && handsFreeModeActive && (
           <div className={`cn-hands-free-bar${voiceStatus === 'listening' ? ' cn-hands-free-bar--listening' : ''}`} role="status" aria-live="polite">
             {voiceStatus === 'unsupported' ? (
               <span>Voice not supported — use Prev / Next buttons</span>
