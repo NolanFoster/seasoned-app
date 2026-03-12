@@ -198,7 +198,7 @@ export default function CookingNavigator({ recipe, onClose }) {
           stop: stopGesture, gestureProgress } =
     useGestureMode({
       videoRef,
-      onNext: () => { setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
+      onNext: () => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
       onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeepBack() },
     })
 
@@ -209,6 +209,18 @@ export default function CookingNavigator({ recipe, onClose }) {
       else next.add(index)
       return next
     })
+  }
+
+  function autoMarkCurrentStepIngredients() {
+    const chips = matchIngredientsToStep(ingredients, instructions[currentStepRef.current] || '')
+    const relevantIndices = chips.reduce((acc, chip, i) => { if (chip.relevant) acc.push(i); return acc }, [])
+    if (relevantIndices.length > 0) {
+      setUsedIngredients((prev) => {
+        const next = new Set(prev)
+        relevantIndices.forEach((i) => next.add(i))
+        return next
+      })
+    }
   }
 
   function toggleGestureMode() {
@@ -329,6 +341,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   function handleVoiceResult(transcript) {
     const cmd = transcript.toLowerCase().trim()
     if (cmd.includes('next')) {
+      autoMarkCurrentStepIngredients()
       setCurrentStep((s) => Math.min(s + 1, total - 1))
     } else if (cmd.includes('back') || cmd.includes('prev')) {
       setCurrentStep((s) => Math.max(s - 1, 0))
@@ -597,7 +610,7 @@ export default function CookingNavigator({ recipe, onClose }) {
                 const isUsed = usedIngredients.has(i)
                 const className = [
                   'cn-ingredient-chip',
-                  chip.relevant ? 'cn-ingredient-chip--active' : '',
+                  chip.relevant && !isUsed ? 'cn-ingredient-chip--active' : '',
                   isUsed ? 'cn-ingredient-chip--used' : '',
                 ].filter(Boolean).join(' ')
                 return (
@@ -629,7 +642,7 @@ export default function CookingNavigator({ recipe, onClose }) {
           <button
             className="cn-nav-btn cn-nav-btn--next"
             disabled={currentStep === total - 1}
-            onClick={() => setCurrentStep((s) => s + 1)}
+            onClick={() => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => s + 1) }}
           >
             Next →
           </button>
