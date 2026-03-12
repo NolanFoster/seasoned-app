@@ -53,8 +53,7 @@ function UserMenu({ user, onSignOut }) {
   useEffect(() => {
     function handleScroll() {
       const y = window.scrollY
-      const fade = Math.max(0.15, 1 - y / 200)
-      setOpacity(fade)
+      setOpacity(Math.max(0, 1 - y / 150))
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
@@ -62,12 +61,13 @@ function UserMenu({ user, onSignOut }) {
 
   const initial = user?.email ? user.email[0] : '?'
   const resolvedOpacity = open ? 1 : opacity
+  const hidden = resolvedOpacity === 0
 
   return (
     <div
       className="user-menu"
       ref={menuRef}
-      style={{ opacity: resolvedOpacity }}
+      style={{ opacity: resolvedOpacity, pointerEvents: hidden ? 'none' : undefined }}
     >
       <button
         className="user-avatar-btn"
