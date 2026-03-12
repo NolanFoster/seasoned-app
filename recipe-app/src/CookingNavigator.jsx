@@ -402,17 +402,19 @@ export default function CookingNavigator({ recipe, onClose }) {
         {/* Gesture Target Lock overlay — shown while user holds a recognised gesture */}
         {gestureSupportEnabled && gestureStatus === 'active' && gestureProgress && (
           <div className="cn-gesture-lock" aria-live="assertive" aria-atomic="true">
-            <svg className="cn-gesture-lock-ring" viewBox="0 0 56 56" aria-hidden="true">
-              <circle cx="28" cy="28" r="24" className="cn-gesture-lock-track" />
-              <circle
-                cx="28" cy="28" r="24"
-                className="cn-gesture-lock-fill"
-                style={{ strokeDashoffset: 150.8 * (1 - gestureProgress.progress) }}
-              />
-            </svg>
-            <span className="cn-gesture-lock-icon" aria-hidden="true">
-              {GESTURE_EMOJI[gestureProgress.gestureName] ?? '🖐️'}
-            </span>
+            <div className="cn-gesture-lock-ring-wrap">
+              <svg className="cn-gesture-lock-ring" viewBox="0 0 56 56" aria-hidden="true">
+                <circle cx="28" cy="28" r="24" className="cn-gesture-lock-track" />
+                <circle
+                  cx="28" cy="28" r="24"
+                  className="cn-gesture-lock-fill"
+                  style={{ strokeDashoffset: 150.8 * (1 - gestureProgress.progress) }}
+                />
+              </svg>
+              <span className="cn-gesture-lock-icon" aria-hidden="true">
+                {GESTURE_EMOJI[gestureProgress.gestureName] ?? '🖐️'}
+              </span>
+            </div>
             <span className="cn-gesture-lock-label">
               {gestureProgress.direction === 'next' ? 'Next Step' : 'Previous Step'}
             </span>
