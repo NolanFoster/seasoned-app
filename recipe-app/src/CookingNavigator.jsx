@@ -97,16 +97,67 @@ function renderStepWithTimers(stepText, stepIndex, activeTimers, onTimerStart) {
 
 const QUANTITY_TOKENS = /^(\d+[\d/.,]*|[¼½¾⅓⅔⅛⅜⅝⅞]|tbsp|tsp|cup|oz|lb|g|kg|ml|l|liter|litre|tablespoon|teaspoon|pinch|handful|bunch|clove|cloves|can|cans|slice|slices|piece|pieces|sprig|sprigs)s?$/i
 
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// Parse a single token to a numeric quantity value, or return null.
+function parseQuantityToken(token) {
+  const unicode = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1/3, '⅔': 2/3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 }
+  if (Object.prototype.hasOwnProperty.call(unicode, token)) return unicode[token]
+  const frac = token.match(/^(\d+)\/(\d+)$/)
+  if (frac) return parseInt(frac[1]) / parseInt(frac[2])
+  // Handles "0.5", ".5", ".25", "200", "2", etc.
+  const n = parseFloat(token)
+  return isNaN(n) ? null : n
+}
+
+// Return the first numeric quantity found in an ingredient's token list, or null.
+function extractIngredientQuantity(tokens) {
+  for (const t of tokens) {
+    const q = parseQuantityToken(t)
+    if (q !== null) return q
+  }
+  return null
+}
+
+// Return the set of all numeric quantities mentioned in a step's text.
+function extractStepQuantities(stepText) {
+  const quantities = new Set()
+  const unicode = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1/3, '⅔': 2/3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 }
+  for (const [ch, val] of Object.entries(unicode)) {
+    if (stepText.includes(ch)) quantities.add(val)
+  }
+  // Match fractions (1/2), dot-led decimals (.5), and regular numbers (200, 2.5)
+  const re = /\d+\/\d+|\.\d+|\d+(?:\.\d+)?/g
+  let m
+  while ((m = re.exec(stepText)) !== null) {
+    const q = parseQuantityToken(m[0])
+    if (q !== null) quantities.add(q)
+  }
+  return quantities
+}
+
 function matchIngredientsToStep(ingredients, stepText) {
   const lower = stepText.toLowerCase()
+  const stepQuantities = extractStepQuantities(lower)
   return ingredients.map((ing) => {
     const tokens = ing.toLowerCase().split(/\s+/)
-    // Drop leading quantity/unit tokens
+    // Drop leading quantity/unit tokens to get the ingredient name
     const nameTokens = tokens.filter((t) => !QUANTITY_TOKENS.test(t))
-    const relevant =
+    const nameMatch =
       nameTokens.length > 0 &&
-      nameTokens.some((token) => token.length > 2 && lower.includes(token))
-    return { text: ing, relevant }
+      nameTokens.some((token) => token.length > 2 && new RegExp(`\\b${escapeRegex(token)}\\b`).test(lower))
+    if (!nameMatch) return { text: ing, relevant: false }
+    // When the ingredient has a quantity AND the step mentions quantities,
+    // only match if the ingredient's quantity appears among the step's quantities.
+    // If the step mentions no quantities at all, accept all name matches (e.g. "add the sugar").
+    const ingQuantity = extractIngredientQuantity(tokens)
+    if (ingQuantity !== null && stepQuantities.size > 0) {
+      const found = [...stepQuantities].some(q => Math.abs(q - ingQuantity) < 0.01)
+      if (!found) return { text: ing, relevant: false }
+    }
+    return { text: ing, relevant: true }
   })
 }
 
@@ -126,6 +177,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   const total = instructions.length
 
   const [currentStep, setCurrentStep] = useState(0)
+  const [usedIngredients, setUsedIngredients] = useState(new Set())
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
@@ -146,9 +198,30 @@ export default function CookingNavigator({ recipe, onClose }) {
           stop: stopGesture, gestureProgress } =
     useGestureMode({
       videoRef,
-      onNext: () => { setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
+      onNext: () => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
       onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeepBack() },
     })
+
+  function handleIngredientToggle(index) {
+    setUsedIngredients((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
+  function autoMarkCurrentStepIngredients() {
+    const chips = matchIngredientsToStep(ingredients, instructions[currentStepRef.current] || '')
+    const relevantIndices = chips.reduce((acc, chip, i) => { if (chip.relevant) acc.push(i); return acc }, [])
+    if (relevantIndices.length > 0) {
+      setUsedIngredients((prev) => {
+        const next = new Set(prev)
+        relevantIndices.forEach((i) => next.add(i))
+        return next
+      })
+    }
+  }
 
   function toggleGestureMode() {
     if (gestureModeActive) {
@@ -268,6 +341,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   function handleVoiceResult(transcript) {
     const cmd = transcript.toLowerCase().trim()
     if (cmd.includes('next')) {
+      autoMarkCurrentStepIngredients()
       setCurrentStep((s) => Math.min(s + 1, total - 1))
     } else if (cmd.includes('back') || cmd.includes('prev')) {
       setCurrentStep((s) => Math.max(s - 1, 0))
@@ -532,14 +606,26 @@ export default function CookingNavigator({ recipe, onClose }) {
           <div className="cn-ingredients">
             <span className="cn-ingredients-label">Ingredients this step</span>
             <div className="cn-ingredient-chips">
-              {allChips.map((chip, i) => (
-                <span
-                  key={i}
-                  className={`cn-ingredient-chip${chip.relevant ? ' cn-ingredient-chip--active' : ''}`}
-                >
-                  {chip.text}
-                </span>
-              ))}
+              {allChips.map((chip, i) => {
+                const isUsed = usedIngredients.has(i)
+                const className = [
+                  'cn-ingredient-chip',
+                  chip.relevant && !isUsed ? 'cn-ingredient-chip--active' : '',
+                  isUsed ? 'cn-ingredient-chip--used' : '',
+                ].filter(Boolean).join(' ')
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={className}
+                    onClick={() => handleIngredientToggle(i)}
+                    title={isUsed ? 'Mark as not used' : 'Mark as used'}
+                    aria-pressed={isUsed}
+                  >
+                    {chip.text}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -556,7 +642,7 @@ export default function CookingNavigator({ recipe, onClose }) {
           <button
             className="cn-nav-btn cn-nav-btn--next"
             disabled={currentStep === total - 1}
-            onClick={() => setCurrentStep((s) => s + 1)}
+            onClick={() => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => s + 1) }}
           >
             Next →
           </button>

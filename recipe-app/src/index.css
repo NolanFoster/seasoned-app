@@ -941,19 +941,36 @@ html, body {
 }
 
 .cn-ingredient-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
   font-size: 0.8rem;
   padding: 3px 10px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 99px;
   color: var(--text-muted);
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
+  cursor: pointer;
 }
 
 .cn-ingredient-chip--active {
   border-color: var(--accent);
   background: rgba(200,169,110,0.1);
   color: var(--text);
+}
+
+.cn-ingredient-chip--used {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.cn-ingredient-chip--used.cn-ingredient-chip--active {
+  opacity: 0.75;
+  text-decoration: line-through;
+  border-color: var(--accent);
+  background: rgba(200,169,110,0.1);
 }
 
 /* Navigation */
