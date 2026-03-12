@@ -164,6 +164,75 @@ describe('OTP Endpoints', () => {
       expect(result.otp).toBeUndefined();
       expect(result.emailSent).toBeDefined();
     });
+
+    it('should return success with emailSent false when email delivery fails', async () => {
+      sendEmailMock.mockRejectedValueOnce(new Error('send failed'));
+
+      const request = new Request('http://localhost/otp/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com' })
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+      expect(result.emailSent).toBe(false);
+    });
+
+    it('should return success with emailSent false when email binding is missing', async () => {
+      const request = new Request('http://localhost/otp/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com' })
+      });
+
+      const envWithoutEmailBinding = {
+        ...mockEnv,
+        send_email: undefined as any
+      };
+
+      const response = await app.fetch(request, envWithoutEmailBinding);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+      expect(result.emailSent).toBe(false);
+    });
+
+    it('should return 500 when OTP storage fails', async () => {
+      vi.mocked(mockEnv.OTP_KV.put).mockRejectedValueOnce(new Error('KV write failed'));
+
+      const request = new Request('http://localhost/otp/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com' })
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(500);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Failed to store OTP');
+    });
+
+    it('should return 500 for invalid JSON payload', async () => {
+      const request = new Request('http://localhost/otp/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{bad-json'
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(500);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Internal server error');
+    });
   });
 
   describe('POST /otp/verify', () => {
@@ -405,6 +474,108 @@ describe('OTP Endpoints', () => {
       const finalStatusResult = await finalStatusResponse.json() as any;
 
       expect(finalStatusResult.exists).toBe(false);
+    });
+  });
+
+  describe('POST /email/send-verification', () => {
+    it('should send verification email successfully', async () => {
+      const request = new Request('http://localhost/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com', otp: '123456', expiryMinutes: 15 })
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Verification email sent successfully');
+      expect(result.messageId).toBeDefined();
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should reject request without email', async () => {
+      const request = new Request('http://localhost/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp: '123456' })
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Email is required and must be a string');
+    });
+
+    it('should reject request without otp', async () => {
+      const request = new Request('http://localhost/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com' })
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(400);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('OTP is required and must be a string');
+    });
+
+    it('should return 500 when email provider returns failure', async () => {
+      sendEmailMock.mockRejectedValueOnce(new Error('send failed'));
+
+      const request = new Request('http://localhost/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com', otp: '123456' })
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(500);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Failed to send verification email');
+      expect(result.error).toBeDefined();
+    });
+
+    it('should return 500 when email binding is missing', async () => {
+      const envWithoutEmailBinding = {
+        ...mockEnv,
+        send_email: undefined as any
+      };
+
+      const request = new Request('http://localhost/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com', otp: '123456' })
+      });
+
+      const response = await app.fetch(request, envWithoutEmailBinding);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(500);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Internal server error');
+    });
+
+    it('should return 500 for malformed JSON body', async () => {
+      const request = new Request('http://localhost/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{bad-json'
+      });
+
+      const response = await app.fetch(request, mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(500);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Internal server error');
     });
   });
 });

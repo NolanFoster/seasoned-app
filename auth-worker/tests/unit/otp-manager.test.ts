@@ -6,6 +6,7 @@ import {
   deleteOTP,
   getOTPStats
 } from '../../src/utils/otp-manager';
+import { hashEmail } from '../../src/utils/crypto';
 
 // Setup crypto polyfill for testing
 beforeAll(async () => {
@@ -83,6 +84,19 @@ describe('OTP Manager', () => {
       expect(result.success).toBe(true);
       expect(result.otp).toBeDefined();
     });
+
+    it('should return failure when KV put throws', async () => {
+      const failingKV = {
+        ...mockKV,
+        put: async () => {
+          throw new Error('KV put failed');
+        }
+      } as unknown as KVNamespace;
+
+      const result = await storeOTP(failingKV, 'test@example.com', '123456');
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Failed to store OTP');
+    });
   });
 
   describe('verifyOTPForEmail', () => {
@@ -141,6 +155,34 @@ describe('OTP Manager', () => {
       expect(secondVerifyResult.success).toBe(false);
       expect(secondVerifyResult.message).toBe('OTP not found or expired');
     });
+
+    it('should return expired when OTP has expired', async () => {
+      const email = 'expired@example.com';
+      await storeOTP(mockKV as unknown as KVNamespace, email, '123456', 0.001);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const verifyResult = await verifyOTPForEmail(mockKV as unknown as KVNamespace, email, '123456');
+      expect(verifyResult.success).toBe(false);
+      expect(verifyResult.message).toBe('OTP has expired');
+    });
+
+    it('should reject immediately when attempts are already maxed', async () => {
+      const email = 'maxed@example.com';
+      const emailHash = await hashEmail(email);
+      const record = {
+        hash: 'irrelevant',
+        salt: 'irrelevant',
+        expiresAt: Date.now() + 60_000,
+        attempts: 3,
+        createdAt: Date.now()
+      };
+
+      await (mockKV as unknown as KVNamespace).put(emailHash, JSON.stringify(record), { expirationTtl: 120 });
+      const verifyResult = await verifyOTPForEmail(mockKV as unknown as KVNamespace, email, '123456');
+
+      expect(verifyResult.success).toBe(false);
+      expect(verifyResult.message).toBe('Maximum verification attempts exceeded');
+    });
   });
 
   describe('hasOTP', () => {
@@ -170,6 +212,18 @@ describe('OTP Manager', () => {
       const exists = await hasOTP(mockKV as unknown as KVNamespace, email);
       expect(exists).toBe(false);
     });
+
+    it('should return false when KV get throws', async () => {
+      const failingKV = {
+        ...mockKV,
+        get: async () => {
+          throw new Error('KV get failed');
+        }
+      } as unknown as KVNamespace;
+
+      const exists = await hasOTP(failingKV, 'test@example.com');
+      expect(exists).toBe(false);
+    });
   });
 
   describe('deleteOTP', () => {
@@ -189,6 +243,18 @@ describe('OTP Manager', () => {
       
       const deleted = await deleteOTP(mockKV as unknown as KVNamespace, email);
       expect(deleted).toBe(true);
+    });
+
+    it('should return false when KV delete throws', async () => {
+      const failingKV = {
+        ...mockKV,
+        delete: async () => {
+          throw new Error('KV delete failed');
+        }
+      } as unknown as KVNamespace;
+
+      const deleted = await deleteOTP(failingKV, 'test@example.com');
+      expect(deleted).toBe(false);
     });
   });
 
@@ -226,6 +292,18 @@ describe('OTP Manager', () => {
       expect(stats.exists).toBe(false);
       expect(stats.attempts).toBeUndefined();
       expect(stats.expiresAt).toBeUndefined();
+    });
+
+    it('should return not exists when KV get throws', async () => {
+      const failingKV = {
+        ...mockKV,
+        get: async () => {
+          throw new Error('KV get failed');
+        }
+      } as unknown as KVNamespace;
+
+      const stats = await getOTPStats(failingKV, 'test@example.com');
+      expect(stats.exists).toBe(false);
     });
   });
 
