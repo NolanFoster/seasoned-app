@@ -15,6 +15,8 @@ try {
     bootstrap: {
       'voice-control': true,
       'gesture-support': true,
+      'dictation': true,
+      'elevate-recipe': true,
     },
   })
 } catch (err) {

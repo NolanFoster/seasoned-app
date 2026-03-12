@@ -184,6 +184,7 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   const voiceControlEnabled = useFlag('voice-control')
   const gestureSupportEnabled = useFlag('gesture-support')
+  const dictationEnabled = useFlag('dictation')
 
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
@@ -519,7 +520,7 @@ export default function CookingNavigator({ recipe, onClose }) {
                 </svg>
               </button>
             )}
-            {voiceControlEnabled && (
+            {voiceControlEnabled && dictationEnabled && (
               <button
                 className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
                 onClick={toggleHandsFreeMode}
@@ -602,7 +603,7 @@ export default function CookingNavigator({ recipe, onClose }) {
         )}
 
         {/* Hands-free status bar */}
-        {voiceControlEnabled && handsFreeModeActive && (
+        {voiceControlEnabled && dictationEnabled && handsFreeModeActive && (
           <div className={`cn-hands-free-bar${voiceStatus === 'listening' ? ' cn-hands-free-bar--listening' : ''}`} role="status" aria-live="polite">
             {voiceStatus === 'unsupported' ? (
               <span>Voice not supported — use Prev / Next buttons</span>

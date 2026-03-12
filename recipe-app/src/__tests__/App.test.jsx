@@ -3,6 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 
+jest.mock('../flaggly.js', () => ({
+  useFlag: (key) => true,
+  flaggly: {},
+}))
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function mockFetchOk(responseBody) {
