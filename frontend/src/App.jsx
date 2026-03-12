@@ -15,6 +15,8 @@ import LoadingRecipes from './components/LoadingRecipes.jsx'
 import NoRecipesFound from './components/NoRecipesFound.jsx'
 import RecipeUtils, { getRecipeDescription, getFilteredIngredients, getFilteredInstructions, decodeHtmlEntities } from './components/RecipeUtils.jsx'
 import TimerManager from './components/TimerManager.jsx'
+import AuthModal from './components/AuthModal.jsx'
+import { useAuth } from './hooks/useAuth.js'
 
 const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
@@ -656,6 +658,8 @@ function App() {
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user, isAuthenticated, login: authLogin, logout: authLogout } = useAuth();
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [clippedRecipePreview, setClippedRecipePreview] = useState(null);
@@ -2580,6 +2584,10 @@ function App() {
           onClipDialogOpen={() => setIsClipping(true)}
           onGenerateAiRecipe={generateAiRecipeFromSearch}
           isGeneratingAiRecipe={isGeneratingAiRecipe}
+          user={user}
+          isAuthenticated={isAuthenticated}
+          onAuthClick={() => setShowAuthModal(true)}
+          onSignOut={authLogout}
         />
       
       {/* Mobile FAB - outside header, bottom left */}
@@ -2587,6 +2595,17 @@ function App() {
       {/* <button className="fab fab-add fab-mobile" onClick={() => setShowAddForm(true)}>
         <span className="fab-icon">+</span>
       </button> */}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onLogin={(token, user) => {
+            authLogin(token, user);
+            setShowAuthModal(false);
+          }}
+        />
+      )}
 
       {/* Main container - scrollable content */}
       <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
