@@ -94,30 +94,6 @@ export default function App() {
   const dropdownRef = useRef(null)
   const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
 
-  if (auth.loading) {
-    return (
-      <div className="auth-screen">
-        <div className="auth-card" style={{ textAlign: 'center' }}>
-          <div className="auth-brand">
-            <svg className="auth-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
-              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
-              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
-            </svg>
-            <span className="auth-brand-name">Seasoned</span>
-          </div>
-          <svg className="auth-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--accent)', width: 28, height: 28 }}>
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-          </svg>
-        </div>
-      </div>
-    )
-  }
-
-  if (!auth.isAuthenticated) {
-    return <AuthScreen onRequestOTP={auth.requestOTP} onVerifyOTP={auth.verifyOTP} />
-  }
-
   const isUrl = isValidUrl(input.trim())
   const hasText = input.trim().length >= 2 && !isUrl
 
@@ -127,18 +103,6 @@ export default function App() {
     if (hasText) return 'search'
     return 'idle'
   }
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-          inputRef.current && !inputRef.current.contains(e.target)) {
-        setShowDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
 
   // --- Search ---
   async function doSearch(query) {
@@ -190,6 +154,56 @@ export default function App() {
   }
 
   const debouncedSearch = useDebounce(doSearch, 300)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
+  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
+
+  // Restore focus after a blocking async action completes, but don't steal focus
+  // from elements the user has intentionally focused.
+  useEffect(() => {
+    if (!inputBusy) {
+      const active = document.activeElement
+      if (!active || active === document.body) inputRef.current?.focus()
+    }
+  }, [inputBusy])
+
+  // --- Auth gates (after all hooks) ---
+
+  if (auth.loading) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-card" style={{ textAlign: 'center' }}>
+          <div className="auth-brand">
+            <svg className="auth-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/>
+              <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4"/>
+              <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
+            </svg>
+            <span className="auth-brand-name">Seasoned</span>
+          </div>
+          <svg className="auth-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--accent)', width: 28, height: 28 }}>
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+          </svg>
+        </div>
+      </div>
+    )
+  }
+
+  if (!auth.isAuthenticated) {
+    return <AuthScreen onRequestOTP={auth.requestOTP} onVerifyOTP={auth.verifyOTP} />
+  }
 
   function handleInputChange(e) {
     const val = e.target.value
@@ -388,20 +402,6 @@ export default function App() {
   const shareUrl = savedRecipeId && RECIPE_VIEW_URL
     ? `${RECIPE_VIEW_URL}/recipe/${savedRecipeId}`
     : null
-
-  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
-  // Only disable input for operations that replace the UI (clip/generate/elevate).
-  // Searching runs in the background so the input stays live and the keyboard stays open.
-  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
-
-  // Restore focus after a blocking async action completes, but don't steal focus
-  // from elements the user has intentionally focused.
-  useEffect(() => {
-    if (!inputBusy) {
-      const active = document.activeElement
-      if (!active || active === document.body) inputRef.current?.focus()
-    }
-  }, [inputBusy])
 
   return (
     <div className="app">
