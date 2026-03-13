@@ -1,35 +1,38 @@
-import { formatDuration, formatIngredientAmount } from '../../shared/utility-functions.js';
+import { renderRecipeCard } from './renderRecipeCard.jsx';
+
+// Normalise an ingredient to a plain string (mirrors RecipeCardDisplay logic)
+function ingredientToString(ing) {
+  if (typeof ing === 'string') return ing;
+  return ing.name || ing.text || JSON.stringify(ing);
+}
 
 // Generate the HTML template for the recipe page
 export function generateRecipeHTML(recipe) {
-  // Extract recipe data
-  const name = recipe.name || recipe.title || 'Untitled Recipe';
-  const description = recipe.description || '';
-  const prepTime = recipe.prep_time || recipe.prepTime;
-  const cookTime = recipe.cook_time || recipe.cookTime;
-  const totalTime = recipe.total_time || recipe.totalTime;
-  const recipeYield = recipe.recipe_yield || recipe.recipeYield || recipe.yield;
-  const ingredients = recipe.ingredients || [];
-  const instructions = recipe.instructions || [];
-  const imageUrl = recipe.image_url || recipe.imageUrl || recipe.image || '';
-  const sourceUrl = recipe.source_url || recipe.sourceUrl || recipe.url || '';
+  // Normalise field aliases so RecipeCardDisplay always gets the canonical names
+  const normalised = {
+    ...recipe,
+    name: recipe.name || recipe.title || 'Untitled Recipe',
+    prep_time: recipe.prep_time || recipe.prepTime,
+    cook_time: recipe.cook_time || recipe.cookTime,
+    recipe_yield: recipe.recipe_yield || recipe.recipeYield || recipe.yield,
+    image: recipe.image || recipe.image_url || recipe.imageUrl,
+    source_url: recipe.source_url || recipe.sourceUrl || recipe.url,
+  };
+
+  const name = normalised.name;
+  const description = normalised.description || '';
+  const imageUrl = normalised.image || '';
+  const prepTime = normalised.prep_time;
+  const cookTime = normalised.cook_time;
+  const ingredients = normalised.ingredients || [];
+  const instructions = normalised.instructions || [];
   const videoUrl = recipe.video_url || recipe.videoUrl || '';
-  const nutrition = recipe.nutrition || {};
 
   // Compute total cook duration for wake lock auto-off
   const recipeDurationMins = parseDurationToMinutes(prepTime) + parseDurationToMinutes(cookTime);
 
-  // Generate styles
-  const styles = generateStyles();
-
-  // Determine source badge
-  const source = recipe.source || 'recipe';
-  const sourceBadgeMap = {
-    clipped: { label: 'Clipped', color: '#5bb87a' },
-    ai_generated: { label: 'AI Generated', color: '#c8a96e' },
-    elevated: { label: 'Elevated', color: '#e8c87a' },
-  };
-  const sourceBadge = sourceBadgeMap[source] || { label: 'Recipe', color: '#4a6e52' };
+  // SSR the recipe card using the shared React component
+  const cardHTML = renderRecipeCard(normalised);
 
   // Generate the HTML
   return `<!DOCTYPE html>
@@ -52,64 +55,16 @@ export function generateRecipeHTML(recipe) {
   <meta name="twitter:description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
   ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ''}
 
-  <style>${styles}</style>
+  <style>${generateStyles()}</style>
 </head>
 <body>
   <div class="page-wrapper">
-    <div class="recipe-card">
-      <!-- Header -->
-      <div class="recipe-card-header">
-        <h2 class="recipe-title">${escapeHtml(name)}</h2>
-        <div class="recipe-header-actions">
-          ${sourceUrl && source !== 'ai_generated' ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="source-link">Source ↗</a>` : ''}
-          ${instructions.length > 0 ? `<button class="cook-btn" id="cook-btn" title="Step-by-step cooking mode">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="flex-shrink:0">
-              <path d="M5 3l14 9-14 9V3z"/>
-            </svg>
-            Cook
-          </button>` : ''}
-          <button class="wake-lock-btn" id="wake-lock-btn" title="Keep screen on while cooking">
-            <span class="wake-lock-icon" id="wake-lock-icon">🌙</span>
-            <span class="wake-lock-label" id="wake-lock-label"></span>
-          </button>
-        </div>
-      </div>
-
-      ${imageUrl ? `<img class="recipe-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}">` : ''}
-
-      ${description ? `<p class="recipe-description">${escapeHtml(description)}</p>` : ''}
-
-      <!-- Meta -->
-      <div class="recipe-meta">
-        ${prepTime ? `<span class="recipe-meta-pill"><strong>Prep</strong> ${escapeHtml(formatDuration(prepTime))}</span>` : ''}
-        ${cookTime ? `<span class="recipe-meta-pill"><strong>Cook</strong> ${escapeHtml(formatDuration(cookTime))}</span>` : ''}
-        ${recipeYield ? `<span class="recipe-meta-pill"><strong>Serves</strong> ${escapeHtml(recipeYield)}</span>` : ''}
-        ${videoUrl ? `<a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="meta-link">Watch Video ↗</a>` : ''}
-      </div>
-
-      <!-- Body -->
-      <div class="recipe-body">
-        <div class="recipe-section">
-          <h3>Ingredients</h3>
-          <ul>
-            ${ingredients.map(ingredient => {
-              const formatted = formatIngredientAmount(ingredient);
-              return `<li>${escapeHtml(formatted)}</li>`;
-            }).join('')}
-          </ul>
-        </div>
-        <div class="recipe-section">
-          <h3>Instructions</h3>
-          <ol>
-            ${instructions.map((instruction) => {
-              const text = typeof instruction === 'string' ? instruction :
-                         (instruction.text || instruction.name || String(instruction));
-              return `<li>${escapeHtml(text)}</li>`;
-            }).join('')}
-          </ol>
-        </div>
-      </div>
-    </div>
+    ${cardHTML}
+    ${videoUrl ? `<div class="page-video-link"><a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch Video ↗</a></div>` : ''}
+    <!-- Wake lock: floating button, touch devices only (CSS media query) -->
+    <button class="wake-lock-float" id="wake-lock-btn" title="Keep screen on while cooking" aria-label="Keep screen on">
+      <span id="wake-lock-icon">🌙</span>
+    </button>
   </div>
   
   <script>
@@ -117,7 +72,6 @@ export function generateRecipeHTML(recipe) {
     (function() {
       var btn = document.getElementById('wake-lock-btn');
       var icon = document.getElementById('wake-lock-icon');
-      var label = document.getElementById('wake-lock-label');
       if (!btn) return;
 
       if (!('wakeLock' in navigator)) {
@@ -138,7 +92,6 @@ export function generateRecipeHTML(recipe) {
           btn.classList.remove('active');
           btn.title = 'Keep screen on while cooking';
           icon.textContent = '🌙';
-          label.textContent = '';
         }
       }
 
@@ -155,7 +108,6 @@ export function generateRecipeHTML(recipe) {
           setActive(true);
           var autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
           if (autoOff > 0) {
-            label.textContent = autoOff + 'm';
             wakeLockTimer = setTimeout(releaseWakeLock, autoOff * 60 * 1000);
           }
           wakeLock.addEventListener('release', function() {
@@ -185,7 +137,7 @@ export function generateRecipeHTML(recipe) {
       if (!cookBtn) return;
 
       var rawIngredients = ${JSON.stringify(
-        ingredients.map(ing => formatIngredientAmount(ing))
+        ingredients.map(ing => ingredientToString(ing))
       )};
       var rawInstructions = ${JSON.stringify(
         instructions.map(inst => typeof inst === 'string' ? inst : (inst.text || inst.name || String(inst)))
@@ -483,48 +435,59 @@ function generateStyles() {
       flex-wrap: wrap;
     }
 
-    @media (max-width: 480px) {
-      .recipe-title { width: 100%; flex-basis: 100%; }
-    }
-
-    .recipe-badge {
-      flex-shrink: 0;
-      margin-top: 3px;
-      padding: 3px 10px;
-      border-radius: 99px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #fff;
-      border-left: 3px solid rgba(255,255,255,0.3);
+    /* Title row — matches RecipeCardDisplay structure */
+    .recipe-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      flex-wrap: wrap;
     }
 
     .recipe-title {
-      flex: 1;
       font-size: 1.375rem;
       font-weight: 700;
       line-height: 1.3;
       color: var(--text);
+      min-width: 0;
     }
 
-    .recipe-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .recipe-source-badge {
       flex-shrink: 0;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
     }
 
-    .source-link {
+    /* Source link inside recipe-meta */
+    .recipe-meta a {
       color: var(--accent);
       text-decoration: none;
       font-size: 0.875rem;
       font-weight: 500;
-      padding: 4px 8px;
+      padding: 3px 8px;
     }
-    .source-link:hover {
+    .recipe-meta a:hover {
       text-decoration: underline;
     }
+
+    /* Page-level video link */
+    .page-video-link {
+      max-width: 720px;
+      margin: 8px auto 0;
+      padding: 0 16px;
+      text-align: right;
+    }
+    .page-video-link a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+    .page-video-link a:hover { text-decoration: underline; }
 
     /* Recipe Image */
     .recipe-image {
@@ -630,43 +593,32 @@ function generateStyles() {
       margin-bottom: 6px;
     }
 
-    /* Wake Lock Button */
-    .wake-lock-btn {
+    /* Wake Lock — floating button, touch devices only */
+    .wake-lock-float {
       display: none;
-      flex-direction: column;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 50;
+      width: 44px;
+      height: 44px;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      border-radius: 50%;
       cursor: pointer;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
       transition: background 0.2s, box-shadow 0.2s;
-      padding: 0;
-      line-height: 1;
     }
     @media (hover: none) and (pointer: coarse) {
-      .wake-lock-btn { display: flex; }
+      .wake-lock-float { display: flex; }
     }
-    .wake-lock-btn:hover {
-      background: var(--border);
-    }
-    .wake-lock-btn.active {
+    .wake-lock-float.active {
       background: rgba(255, 200, 0, 0.15);
       border-color: rgba(255, 200, 0, 0.4);
-      box-shadow: 0 0 8px rgba(255, 200, 0, 0.3);
-    }
-    .wake-lock-icon {
-      font-size: 0.95em;
-      line-height: 1;
-    }
-    .wake-lock-label {
-      font-size: 0.5em;
-      font-weight: 600;
-      color: var(--text-muted);
-      line-height: 1;
-      margin-top: 1px;
+      box-shadow: 0 0 12px rgba(255, 200, 0, 0.4);
     }
 
     /* ── Cook Button ── */
