@@ -768,6 +768,7 @@ export default function CookingNavigator({ recipe, onClose }) {
           </div>
         )}
 
+        <div className="cn-scroll-body">
         {currentStep === -1 ? (
           <div className="cn-mise-en-place">
             <div className="cn-step-body">
@@ -868,6 +869,7 @@ export default function CookingNavigator({ recipe, onClose }) {
             )}
           </>
         )}
+        </div>
 
         {/* Navigation */}
         <div className="cn-nav">
