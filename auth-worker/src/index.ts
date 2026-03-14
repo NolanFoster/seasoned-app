@@ -179,8 +179,8 @@ app.post('/otp/verify', async (c) => {
           const { JWTService } = await import('./services/jwt-service');
           const jwtService = new JWTService(c.env);
           
-          // Create token with 24 hour expiration
-          const tokenResult = await jwtService.createToken(result.user_id, email, 86400);
+          // Create token with 7 day expiration
+          const tokenResult = await jwtService.createToken(result.user_id, email, 604800);
           
           if (tokenResult.success && tokenResult.token) {
             jwtToken = tokenResult.token;
@@ -248,7 +248,7 @@ app.post('/otp/verify', async (c) => {
           success: true,
           message: 'OTP verified successfully',
           token: jwtToken,
-          expiresIn: 86400,
+          expiresIn: 604800,
           user: {
             id: result.user_id,
             email: email
@@ -306,28 +306,19 @@ app.post('/auth/refresh', async (c) => {
         }, 400);
       }
 
-      // Check if token is close to expiration (within 1 hour)
-      const timeUntilExpiration = jwtService.getTimeUntilExpiration(verifyResult.payload);
-      if (timeUntilExpiration > 3600) {
-        return c.json({
-          success: false,
-          message: 'Token is not close to expiration yet'
-        }, 400);
-      }
-
-      // Create a new token with extended expiration
+      // Create a new token with extended expiration (sliding window — refresh any valid token)
       const newTokenResult = await jwtService.createToken(
         verifyResult.payload.sub,
         verifyResult.payload.email,
-        86400 // 24 hours
+        604800 // 7 days
       );
-      
+
       if (newTokenResult.success && newTokenResult.token) {
         return c.json({
           success: true,
           message: 'Token refreshed successfully',
           token: newTokenResult.token,
-          expiresIn: 86400,
+          expiresIn: 604800,
           user: {
             id: verifyResult.payload.sub,
             email: verifyResult.payload.email
