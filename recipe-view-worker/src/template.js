@@ -1,4 +1,4 @@
-import { renderRecipeCard } from './renderRecipeCard.jsx';
+import { renderRecipeCard } from './renderRecipeCard.js';
 
 // Normalise an ingredient to a plain string (mirrors RecipeCardDisplay logic)
 function ingredientToString(ing) {
