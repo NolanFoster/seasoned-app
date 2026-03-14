@@ -591,4 +591,68 @@ describe('CookingNavigator — mise en place', () => {
     const flourChipStep1 = screen.getByRole('button', { name: /200g flour/i })
     expect(flourChipStep1).not.toHaveClass('cn-ingredient-chip--used')
   })
+
+  test('groups ingredients by action type showing multiple group labels', () => {
+    const recipe = {
+      name: 'Group Test',
+      ingredients: ['2 cloves garlic', '1 cup flour', '1 lb chicken breast'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Chop / dice / mince')).toBeInTheDocument()
+    expect(screen.getByText('Measure')).toBeInTheDocument()
+    expect(screen.getByText('Marinate / temper')).toBeInTheDocument()
+  })
+
+  test('places garlic under Chop / dice / mince', () => {
+    const recipe = {
+      name: 'Garlic Test',
+      ingredients: ['3 cloves garlic'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Chop / dice / mince')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /3 cloves garlic/i })).toBeInTheDocument()
+  })
+
+  test('places flour under Measure', () => {
+    const recipe = {
+      name: 'Flour Test',
+      ingredients: ['2 cups flour'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Measure')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2 cups flour/i })).toBeInTheDocument()
+  })
+
+  test('places salmon under Marinate / temper', () => {
+    const recipe = {
+      name: 'Salmon Test',
+      ingredients: ['1 lb salmon fillet'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Marinate / temper')).toBeInTheDocument()
+  })
+
+  test('places potatoes under Peel', () => {
+    const recipe = {
+      name: 'Potato Test',
+      ingredients: ['3 large potatoes'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Peel')).toBeInTheDocument()
+  })
+
+  test('places unknown ingredient without unit under Other', () => {
+    const recipe = {
+      name: 'Other Test',
+      ingredients: ['lemon zest'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Other')).toBeInTheDocument()
+  })
 })
