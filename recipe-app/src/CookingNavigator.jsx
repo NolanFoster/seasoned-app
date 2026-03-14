@@ -260,6 +260,23 @@ const INGREDIENT_CATEGORIES = [
   },
 ]
 
+const CATEGORY_PREP_MINUTES = {
+  'Chop / dice / mince': 3,
+  'Peel':                2,
+  'Wash & dry':          1,
+  'Marinate / temper':   5,
+  'Measure':             0.5,
+  'Other':               1,
+}
+
+function estimatePrepMinutes(ingredients) {
+  const total = ingredients.reduce((sum, ing) => {
+    const label = categorizeIngredient(ing)
+    return sum + (CATEGORY_PREP_MINUTES[label] ?? 1)
+  }, 0)
+  return Math.max(1, Math.round(total))
+}
+
 function categorizeIngredient(text) {
   const lower = text.toLowerCase()
   for (const { label, keywords } of INGREDIENT_CATEGORIES) {
@@ -759,6 +776,21 @@ export default function CookingNavigator({ recipe, onClose }) {
                 ingredients and equipment below.
               </p>
             </div>
+            {ingredients.length > 0 && (() => {
+              const prepMins = estimatePrepMinutes(ingredients)
+              const pct = Math.round((usedIngredients.size / ingredients.length) * 100)
+              return (
+                <div className="cn-mise-progress">
+                  <div className="cn-mise-progress-label">
+                    <span>Prep Time: ~{prepMins} min</span>
+                    <span>{pct}% complete</span>
+                  </div>
+                  <div className="cn-mise-progress-track">
+                    <div className="cn-mise-progress-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })()}
             {ingredients.length > 0 &&
               groupIngredients(ingredients).map(({ label, items }) => (
                 <div key={label} className="cn-ingredients">
