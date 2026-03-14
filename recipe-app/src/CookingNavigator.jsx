@@ -183,6 +183,105 @@ function extractEquipment(instructions) {
   return EQUIPMENT_KEYWORDS.filter((eq) => allText.includes(eq))
 }
 
+// ── Ingredient categorization ─────────────────────────────────────────────────
+
+const INGREDIENT_CATEGORIES = [
+  {
+    label: 'Chop / dice / mince',
+    keywords: [
+      'onion', 'shallot', 'garlic', 'leek', 'scallion', 'green onion', 'chive',
+      'celery', 'carrot', 'tomato', 'cherry tomato',
+      'zucchini', 'courgette', 'squash', 'pumpkin',
+      'mushroom', 'shiitake', 'portobello', 'cremini',
+      'bell pepper', 'jalapeño', 'jalapeno', 'serrano', 'habanero', 'poblano',
+      'chili pepper', 'chilli pepper',
+      'ginger', 'fennel', 'cucumber', 'eggplant', 'aubergine',
+      'broccoli', 'cauliflower', 'broccolini',
+      'brussels sprout', 'asparagus',
+      'green bean', 'string bean', 'corn',
+      'avocado', 'mango', 'pineapple', 'apple', 'pear',
+      'beet', 'beetroot', 'turnip', 'parsnip',
+      'cabbage', 'bok choy', 'kale', 'collard', 'chard', 'spinach',
+      'parsley', 'cilantro', 'coriander leaf', 'basil', 'mint',
+      'dill', 'tarragon', 'chives',
+      'walnut', 'almond', 'pecan', 'cashew', 'pistachio', 'hazelnut', 'peanut',
+      'chocolate', 'sun-dried tomato', 'artichoke', 'radish',
+    ],
+  },
+  {
+    label: 'Peel',
+    keywords: [
+      'potato', 'sweet potato', 'yam',
+      'rutabaga', 'celeriac', 'kohlrabi',
+    ],
+  },
+  {
+    label: 'Wash & dry',
+    keywords: [
+      'lettuce', 'romaine', 'iceberg', 'arugula', 'watercress',
+      'endive', 'radicchio', 'frisée',
+      'berry', 'berries', 'strawberry', 'blueberry', 'raspberry',
+      'blackberry', 'cranberry', 'grape', 'cherry',
+    ],
+  },
+  {
+    label: 'Marinate / temper',
+    keywords: [
+      'chicken', 'beef', 'pork', 'lamb', 'turkey', 'veal', 'duck',
+      'fish', 'salmon', 'tuna', 'cod', 'halibut', 'tilapia', 'trout',
+      'bass', 'snapper', 'swordfish', 'mackerel',
+      'shrimp', 'prawn', 'scallop', 'crab', 'lobster', 'clam', 'mussel',
+      'tofu', 'tempeh', 'seitan',
+      'steak', 'tenderloin', 'fillet', 'loin', 'breast', 'thigh',
+      'ground beef', 'ground pork', 'ground turkey', 'ground chicken',
+      'egg',
+    ],
+  },
+  {
+    label: 'Measure',
+    keywords: [
+      'flour', 'sugar', 'brown sugar', 'powdered sugar',
+      'salt', 'oil', 'olive oil', 'butter',
+      'milk', 'cream', 'buttermilk', 'coconut milk', 'almond milk',
+      'broth', 'stock',
+      'vinegar', 'balsamic', 'soy sauce', 'fish sauce', 'worcestershire',
+      'hot sauce', 'hoisin', 'oyster sauce', 'teriyaki',
+      'vanilla', 'extract',
+      'baking soda', 'baking powder', 'yeast',
+      'honey', 'maple syrup', 'molasses', 'corn syrup',
+      'water', 'wine', 'beer', 'juice',
+      'cumin', 'paprika', 'turmeric', 'coriander', 'cinnamon',
+      'cardamom', 'nutmeg', 'allspice', 'cayenne', 'pepper flakes',
+      'chili powder', 'curry powder', 'garam masala', "za'atar",
+      'bay leaf', 'star anise', 'fennel seed',
+      'sauce', 'paste', 'powder', 'syrup',
+    ],
+  },
+]
+
+function categorizeIngredient(text) {
+  const lower = text.toLowerCase()
+  for (const { label, keywords } of INGREDIENT_CATEGORIES) {
+    if (keywords.some((kw) => lower.includes(kw))) return label
+  }
+  const hasUnit = lower.split(/\s+/).some((t) => QUANTITY_TOKENS.test(t))
+  return hasUnit ? 'Measure' : 'Other'
+}
+
+function groupIngredients(ingredients) {
+  const buckets = new Map()
+  ingredients.forEach((text, index) => {
+    const label = categorizeIngredient(text)
+    if (!buckets.has(label)) buckets.set(label, [])
+    buckets.get(label).push({ text, index })
+  })
+  const order = [...INGREDIENT_CATEGORIES.map((c) => c.label), 'Other']
+  return order.filter((label) => buckets.has(label)).map((label) => ({
+    label,
+    items: buckets.get(label),
+  }))
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 function formatTime(secs) {
@@ -659,33 +758,35 @@ export default function CookingNavigator({ recipe, onClose }) {
                 ingredients and equipment below.
               </p>
             </div>
-            {ingredients.length > 0 && (
-              <div className="cn-ingredients">
-                <span className="cn-ingredients-label">Ingredients to prepare</span>
-                <div className="cn-ingredient-chips">
-                  {ingredients.map((ing, i) => {
-                    const isUsed = usedIngredients.has(i)
-                    const className = [
-                      'cn-ingredient-chip',
-                      !isUsed ? 'cn-ingredient-chip--active' : '',
-                      isUsed ? 'cn-ingredient-chip--used' : '',
-                    ].filter(Boolean).join(' ')
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        className={className}
-                        onClick={() => handleIngredientToggle(i)}
-                        title={isUsed ? 'Mark as not prepared' : 'Mark as prepared'}
-                        aria-pressed={isUsed}
-                      >
-                        {ing}
-                      </button>
-                    )
-                  })}
+            {ingredients.length > 0 &&
+              groupIngredients(ingredients).map(({ label, items }) => (
+                <div key={label} className="cn-ingredients">
+                  <span className="cn-ingredients-label">{label}</span>
+                  <div className="cn-ingredient-chips">
+                    {items.map(({ text, index }) => {
+                      const isUsed = usedIngredients.has(index)
+                      const className = [
+                        'cn-ingredient-chip',
+                        !isUsed ? 'cn-ingredient-chip--active' : '',
+                        isUsed ? 'cn-ingredient-chip--used' : '',
+                      ].filter(Boolean).join(' ')
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          className={className}
+                          onClick={() => handleIngredientToggle(index)}
+                          title={isUsed ? 'Mark as not prepared' : 'Mark as prepared'}
+                          aria-pressed={isUsed}
+                        >
+                          {text}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              ))
+            }
             {equipment.length > 0 && (
               <div className="cn-ingredients">
                 <span className="cn-ingredients-label">Equipment needed</span>
