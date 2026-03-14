@@ -582,12 +582,13 @@ describe('CookingNavigator — mise en place', () => {
     expect(screen.getByText('Mise en Place')).toBeInTheDocument()
   })
 
-  test('ingredients checked during mise en place retain used state on step 1', () => {
+  test('ingredients checked during mise en place are reset when cooking starts', () => {
     renderNavigator()
     const flourChip = screen.getByRole('button', { name: /200g flour/i })
     fireEvent.click(flourChip) // mark as prepared
+    expect(flourChip).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByText('Start Cooking →'))
     const flourChipStep1 = screen.getByRole('button', { name: /200g flour/i })
-    expect(flourChipStep1).toHaveClass('cn-ingredient-chip--used')
+    expect(flourChipStep1).not.toHaveClass('cn-ingredient-chip--used')
   })
 })

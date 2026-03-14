@@ -862,6 +862,14 @@ html, body {
   color: var(--text-muted);
 }
 
+.cn-mise-translation {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+  opacity: 0.75;
+}
+
 .cn-close-btn {
   display: flex;
   align-items: center;
