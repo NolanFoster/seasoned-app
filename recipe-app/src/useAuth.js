@@ -31,10 +31,15 @@ export function useAuth() {
   useEffect(() => {
     const stored = getStoredAuth()
     if (stored) {
-      validateToken(stored.token).then((valid) => {
+      validateToken(stored.token).then(async (valid) => {
         if (valid) {
-          setToken(stored.token)
-          setUser(stored.user)
+          // Sliding expiration: renew the token on every app load
+          const refreshed = await refreshToken(stored.token)
+          const activeToken = refreshed ? refreshed.token : stored.token
+          const activeUser  = refreshed ? refreshed.user  : stored.user
+          storeAuth(activeToken, activeUser)
+          setToken(activeToken)
+          setUser(activeUser)
         } else {
           clearAuth()
         }
@@ -58,6 +63,22 @@ export function useAuth() {
       return data.success && data.valid
     } catch {
       return false
+    }
+  }
+
+  async function refreshToken(t) {
+    if (!AUTH_WORKER_URL) return null
+    try {
+      const res = await fetch(`${AUTH_WORKER_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: t }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.success && data.token ? data : null
+    } catch {
+      return null
     }
   }
 
