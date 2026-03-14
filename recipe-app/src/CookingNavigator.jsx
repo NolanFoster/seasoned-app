@@ -333,6 +333,9 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   const [gestureModeActive, setGestureModeActive] = useState(false)
 
+  const [cookMenuOpen, setCookMenuOpen] = useState(false)
+  const cookMenuRef = useRef(null)
+
   const TEXT_SIZES = ['normal', 'large', 'xl']
   const [textSize, setTextSize] = useState(() => {
     const saved = localStorage.getItem('cn-text-size')
@@ -353,6 +356,17 @@ export default function CookingNavigator({ recipe, onClose }) {
       onNext: () => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
       onPrev: () => { setCurrentStep((s) => Math.max(s - 1, -1)); playBeepBack() },
     })
+
+  useEffect(() => {
+    if (!cookMenuOpen) return
+    function handleClick(e) {
+      if (cookMenuRef.current && !cookMenuRef.current.contains(e.target)) {
+        setCookMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [cookMenuOpen])
 
   function handleIngredientToggle(index) {
     setUsedIngredients((prev) => {
@@ -655,60 +669,89 @@ export default function CookingNavigator({ recipe, onClose }) {
             {currentStep === -1 ? <>Mise en Place <span className="cn-mise-translation">— everything in its place</span></> : `Step ${currentStep + 1} of ${total}`}
           </span>
           <div className="cn-header-actions">
-            {gestureSupportEnabled && gestureSupported && (
+            <div className="action-menu" ref={cookMenuRef}>
               <button
-                className={`cn-hands-free-btn${gestureModeActive ? ' cn-gesture-btn--active' : ''}`}
-                onClick={toggleGestureMode}
-                title={gestureModeActive ? 'Stop gesture mode' : 'Wave to navigate steps'}
-                aria-pressed={gestureModeActive}
-                aria-label={gestureModeActive ? 'Stop gesture mode' : 'Start gesture mode'}
+                className="cn-hands-free-btn"
+                onClick={() => setCookMenuOpen(o => !o)}
+                title="Options"
+                aria-label="Open options menu"
+                aria-expanded={cookMenuOpen}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M18 11V6a2 2 0 00-4 0v5"/>
-                  <path d="M14 10V4a2 2 0 00-4 0v6"/>
-                  <path d="M10 10.5V6a2 2 0 00-4 0v8"/>
-                  <path d="M18 11a2 2 0 012 2v1a8 8 0 01-16 0v-3"/>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
                 </svg>
               </button>
-            )}
-            {voiceControlEnabled && dictationEnabled && (
-              <button
-                className={`cn-hands-free-btn${handsFreeModeActive ? ' cn-hands-free-btn--active' : ''}`}
-                onClick={toggleHandsFreeMode}
-                title={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free voice navigation'}
-                aria-pressed={handsFreeModeActive}
-                aria-label={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free mode'}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-              </button>
-            )}
-            <button
-              className={`cn-hands-free-btn${isSpeaking ? ' cn-speak-btn--active' : ''}`}
-              onClick={isSpeaking ? stopSpeaking : speakCurrentStep}
-              title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
-              aria-pressed={isSpeaking}
-              aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-              </svg>
-            </button>
-            <button
-              className={`cn-hands-free-btn cn-text-size-btn${textSize !== 'normal' ? ' cn-text-size-btn--active' : ''}`}
-              onClick={cycleTextSize}
-              title={`Text size: ${textSize}. Click to increase.`}
-              aria-label={`Text size ${textSize}, click to cycle`}
-            >
-              {textSize === 'normal' ? 'A' : textSize === 'large' ? 'A+' : 'A++'}
-            </button>
-            <button className="cn-close-btn" onClick={onClose} title="Exit cooking mode">✕</button>
+              {cookMenuOpen && (
+                <div className="action-menu-dropdown">
+                  <button
+                    className="action-menu-item"
+                    onClick={() => { setCookMenuOpen(false); onClose(); }}
+                    title="Exit cooking mode"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                    Close
+                  </button>
+                  <button
+                    className={`action-menu-item${isSpeaking ? ' active' : ''}`}
+                    onClick={() => { setCookMenuOpen(false); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
+                    title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
+                    aria-pressed={isSpeaking}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                    {isSpeaking ? 'Stop reading' : 'Read aloud'}
+                  </button>
+                  <button
+                    className={`action-menu-item${textSize !== 'normal' ? ' active' : ''}`}
+                    onClick={() => { cycleTextSize(); setCookMenuOpen(false); }}
+                    title={`Text size: ${textSize}. Click to increase.`}
+                    aria-label={`Text size ${textSize}, click to cycle`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
+                    </svg>
+                    Text size: {textSize === 'normal' ? 'A' : textSize === 'large' ? 'A+' : 'A++'}
+                  </button>
+                  {voiceControlEnabled && dictationEnabled && (
+                    <button
+                      className={`action-menu-item${handsFreeModeActive ? ' active' : ''}`}
+                      onClick={() => { setCookMenuOpen(false); toggleHandsFreeMode(); }}
+                      title={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free voice navigation'}
+                      aria-pressed={handsFreeModeActive}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                      </svg>
+                      {handsFreeModeActive ? 'Stop hands-free' : 'Hands-free voice'}
+                    </button>
+                  )}
+                  {gestureSupportEnabled && gestureSupported && (
+                    <button
+                      className={`action-menu-item${gestureModeActive ? ' active' : ''}`}
+                      onClick={() => { setCookMenuOpen(false); toggleGestureMode(); }}
+                      title={gestureModeActive ? 'Stop gesture mode' : 'Wave to navigate steps'}
+                      aria-pressed={gestureModeActive}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 11V6a2 2 0 00-4 0v5"/>
+                        <path d="M14 10V4a2 2 0 00-4 0v6"/>
+                        <path d="M10 10.5V6a2 2 0 00-4 0v8"/>
+                        <path d="M18 11a2 2 0 012 2v1a8 8 0 01-16 0v-3"/>
+                      </svg>
+                      {gestureModeActive ? 'Stop gestures' : 'Gesture mode'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
