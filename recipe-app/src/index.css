@@ -863,7 +863,12 @@ html, body {
 }
 
 .cn-mise-progress {
-  padding: 4px 24px 12px;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+  box-shadow: 0 8px 20px var(--surface);
+  padding: 8px 24px 12px;
 }
 
 .cn-mise-progress-label {
@@ -916,11 +921,16 @@ html, body {
   color: var(--text);
 }
 
+/* Scrollable content wrapper — fills space between header and nav */
+.cn-scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* Step body */
 .cn-step-body {
-  flex: 1;
   padding: 16px 24px 8px;
-  overflow-y: auto;
 }
 
 .cn-step-text {
