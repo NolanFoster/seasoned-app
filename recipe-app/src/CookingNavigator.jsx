@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
+import RecipeCardDisplay from './RecipeCardDisplay.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -336,6 +337,7 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   const [cookMenuOpen, setCookMenuOpen] = useState(false)
   const cookMenuRef = useRef(null)
+  const [showRecipe, setShowRecipe] = useState(false)
 
   const TEXT_SIZES = ['normal', 'large', 'xl']
   const [textSize, setTextSize] = useState(() => {
@@ -670,6 +672,21 @@ export default function CookingNavigator({ recipe, onClose }) {
             {currentStep === -1 ? <>Mise en Place <span className="cn-mise-translation">— everything in its place</span></> : `Step ${currentStep + 1} of ${total}`}
           </span>
           <div className="cn-header-actions">
+            <button
+              className={`cn-hands-free-btn${showRecipe ? ' cn-hands-free-btn--active' : ''}`}
+              onClick={() => setShowRecipe(o => !o)}
+              title={showRecipe ? 'Back to steps' : 'View full recipe'}
+              aria-pressed={showRecipe}
+              aria-label={showRecipe ? 'Back to cooking steps' : 'View full recipe'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </button>
             <div className="action-menu" ref={cookMenuRef}>
               <button
                 className="cn-hands-free-btn"
@@ -812,7 +829,11 @@ export default function CookingNavigator({ recipe, onClose }) {
         )}
 
         <div className="cn-scroll-body">
-        {currentStep === -1 ? (
+        {showRecipe ? (
+          <div className="cn-recipe-panel">
+            <RecipeCardDisplay recipe={recipe} />
+          </div>
+        ) : currentStep === -1 ? (
           <div className="cn-mise-en-place">
             <div className="cn-step-body">
               <p className="cn-step-text">
@@ -915,29 +936,31 @@ export default function CookingNavigator({ recipe, onClose }) {
         </div>
 
         {/* Navigation */}
-        <div className="cn-nav">
-          <button
-            className="cn-nav-btn cn-nav-btn--prev"
-            disabled={currentStep === -1}
-            onClick={() => setCurrentStep((s) => s - 1)}
-          >
-            ← Prev
-          </button>
-          <button
-            className="cn-nav-btn cn-nav-btn--next"
-            disabled={currentStep === total - 1}
-            onClick={() => {
-              if (currentStep === -1) {
-                setUsedIngredients(new Set())
-              } else {
-                autoMarkCurrentStepIngredients()
-              }
-              setCurrentStep((s) => s + 1)
-            }}
-          >
-            {currentStep === -1 ? 'Start Cooking →' : 'Next →'}
-          </button>
-        </div>
+        {!showRecipe && (
+          <div className="cn-nav">
+            <button
+              className="cn-nav-btn cn-nav-btn--prev"
+              disabled={currentStep === -1}
+              onClick={() => setCurrentStep((s) => s - 1)}
+            >
+              ← Prev
+            </button>
+            <button
+              className="cn-nav-btn cn-nav-btn--next"
+              disabled={currentStep === total - 1}
+              onClick={() => {
+                if (currentStep === -1) {
+                  setUsedIngredients(new Set())
+                } else {
+                  autoMarkCurrentStepIngredients()
+                }
+                setCurrentStep((s) => s + 1)
+              }}
+            >
+              {currentStep === -1 ? 'Start Cooking →' : 'Next →'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

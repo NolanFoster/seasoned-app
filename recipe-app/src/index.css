@@ -1261,6 +1261,13 @@ html, body {
   color: var(--accent);
 }
 
+.cn-recipe-panel {
+  padding: 16px 20px 24px;
+}
+.cn-recipe-panel .cook-btn {
+  display: none;
+}
+
 .cn-card--text-large .cn-step-text          { font-size: 1.5rem; }
 .cn-card--text-large .cn-ingredient-chip   { font-size: 1.05rem; }
 .cn-card--text-large .cn-ingredients-label { font-size: 0.85rem; }
