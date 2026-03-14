@@ -537,7 +537,7 @@ export default function CookingNavigator({ recipe, onClose }) {
         {/* Header */}
         <div className="cn-header">
           <span className="cn-step-counter">
-            {currentStep === -1 ? 'Mise en Place' : `Step ${currentStep + 1} of ${total}`}
+            {currentStep === -1 ? <>Mise en Place <span className="cn-mise-translation">— everything in its place</span></> : `Step ${currentStep + 1} of ${total}`}
           </span>
           <div className="cn-header-actions">
             {gestureSupportEnabled && gestureSupported && (
@@ -654,10 +654,12 @@ export default function CookingNavigator({ recipe, onClose }) {
 
         {currentStep === -1 ? (
           <div className="cn-mise-en-place">
-            <p className="cn-step-text">
-              Before you start cooking, read through the full recipe, then gather and prepare all
-              ingredients and equipment below.
-            </p>
+            <div className="cn-step-body">
+              <p className="cn-step-text">
+                Before you start cooking, read through the full recipe, then gather and prepare all
+                ingredients and equipment below.
+              </p>
+            </div>
             {ingredients.length > 0 && (
               <div className="cn-ingredients">
                 <span className="cn-ingredients-label">Ingredients to prepare</span>
@@ -746,7 +748,14 @@ export default function CookingNavigator({ recipe, onClose }) {
           <button
             className="cn-nav-btn cn-nav-btn--next"
             disabled={currentStep === total - 1}
-            onClick={() => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => s + 1) }}
+            onClick={() => {
+              if (currentStep === -1) {
+                setUsedIngredients(new Set())
+              } else {
+                autoMarkCurrentStepIngredients()
+              }
+              setCurrentStep((s) => s + 1)
+            }}
           >
             {currentStep === -1 ? 'Start Cooking →' : 'Next →'}
           </button>
