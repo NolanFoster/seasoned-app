@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { Env } from './types/env';
 import { storeOTP, verifyOTPForEmail, hasOTP, deleteOTP, getOTPStats } from './utils/otp-manager';
-import { SESService } from './services/ses-service';
+import { EmailService } from './services/email-service';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,7 +21,7 @@ app.get('/health', async (c) => {
     services: {
       otp_kv: 'unknown',
       user_management: 'unknown',
-      ses: 'unknown'
+      email: 'unknown'
     }
   };
 
@@ -57,17 +57,17 @@ app.get('/health', async (c) => {
   }
 
   try {
-    // Test AWS SES configuration
-    if (env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY) {
-      health.services.ses = 'healthy';
+    // Test Cloudflare send_email binding configuration
+    if (env.send_email && typeof env.send_email.send === 'function') {
+      health.services.email = 'healthy';
     } else {
-      health.services.ses = 'unhealthy';
+      health.services.email = 'unhealthy';
       health.status = 'degraded';
     }
   } catch (error) {
-    health.services.ses = 'unhealthy';
+    health.services.email = 'unhealthy';
     health.status = 'degraded';
-    console.error('SES configuration check failed:', error);
+    console.error('Email binding configuration check failed:', error);
   }
 
   // Determine overall health
@@ -113,8 +113,8 @@ app.post('/otp/generate', async (c) => {
       let emailSent = false;
       if (result.otp) {
         try {
-          const sesService = new SESService(c.env);
-          const emailResult = await sesService.sendVerificationEmail(email, result.otp, 10);
+          const emailService = new EmailService(c.env);
+          const emailResult = await emailService.sendVerificationEmail(email, result.otp, 10);
           
           if (emailResult.success) {
             emailSent = true;
@@ -179,8 +179,8 @@ app.post('/otp/verify', async (c) => {
           const { JWTService } = await import('./services/jwt-service');
           const jwtService = new JWTService(c.env);
           
-          // Create token with 24 hour expiration
-          const tokenResult = await jwtService.createToken(result.user_id, email, 86400);
+          // Create token with 7 day expiration
+          const tokenResult = await jwtService.createToken(result.user_id, email, 604800);
           
           if (tokenResult.success && tokenResult.token) {
             jwtToken = tokenResult.token;
@@ -248,7 +248,7 @@ app.post('/otp/verify', async (c) => {
           success: true,
           message: 'OTP verified successfully',
           token: jwtToken,
-          expiresIn: 86400,
+          expiresIn: 604800,
           user: {
             id: result.user_id,
             email: email
@@ -306,28 +306,19 @@ app.post('/auth/refresh', async (c) => {
         }, 400);
       }
 
-      // Check if token is close to expiration (within 1 hour)
-      const timeUntilExpiration = jwtService.getTimeUntilExpiration(verifyResult.payload);
-      if (timeUntilExpiration > 3600) {
-        return c.json({
-          success: false,
-          message: 'Token is not close to expiration yet'
-        }, 400);
-      }
-
-      // Create a new token with extended expiration
+      // Create a new token with extended expiration (sliding window — refresh any valid token)
       const newTokenResult = await jwtService.createToken(
         verifyResult.payload.sub,
         verifyResult.payload.email,
-        86400 // 24 hours
+        604800 // 7 days
       );
-      
+
       if (newTokenResult.success && newTokenResult.token) {
         return c.json({
           success: true,
           message: 'Token refreshed successfully',
           token: newTokenResult.token,
-          expiresIn: 86400,
+          expiresIn: 604800,
           user: {
             id: verifyResult.payload.sub,
             email: verifyResult.payload.email
@@ -487,10 +478,10 @@ app.post('/email/send-verification', async (c) => {
       }, 400);
     }
 
-    console.log('✅ Request validation passed, calling SES service with email:', email);
+    console.log('✅ Request validation passed, calling email service with email:', email);
 
-    const sesService = new SESService(c.env);
-    const result = await sesService.sendVerificationEmail(email, otp, expiryMinutes);
+    const emailService = new EmailService(c.env);
+    const result = await emailService.sendVerificationEmail(email, otp, expiryMinutes);
     
     if (result.success) {
       return c.json({

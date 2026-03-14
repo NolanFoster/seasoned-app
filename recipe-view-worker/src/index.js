@@ -92,13 +92,14 @@ export default {
       const recipeId = recipeMatch[1];
       
       try {
-        // Fetch recipe data from the recipe save worker
-        const apiUrl = env.RECIPE_SAVE_WORKER_URL || 'https://recipe-save-worker.nolanfoster.workers.dev';
-        const recipeResponse = await fetch(`${apiUrl}/recipe/get?id=${recipeId}`, {
-          headers: {
-            'Accept': 'application/json'
-          }
+        // Fetch recipe data from the recipe save worker.
+        // Use service binding when available (avoids workers.dev subrequest restriction).
+        const recipeRequest = new Request(`https://recipe-save-worker/api/recipes/${recipeId}`, {
+          headers: { 'Accept': 'application/json' }
         });
+        const recipeResponse = env.RECIPE_SAVE_WORKER
+          ? await env.RECIPE_SAVE_WORKER.fetch(recipeRequest)
+          : await fetch(`${env.RECIPE_SAVE_WORKER_URL || 'https://recipe-save-worker.nolanfoster.workers.dev'}/api/recipes/${recipeId}`, { headers: { 'Accept': 'application/json' } });
 
         if (!recipeResponse.ok) {
           if (recipeResponse.status === 404) {
@@ -136,7 +137,8 @@ export default {
           headers: {
             ...corsHeaders,
             'Content-Type': 'text/html;charset=UTF-8',
-            'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+            'Cache-Control': 'public, max-age=300',
+            'Permissions-Policy': 'screen-wake-lock=*'
           }
         });
       } catch (error) {

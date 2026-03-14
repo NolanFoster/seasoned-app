@@ -5,6 +5,7 @@ process.env.VITE_API_URL = 'https://test-api.example.com';
 process.env.VITE_CLIPPER_API_URL = 'https://test-clipper.example.com';
 process.env.VITE_SEARCH_DB_URL = 'https://test-search.example.com';
 process.env.VITE_RECIPE_GENERATION_URL = 'https://test-gen.example.com';
+process.env.VITE_AUTH_WORKER_URL = 'https://test-auth.example.com';
 
 // Default fetch mock — individual tests override as needed
 global.fetch = jest.fn(() =>

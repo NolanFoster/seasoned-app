@@ -168,6 +168,32 @@ describe('generateRecipeHTML', () => {
     // Video URL should be included if the template supports it
   });
 
+  it('should not show source link for ai_generated recipes', () => {
+    const recipe = {
+      name: 'AI Recipe',
+      source: 'ai_generated',
+      source_url: 'https://seasoned.app/ai/ai-1773098213967'
+    };
+
+    const html = generateRecipeHTML(recipe);
+
+    expect(html).not.toContain('class="source-link"');
+    expect(html).not.toContain('https://seasoned.app/ai/ai-1773098213967');
+  });
+
+  it('should show source link for clipped recipes', () => {
+    const recipe = {
+      name: 'Clipped Recipe',
+      source: 'clipped',
+      source_url: 'https://example.com/original-recipe'
+    };
+
+    const html = generateRecipeHTML(recipe);
+
+    expect(html).toContain('class="source-link"');
+    expect(html).toContain('https://example.com/original-recipe');
+  });
+
   it('should generate valid HTML structure', () => {
     const recipe = {
       name: 'Valid HTML Recipe',
@@ -184,5 +210,57 @@ describe('generateRecipeHTML', () => {
     expect(html).toContain('<body>');
     expect(html).toContain('</body>');
     expect(html).toContain('</html>');
+  });
+
+  it('should use default meta description when recipe has no description', () => {
+    const recipe = { name: 'No Desc Recipe' };
+    const html = generateRecipeHTML(recipe);
+    expect(html).toContain('View the recipe for No Desc Recipe');
+  });
+
+  it('should handle ingredient objects in structured data (ingredientToString)', () => {
+    const recipe = {
+      name: 'Object Ingredients',
+      ingredients: [
+        { name: '1 cup sugar' },
+        { text: '2 eggs' },
+        { amount: 3, unit: 'tbsp' }
+      ]
+    };
+    const html = generateRecipeHTML(recipe);
+    // .name and .text values appear as plain strings in the structured data script
+    expect(html).toContain('1 cup sugar');
+    expect(html).toContain('2 eggs');
+    // Fallback JSON.stringify result is embedded in the outer JSON array, so keys are visible
+    expect(html).toContain('amount');
+    expect(html).toContain('tbsp');
+  });
+
+  it('should handle numeric prep/cook time for wake lock duration', () => {
+    const recipe = {
+      name: 'Numeric Times',
+      prep_time: 20,
+      cook_time: 40,
+    };
+    // Numeric durations should not break HTML generation
+    const html = generateRecipeHTML(recipe);
+    expect(html).toContain('Numeric Times');
+  });
+
+  it('should handle non-ISO duration strings without crashing', () => {
+    const recipe = {
+      name: 'Plain Time',
+      prep_time: '20 minutes',
+      cook_time: '40 minutes',
+    };
+    const html = generateRecipeHTML(recipe);
+    expect(html).toContain('Plain Time');
+  });
+
+  it('should handle empty/falsy escapeHtml input without crashing', () => {
+    // Recipe with empty name edge case — goes through escapeHtml('')
+    const recipe = { title: 'Fallback Title' };
+    const html = generateRecipeHTML(recipe);
+    expect(html).toContain('Fallback Title');
   });
 });

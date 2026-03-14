@@ -96,7 +96,7 @@ describe('Recipe View Worker', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('text/html;charset=UTF-8');
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=300');
 
       const html = await response.text();
       expect(html).toContain(mockRecipe.title);
@@ -181,7 +181,7 @@ describe('Recipe View Worker', () => {
       await worker.fetch(request, mockEnv);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockEnv.RECIPE_SAVE_WORKER_URL}/recipe/get?id=${mockRecipeId}`,
+        `${mockEnv.RECIPE_SAVE_WORKER_URL}/api/recipes/${mockRecipeId}`,
         expect.objectContaining({
           headers: expect.objectContaining({
             'Accept': 'application/json'
@@ -204,7 +204,7 @@ describe('Recipe View Worker', () => {
       await worker.fetch(request, {}); // Empty env
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/recipe/get?id=${mockRecipeId}`),
+        expect.stringContaining(`/api/recipes/${mockRecipeId}`),
         expect.any(Object)
       );
     });

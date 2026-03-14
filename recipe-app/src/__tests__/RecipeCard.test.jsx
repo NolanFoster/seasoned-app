@@ -2,6 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeCard from '../RecipeCard';
 
+const flagOverrides = { 'elevate-recipe': true }
+jest.mock('../flaggly.js', () => ({
+  useFlag: (key) => flagOverrides[key] ?? true,
+  flaggly: {},
+}))
+
 const baseRecipe = {
   id: 'r1',
   source: 'clipped',
@@ -62,6 +68,11 @@ describe('RecipeCard — rendering', () => {
     expect(screen.queryByRole('link', { name: /source/i })).not.toBeInTheDocument();
   });
 
+  test('does not render source link for ai_generated recipes', () => {
+    renderCard({ source: 'ai_generated', source_url: 'https://seasoned.app/ai/ai-1773098213967' });
+    expect(screen.queryByRole('link', { name: /source/i })).not.toBeInTheDocument();
+  });
+
   test('renders image when present', () => {
     renderCard();
     const img = screen.getByRole('img', { name: /Spaghetti Carbonara/i });
@@ -119,42 +130,107 @@ describe('RecipeCard — source badges', () => {
     expect(screen.getByText('Elevated')).toBeInTheDocument();
   });
 
-  test('shows fallback "Recipe" badge for unknown source', () => {
+  test('shows no badge for unknown source', () => {
     renderCard({ source: 'unknown' });
-    expect(screen.getByText('Recipe')).toBeInTheDocument();
+    expect(screen.queryByText('Recipe')).not.toBeInTheDocument();
+  });
+});
+
+describe('RecipeCard — share button', () => {
+  const shareUrl = 'https://recipe-view-worker.example.workers.dev/recipe/abc123';
+
+  test('share button is not rendered when shareUrl is not provided', () => {
+    renderCard();
+    fireEvent.click(screen.getByTitle('More options'));
+    expect(screen.queryByTitle('Share recipe')).not.toBeInTheDocument();
+  });
+
+  test('share button is rendered when shareUrl is provided', () => {
+    renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('More options'));
+    expect(screen.getByTitle('Share recipe')).toBeInTheDocument();
+  });
+
+  test('share button calls navigator.share when available', () => {
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('More options'));
+    fireEvent.click(screen.getByTitle('Share recipe'));
+    expect(shareMock).toHaveBeenCalledWith({
+      title: baseRecipe.name,
+      url: shareUrl,
+    });
+    delete navigator.share;
+  });
+
+  test('share button copies to clipboard when navigator.share is unavailable', () => {
+    const writeTextMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    renderCard({}, { shareUrl });
+    fireEvent.click(screen.getByTitle('More options'));
+    fireEvent.click(screen.getByTitle('Share recipe'));
+    expect(writeTextMock).toHaveBeenCalledWith(shareUrl);
   });
 });
 
 describe('RecipeCard — interactions', () => {
   test('calls onClose when close button is clicked', () => {
     const { onClose } = renderCard();
+    fireEvent.click(screen.getByTitle('More options'));
     fireEvent.click(screen.getByTitle('Close'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   test('calls onElevate when elevate button is clicked', () => {
     const { onElevate } = renderCard();
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     fireEvent.click(screen.getByTitle(/Elevate this recipe/i));
     expect(onElevate).toHaveBeenCalledTimes(1);
   });
 
   test('elevate button is disabled while isElevating', () => {
     renderCard({}, { isElevating: true });
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByTitle(/Elevate this recipe/i)).toBeDisabled();
   });
 
   test('elevate button shows "Elevating…" text while isElevating', () => {
     renderCard({}, { isElevating: true });
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByText('Elevating…')).toBeInTheDocument();
   });
 
   test('elevate button is enabled when not elevating', () => {
     renderCard();
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByTitle(/Elevate this recipe/i)).not.toBeDisabled();
   });
 
   test('elevate button shows "Elevate" text when not elevating', () => {
     renderCard();
+    fireEvent.click(screen.getByTitle('Remix with AI'));
     expect(screen.getByText('Elevate')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeCard — elevate-recipe feature flag', () => {
+  afterEach(() => {
+    flagOverrides['elevate-recipe'] = true;
+  });
+
+  test('hides remix menu when elevate-recipe flag is disabled', () => {
+    flagOverrides['elevate-recipe'] = false;
+    renderCard();
+    expect(screen.queryByTitle('Remix with AI')).not.toBeInTheDocument();
+  });
+
+  test('shows remix menu when elevate-recipe flag is enabled', () => {
+    flagOverrides['elevate-recipe'] = true;
+    renderCard();
+    expect(screen.getByTitle('Remix with AI')).toBeInTheDocument();
   });
 });
