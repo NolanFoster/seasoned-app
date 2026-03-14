@@ -69,29 +69,30 @@ function fireSpeechResult(instance, transcript) {
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
 describe('CookingNavigator — rendering', () => {
-  test('shows step 1 of 3 on initial render', () => {
+  test('shows Mise en Place on initial render', () => {
     renderNavigator()
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
   })
 
-  test('shows first instruction text', () => {
+  test('shows mise en place intro text initially', () => {
     renderNavigator()
-    expect(screen.getByText('Mix flour and eggs.')).toBeInTheDocument()
+    expect(screen.getByText(/gather and prepare all/i)).toBeInTheDocument()
   })
 
-  test('renders Prev and Next navigation buttons', () => {
+  test('renders Prev and Start Cooking navigation buttons', () => {
     renderNavigator()
     expect(screen.getByText('← Prev')).toBeInTheDocument()
-    expect(screen.getByText('Next →')).toBeInTheDocument()
+    expect(screen.getByText('Start Cooking →')).toBeInTheDocument()
   })
 
-  test('Prev button is disabled on first step', () => {
+  test('Prev button is disabled on mise en place', () => {
     renderNavigator()
     expect(screen.getByText('← Prev')).toBeDisabled()
   })
 
   test('Next button is disabled on last step', () => {
     renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
     fireEvent.click(screen.getByText('Next →'))
     fireEvent.click(screen.getByText('Next →'))
     expect(screen.getByText('Next →')).toBeDisabled()
@@ -109,6 +110,7 @@ describe('CookingNavigator — rendering', () => {
 describe('CookingNavigator — step navigation', () => {
   test('advances to next step on Next click', () => {
     renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
     fireEvent.click(screen.getByText('Next →'))
     expect(screen.getByText('Step 2 of 3')).toBeInTheDocument()
     expect(screen.getByText('Add milk and stir.')).toBeInTheDocument()
@@ -116,6 +118,7 @@ describe('CookingNavigator — step navigation', () => {
 
   test('goes back to previous step on Prev click', () => {
     renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
     fireEvent.click(screen.getByText('Next →'))
     fireEvent.click(screen.getByText('← Prev'))
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
@@ -188,7 +191,8 @@ describe('CookingNavigator — voice commands', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
-    fireSpeechResult(instance, 'next')
+    fireSpeechResult(instance, 'next') // mise en place → step 1
+    fireSpeechResult(instance, 'next') // step 1 → step 2
     expect(screen.getByText('Step 2 of 3')).toBeInTheDocument()
   })
 
@@ -196,8 +200,9 @@ describe('CookingNavigator — voice commands', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
-    fireSpeechResult(instance, 'next')
-    fireSpeechResult(instance, 'back')
+    fireSpeechResult(instance, 'next') // mise en place → step 1
+    fireSpeechResult(instance, 'next') // step 1 → step 2
+    fireSpeechResult(instance, 'back') // step 2 → step 1
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
   })
 
@@ -205,8 +210,9 @@ describe('CookingNavigator — voice commands', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
-    fireSpeechResult(instance, 'next')
-    fireSpeechResult(instance, 'previous')
+    fireSpeechResult(instance, 'next') // mise en place → step 1
+    fireSpeechResult(instance, 'next') // step 1 → step 2
+    fireSpeechResult(instance, 'previous') // step 2 → step 1
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
   })
 
@@ -214,18 +220,19 @@ describe('CookingNavigator — voice commands', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
-    fireSpeechResult(instance, 'next')
-    fireSpeechResult(instance, 'next')
+    fireSpeechResult(instance, 'next') // mise en place → step 1
+    fireSpeechResult(instance, 'next') // step 1 → step 2
+    fireSpeechResult(instance, 'next') // step 2 → step 3
     fireSpeechResult(instance, 'next') // already on last step
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
   })
 
-  test('"back" does not go before first step', () => {
+  test('"back" does not go before mise en place', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
-    fireSpeechResult(instance, 'back') // already on first step
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+    fireSpeechResult(instance, 'back') // already on mise en place
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
   })
 
   test('"stop" voice command calls onClose', () => {
@@ -372,6 +379,7 @@ describe('CookingNavigator — ingredient matching', () => {
       instructions: ['Strain the mixture through cheesecloth.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     const chip = screen.getByRole('button', { name: /cheddar cheese/i })
     expect(chip).not.toHaveClass('cn-ingredient-chip--active')
   })
@@ -383,6 +391,7 @@ describe('CookingNavigator — ingredient matching', () => {
       instructions: ['Add the cheddar cheese and stir.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     const chip = screen.getByRole('button', { name: /cheddar cheese/i })
     expect(chip).toHaveClass('cn-ingredient-chip--active')
   })
@@ -394,6 +403,7 @@ describe('CookingNavigator — ingredient matching', () => {
       instructions: ['Spread peanut butter on toast.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     const chip = screen.getByRole('button', { name: /peas/i })
     expect(chip).not.toHaveClass('cn-ingredient-chip--active')
   })
@@ -409,6 +419,7 @@ describe('CookingNavigator — ingredient quantity disambiguation', () => {
       instructions: ['Add .5 cup sugar to bowl.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     expect(screen.getByRole('button', { name: /\.5 cup of sugar/i })).toHaveClass('cn-ingredient-chip--active')
     expect(screen.getByRole('button', { name: /\.25 cup sugar/i })).not.toHaveClass('cn-ingredient-chip--active')
   })
@@ -420,6 +431,7 @@ describe('CookingNavigator — ingredient quantity disambiguation', () => {
       instructions: ['Add .25 cup sugar to bowl.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     expect(screen.getByRole('button', { name: /\.5 cup of sugar/i })).not.toHaveClass('cn-ingredient-chip--active')
     expect(screen.getByRole('button', { name: /\.25 cup sugar/i })).toHaveClass('cn-ingredient-chip--active')
   })
@@ -431,6 +443,7 @@ describe('CookingNavigator — ingredient quantity disambiguation', () => {
       instructions: ['Add the sugar to the bowl.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     expect(screen.getByRole('button', { name: /\.5 cup of sugar/i })).toHaveClass('cn-ingredient-chip--active')
     expect(screen.getByRole('button', { name: /\.25 cup sugar/i })).toHaveClass('cn-ingredient-chip--active')
   })
@@ -442,6 +455,7 @@ describe('CookingNavigator — ingredient quantity disambiguation', () => {
       instructions: ['Melt 1/2 cup butter in a pan.', 'Done.'],
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     expect(screen.getByRole('button', { name: /1\/2 cup butter/i })).toHaveClass('cn-ingredient-chip--active')
     expect(screen.getByRole('button', { name: /1\/4 cup butter/i })).not.toHaveClass('cn-ingredient-chip--active')
   })
@@ -486,8 +500,9 @@ describe('CookingNavigator — ingredient usage tracking', () => {
   })
 
   test('used ingredient chip is not highlighted even when relevant to current step', () => {
-    // Step 1: "Mix flour and eggs." — flour is relevant
     render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
+    // Navigate to step 1: "Mix flour and eggs." — flour is relevant
+    fireEvent.click(screen.getByText('Start Cooking →'))
     const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
     // Mark flour as used manually on step 1
     fireEvent.click(flourChip)
@@ -501,11 +516,143 @@ describe('CookingNavigator — ingredient usage tracking', () => {
   test('auto-marks relevant ingredients as used when advancing to next step', () => {
     // Step 1: "Mix flour and eggs." — both are relevant
     render(<CookingNavigator recipe={trackingRecipe} onClose={jest.fn()} />)
-    // Advance without manually clicking anything
+    // Advance from mise en place to step 1, then from step 1 to step 2 (triggering auto-mark of step 1)
+    fireEvent.click(screen.getByText('Start Cooking →'))
     fireEvent.click(screen.getByText('Next →'))
     // Both should now be marked as used (auto-crossed from step 1)
     const flourChip = screen.getAllByRole('button', { name: /flour/i })[0]
     expect(flourChip).toHaveClass('cn-ingredient-chip--used')
     expect(flourChip).not.toHaveClass('cn-ingredient-chip--active')
+  })
+})
+
+// ── Mise en Place ─────────────────────────────────────────────────────────────
+
+describe('CookingNavigator — mise en place', () => {
+  test('shows "Mise en Place" header on initial render', () => {
+    renderNavigator()
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
+    expect(screen.queryByText('Step 1 of 3')).not.toBeInTheDocument()
+  })
+
+  test('shows intro text on mise en place screen', () => {
+    renderNavigator()
+    expect(screen.getByText(/gather and prepare all/i)).toBeInTheDocument()
+  })
+
+  test('shows all recipe ingredients as buttons on mise en place screen', () => {
+    renderNavigator()
+    expect(screen.getByRole('button', { name: /200g flour/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2 eggs/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /100ml milk/i })).toBeInTheDocument()
+  })
+
+  test('shows equipment extracted from instructions', () => {
+    renderNavigator({
+      instructions: ['Preheat the oven to 180°C.', 'Mix in a bowl.', 'Bake until done.'],
+    })
+    expect(screen.getByText('oven')).toBeInTheDocument()
+    expect(screen.getByText('bowl')).toBeInTheDocument()
+  })
+
+  test('does not show equipment section when instructions have no equipment keywords', () => {
+    renderNavigator({
+      instructions: ['Combine ingredients.', 'Serve immediately.'],
+    })
+    expect(screen.queryByText('Equipment needed')).not.toBeInTheDocument()
+  })
+
+  test('"Start Cooking →" button appears on mise en place and advances to Step 1', () => {
+    renderNavigator()
+    expect(screen.getByText('Start Cooking →')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Mix flour and eggs.')).toBeInTheDocument()
+  })
+
+  test('Prev button is disabled on mise en place screen', () => {
+    renderNavigator()
+    expect(screen.getByText('← Prev')).toBeDisabled()
+  })
+
+  test('navigating Prev from step 1 returns to mise en place', () => {
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByText('← Prev'))
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
+  })
+
+  test('ingredients checked during mise en place are reset when cooking starts', () => {
+    renderNavigator()
+    const flourChip = screen.getByRole('button', { name: /200g flour/i })
+    fireEvent.click(flourChip) // mark as prepared
+    expect(flourChip).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    const flourChipStep1 = screen.getByRole('button', { name: /200g flour/i })
+    expect(flourChipStep1).not.toHaveClass('cn-ingredient-chip--used')
+  })
+
+  test('groups ingredients by action type showing multiple group labels', () => {
+    const recipe = {
+      name: 'Group Test',
+      ingredients: ['2 cloves garlic', '1 cup flour', '1 lb chicken breast'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Chop / dice / mince')).toBeInTheDocument()
+    expect(screen.getByText('Measure')).toBeInTheDocument()
+    expect(screen.getByText('Marinate / temper')).toBeInTheDocument()
+  })
+
+  test('places garlic under Chop / dice / mince', () => {
+    const recipe = {
+      name: 'Garlic Test',
+      ingredients: ['3 cloves garlic'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Chop / dice / mince')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /3 cloves garlic/i })).toBeInTheDocument()
+  })
+
+  test('places flour under Measure', () => {
+    const recipe = {
+      name: 'Flour Test',
+      ingredients: ['2 cups flour'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Measure')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2 cups flour/i })).toBeInTheDocument()
+  })
+
+  test('places salmon under Marinate / temper', () => {
+    const recipe = {
+      name: 'Salmon Test',
+      ingredients: ['1 lb salmon fillet'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Marinate / temper')).toBeInTheDocument()
+  })
+
+  test('places potatoes under Peel', () => {
+    const recipe = {
+      name: 'Potato Test',
+      ingredients: ['3 large potatoes'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Peel')).toBeInTheDocument()
+  })
+
+  test('places unknown ingredient without unit under Other', () => {
+    const recipe = {
+      name: 'Other Test',
+      ingredients: ['lemon zest'],
+      instructions: ['Cook.'],
+    }
+    render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
+    expect(screen.getByText('Other')).toBeInTheDocument()
   })
 })

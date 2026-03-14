@@ -862,6 +862,46 @@ html, body {
   color: var(--text-muted);
 }
 
+.cn-mise-progress {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+  box-shadow: 0 8px 20px var(--surface);
+  padding: 8px 24px 12px;
+}
+
+.cn-mise-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.cn-mise-progress-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cn-mise-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.cn-mise-translation {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+  opacity: 0.75;
+}
+
 .cn-close-btn {
   display: flex;
   align-items: center;
@@ -881,11 +921,16 @@ html, body {
   color: var(--text);
 }
 
+/* Scrollable content wrapper — fills space between header and nav */
+.cn-scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* Step body */
 .cn-step-body {
-  flex: 1;
   padding: 16px 24px 8px;
-  overflow-y: auto;
 }
 
 .cn-step-text {
@@ -1216,19 +1261,23 @@ html, body {
   color: var(--accent);
 }
 
-.cn-card--text-large .cn-step-text        { font-size: 1.5rem; }
-.cn-card--text-large .cn-ingredient-chip  { font-size: 1.05rem; }
+.cn-card--text-large .cn-step-text          { font-size: 1.5rem; }
+.cn-card--text-large .cn-ingredient-chip   { font-size: 1.05rem; }
 .cn-card--text-large .cn-ingredients-label { font-size: 0.85rem; }
-.cn-card--text-large .cn-nav-btn          { font-size: 1.1rem; }
-.cn-card--text-large .cn-timer-pill       { font-size: 0.95rem; }
-.cn-card--text-large .cn-step-counter     { font-size: 0.85rem; }
+.cn-card--text-large .cn-nav-btn           { font-size: 1.1rem; }
+.cn-card--text-large .cn-timer-pill        { font-size: 0.95rem; }
+.cn-card--text-large .cn-step-counter      { font-size: 0.85rem; }
+.cn-card--text-large .cn-mise-progress-label { font-size: 0.9rem; }
+.cn-card--text-large .cn-equipment-list    { font-size: 1.05rem; }
 
-.cn-card--text-xl .cn-step-text           { font-size: 2rem; }
-.cn-card--text-xl .cn-ingredient-chip     { font-size: 1.25rem; }
-.cn-card--text-xl .cn-ingredients-label  { font-size: 1rem; }
-.cn-card--text-xl .cn-nav-btn             { font-size: 1.3rem; }
-.cn-card--text-xl .cn-timer-pill          { font-size: 1.1rem; }
-.cn-card--text-xl .cn-step-counter        { font-size: 1rem; }
+.cn-card--text-xl .cn-step-text            { font-size: 2rem; }
+.cn-card--text-xl .cn-ingredient-chip      { font-size: 1.25rem; }
+.cn-card--text-xl .cn-ingredients-label   { font-size: 1rem; }
+.cn-card--text-xl .cn-nav-btn              { font-size: 1.3rem; }
+.cn-card--text-xl .cn-timer-pill           { font-size: 1.1rem; }
+.cn-card--text-xl .cn-step-counter         { font-size: 1rem; }
+.cn-card--text-xl .cn-mise-progress-label  { font-size: 1.05rem; }
+.cn-card--text-xl .cn-equipment-list       { font-size: 1.25rem; }
 
 /* ── Auth Screen ─────────────────────────────────────────────────────── */
 

@@ -161,6 +161,145 @@ function matchIngredientsToStep(ingredients, stepText) {
   })
 }
 
+// ── Equipment extraction ──────────────────────────────────────────────────────
+
+const EQUIPMENT_KEYWORDS = [
+  'oven', 'microwave', 'stove', 'stovetop', 'grill', 'broiler',
+  'bowl', 'mixing bowl', 'large bowl', 'small bowl', 'medium bowl',
+  'pan', 'skillet', 'frying pan', 'saucepan', 'baking pan', 'sheet pan', 'baking sheet',
+  'pot', 'stockpot', 'dutch oven',
+  'whisk', 'spatula', 'wooden spoon', 'ladle',
+  'knife', 'cutting board', 'chopping board',
+  'colander', 'strainer', 'sieve',
+  'blender', 'food processor', 'stand mixer', 'hand mixer',
+  'grater', 'zester', 'peeler',
+  'measuring cup', 'measuring spoon',
+  'wire rack', 'cooling rack',
+  'roasting pan', 'casserole dish', 'baking dish',
+  'thermometer',
+]
+
+function extractEquipment(instructions) {
+  const allText = instructions.join(' ').toLowerCase()
+  return EQUIPMENT_KEYWORDS.filter((eq) => allText.includes(eq))
+}
+
+// ── Ingredient categorization ─────────────────────────────────────────────────
+
+const INGREDIENT_CATEGORIES = [
+  {
+    label: 'Chop / dice / mince',
+    keywords: [
+      'onion', 'shallot', 'garlic', 'leek', 'scallion', 'green onion', 'chive',
+      'celery', 'carrot', 'tomato', 'cherry tomato',
+      'zucchini', 'courgette', 'squash', 'pumpkin',
+      'mushroom', 'shiitake', 'portobello', 'cremini',
+      'bell pepper', 'jalapeño', 'jalapeno', 'serrano', 'habanero', 'poblano',
+      'chili pepper', 'chilli pepper',
+      'ginger', 'fennel', 'cucumber', 'eggplant', 'aubergine',
+      'broccoli', 'cauliflower', 'broccolini',
+      'brussels sprout', 'asparagus',
+      'green bean', 'string bean', 'corn',
+      'avocado', 'mango', 'pineapple', 'apple', 'pear',
+      'beet', 'beetroot', 'turnip', 'parsnip',
+      'cabbage', 'bok choy', 'kale', 'collard', 'chard', 'spinach',
+      'parsley', 'cilantro', 'coriander leaf', 'basil', 'mint',
+      'dill', 'tarragon', 'chives',
+      'walnut', 'almond', 'pecan', 'cashew', 'pistachio', 'hazelnut', 'peanut',
+      'chocolate', 'sun-dried tomato', 'artichoke', 'radish',
+    ],
+  },
+  {
+    label: 'Peel',
+    keywords: [
+      'potato', 'sweet potato', 'yam',
+      'rutabaga', 'celeriac', 'kohlrabi',
+    ],
+  },
+  {
+    label: 'Wash & dry',
+    keywords: [
+      'lettuce', 'romaine', 'iceberg', 'arugula', 'watercress',
+      'endive', 'radicchio', 'frisée',
+      'berry', 'berries', 'strawberry', 'blueberry', 'raspberry',
+      'blackberry', 'cranberry', 'grape', 'cherry',
+    ],
+  },
+  {
+    label: 'Marinate / temper',
+    keywords: [
+      'chicken', 'beef', 'pork', 'lamb', 'turkey', 'veal', 'duck',
+      'fish', 'salmon', 'tuna', 'cod', 'halibut', 'tilapia', 'trout',
+      'bass', 'snapper', 'swordfish', 'mackerel',
+      'shrimp', 'prawn', 'scallop', 'crab', 'lobster', 'clam', 'mussel',
+      'tofu', 'tempeh', 'seitan',
+      'steak', 'tenderloin', 'fillet', 'loin', 'breast', 'thigh',
+      'ground beef', 'ground pork', 'ground turkey', 'ground chicken',
+      'egg',
+    ],
+  },
+  {
+    label: 'Measure',
+    keywords: [
+      'flour', 'sugar', 'brown sugar', 'powdered sugar',
+      'salt', 'oil', 'olive oil', 'butter',
+      'milk', 'cream', 'buttermilk', 'coconut milk', 'almond milk',
+      'broth', 'stock',
+      'vinegar', 'balsamic', 'soy sauce', 'fish sauce', 'worcestershire',
+      'hot sauce', 'hoisin', 'oyster sauce', 'teriyaki',
+      'vanilla', 'extract',
+      'baking soda', 'baking powder', 'yeast',
+      'honey', 'maple syrup', 'molasses', 'corn syrup',
+      'water', 'wine', 'beer', 'juice',
+      'cumin', 'paprika', 'turmeric', 'coriander', 'cinnamon',
+      'cardamom', 'nutmeg', 'allspice', 'cayenne', 'pepper flakes',
+      'chili powder', 'curry powder', 'garam masala', "za'atar",
+      'bay leaf', 'star anise', 'fennel seed',
+      'sauce', 'paste', 'powder', 'syrup',
+    ],
+  },
+]
+
+const CATEGORY_PREP_MINUTES = {
+  'Chop / dice / mince': 3,
+  'Peel':                2,
+  'Wash & dry':          1,
+  'Marinate / temper':   5,
+  'Measure':             0.5,
+  'Other':               1,
+}
+
+function estimatePrepMinutes(ingredients) {
+  const total = ingredients.reduce((sum, ing) => {
+    const label = categorizeIngredient(ing)
+    return sum + (CATEGORY_PREP_MINUTES[label] ?? 1)
+  }, 0)
+  return Math.max(1, Math.round(total))
+}
+
+function categorizeIngredient(text) {
+  const lower = text.toLowerCase()
+  for (const { label, keywords } of INGREDIENT_CATEGORIES) {
+    if (keywords.some((kw) => lower.includes(kw))) return label
+  }
+  const hasUnit = lower.split(/\s+/).some((t) => QUANTITY_TOKENS.test(t))
+  return hasUnit ? 'Measure' : 'Other'
+}
+
+function groupIngredients(ingredients) {
+  const buckets = new Map()
+  ingredients.forEach((text, index) => {
+    const label = categorizeIngredient(text)
+    if (!buckets.has(label)) buckets.set(label, [])
+    buckets.get(label).push({ text, index })
+  })
+  const order = [...INGREDIENT_CATEGORIES.map((c) => c.label), 'Other']
+  return order.filter((label) => buckets.has(label)).map((label) => ({
+    label,
+    items: buckets.get(label),
+  }))
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 function formatTime(secs) {
@@ -176,7 +315,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   const ingredients = normalizeIngredients(recipe.ingredients)
   const total = instructions.length
 
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentStep, setCurrentStep] = useState(-1)
   const [usedIngredients, setUsedIngredients] = useState(new Set())
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
@@ -213,7 +352,7 @@ export default function CookingNavigator({ recipe, onClose }) {
     useGestureMode({
       videoRef,
       onNext: () => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => Math.min(s + 1, total - 1)); playBeep() },
-      onPrev: () => { setCurrentStep((s) => Math.max(s - 1, 0)); playBeepBack() },
+      onPrev: () => { setCurrentStep((s) => Math.max(s - 1, -1)); playBeepBack() },
     })
 
   function handleIngredientToggle(index) {
@@ -358,7 +497,7 @@ export default function CookingNavigator({ recipe, onClose }) {
       autoMarkCurrentStepIngredients()
       setCurrentStep((s) => Math.min(s + 1, total - 1))
     } else if (cmd.includes('back') || cmd.includes('prev')) {
-      setCurrentStep((s) => Math.max(s - 1, 0))
+      setCurrentStep((s) => Math.max(s - 1, -1))
     } else if (cmd.includes('read')) {
       speakCurrentStep()
     } else if (cmd.includes('stop') || cmd.includes('close') || cmd.includes('exit') || cmd.includes('done')) {
@@ -435,6 +574,16 @@ export default function CookingNavigator({ recipe, onClose }) {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
     const step = currentStepRef.current
+    if (step === -1) {
+      const utterance = new SpeechSynthesisUtterance(
+        'Mise en place. Gather and prepare all your ingredients and equipment before you start cooking.'
+      )
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => setIsSpeaking(false)
+      utterance.onerror = () => setIsSpeaking(false)
+      window.speechSynthesis.speak(utterance)
+      return
+    }
     const stepInstructions = instructions[step] || ''
     const relevantIngredients = matchIngredientsToStep(ingredients, stepInstructions)
       .filter((c) => c.relevant)
@@ -461,6 +610,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   const chipData = matchIngredientsToStep(ingredients, stepText)
   const relevantChips = chipData.filter((c) => c.relevant)
   const allChips = chipData
+  const equipment = extractEquipment(instructions)
 
   return (
     <div className="cn-overlay" role="dialog" aria-label="Cooking navigator">
@@ -496,13 +646,15 @@ export default function CookingNavigator({ recipe, onClose }) {
         <div className="cn-progress-bar">
           <div
             className="cn-progress-fill"
-            style={{ width: `${((currentStep + 1) / total) * 100}%` }}
+            style={{ width: `${currentStep === -1 ? 0 : ((currentStep + 1) / total) * 100}%` }}
           />
         </div>
 
         {/* Header */}
         <div className="cn-header">
-          <span className="cn-step-counter">Step {currentStep + 1} of {total}</span>
+          <span className="cn-step-counter">
+            {currentStep === -1 ? <>Mise en Place <span className="cn-mise-translation">— everything in its place</span></> : `Step ${currentStep + 1} of ${total}`}
+          </span>
           <div className="cn-header-actions">
             {gestureSupportEnabled && gestureSupported && (
               <button
@@ -616,47 +768,114 @@ export default function CookingNavigator({ recipe, onClose }) {
           </div>
         )}
 
-        {/* Step text */}
-        <div className="cn-step-body">
-          <p className="cn-step-text">
-            {renderStepWithTimers(stepText, currentStep, activeTimers, handleTimerStart)}
-          </p>
-        </div>
-
-        {/* Ingredient chips */}
-        {allChips.length > 0 && (
-          <div className="cn-ingredients">
-            <span className="cn-ingredients-label">Ingredients this step</span>
-            <div className="cn-ingredient-chips">
-              {allChips.map((chip, i) => {
-                const isUsed = usedIngredients.has(i)
-                const className = [
-                  'cn-ingredient-chip',
-                  chip.relevant && !isUsed ? 'cn-ingredient-chip--active' : '',
-                  isUsed ? 'cn-ingredient-chip--used' : '',
-                ].filter(Boolean).join(' ')
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    className={className}
-                    onClick={() => handleIngredientToggle(i)}
-                    title={isUsed ? 'Mark as not used' : 'Mark as used'}
-                    aria-pressed={isUsed}
-                  >
-                    {chip.text}
-                  </button>
-                )
-              })}
+        <div className="cn-scroll-body">
+        {currentStep === -1 ? (
+          <div className="cn-mise-en-place">
+            <div className="cn-step-body">
+              <p className="cn-step-text">
+                Before you start cooking, read through the full recipe, then gather and prepare all
+                ingredients and equipment below.
+              </p>
             </div>
+            {ingredients.length > 0 && (() => {
+              const prepMins = estimatePrepMinutes(ingredients)
+              const pct = Math.round((usedIngredients.size / ingredients.length) * 100)
+              return (
+                <div className="cn-mise-progress">
+                  <div className="cn-mise-progress-label">
+                    <span>Prep Time: ~{prepMins} min</span>
+                    <span>{pct}% complete</span>
+                  </div>
+                  <div className="cn-mise-progress-track">
+                    <div className="cn-mise-progress-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })()}
+            {ingredients.length > 0 &&
+              groupIngredients(ingredients).map(({ label, items }) => (
+                <div key={label} className="cn-ingredients">
+                  <span className="cn-ingredients-label">{label}</span>
+                  <div className="cn-ingredient-chips">
+                    {items.map(({ text, index }) => {
+                      const isUsed = usedIngredients.has(index)
+                      const className = [
+                        'cn-ingredient-chip',
+                        !isUsed ? 'cn-ingredient-chip--active' : '',
+                        isUsed ? 'cn-ingredient-chip--used' : '',
+                      ].filter(Boolean).join(' ')
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          className={className}
+                          onClick={() => handleIngredientToggle(index)}
+                          title={isUsed ? 'Mark as not prepared' : 'Mark as prepared'}
+                          aria-pressed={isUsed}
+                        >
+                          {text}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))
+            }
+            {equipment.length > 0 && (
+              <div className="cn-ingredients">
+                <span className="cn-ingredients-label">Equipment needed</span>
+                <ul className="cn-equipment-list">
+                  {equipment.map((eq, i) => <li key={i}>{eq}</li>)}
+                </ul>
+              </div>
+            )}
           </div>
+        ) : (
+          <>
+            {/* Step text */}
+            <div className="cn-step-body">
+              <p className="cn-step-text">
+                {renderStepWithTimers(stepText, currentStep, activeTimers, handleTimerStart)}
+              </p>
+            </div>
+
+            {/* Ingredient chips */}
+            {allChips.length > 0 && (
+              <div className="cn-ingredients">
+                <span className="cn-ingredients-label">Ingredients this step</span>
+                <div className="cn-ingredient-chips">
+                  {allChips.map((chip, i) => {
+                    const isUsed = usedIngredients.has(i)
+                    const className = [
+                      'cn-ingredient-chip',
+                      chip.relevant && !isUsed ? 'cn-ingredient-chip--active' : '',
+                      isUsed ? 'cn-ingredient-chip--used' : '',
+                    ].filter(Boolean).join(' ')
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className={className}
+                        onClick={() => handleIngredientToggle(i)}
+                        title={isUsed ? 'Mark as not used' : 'Mark as used'}
+                        aria-pressed={isUsed}
+                      >
+                        {chip.text}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
+        </div>
 
         {/* Navigation */}
         <div className="cn-nav">
           <button
             className="cn-nav-btn cn-nav-btn--prev"
-            disabled={currentStep === 0}
+            disabled={currentStep === -1}
             onClick={() => setCurrentStep((s) => s - 1)}
           >
             ← Prev
@@ -664,9 +883,16 @@ export default function CookingNavigator({ recipe, onClose }) {
           <button
             className="cn-nav-btn cn-nav-btn--next"
             disabled={currentStep === total - 1}
-            onClick={() => { autoMarkCurrentStepIngredients(); setCurrentStep((s) => s + 1) }}
+            onClick={() => {
+              if (currentStep === -1) {
+                setUsedIngredients(new Set())
+              } else {
+                autoMarkCurrentStepIngredients()
+              }
+              setCurrentStep((s) => s + 1)
+            }}
           >
-            Next →
+            {currentStep === -1 ? 'Start Cooking →' : 'Next →'}
           </button>
         </div>
       </div>
