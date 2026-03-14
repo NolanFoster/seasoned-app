@@ -4,15 +4,15 @@ on:
   push:
     branches: [ main, staging ]
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-tests.yml'
+      - 'recipe-app/**'
+      - '.github/workflows/recipe-app-tests.yml'
       - 'package.json'
       - 'package-lock.json'
   pull_request:
     branches: [ main, staging ]
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-tests.yml'
+      - 'recipe-app/**'
+      - '.github/workflows/recipe-app-tests.yml'
       - 'package.json'
       - 'package-lock.json'
 
@@ -23,7 +23,7 @@ permissions:
   checks: write
 
 jobs:
-  test-frontend:
+  test-recipe-app:
     name: Frontend Tests and Coverage
     runs-on: ubuntu-latest
     continue-on-error: true  # Continue even if tests fail to get coverage data
@@ -47,14 +47,14 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        cache-dependency-path: recipe-app/package-lock.json
     
     - name: Install Frontend Dependencies
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: npm ci
     
     - name: Run Frontend Tests with Coverage
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         echo "Running tests with coverage..."
         # Run tests with coverage, but don't fail the workflow if tests fail
@@ -64,7 +64,7 @@ jobs:
         }
     
     - name: Check Coverage Thresholds
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
         # The coverage threshold check is handled by Jest config
@@ -109,14 +109,14 @@ jobs:
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-coverage
-        path: frontend/coverage/
+        name: recipe-app-coverage
+        path: recipe-app/coverage/
       if: always()  # Always upload coverage even if tests fail
     
     - name: Generate Diff Coverage Report (PR only)
       if: github.event_name == 'pull_request'
       id: diff-coverage
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         # Install diff-cover for differential coverage
         pip install diff-cover
@@ -190,7 +190,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Required: 85% coverage for new/modified code**" >> $GITHUB_STEP_SUMMARY
 
-  lint-frontend:
+  lint-recipe-app:
     name: Frontend Code Quality Checks
     runs-on: ubuntu-latest
     
@@ -203,14 +203,14 @@ jobs:
         node-version: '18'
     
     - name: Lint Frontend
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         npm ci
         npm run lint || echo "Linting completed with warnings"
 
   coverage-report:
     name: Frontend Coverage Report
-    needs: [test-frontend]
+    needs: [test-recipe-app]
     runs-on: ubuntu-latest
     if: always()
     
@@ -220,8 +220,8 @@ jobs:
     - name: Download Frontend Coverage
       uses: actions/download-artifact@v4
       with:
-        name: frontend-coverage
-        path: ./coverage-reports/frontend
+        name: recipe-app-coverage
+        path: ./coverage-reports/recipe-app
       continue-on-error: true
     
     - name: Coverage Summary
@@ -231,7 +231,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Validate that we have coverage data
-        if [ ! -d ./coverage-reports/frontend ] || [ ! -f ./coverage-reports/frontend/coverage-summary.json ]; then
+        if [ ! -d ./coverage-reports/recipe-app ] || [ ! -f ./coverage-reports/recipe-app/coverage-summary.json ]; then
           echo "⚠️ **No valid coverage data available**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "This may happen if:" >> $GITHUB_STEP_SUMMARY
@@ -243,11 +243,11 @@ jobs:
           exit 0
         fi
         
-        if [ -d ./coverage-reports/frontend ]; then
+        if [ -d ./coverage-reports/recipe-app ]; then
           echo "✅ Frontend coverage reports available" >> $GITHUB_STEP_SUMMARY
           
           # Extract and display coverage percentages from JSON summary
-          if [ -f ./coverage-reports/frontend/coverage-summary.json ]; then
+          if [ -f ./coverage-reports/recipe-app/coverage-summary.json ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Coverage Metrics:" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
@@ -257,10 +257,10 @@ jobs:
             sudo apt-get install -y jq
             
             # Extract coverage values with error handling
-            lines=$(jq -r '.total.lines.pct // "N/A"' ./coverage-reports/frontend/coverage-summary.json)
-            statements=$(jq -r '.total.statements.pct // "N/A"' ./coverage-reports/frontend/coverage-summary.json)
-            functions=$(jq -r '.total.functions.pct // "N/A"' ./coverage-reports/frontend/coverage-summary.json)
-            branches=$(jq -r '.total.branches.pct // "N/A"' ./coverage-reports/frontend/coverage-summary.json)
+            lines=$(jq -r '.total.lines.pct // "N/A"' ./coverage-reports/recipe-app/coverage-summary.json)
+            statements=$(jq -r '.total.statements.pct // "N/A"' ./coverage-reports/recipe-app/coverage-summary.json)
+            functions=$(jq -r '.total.functions.pct // "N/A"' ./coverage-reports/recipe-app/coverage-summary.json)
+            branches=$(jq -r '.total.branches.pct // "N/A"' ./coverage-reports/recipe-app/coverage-summary.json)
             
             # Validate that we got numeric values and they are reasonable
             if [[ "$lines" =~ ^[0-9]+\.?[0-9]*$ ]] && [[ "$statements" =~ ^[0-9]+\.?[0-9]*$ ]] && \
@@ -296,7 +296,7 @@ jobs:
             else
               echo "⚠️ Invalid coverage data format detected" >> $GITHUB_STEP_SUMMARY
               echo "Raw coverage data:" >> $GITHUB_STEP_SUMMARY
-              cat ./coverage-reports/frontend/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+              cat ./coverage-reports/recipe-app/coverage-summary.json >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "**Coverage data validation failed**" >> $GITHUB_STEP_SUMMARY
               echo "This may indicate:" >> $GITHUB_STEP_SUMMARY
@@ -308,7 +308,7 @@ jobs:
             
 
                       else
-              echo "⚠️ coverage-summary.json not found in frontend coverage reports" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ coverage-summary.json not found in recipe-app coverage reports" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "**Coverage files missing**" >> $GITHUB_STEP_SUMMARY
               echo "This may indicate:" >> $GITHUB_STEP_SUMMARY
@@ -318,7 +318,7 @@ jobs:
               echo "coverage_available=false" >> $GITHUB_OUTPUT
             fi
         else
-          echo "⚠️ No frontend coverage reports found" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ No recipe-app coverage reports found" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**No coverage artifacts available**" >> $GITHUB_STEP_SUMMARY
           echo "This may indicate:" >> $GITHUB_STEP_SUMMARY
@@ -354,10 +354,10 @@ jobs:
           const coverageAvailable = '${{ steps.coverage-summary.outputs.coverage_available }}' === 'true';
           const coverageBelowThreshold = '${{ steps.coverage-summary.outputs.coverage_below_threshold }}' === 'true';
           
-          // Get diff coverage data from test-frontend job
-          const diffCoverageAvailable = '${{ needs.test-frontend.outputs.diff_coverage_available }}' === 'true';
-          const diffCoverageBelowThreshold = '${{ needs.test-frontend.outputs.diff_coverage_below_threshold }}' === 'true';
-          const diffCoveragePercentage = '${{ needs.test-frontend.outputs.diff_coverage_percentage }}';
+          // Get diff coverage data from test-recipe-app job
+          const diffCoverageAvailable = '${{ needs.test-recipe-app.outputs.diff_coverage_available }}' === 'true';
+          const diffCoverageBelowThreshold = '${{ needs.test-recipe-app.outputs.diff_coverage_below_threshold }}' === 'true';
+          const diffCoveragePercentage = '${{ needs.test-recipe-app.outputs.diff_coverage_percentage }}';
           
           // Check if any threshold is not met
           const anyThresholdNotMet = coverageBelowThreshold || diffCoverageBelowThreshold;
@@ -488,7 +488,7 @@ jobs:
             
             console.log('Frontend coverage comment posted successfully');
           } catch (error) {
-            console.error('Failed to post frontend coverage comment:', error);
+            console.error('Failed to post recipe-app coverage comment:', error);
             console.log('This may be due to permissions. The coverage report is still available in the workflow summary.');
             
             // Still add to summary even if comment fails
