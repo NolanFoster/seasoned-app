@@ -430,6 +430,7 @@ export default function App() {
             <path d="M12 8v1M12 15v1M8.5 9.5l.7.7M14.8 14.8l.7.7M8 12H7M17 12h-1M8.5 14.5l.7-.7M14.8 9.2l.7-.7"/>
           </svg>
           <span className="brand-name">Seasoned</span>
+          <span className="brand-tagline">Clip, Organize, Season Every Recipe to Your Taste</span>
         </div>
 
         <div className="omnibox">

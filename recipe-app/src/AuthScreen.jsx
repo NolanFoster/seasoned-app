@@ -133,6 +133,7 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
           </svg>
           <span className="auth-brand-name">Seasoned</span>
         </div>
+        <p className="auth-tagline">Clip, Organize, Season Every Recipe to Your Taste</p>
 
         {step === 'email' ? (
           <>
