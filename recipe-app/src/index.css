@@ -76,6 +76,12 @@ html, body {
   color: var(--text);
 }
 
+.brand-tagline {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
 /* ── Omnibox ── */
 .omnibox {
   position: relative;
@@ -1334,6 +1340,13 @@ html, body {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
+}
+
+.auth-tagline {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+  text-align: center;
 }
 
 .auth-title {
