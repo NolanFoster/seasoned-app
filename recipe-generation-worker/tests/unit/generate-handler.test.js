@@ -5,7 +5,7 @@ vi.mock('opik', () => ({
   Opik: vi.fn().mockImplementation(() => ({
     flush: vi.fn().mockResolvedValue(undefined),
     trace: vi.fn().mockReturnValue({ id: 'mock-trace-id' }),
-    span: vi.fn().mockReturnValue({ id: 'mock-span-id' }),
+    span: vi.fn().mockReturnValue({ id: 'mock-span-id' })
   }))
 }));
 
