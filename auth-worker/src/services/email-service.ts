@@ -192,14 +192,15 @@ export class EmailService {
             border-radius: 50%;
             background: #1b2c1d;
             border: 1px solid #2a3d2c;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-align: center;
+            line-height: 56px;
           }
           .logo svg {
             width: 28px;
             height: 28px;
             fill: #c8a96e;
+            vertical-align: middle;
+            display: inline-block;
           }
           .app-name {
             margin: 0;
@@ -243,12 +244,19 @@ export class EmailService {
           }
           .otp-code {
             margin: 0;
-            font-size: 42px;
+            font-size: 36px;
             line-height: 1;
-            letter-spacing: 8px;
+            letter-spacing: 6px;
             font-weight: 700;
             color: #c8a96e;
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+          }
+          @media only screen and (max-width: 480px) {
+            .otp-code {
+              font-size: 28px;
+              letter-spacing: 4px;
+            }
           }
           .otp-label {
             margin: 12px 0 0;
