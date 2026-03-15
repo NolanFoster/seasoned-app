@@ -20,10 +20,10 @@ jobs:
         node-version: '18'
         cache: 'npm'
     
-    - name: Test Frontend
-      if: contains(github.event.head_commit.message, 'frontend') || github.event_name == 'pull_request'
+    - name: Test Recipe App
+      if: contains(github.event.head_commit.message, 'recipe-app') || github.event_name == 'pull_request'
       run: |
-        cd frontend
+        cd recipe-app
         if [ -f "package.json" ]; then
           npm ci
           npm test
@@ -59,9 +59,9 @@ jobs:
     
     - name: Run Linting
       run: |
-        # Run linting for frontend
-        if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
-          cd frontend
+        # Run linting for recipe-app
+        if [ -d "recipe-app" ] && [ -f "recipe-app/package.json" ]; then
+          cd recipe-app
           npm run lint || echo "No lint script found"
           cd ..
         fi

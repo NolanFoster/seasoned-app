@@ -69,7 +69,7 @@ This project follows a strict testing and staging deployment workflow to ensure 
    ./.github/hooks/install-hooks.sh
    ```
    
-   This hook automatically runs tests for all workers and frontend changes, preventing broken code from being committed.
+   This hook automatically runs tests for all workers and recipe-app changes, preventing broken code from being committed.
 
 2. Make your changes and commit (tests run automatically)
 
@@ -135,10 +135,10 @@ For detailed setup instructions for each worker, see their individual README fil
 
 ### 2. Frontend Setup
 
-Navigate to the `frontend` directory:
+Navigate to the `recipe-app` directory:
 
 ```bash
-cd frontend
+cd recipe-app
 ```
 
 Install dependencies:
@@ -147,7 +147,7 @@ Install dependencies:
 npm install
 ```
 
-Update the API URLs in your environment file (`frontend/.env.local`):
+Update the API URLs in your environment file (`recipe-app/.env.local`):
 
 ```bash
 VITE_CLIPPER_API_URL=https://your-clipper-worker.your-subdomain.workers.dev
@@ -171,7 +171,7 @@ npm run dev
 1. **Copy example environment files:**
    ```bash
    # Frontend  
-   cp frontend/.env.example frontend/.env.local
+   cp recipe-app/.env.example recipe-app/.env.local
    ```
 
 2. **Update the files with your actual values**
@@ -247,7 +247,7 @@ npm run dev
 ### Frontend Development
 
 ```bash
-cd frontend
+cd recipe-app
 npm run dev
 ```
 
@@ -301,19 +301,19 @@ The frontend is configured for deployment to **Cloudflare Pages** with multiple 
 
 **Quick Deploy** (default environment):
 ```bash
-cd frontend
+cd recipe-app
 npm run deploy
 ```
 
 **Deploy to Staging**:
 ```bash
-cd frontend
+cd recipe-app
 npm run deploy:staging
 ```
 
 **Deploy to Production**:
 ```bash
-cd frontend
+cd recipe-app
 npm run deploy:prod
 ```
 
@@ -331,7 +331,7 @@ npm run deploy:prod
 If you prefer other hosting services, you can build manually and deploy the `dist/` folder:
 
 ```bash
-cd frontend
+cd recipe-app
 npm run build
 ```
 
@@ -343,7 +343,7 @@ Then upload the `dist/` folder contents to:
 
 #### Environment Configuration
 
-Before deploying, ensure your environment variables are set in `frontend/.env.local`:
+Before deploying, ensure your environment variables are set in `recipe-app/.env.local`:
 
 ```bash
 VITE_API_URL=https://your-worker.your-subdomain.workers.dev
@@ -355,7 +355,7 @@ VITE_CLIPPER_API_URL=https://your-clipper-worker.your-subdomain.workers.dev
 Preview your production build locally before deploying:
 
 ```bash
-cd frontend
+cd recipe-app
 npm run build
 npm run preview
 ```
