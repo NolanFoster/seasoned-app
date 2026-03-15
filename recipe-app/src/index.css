@@ -76,6 +76,12 @@ html, body {
   color: var(--text);
 }
 
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .brand-tagline {
   font-size: 0.65rem;
   color: var(--text-muted);
