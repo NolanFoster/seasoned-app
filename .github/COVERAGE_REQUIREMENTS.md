@@ -6,7 +6,7 @@ This repository enforces code coverage requirements to maintain code quality.
 
 ### Overall Coverage
 - **Minimum Required**: 40% for all metrics (lines, statements, functions, branches)
-- Enforced by Jest configuration in `frontend/jest.config.js`
+- Enforced by Jest configuration in `recipe-app/jest.config.js`
 - Tests will fail if coverage falls below this threshold
 
 ### Differential Coverage
@@ -54,7 +54,7 @@ To test coverage locally:
 
 ```bash
 # Run tests with coverage
-cd frontend
+cd recipe-app
 npm run test:coverage
 
 # The command will fail if coverage is below 40%
@@ -62,7 +62,7 @@ npm run test:coverage
 
 ## Coverage Reports
 
-- **HTML Report**: `frontend/coverage/lcov-report/index.html`
+- **HTML Report**: `recipe-app/coverage/lcov-report/index.html`
 - **Summary**: Displayed in GitHub Actions workflow summary
 - **PR Comments**: Automatic comments on PRs with coverage details
 - **Differential Report**: Available as artifact in PR workflows
@@ -82,7 +82,7 @@ To improve code coverage:
 If you see "No coverage data available" in the workflow:
 1. Ensure you have at least one test file (*.test.js or *.spec.js)
 2. Check that tests are actually running: `npm run test:coverage`
-3. Verify coverage-summary.json is generated in `frontend/coverage/`
+3. Verify coverage-summary.json is generated in `recipe-app/coverage/`
 4. Make sure Jest configuration includes all necessary coverage reporters
 
 ### Coverage Below Threshold

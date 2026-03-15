@@ -5,37 +5,37 @@
 
 echo "Running pre-commit checks..."
 
-# Check if we're in the frontend directory or have frontend changes
-if git diff --cached --name-only | grep -q "^frontend/"; then
-    echo "Frontend changes detected. Running linting and tests..."
-    cd frontend
+# Check if we're in the recipe-app directory or have recipe-app changes
+if git diff --cached --name-only | grep -q "^recipe-app/"; then
+    echo "Recipe app changes detected. Running linting and tests..."
+    cd recipe-app
     if [ -f "package.json" ]; then
         # Run linting first
         if npm run | grep -q " lint"; then
-            echo "🔍 Running frontend linting..."
+            echo "🔍 Running recipe-app linting..."
             npm run lint
-            FRONTEND_LINT_RESULT=$?
-            if [ $FRONTEND_LINT_RESULT -ne 0 ]; then
-                echo "❌ Frontend linting failed! Please fix linting issues before committing."
+            RECIPE_APP_LINT_RESULT=$?
+            if [ $RECIPE_APP_LINT_RESULT -ne 0 ]; then
+                echo "❌ Recipe app linting failed! Please fix linting issues before committing."
                 exit 1
             fi
-            echo "✅ Frontend linting passed!"
+            echo "✅ Recipe app linting passed!"
         else
-            echo "⚠️  No lint script found in frontend/package.json"
+            echo "⚠️  No lint script found in recipe-app/package.json"
         fi
         
         # Check if test script exists
         if npm run | grep -q " test"; then
-            echo "🧪 Running frontend tests..."
+            echo "🧪 Running recipe-app tests..."
             npm test
-            FRONTEND_TEST_RESULT=$?
-            if [ $FRONTEND_TEST_RESULT -ne 0 ]; then
-                echo "❌ Frontend tests failed! Commit aborted."
+            RECIPE_APP_TEST_RESULT=$?
+            if [ $RECIPE_APP_TEST_RESULT -ne 0 ]; then
+                echo "❌ Recipe app tests failed! Commit aborted."
                 exit 1
             fi
-            echo "✅ Frontend tests passed!"
+            echo "✅ Recipe app tests passed!"
         else
-            echo "⚠️  No test script found in frontend/package.json"
+            echo "⚠️  No test script found in recipe-app/package.json"
         fi
     fi
     cd ..
