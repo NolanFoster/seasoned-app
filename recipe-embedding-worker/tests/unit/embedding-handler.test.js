@@ -770,6 +770,35 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(callArgs.text).not.toContain('Ingredients:');
   });
 
+  it('should handle gzip-compressed recipe data from KV', async () => {
+    // Base64 gzip of: {"id":"test","data":{"name":"Compressed Recipe","description":"A compressed recipe","ingredients":["flour","eggs"],"instructions":["mix","bake"]}}
+    const compressedBase64 = 'H4sIAAAAAAAAA0XMTQoCMQyG4asM37onyE68gVuZRW1jCdofkgwIw9xdOiCu34d3h2QQnM0RkKNH0I4WK4Nw7XUom3Febpxk8CRsSWW49AbCZUl/oz8jrShn4eYGuuP57psigEsxrDOb65bm4uxVPgh4xBdjPY4vYis5n5IAAAA=';
+
+    // compressedBase64 is not valid JSON, so JSON.parse will fail → decompression path runs
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(compressedBase64);
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
+    mockEnv.AI.run.mockResolvedValue({ data: [[0.1, 0.2, 0.3]] });
+    mockEnv.RECIPE_VECTORS.upsert.mockResolvedValue(true);
+
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
+
+    expect(result.success).toBe(true);
+    expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
+      text: expect.stringContaining('Compressed Recipe')
+    });
+  });
+
+  it('should return recipe_not_found when data is neither valid JSON nor valid gzip', async () => {
+    // Provide a string that fails both JSON.parse and decompressData
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue('not-valid-json-and-not-valid-gzip-!!!');
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
+
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('recipe_not_found');
+  });
+
   it('should handle recipe with minimal valid data', async () => {
     const minimalRecipe = {
       data: {
