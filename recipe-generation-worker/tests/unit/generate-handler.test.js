@@ -4,8 +4,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 vi.mock('opik', () => ({
   Opik: vi.fn().mockImplementation(() => ({
     flush: vi.fn().mockResolvedValue(undefined),
-    trace: vi.fn().mockReturnValue({ id: 'mock-trace-id' }),
-    span: vi.fn().mockReturnValue({ id: 'mock-span-id' })
+    trace: vi.fn().mockReturnValue({
+      id: 'mock-trace-id',
+      span: vi.fn().mockReturnValue({ id: 'mock-span-id', end: vi.fn(), error: vi.fn() }),
+      end: vi.fn(),
+      error: vi.fn()
+    }),
+    span: vi.fn().mockReturnValue({ id: 'mock-span-id', end: vi.fn(), error: vi.fn() })
   }))
 }));
 
@@ -1650,6 +1655,363 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.recipe).toBeDefined();
       expect(data.recipe.image_url).toBeUndefined();
       expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+  });
+
+  describe('AI Response Field Normalization', () => {
+    it('should normalize uppercase field names from AI (Ingredients, Instructions, Name, Description)', async () => {
+      const uppercaseFieldEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                Name: 'Uppercase Recipe',
+                Description: 'A recipe with uppercase fields',
+                Ingredients: ['1 cup flour', '2 eggs'],
+                Instructions: ['Mix well', 'Bake for 30 min'],
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['flour', 'eggs'] });
+      const response = await handleGenerate(request, uppercaseFieldEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.name).toBe('Uppercase Recipe');
+      expect(data.recipe.description).toBe('A recipe with uppercase fields');
+      expect(data.recipe.ingredients).toEqual(['1 cup flour', '2 eggs']);
+      expect(data.recipe.instructions).toEqual(['Mix well', 'Bake for 30 min']);
+    });
+
+    it('should apply fallback values when recipe is missing optional fields', async () => {
+      const minimalFieldEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                ingredients: ['1 cup flour'],
+                instructions: ['Mix and bake'],
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                difficulty: 'Easy'
+                // Missing: name, servings, cuisine, dietary
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', {
+        ingredients: ['flour'],
+        cuisine: 'Italian',
+        dietary: ['vegan']
+      });
+      const response = await handleGenerate(request, minimalFieldEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.name).toBeDefined(); // fallback applied
+      expect(data.recipe.servings).toBeDefined(); // fallback applied
+      expect(data.recipe.cuisine).toBe('Italian'); // from request
+      expect(data.recipe.dietary).toEqual(['vegan']); // from request
+    });
+
+    it('should handle dietaryConsiderations as array', async () => {
+      const dietaryArrayEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Diet Recipe',
+                description: 'A dietary recipe',
+                ingredients: ['1 cup oats'],
+                instructions: ['Cook oats'],
+                prepTime: '5 minutes',
+                cookTime: '10 minutes',
+                totalTime: '15 minutes',
+                servings: '2 servings',
+                difficulty: 'Easy',
+                dietaryConsiderations: ['vegan', 'gluten-free']
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['oats'] });
+      const response = await handleGenerate(request, dietaryArrayEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.dietary)).toBe(true);
+    });
+
+    it('should handle dietaryConsiderations as string', async () => {
+      const dietaryStringEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Vegan Recipe',
+                description: 'A vegan recipe',
+                ingredients: ['1 cup lentils'],
+                instructions: ['Cook lentils'],
+                prepTime: '5 minutes',
+                cookTime: '20 minutes',
+                totalTime: '25 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy',
+                dietaryConsiderations: 'vegan'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['lentils'] });
+      const response = await handleGenerate(request, dietaryStringEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.dietary)).toBe(true);
+    });
+
+    it('should handle object-type ingredients (convert to array)', async () => {
+      const objectIngredientsEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Object Ingredients Recipe',
+                description: 'A recipe with object-type ingredients',
+                ingredients: { flour: '1 cup', eggs: '2', butter: '100g' },
+                instructions: ['Mix all', 'Bake at 350F'],
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['flour'] });
+      const response = await handleGenerate(request, objectIngredientsEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.ingredients)).toBe(true);
+    });
+
+    it('should handle null/undefined ingredients (fallback to empty array)', async () => {
+      const nullIngredientsEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'No Ingredients Recipe',
+                description: 'A recipe with null ingredients',
+                ingredients: null,
+                instructions: null,
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['test'] });
+      const response = await handleGenerate(request, nullIngredientsEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.ingredients)).toBe(true);
+      expect(Array.isArray(data.recipe.instructions)).toBe(true);
+    });
+
+    it('should handle nested recipe structure from AI (flatten recipe.recipe)', async () => {
+      const nestedRecipeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                recipe: {
+                  name: 'Nested Recipe',
+                  description: 'A recipe in nested structure',
+                  ingredients: ['1 cup rice'],
+                  instructions: ['Cook rice'],
+                  prepTime: '5 minutes',
+                  cookTime: '20 minutes',
+                  totalTime: '25 minutes',
+                  servings: '2 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Asian',
+                  dietary: []
+                }
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['rice'] });
+      const response = await handleGenerate(request, nestedRecipeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.name).toBe('Nested Recipe');
+    });
+  });
+
+  describe('Similarity Search Edge Cases', () => {
+    it('should handle vectorize returning no matches property', async () => {
+      const envWithNoMatches = {
+        ...enhancedMockEnv,
+        RECIPE_VECTORS: {
+          query: vi.fn().mockResolvedValue({}) // no matches property
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await handleGenerate(request, envWithNoMatches, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.similarRecipesFound).toBe(0);
+    });
+
+    it('should handle KV returning null recipe (success: false)', async () => {
+      const envWithNullKV = {
+        ...enhancedMockEnv,
+        RECIPE_STORAGE: {
+          get: vi.fn().mockResolvedValue(null) // recipe not found
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await handleGenerate(request, envWithNullKV, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      // Recipe generates OK even though similar recipes KV lookup failed
+      expect(data.recipe.similarRecipesFound).toBe(0);
+    });
+  });
+
+  describe('Opik Tracing Error Handling', () => {
+    it('should create error trace when Opik is active and AI generation fails', async () => {
+      const envWithOpikAndFailingLLM = {
+        ...enhancedMockEnv,
+        ...mockEnvWithOpik,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.reject(new Error('LLaMA service unavailable'));
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await handleGenerate(request, envWithOpikAndFailingLLM, corsHeaders);
+
+      // Should return 500 because LLaMA failed
+      expect(response.status).toBe(500);
+      const data = await response.json();
+      expect(data.error).toBe('Failed to process recipe generation request');
+    });
+  });
+
+  describe('ISO Time Additional Edge Cases', () => {
+    it('should normalize PT2H1M to "2 hours 1 minute" (plural hours, singular minute)', async () => {
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Time Test Recipe',
+                description: 'Testing time normalization',
+                ingredients: ['1 cup test'],
+                instructions: ['Test instruction'],
+                prepTime: 'PT2H1M',
+                cookTime: 'PT1M',
+                totalTime: 'PT1H1M',
+                servings: '4 servings',
+                difficulty: 'Easy',
+                cuisine: 'Test',
+                dietary: []
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['test'] });
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.prepTime).toBe('2 hours 1 minute');
+      expect(data.recipe.cookTime).toBe('1 minute');
+      expect(data.recipe.totalTime).toBe('1 hour 1 minute');
     });
   });
 });
