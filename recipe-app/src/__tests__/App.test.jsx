@@ -96,10 +96,9 @@ const GENERATE_RESPONSE = {
 // ── isValidUrl (tested via omnibox UI behaviour) ───────────────────────────
 
 describe('Omnibox input mode detection', () => {
-  test('shows Search + Generate buttons for plain text input', () => {
+  test('shows Generate button for plain text input', () => {
     render(<App />);
     setInputValue('pasta');
-    expect(screen.getByText('Search')).toBeInTheDocument();
     expect(screen.getByText('Generate')).toBeInTheDocument();
   });
 
@@ -116,9 +115,11 @@ describe('Omnibox input mode detection', () => {
     expect(screen.getByText('Clip')).toBeInTheDocument();
   });
 
-  test('primary button is disabled for empty input', () => {
+  test('no action buttons shown for empty input', () => {
     render(<App />);
-    expect(screen.getByText('Search').closest('button')).toBeDisabled();
+    expect(screen.queryByText('Search')).not.toBeInTheDocument();
+    expect(screen.queryByText('Generate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Clip')).not.toBeInTheDocument();
   });
 
   test('Generate button is not shown for URL input', () => {

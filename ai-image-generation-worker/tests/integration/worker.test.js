@@ -12,7 +12,7 @@ describe('AI Image Generation Worker Integration', () => {
       ENVIRONMENT: 'test',
       IMAGE_DOMAIN: 'https://test-images.example.com',
       AI: mockAI,
-      RECIPE_IMAGES: mockR2Bucket
+      AI_GENERATED_RECIPE_IMAGES: mockR2Bucket
     };
     
     ctx = {

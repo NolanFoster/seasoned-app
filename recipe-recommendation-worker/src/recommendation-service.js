@@ -239,6 +239,10 @@ Make the categories relevant to the season, location, and context. Be specific w
     let content;
     if (response.response) {
       content = response.response;
+    } else if (response.result) {
+      content = response.result;
+    } else if (response.text) {
+      content = response.text;
     } else if (response.content) {
       content = response.content;
     } else if (typeof response === 'string') {
@@ -338,7 +342,7 @@ Make the categories relevant to the season, location, and context. Be specific w
 
     return {
       recommendations: enhancedRecommendations,
-      location: location || null,
+      location: location ?? null,
       date,
       season,
       aiModel: '@cf/meta/llama-3.1-8b-instruct',
@@ -471,6 +475,10 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
     let content;
     if (response.response) {
       content = response.response;
+    } else if (response.result) {
+      content = response.result;
+    } else if (response.text) {
+      content = response.text;
     } else if (response.content) {
       content = response.content;
     } else if (typeof response === 'string') {
@@ -696,6 +704,10 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
     let content;
     if (response.response) {
       content = response.response;
+    } else if (response.result) {
+      content = response.result;
+    } else if (response.text) {
+      content = response.text;
     } else if (response.content) {
       content = response.content;
     } else if (typeof response === 'string') {
@@ -1221,7 +1233,7 @@ export async function searchRecipeByCategory(categoryName, dishNames, limit, env
             status: response.status,
             statusText: response.statusText,
             ok: response.ok,
-            headers: Object.fromEntries(response.headers.entries())
+            headers: response.headers ? Object.fromEntries(response.headers.entries()) : {}
           });
 
           if (response.ok) {

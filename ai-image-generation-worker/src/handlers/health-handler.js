@@ -20,7 +20,7 @@ export async function handleHealth(request, env) {
   }
 
   // Check if R2 bucket is available
-  if (!env.RECIPE_IMAGES) {
+  if (!env.AI_GENERATED_RECIPE_IMAGES) {
     health.services.r2 = 'unavailable';
     health.status = 'degraded';
   }

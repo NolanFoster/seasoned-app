@@ -39,6 +39,10 @@ function renderNavigator(overrides = {}, props = {}) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function openOptionsMenu() {
+  fireEvent.click(screen.getByTitle('Options'))
+}
+
 function mockSpeechRecognition() {
   const instance = {
     continuous: false,
@@ -100,6 +104,7 @@ describe('CookingNavigator — rendering', () => {
 
   test('calls onClose when close button is clicked', () => {
     const { onClose } = renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Exit cooking mode'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
@@ -130,26 +135,31 @@ describe('CookingNavigator — step navigation', () => {
 describe('CookingNavigator — hands-free button', () => {
   test('renders hands-free mic button', () => {
     renderNavigator()
+    openOptionsMenu()
     expect(screen.getByTitle('Start hands-free voice navigation')).toBeInTheDocument()
   })
 
   test('mic button has aria-pressed=false initially', () => {
     renderNavigator()
-    expect(screen.getByLabelText('Start hands-free mode')).toHaveAttribute('aria-pressed', 'false')
+    openOptionsMenu()
+    expect(screen.getByTitle('Start hands-free voice navigation')).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('mic button toggles aria-pressed when clicked (unsupported env)', () => {
     delete window.SpeechRecognition
     delete window.webkitSpeechRecognition
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
-    expect(screen.getByLabelText('Stop hands-free mode')).toHaveAttribute('aria-pressed', 'true')
+    openOptionsMenu()
+    expect(screen.getByTitle('Stop hands-free mode')).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('shows unsupported message when Speech API unavailable', () => {
     delete window.SpeechRecognition
     delete window.webkitSpeechRecognition
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     expect(screen.getByText(/Voice not supported/i)).toBeInTheDocument()
   })
@@ -158,7 +168,9 @@ describe('CookingNavigator — hands-free button', () => {
     delete window.SpeechRecognition
     delete window.webkitSpeechRecognition
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Stop hands-free mode'))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
@@ -175,6 +187,7 @@ describe('CookingNavigator — voice commands', () => {
   test('starts recognition when hands-free mode activated', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     expect(instance.start).toHaveBeenCalledTimes(1)
   })
@@ -182,6 +195,7 @@ describe('CookingNavigator — voice commands', () => {
   test('shows listening status bar when voice is active', () => {
     mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText(/Listening/i)).toBeInTheDocument()
@@ -190,6 +204,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"next" voice command advances to next step', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'next') // mise en place → step 1
     fireSpeechResult(instance, 'next') // step 1 → step 2
@@ -199,6 +214,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"back" voice command goes to previous step', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'next') // mise en place → step 1
     fireSpeechResult(instance, 'next') // step 1 → step 2
@@ -209,6 +225,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"previous" voice command goes to previous step', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'next') // mise en place → step 1
     fireSpeechResult(instance, 'next') // step 1 → step 2
@@ -219,6 +236,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"next" does not advance past last step', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'next') // mise en place → step 1
     fireSpeechResult(instance, 'next') // step 1 → step 2
@@ -230,6 +248,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"back" does not go before mise en place', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'back') // already on mise en place
     expect(screen.getByText('Mise en Place')).toBeInTheDocument()
@@ -238,6 +257,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"stop" voice command calls onClose', () => {
     const { instance } = mockSpeechRecognition()
     const { onClose } = renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'stop')
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -246,6 +266,7 @@ describe('CookingNavigator — voice commands', () => {
   test('"close" voice command calls onClose', () => {
     const { instance } = mockSpeechRecognition()
     const { onClose } = renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     fireSpeechResult(instance, 'close')
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -254,7 +275,9 @@ describe('CookingNavigator — voice commands', () => {
   test('stops recognition when hands-free mode deactivated', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Stop hands-free mode'))
     expect(instance.stop).toHaveBeenCalledTimes(1)
   })
@@ -262,6 +285,7 @@ describe('CookingNavigator — voice commands', () => {
   test('sets recognition to continuous mode', () => {
     const { instance } = mockSpeechRecognition()
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Start hands-free voice navigation'))
     expect(instance.continuous).toBe(true)
   })
@@ -287,12 +311,14 @@ describe('CookingNavigator — gesture mode', () => {
 
   test('renders gesture toggle button when flag and support are enabled', () => {
     renderNavigator()
+    openOptionsMenu()
     expect(screen.getByTitle('Wave to navigate steps')).toBeInTheDocument()
   })
 
   test('gesture button shows aria-pressed=false initially', () => {
     renderNavigator()
-    expect(screen.getByLabelText('Start gesture mode')).toHaveAttribute('aria-pressed', 'false')
+    openOptionsMenu()
+    expect(screen.getByTitle('Wave to navigate steps')).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('clicking gesture button calls start() and shows status bar', () => {
@@ -301,6 +327,7 @@ describe('CookingNavigator — gesture mode', () => {
       isSupported: true, status: 'idle', start, stop: jest.fn(), gestureProgress: null,
     })
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Wave to navigate steps'))
     expect(start).toHaveBeenCalledTimes(1)
   })
@@ -310,6 +337,7 @@ describe('CookingNavigator — gesture mode', () => {
       isSupported: true, status: 'active', start: jest.fn(), stop: jest.fn(), gestureProgress: null,
     })
     renderNavigator()
+    openOptionsMenu()
     fireEvent.click(screen.getByTitle('Wave to navigate steps'))
     expect(screen.getByText(/Hold.*for Next/i)).toBeInTheDocument()
     expect(screen.getByText(/for Prev/i)).toBeInTheDocument()
@@ -359,12 +387,14 @@ describe('CookingNavigator — dictation feature flag', () => {
   test('hides mic button when dictation flag is disabled', () => {
     flagOverrides['dictation'] = false
     renderNavigator()
+    openOptionsMenu()
     expect(screen.queryByTitle('Start hands-free voice navigation')).not.toBeInTheDocument()
   })
 
   test('shows mic button when dictation flag is enabled', () => {
     flagOverrides['dictation'] = true
     renderNavigator()
+    openOptionsMenu()
     expect(screen.getByTitle('Start hands-free voice navigation')).toBeInTheDocument()
   })
 })

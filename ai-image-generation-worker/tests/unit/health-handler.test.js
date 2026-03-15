@@ -9,7 +9,7 @@ describe('Health Handler', () => {
     mockEnv = {
       ENVIRONMENT: 'test',
       AI: {},
-      RECIPE_IMAGES: {}
+      AI_GENERATED_RECIPE_IMAGES: {}
     };
     mockRequest = new Request('https://example.com/health');
   });
@@ -36,7 +36,7 @@ describe('Health Handler', () => {
   });
 
   it('should return degraded status when R2 is unavailable', async () => {
-    delete mockEnv.RECIPE_IMAGES;
+    delete mockEnv.AI_GENERATED_RECIPE_IMAGES;
     const response = await handleHealth(mockRequest, mockEnv);
     const data = await response.json();
 

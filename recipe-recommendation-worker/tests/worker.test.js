@@ -335,11 +335,9 @@ describe('Recipe Recommendation Worker', () => {
       
       expect(recipes).toBeDefined();
       expect(recipes.length).toBe(1);
-      // Due to metrics error, we get error fallback behavior
-      expect(recipes[0].id).toMatch(/^ai_\d+_[a-z0-9]+$/);
-      expect(recipes[0].name).toBe('dish1');
-      expect(recipes[0].source).toBe('ai_generated');
-      expect(recipes[0].fallback).toBe(true);
+      expect(recipes[0].id).toBe('recipe1');
+      expect(recipes[0].name).toBe('Test Recipe 1');
+      expect(['smart_search_database', 'search_database_only', 'smart_search_database_kv_enriched']).toContain(recipes[0].source);
     });
 
     it('should fall back to recipe save worker if search database fails', async () => {
@@ -524,10 +522,11 @@ describe('Recipe Recommendation Worker', () => {
       });
       
       const recommendations = await getRecipeRecommendations(
-        'Test City', 
-        '2024-06-15', 
-        2, 
-        mockAIEnv, 
+        'Test City',
+        '2024-06-15',
+        2,
+        0,
+        mockAIEnv,
         'test-123'
       );
       
@@ -542,10 +541,11 @@ describe('Recipe Recommendation Worker', () => {
 
     it('should throw error when AI is not available', async () => {
       await expect(getRecipeRecommendations(
-        'Test City', 
-        '2024-06-15', 
-        3, 
-        mockEnv, 
+        'Test City',
+        '2024-06-15',
+        3,
+        0,
+        mockEnv,
         'test-123'
       )).rejects.toThrow('AI binding not configured - cannot generate recommendations');
     });

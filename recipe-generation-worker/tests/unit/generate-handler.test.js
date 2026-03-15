@@ -1,4 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock the opik module to prevent real network calls during tests
+vi.mock('opik', () => ({
+  Opik: vi.fn().mockImplementation(() => ({
+    flush: vi.fn().mockResolvedValue(undefined),
+    trace: vi.fn().mockReturnValue({ id: 'mock-trace-id' }),
+    span: vi.fn().mockReturnValue({ id: 'mock-span-id' }),
+  }))
+}));
+
 import { handleGenerate } from '../../src/handlers/generate-handler.js';
 import { mockEnv, mockEnvWithOpik, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
 

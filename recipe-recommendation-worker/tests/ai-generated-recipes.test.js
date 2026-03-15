@@ -44,31 +44,32 @@ describe('AI-Generated Recipes Functions', () => {
       SEARCH_WORKER: {
         fetch: vi.fn().mockResolvedValue({
           ok: true,
+          headers: { entries: () => [] },
           json: () => Promise.resolve({
-            recipes: [
+            results: [
               {
                 id: 'recipe1',
-                name: 'Chicken Noodle Soup',
-                description: 'A classic comfort food',
-                yield: '4 servings',
-                prepTime: '15 minutes',
-                cookTime: '30 minutes',
-                image_url: 'https://example.com/image1.jpg',
-                source_url: 'https://example.com/recipe1',
-                type: 'recipe',
-                source: 'database'
+                properties: {
+                  title: 'Chicken Noodle Soup',
+                  description: 'A classic comfort food',
+                  servings: '4 servings',
+                  prepTime: '15 minutes',
+                  cookTime: '30 minutes',
+                  imageUrl: 'https://example.com/image1.jpg',
+                  url: 'https://example.com/recipe1'
+                }
               },
               {
                 id: 'recipe2',
-                name: 'Tomato Basil Soup',
-                description: 'Fresh and flavorful',
-                yield: '4 servings',
-                prepTime: '10 minutes',
-                cookTime: '25 minutes',
-                image_url: 'https://example.com/image2.jpg',
-                source_url: 'https://example.com/recipe2',
-                type: 'recipe',
-                source: 'database'
+                properties: {
+                  title: 'Tomato Basil Soup',
+                  description: 'Fresh and flavorful',
+                  servings: '4 servings',
+                  prepTime: '10 minutes',
+                  cookTime: '25 minutes',
+                  imageUrl: 'https://example.com/image2.jpg',
+                  url: 'https://example.com/recipe2'
+                }
               }
             ]
           })
