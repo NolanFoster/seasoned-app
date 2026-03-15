@@ -58,9 +58,15 @@ html, body {
 /* ── Brand ── */
 .brand {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.brand-header {
+  display: flex;
   align-items: center;
   gap: 10px;
-  justify-content: center;
 }
 
 .brand-icon {
