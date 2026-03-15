@@ -1,6 +1,37 @@
 import { processEmbeddingMessage } from './handlers/embedding-handler.js';
 
 export default {
+  // Handle scheduled cron triggers (runs at 2 AM daily)
+  async scheduled(controller, env, _ctx) {
+    const startTime = Date.now();
+    const cronTime = new Date(controller.scheduledTime).toISOString();
+
+    console.log(`\\n=== Recipe Embedding Worker Cron Job Started at ${cronTime} ===`);
+    console.log(`Environment: ${env.ENVIRONMENT}`);
+
+    try {
+      // Perform periodic maintenance tasks
+      console.log('Running periodic maintenance tasks...');
+
+      // TODO: Add any periodic maintenance tasks here
+      // Examples:
+      // - Clean up old/expired embeddings
+      // - Run health checks on vector store
+      // - Generate usage statistics
+      // - Validate data integrity
+
+      const duration = Date.now() - startTime;
+      console.log(`\\n✅ Cron job completed successfully in ${duration}ms`);
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`\\n💥 Cron job failed after ${duration}ms:`, error);
+      throw error;
+    }
+
+    console.log('=== Recipe Embedding Worker Cron Job Ended ===\\n');
+  },
+
   // Handle queue messages from recipe-embedding-queue
   async queue(batch, env, _ctx) {
     console.log(`Processing ${batch.messages.length} recipe IDs from embedding queue`);

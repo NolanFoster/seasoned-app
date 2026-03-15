@@ -1,4 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock the opik module to prevent real network calls during tests
+vi.mock('opik', () => ({
+  Opik: vi.fn().mockImplementation(() => ({
+    flush: vi.fn().mockResolvedValue(undefined),
+    trace: vi.fn().mockReturnValue({
+      id: 'mock-trace-id',
+      span: vi.fn().mockReturnValue({ id: 'mock-span-id', end: vi.fn(), error: vi.fn() }),
+      end: vi.fn(),
+      error: vi.fn()
+    }),
+    span: vi.fn().mockReturnValue({ id: 'mock-span-id', end: vi.fn(), error: vi.fn() })
+  }))
+}));
+
 import { handleGenerate } from '../../src/handlers/generate-handler.js';
 import { mockEnv, mockEnvWithOpik, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
 
@@ -22,42 +37,88 @@ describe('Generate Handler - Unit Tests', () => {
     get: vi.fn()
   };
 
+  const mockImageGenerationService = {
+    fetch: vi.fn()
+  };
+
   const enhancedMockEnv = {
     ...mockEnv,
     AI: mockAI,
     RECIPE_VECTORS: mockVectors,
-    RECIPE_STORAGE: mockKVStorage
+    RECIPE_STORAGE: mockKVStorage,
+    IMAGE_GENERATION_SERVICE: mockImageGenerationService
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Default mock responses
-    mockAI.run.mockImplementation((model, _params) => {
+    mockAI.run.mockImplementation((model, params) => {
       if (model === '@cf/baai/bge-small-en-v1.5') {
         return Promise.resolve({
           data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
         });
-      } else if (model === '@cf/meta/llama-3.1-8b-instruct') {
+      } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+        // Extract request info from the user prompt to make dynamic responses
+        const userMessage = params.messages?.find(m => m.role === 'user')?.content || '';
+
+        // Determine cuisine and dietary from the prompt
+        let cuisine = 'Asian-inspired';
+        let dietary = [];
+
+        if (userMessage.includes('asian')) {
+          cuisine = 'asian';
+        }
+        if (userMessage.includes('vegetarian')) {
+          dietary = ['vegetarian'];
+        }
+        if (userMessage.includes('gluten-free')) {
+          dietary.push('gluten-free');
+        }
+        if (userMessage.includes('low-sodium')) {
+          dietary.push('low-sodium');
+        }
+
+        // Return valid JSON matching our schema
+        const mockRecipe = {
+          name: 'Chicken Rice Bowl',
+          description: 'A delicious and easy chicken rice bowl perfect for a quick meal',
+          ingredients: [
+            '2 cups cooked rice',
+            '1 lb chicken breast, diced',
+            '2 tbsp olive oil',
+            '1 onion, chopped',
+            'Salt and pepper to taste'
+          ],
+          instructions: [
+            'Heat olive oil in a large pan over medium heat',
+            'Cook chicken until golden brown, about 6-8 minutes',
+            'Add onion and cook until soft, about 3-4 minutes',
+            'Season with salt and pepper',
+            'Serve over rice and enjoy'
+          ],
+          prepTime: '10 minutes',
+          cookTime: '15 minutes',
+          totalTime: '25 minutes',
+          servings: '4 servings',
+          difficulty: 'Easy',
+          cuisine: cuisine,
+          dietary: dietary,
+          tips: [
+            'Use leftover rice for best results',
+            'Can substitute chicken with tofu for vegetarian option'
+          ],
+          nutrition: {
+            calories: '350 per serving',
+            protein: '25g',
+            carbs: '40g',
+            fat: '8g'
+          },
+          storage: 'Store leftovers in refrigerator for up to 3 days'
+        };
+
         return Promise.resolve({
-          response: `Chicken Rice Bowl
-
-Ingredients:
-- 2 cups cooked rice
-- 1 lb chicken breast, diced
-- 2 tbsp olive oil
-- 1 onion, chopped
-- Salt and pepper to taste
-
-Instructions:
-1. Heat olive oil in a large pan
-2. Cook chicken until golden brown
-3. Add onion and cook until soft
-4. Serve over rice
-
-Prep time: 10 minutes
-Cook time: 15 minutes
-Serves: 4`
+          response: mockRecipe
         });
       }
     });
@@ -87,6 +148,22 @@ Serves: 4`
         recipeYield: '4'
       }
     }));
+
+    // Mock image generation service responses
+    mockImageGenerationService.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        imageUrl: 'https://images.seasonedapp.com/recipe-test-image.jpg',
+        imageId: 'recipe-test-123',
+        metadata: {
+          recipeName: 'Test Recipe',
+          style: 'realistic',
+          aspectRatio: '1:1',
+          generatedAt: new Date().toISOString()
+        }
+      })
+    });
   });
 
   describe('Recipe Generation', () => {
@@ -113,7 +190,7 @@ Serves: 4`
 
       // Verify AI calls were made
       expect(mockAI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', expect.any(Object));
-      expect(mockAI.run).toHaveBeenCalledWith('@cf/meta/llama-3.1-8b-instruct', expect.any(Object));
+      expect(mockAI.run).toHaveBeenCalledWith('@cf/meta/llama-4-scout-17b-16e-instruct', expect.any(Object));
       expect(mockVectors.query).toHaveBeenCalled();
     });
 
@@ -676,6 +753,1265 @@ Serves: 4`
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Recipe Elevation Integration', () => {
+    it('should elevate recipe when elevate option is true in mock mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeDefined();
+      expect(data.recipe.elevationMethod).toBe('mock-ai');
+      expect(data.recipe.mockMode).toBe(true);
+    });
+
+    it('should not elevate recipe when elevate option is false', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+      expect(data.recipe.elevationMethod).toBeUndefined();
+    });
+
+    it('should not elevate recipe when elevate option is not provided', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+      expect(data.recipe.elevationMethod).toBeUndefined();
+    });
+
+    it('should work with recipeName and elevation', async () => {
+      const requestBody = {
+        recipeName: 'Chicken Teriyaki Bowl',
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should work with complex request and elevation', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice', 'vegetables'],
+        cuisine: 'asian',
+        dietary: ['gluten-free', 'low-sodium'],
+        servings: 4,
+        maxCookTime: 30,
+        mealType: 'dinner',
+        cookingMethod: 'stir-fry',
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.cuisine).toBe('asian');
+      expect(data.recipe.dietary).toEqual(['gluten-free', 'low-sodium']);
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should handle elevation with mixed recipeName and additional constraints', async () => {
+      const requestBody = {
+        recipeName: 'Healthy Pasta Salad',
+        dietary: ['vegetarian'],
+        servings: 6,
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.name).toContain('Elevated');
+      expect(data.recipe.dietary).toEqual(['vegetarian']);
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should handle elevation failure gracefully in mock mode', async () => {
+      // Create an environment that will cause elevateRecipe to fail
+      const failingEnv = {
+        AI: {
+          run: vi.fn().mockRejectedValue(new Error('AI service unavailable'))
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, failingEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.elevationError).toBe('Recipe elevation failed, returning original recipe');
+      expect(data.recipe.elevationFailed).toBe(true);
+      expect(data.recipe.name).not.toContain('Elevated');
+    });
+
+    it('should handle elevation failure gracefully in AI mode', async () => {
+      // Create an environment that allows recipe generation but fails elevation
+      const failingEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            // Allow recipe generation to succeed
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              // Check if this is an elevation call by looking for the culinary expert prompt
+              const systemMessage = _params.messages?.find(m => m.role === 'system')?.content || '';
+              if (systemMessage.includes('expert culinary teacher')) {
+                // This is an elevation call - make it fail
+                return Promise.reject(new Error('Elevation AI service unavailable'));
+              } else {
+                // This is a regular recipe generation call - make it succeed
+                return Promise.resolve({
+                  response: {
+                    name: 'Chicken Rice Bowl',
+                    description: 'A delicious and easy chicken rice bowl',
+                    ingredients: ['2 cups cooked rice', '1 lb chicken breast, diced'],
+                    instructions: ['Heat oil', 'Cook chicken', 'Serve over rice'],
+                    prepTime: '10 minutes',
+                    cookTime: '15 minutes',
+                    totalTime: '25 minutes',
+                    servings: '4 servings',
+                    difficulty: 'Easy',
+                    cuisine: 'Asian',
+                    dietary: []
+                  }
+                });
+              }
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, failingEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.elevationError).toBe('Recipe elevation failed, returning original recipe');
+      expect(data.recipe.elevationFailed).toBe(true);
+      expect(data.recipe.name).not.toContain('Elevated');
+    });
+
+    it('should handle elevation with truthy but non-boolean values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: 'true' // String instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because 'true' !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with numeric values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: 1 // Number instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because 1 !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with null values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: null
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because null !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+  });
+
+  describe('ISO Time Normalization', () => {
+    it('should normalize ISO time formats in recipe generation', async () => {
+      // Create a mock environment that returns a recipe with ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe',
+                  description: 'A test recipe with ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'PT15M', // ISO format
+                  cookTime: 'PT1H30M', // ISO format with hours and minutes
+                  totalTime: 'PT2H', // ISO format with hours only
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('15 minutes');
+      expect(data.recipe.cookTime).toBe('1 hour 30 minutes');
+      expect(data.recipe.totalTime).toBe('2 hours');
+    });
+
+    it('should handle various ISO time format edge cases', async () => {
+      // Create a mock environment that returns a recipe with various ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe 2',
+                  description: 'A test recipe with various ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'PT0M', // Zero minutes
+                  cookTime: 'PT1H', // One hour
+                  totalTime: 'PT30M', // 30 minutes
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('PT0M'); // Should remain unchanged for zero minutes
+      expect(data.recipe.cookTime).toBe('1 hour');
+      expect(data.recipe.totalTime).toBe('30 minutes');
+    });
+
+    it('should handle invalid ISO time formats', async () => {
+      // Create a mock environment that returns a recipe with invalid ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe 3',
+                  description: 'A test recipe with invalid ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'INVALID', // Invalid format
+                  cookTime: 'PT', // Incomplete format
+                  totalTime: 'PT1H30M', // Valid format
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('INVALID'); // Should remain unchanged
+      expect(data.recipe.cookTime).toBe('PT'); // Should remain unchanged
+      expect(data.recipe.totalTime).toBe('1 hour 30 minutes'); // Should be normalized
+    });
+
+    it('should handle ISO time with only minutes and zero hours', async () => {
+      // Create a mock environment that returns a recipe with ISO time formats
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Test Recipe 4',
+                  description: 'A test recipe with ISO time formats',
+                  ingredients: ['1 cup test ingredient'],
+                  instructions: ['Test instruction'],
+                  prepTime: 'PT45M', // 45 minutes only
+                  cookTime: 'PT0H30M', // 0 hours, 30 minutes
+                  totalTime: 'PT1H15M', // 1 hour 15 minutes
+                  servings: '4 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Test',
+                  dietary: []
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['test'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('45 minutes');
+      expect(data.recipe.cookTime).toBe('30 minutes');
+      expect(data.recipe.totalTime).toBe('1 hour 15 minutes');
+    });
+
+    it('should handle elevation with undefined values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: undefined
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because undefined !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with empty string values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: ''
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because '' !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with false values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because false !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with object values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: {}
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because {} !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle elevation with array values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        elevate: []
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not elevate because [] !== true
+      expect(data.recipe.name).not.toContain('Elevated');
+      expect(data.recipe.elevatedAt).toBeUndefined();
+    });
+
+    it('should handle complex recipe parsing edge cases', async () => {
+      // Create a mock environment that returns a complex recipe with various edge cases
+      const complexEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model, _params) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({
+                data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
+              });
+            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+              return Promise.resolve({
+                response: {
+                  name: 'Complex Test Recipe',
+                  description: 'A complex recipe with various edge cases',
+                  ingredients: [
+                    '1 cup flour',
+                    '2 eggs',
+                    '1/2 cup milk'
+                  ],
+                  instructions: [
+                    'Mix dry ingredients',
+                    'Add wet ingredients',
+                    'Bake at 350°F for 30 minutes'
+                  ],
+                  prepTime: 'PT15M', // ISO format
+                  cookTime: 'PT30M', // ISO format
+                  totalTime: 'PT45M', // ISO format
+                  servings: 6, // Numeric instead of string
+                  difficulty: 'Medium',
+                  cuisine: 'American',
+                  dietary: ['vegetarian'],
+                  tips: [
+                    'Preheat oven before mixing',
+                    'Check doneness with toothpick'
+                  ],
+                  nutrition: {
+                    calories: '250 per serving',
+                    protein: '8g',
+                    carbs: '35g',
+                    fat: '6g'
+                  }
+                }
+              });
+            }
+            return Promise.resolve({ response: 'Default response' });
+          })
+        }
+      };
+
+      const requestBody = {
+        ingredients: ['flour', 'eggs', 'milk'],
+        elevate: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, complexEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.prepTime).toBe('15 minutes');
+      expect(data.recipe.cookTime).toBe('30 minutes');
+      expect(data.recipe.totalTime).toBe('45 minutes');
+      expect(data.recipe.servings).toBe('6 servings'); // Should be converted to string
+    });
+  });
+
+  describe('Image Generation Integration', () => {
+    it('should generate image when generateImage option is true in mock mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+    });
+
+    it('should generate image when generateImage option is true in AI mode', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+
+      // Verify image generation service was called
+      expect(mockImageGenerationService.fetch).toHaveBeenCalledWith(
+        'https://ai-image-generation-worker/generate',
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: expect.stringContaining('"recipe"')
+        })
+      );
+    });
+
+    it('should not generate image when generateImage option is false', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: false
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+
+      // Verify image generation service was not called
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should not generate image when generateImage option is not provided', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice']
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+
+      // Verify image generation service was not called
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle image generation failure gracefully in mock mode', async () => {
+      // Mock image generation service to fail
+      mockImageGenerationService.fetch.mockRejectedValue(new Error('Image service unavailable'));
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should handle image generation failure gracefully in AI mode', async () => {
+      // Mock image generation service to fail
+      mockImageGenerationService.fetch.mockRejectedValue(new Error('Image service unavailable'));
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should handle image generation service returning unsuccessful response', async () => {
+      // Mock image generation service to return unsuccessful response
+      mockImageGenerationService.fetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          success: false,
+          error: 'Image generation failed'
+        })
+      });
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should handle image generation service returning HTTP error', async () => {
+      // Mock image generation service to return HTTP error
+      mockImageGenerationService.fetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+
+    it('should work with image generation and elevation together', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true,
+        elevate: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // In AI mode, elevation works but may not change the name significantly
+      expect(data.recipe.name).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+      expect(data.recipe.elevatedAt).toBeDefined();
+    });
+
+    it('should work with image generation and recipeName', async () => {
+      const requestBody = {
+        recipeName: 'Chicken Teriyaki Bowl',
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+    });
+
+    it('should work with image generation and complex request', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice', 'vegetables'],
+        cuisine: 'asian',
+        dietary: ['gluten-free', 'low-sodium'],
+        servings: 4,
+        maxCookTime: 30,
+        mealType: 'dinner',
+        cookingMethod: 'stir-fry',
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.cuisine).toBe('asian');
+      expect(data.recipe.dietary).toEqual(['gluten-free', 'low-sodium']);
+      expect(data.recipe.image_url).toBe('https://images.seasonedapp.com/recipe-test-image.jpg');
+    });
+
+    it('should handle image generation with truthy but non-boolean values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: 'true' // String instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not generate image because 'true' !== true
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle image generation with numeric values', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: 1 // Number instead of boolean
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      // Should not generate image because 1 !== true
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(mockImageGenerationService.fetch).not.toHaveBeenCalled();
+    });
+
+    it('should handle image generation when service is not available', async () => {
+      const envWithoutImageService = {
+        ...enhancedMockEnv,
+        IMAGE_GENERATION_SERVICE: undefined
+      };
+
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        generateImage: true
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, envWithoutImageService, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe).toBeDefined();
+      expect(data.recipe.image_url).toBeUndefined();
+      expect(data.recipe.imageGenerationError).toBe('Image generation failed, recipe generated without image');
+    });
+  });
+
+  describe('AI Response Field Normalization', () => {
+    it('should normalize uppercase field names from AI (Ingredients, Instructions, Name, Description)', async () => {
+      const uppercaseFieldEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                Name: 'Uppercase Recipe',
+                Description: 'A recipe with uppercase fields',
+                Ingredients: ['1 cup flour', '2 eggs'],
+                Instructions: ['Mix well', 'Bake for 30 min'],
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['flour', 'eggs'] });
+      const response = await handleGenerate(request, uppercaseFieldEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.name).toBe('Uppercase Recipe');
+      expect(data.recipe.description).toBe('A recipe with uppercase fields');
+      expect(data.recipe.ingredients).toEqual(['1 cup flour', '2 eggs']);
+      expect(data.recipe.instructions).toEqual(['Mix well', 'Bake for 30 min']);
+    });
+
+    it('should apply fallback values when recipe is missing optional fields', async () => {
+      const minimalFieldEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                ingredients: ['1 cup flour'],
+                instructions: ['Mix and bake'],
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                difficulty: 'Easy'
+                // Missing: name, servings, cuisine, dietary
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', {
+        ingredients: ['flour'],
+        cuisine: 'Italian',
+        dietary: ['vegan']
+      });
+      const response = await handleGenerate(request, minimalFieldEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.name).toBeDefined(); // fallback applied
+      expect(data.recipe.servings).toBeDefined(); // fallback applied
+      expect(data.recipe.cuisine).toBe('Italian'); // from request
+      expect(data.recipe.dietary).toEqual(['vegan']); // from request
+    });
+
+    it('should handle dietaryConsiderations as array', async () => {
+      const dietaryArrayEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Diet Recipe',
+                description: 'A dietary recipe',
+                ingredients: ['1 cup oats'],
+                instructions: ['Cook oats'],
+                prepTime: '5 minutes',
+                cookTime: '10 minutes',
+                totalTime: '15 minutes',
+                servings: '2 servings',
+                difficulty: 'Easy',
+                dietaryConsiderations: ['vegan', 'gluten-free']
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['oats'] });
+      const response = await handleGenerate(request, dietaryArrayEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.dietary)).toBe(true);
+    });
+
+    it('should handle dietaryConsiderations as string', async () => {
+      const dietaryStringEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Vegan Recipe',
+                description: 'A vegan recipe',
+                ingredients: ['1 cup lentils'],
+                instructions: ['Cook lentils'],
+                prepTime: '5 minutes',
+                cookTime: '20 minutes',
+                totalTime: '25 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy',
+                dietaryConsiderations: 'vegan'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['lentils'] });
+      const response = await handleGenerate(request, dietaryStringEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.dietary)).toBe(true);
+    });
+
+    it('should handle object-type ingredients (convert to array)', async () => {
+      const objectIngredientsEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Object Ingredients Recipe',
+                description: 'A recipe with object-type ingredients',
+                ingredients: { flour: '1 cup', eggs: '2', butter: '100g' },
+                instructions: ['Mix all', 'Bake at 350F'],
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['flour'] });
+      const response = await handleGenerate(request, objectIngredientsEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.ingredients)).toBe(true);
+    });
+
+    it('should handle null/undefined ingredients (fallback to empty array)', async () => {
+      const nullIngredientsEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'No Ingredients Recipe',
+                description: 'A recipe with null ingredients',
+                ingredients: null,
+                instructions: null,
+                prepTime: '10 minutes',
+                cookTime: '30 minutes',
+                totalTime: '40 minutes',
+                servings: '4 servings',
+                difficulty: 'Easy'
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['test'] });
+      const response = await handleGenerate(request, nullIngredientsEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.recipe.ingredients)).toBe(true);
+      expect(Array.isArray(data.recipe.instructions)).toBe(true);
+    });
+
+    it('should handle nested recipe structure from AI (flatten recipe.recipe)', async () => {
+      const nestedRecipeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                recipe: {
+                  name: 'Nested Recipe',
+                  description: 'A recipe in nested structure',
+                  ingredients: ['1 cup rice'],
+                  instructions: ['Cook rice'],
+                  prepTime: '5 minutes',
+                  cookTime: '20 minutes',
+                  totalTime: '25 minutes',
+                  servings: '2 servings',
+                  difficulty: 'Easy',
+                  cuisine: 'Asian',
+                  dietary: []
+                }
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['rice'] });
+      const response = await handleGenerate(request, nestedRecipeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.name).toBe('Nested Recipe');
+    });
+  });
+
+  describe('Similarity Search Edge Cases', () => {
+    it('should handle vectorize returning no matches property', async () => {
+      const envWithNoMatches = {
+        ...enhancedMockEnv,
+        RECIPE_VECTORS: {
+          query: vi.fn().mockResolvedValue({}) // no matches property
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await handleGenerate(request, envWithNoMatches, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.similarRecipesFound).toBe(0);
+    });
+
+    it('should handle KV returning null recipe (success: false)', async () => {
+      const envWithNullKV = {
+        ...enhancedMockEnv,
+        RECIPE_STORAGE: {
+          get: vi.fn().mockResolvedValue(null) // recipe not found
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await handleGenerate(request, envWithNullKV, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      // Recipe generates OK even though similar recipes KV lookup failed
+      expect(data.recipe.similarRecipesFound).toBe(0);
+    });
+  });
+
+  describe('Opik Tracing Error Handling', () => {
+    it('should create error trace when Opik is active and AI generation fails', async () => {
+      const envWithOpikAndFailingLLM = {
+        ...enhancedMockEnv,
+        ...mockEnvWithOpik,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.reject(new Error('LLaMA service unavailable'));
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await handleGenerate(request, envWithOpikAndFailingLLM, corsHeaders);
+
+      // Should return 500 because LLaMA failed
+      expect(response.status).toBe(500);
+      const data = await response.json();
+      expect(data.error).toBe('Failed to process recipe generation request');
+    });
+  });
+
+  describe('ISO Time Additional Edge Cases', () => {
+    it('should normalize PT2H1M to "2 hours 1 minute" (plural hours, singular minute)', async () => {
+      const isoTimeEnv = {
+        ...enhancedMockEnv,
+        AI: {
+          run: vi.fn().mockImplementation((model) => {
+            if (model === '@cf/baai/bge-small-en-v1.5') {
+              return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+            }
+            return Promise.resolve({
+              response: {
+                name: 'Time Test Recipe',
+                description: 'Testing time normalization',
+                ingredients: ['1 cup test'],
+                instructions: ['Test instruction'],
+                prepTime: 'PT2H1M',
+                cookTime: 'PT1M',
+                totalTime: 'PT1H1M',
+                servings: '4 servings',
+                difficulty: 'Easy',
+                cuisine: 'Test',
+                dietary: []
+              }
+            });
+          })
+        }
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['test'] });
+      const response = await handleGenerate(request, isoTimeEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.recipe.prepTime).toBe('2 hours 1 minute');
+      expect(data.recipe.cookTime).toBe('1 minute');
+      expect(data.recipe.totalTime).toBe('1 hour 1 minute');
     });
   });
 });

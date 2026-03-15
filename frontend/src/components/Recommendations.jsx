@@ -2,8 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { formatDuration } from '../../../shared/utility-functions.js';
 import SwipeableRecipeGrid from './SwipeableRecipeGrid.jsx';
 
-const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
-const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL;
+const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL || process.env.VITE_RECOMMENDATION_API_URL || 'https://recommendations.test.workers.dev';
 
 function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingStates, onAiCardClick, onLocationUpdate }) {
   // Debug flag - set to true to enable detailed logging
@@ -16,148 +15,102 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     }
   };
   
-  // Debug logging
+  // If recipesByCategory is provided, use it directly; otherwise fetch recommendations (which now include recipes)
+  const [recommendations, setRecommendations] = useState(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track location resolution state
+  const [locationTimeout, setLocationTimeout] = useState(null); // Track timeout state
+  const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false); // Prevent multiple simultaneous API calls
+  const [lastProcessedLocation, setLastProcessedLocation] = useState(null); // Track the last location we processed recipes for
+  const [recommendationCallCount, setRecommendationCallCount] = useState(0); // Track total number of API calls made
+  const hasMadeApiCall = useRef(false); // Track if we've already made an API call to prevent duplicates
+
+  // Debug logging - now that all state variables are declared
   debugLogEmoji('🔍', 'Recommendations component rendered with:', {
     recipesByCategory: recipesByCategory,
     recipesByCategorySize: recipesByCategory?.size,
     recipesByCategoryType: typeof recipesByCategory,
-    hasRecipesByCategory: Boolean(recipesByCategory && recipesByCategory.size > 0)
+    hasRecipesByCategory: Boolean(recipesByCategory && recipesByCategory.size > 0),
+    hasRecommendations: Boolean(recommendations),
+    recommendationsType: recommendations ? typeof recommendations : 'none',
+    userLocation: userLocation,
+    lastProcessedLocation: lastProcessedLocation,
+    recommendationCallCount: recommendationCallCount
   });
-  
-  // If recipesByCategory is provided, use it directly; otherwise fall back to fetching
-  const [recommendations, setRecommendations] = useState(null);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
-  const [userLocation, setUserLocation] = useState(null);
-  const [externalRecipes, setExternalRecipes] = useState({});
-  const [recipeCache, setRecipeCache] = useState(new Map()); // Cache for recipe searches
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track location resolution state
-  const [locationTimeout, setLocationTimeout] = useState(null); // Track timeout state
-  const [loadedCategories, setLoadedCategories] = useState(new Set()); // Track which categories have been loaded
-  const [visibleCategories, setVisibleCategories] = useState(new Set()); // Track which categories are visible
+
+  // Check if we need to fetch fresh recommendations due to location change
+  const shouldFetchFreshRecommendations = () => {
+    // If we don't have recipesByCategory, we need to fetch
+    if (!recipesByCategory || recipesByCategory.size === 0) {
+      return true;
+    }
+    
+    // If we have a new location that's different from what we processed last, we need to fetch
+    if (userLocation && userLocation !== lastProcessedLocation) {
+      debugLogEmoji('🔄', 'Location changed, need fresh recommendations:', {
+        currentLocation: userLocation,
+        lastProcessedLocation: lastProcessedLocation
+      });
+      return true;
+    }
+    
+    // If we have recipes but no location tracking, we might need to fetch
+    if (recipesByCategory.size > 0 && lastProcessedLocation === null) {
+      debugLogEmoji('🤔', 'Have recipes but no location tracking, may need fresh recommendations');
+      return true;
+    }
+    
+    // Otherwise, we can use existing recipesByCategory
+    return false;
+  };
 
   // Fetch recommendations on component mount
   useEffect(() => {
+    // Debug: Check if recommendation API URL is set
+    debugLogEmoji('🔗', 'Recommendation API URL:', RECOMMENDATION_API_URL);
+    if (!RECOMMENDATION_API_URL) {
+      console.error('❌ RECOMMENDATION_API_URL is not set!');
+      debugLogEmoji('❌', 'RECOMMENDATION_API_URL is not set - recommendations will fail');
+    }
+    
     // Don't fetch recommendations immediately - wait for location permission resolution
     // The fetchRecommendations will be called after location is determined or timeout occurs
   }, []); // Empty dependency array means this runs once on mount
 
+  // Handle when recipesByCategory changes from parent (e.g., when location changes)
+  useEffect(() => {
+    if (recipesByCategory && recipesByCategory.size > 0) {
+      // If we receive recipesByCategory from parent, mark that we've processed data
+      // This prevents unnecessary API calls while still allowing fresh calls when location changes
+      if (lastProcessedLocation === null) {
+        // If we don't have a lastProcessedLocation, assume this is location-agnostic data
+        setLastProcessedLocation('');
+        debugLogEmoji('📥', 'Received recipesByCategory from parent, set lastProcessedLocation to empty string');
+      }
+      
+      // Set loading states to false since we have data
+      setIsResolvingLocation(false);
+      setIsLoadingRecommendations(false);
+    }
+  }, [recipesByCategory, lastProcessedLocation]);
+
+  // Handle location changes that require fresh recommendations
+  useEffect(() => {
+    // Since the parent (App.jsx) handles all API calls, we should never make our own API calls
+    // The parent will call getRecipesFromRecommendations() and pass the results via recipesByCategory
+    debugLogEmoji('✅', 'Parent handles all API calls, skipping local fetch logic');
+  }, [userLocation, lastProcessedLocation, isFetchingRecommendations, recipesByCategory]);
+
   // Handle location permission resolution with timeout
   useEffect(() => {
-    let timeoutId;
-    let isLocationResolved = false;
-
-    // Use shorter timeout in test environments
-    const timeoutDuration = process.env.NODE_ENV === 'test' ? 2000 : 60000; // 2 seconds for tests, 60 seconds for production
-
-    const resolveLocationAndFetch = async (location) => {
-      if (isLocationResolved) return;
-      isLocationResolved = true;
-      
-      // Clear the timeout since we're resolving
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        setLocationTimeout(null);
-      }
-      
-      // Set resolving state to false
+    // Since the parent (App.jsx) handles all API calls and location resolution,
+    // we should never run our own location resolution logic
+    debugLogEmoji('✅', 'Parent handles location resolution, skipping local logic');
       setIsResolvingLocation(false);
-      
-      // Now fetch recommendations with the resolved location
-      await fetchRecommendationsWithLocation(location);
-    };
-
-    const handleLocationTimeout = () => {
-      if (isLocationResolved) return;
-      isLocationResolved = true;
-      
-      debugLogEmoji('⏰', 'Location permission timeout - using default location');
-      
-      // Set a default location after timeout
-      setUserLocation('San Francisco, CA');
-      onLocationUpdate?.('San Francisco, CA'); // Update parent component with default location
-      setLocationTimeout(null);
-      setIsResolvingLocation(false);
-      
-      // Fetch recommendations with default location - pass the location directly to avoid timing issues
-      fetchRecommendationsWithLocation('San Francisco, CA');
-    };
-
-    // Set timeout for location permission
-    timeoutId = setTimeout(handleLocationTimeout, timeoutDuration);
-    setLocationTimeout(Math.floor(timeoutDuration / 1000)); // Start countdown
-
-    // Update countdown every second
-    const countdownInterval = setInterval(() => {
-      setLocationTimeout(prev => {
-        if (prev && prev > 1) {
-          return prev - 1;
-        }
-        return null;
-      });
-    }, 1000);
-
-    // Try to get location immediately
-    if (navigator.geolocation) {
-      // Always try to get location first, regardless of permission state
-      // This makes the component more responsive and easier to test
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          // Try to get city name using reverse geocoding
-          fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`)
-            .then(response => response.json())
-            .then(geocodeData => {
-              const city = geocodeData.city || geocodeData.locality;
-              const region = geocodeData.principalSubdivision || geocodeData.countryName;
-              
-              let location;
-              if (city && region) {
-                location = `${city}, ${region}`;
-              } else if (city) {
-                location = city;
-              } else {
-                location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
-              }
-              
-              setUserLocation(location);
-              onLocationUpdate?.(location); // Update parent component with location
-              resolveLocationAndFetch(location);
-            })
-            .catch((error) => {
-              // Fallback to coordinates if geocoding fails
-              const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
-              setUserLocation(location);
-              onLocationUpdate?.(location); // Update parent component with location
-              resolveLocationAndFetch(location);
-            });
-        },
-        (error) => {
-          debugLogEmoji('❌', 'Geolocation failed:', error.message);
-          if (error.code === 1) { // PERMISSION_DENIED
-            setShowLocationPrompt(true);
-          }
-          // Don't resolve yet - let the timeout handle it
-        },
-        { timeout: 10000, enableHighAccuracy: true, maximumAge: 300000 }
-      );
-    } else {
-      // Geolocation not supported, use default location immediately
-      setUserLocation('San Francisco, CA');
-      onLocationUpdate?.('San Francisco, CA'); // Update parent component with default location
-      resolveLocationAndFetch('San Francisco, CA');
-    }
-
-    // Cleanup function
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      clearInterval(countdownInterval);
-    };
-  }, []); // Empty dependency array means this runs once on mount
+      setIsLoadingRecommendations(false);
+  }, []); // Only run once on mount
 
   // Monitor changes to recipesByCategory
   useEffect(() => {
@@ -169,368 +122,201 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     });
   }, [recipesByCategory]);
 
-  // Fetch external recipes when recommendations change (only if recipesByCategory not provided)
+  // Handle recommendations changes (now that they include recipes directly)
   useEffect(() => {
     // If recipesByCategory is provided, use it directly
     if (recipesByCategory && recipesByCategory.size > 0) {
-      const externalData = {};
-      for (const [categoryName, recipes] of recipesByCategory.entries()) {
-        externalData[categoryName] = recipes;
-      }
-      setExternalRecipes(externalData);
+      debugLogEmoji('✅', 'Using recipesByCategory directly, no processing needed');
       setIsLoadingRecommendations(false);
       return;
     }
     
-    // Otherwise, fetch recommendations and external recipes
+    // If we have recommendations with recipes, just set loading to false
     if (recommendations && recommendations.recommendations) {
-      const fetchExternalRecipes = async () => {
-        const externalData = {};
-        
-        // Create all promises at once to run in parallel
-        const categoryPromises = Object.entries(recommendations.recommendations).map(async ([categoryName, tags]) => {
-          if (Array.isArray(tags)) {
-            try {
-              debugLogEmoji('🚀', `Starting parallel fetch for category: ${categoryName}`);
-              const externalRecipes = await searchRecipesByTags(tags, 3);
-              return { categoryName, recipes: externalRecipes };
-            } catch (error) {
-              console.error(`Error fetching external recipes for ${categoryName}:`, error);
-              return { categoryName, recipes: [] };
-            }
-          }
-          return { categoryName, recipes: [] };
-        });
-        
-        // Wait for all categories to complete in parallel
-        const results = await Promise.all(categoryPromises);
-        
-        // Build the externalData object from results
-        results.forEach(({ categoryName, recipes }) => {
-          externalData[categoryName] = recipes;
-        });
-        
-        debugLogEmoji('✅', 'All categories fetched in parallel', {
-          categoryCount: results.length,
-          totalRecipes: results.reduce((sum, { recipes }) => sum + recipes.length, 0)
-        });
-        
-        setExternalRecipes(externalData);
-      };
-      fetchExternalRecipes();
+      debugLogEmoji('✅', 'Recommendations with recipes received, setting loading to false');
+      setIsLoadingRecommendations(false);
     }
   }, [recommendations, recipesByCategory]);
 
-  // Monitor location permission changes
+  // Monitor location permission changes - DISABLED to prevent multiple API calls
   useEffect(() => {
-    if (navigator.permissions && navigator.permissions.query) {
-      const checkPermission = async () => {
-        try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          
-          // Listen for permission changes
-          permission.addEventListener('change', () => {
-            debugLogEmoji('🔒', 'Location permission changed to:', permission.state);
-            
-            if (permission.state === 'granted' && !userLocation) {
-              // Permission was granted, but don't call fetchRecommendations here
-              // The timeout system will handle location resolution
-              debugLogEmoji('✅', 'Location permission granted, waiting for timeout system to resolve');
-            } else if (permission.state === 'denied') {
-              // Permission was denied, show manual option
-              setShowLocationPrompt(true);
-            }
-          });
-        } catch (error) {
-          debugLogEmoji('⚠️', 'Could not monitor permission changes:', error.message);
-        }
-      };
-      
-      checkPermission();
-    }
-  }, [userLocation]);
+    // Skip permission monitoring to prevent multiple API calls
+    debugLogEmoji('✅', 'Permission monitoring disabled to prevent multiple API calls');
+  }, [userLocation]); // Only monitor userLocation changes, not recipesByCategory
 
-  // Fetch recommendations with a specific location (to avoid timing issues with state updates)
-  async function fetchRecommendationsWithLocation(location) {
-    try {
-      setIsLoadingRecommendations(true);
-      
-      // If we still don't have a location, use empty string for location-agnostic recommendations
-      if (!location) {
-        location = '';
-        debugLogEmoji('🌍', 'Using location-agnostic recommendations');
-      }
-      
-      const currentDate = new Date().toISOString().split('T')[0];
-      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
-      
-      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location: location,
-          date: currentDate
-        })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        debugLogEmoji('✅', 'Recommendations received:', data);
-        
-        // Filter out inappropriate seasonal recommendations
-        if (data.recommendations && data.season) {
-          const filteredRecommendations = {};
-          const season = data.season.toLowerCase();
-          
-          Object.entries(data.recommendations).forEach(([category, tags]) => {
-            if (Array.isArray(tags)) {
-              // Filter out fall/winter holiday items in summer
-              if (season === 'summer' && category.toLowerCase().includes('holiday')) {
-                // Keep only summer-appropriate items
-                filteredRecommendations[category] = tags.filter(tag => {
-                  const tagLower = tag.toLowerCase();
-                  // Remove fall/winter holidays
-                  return !tagLower.includes('halloween') && 
-                         !tagLower.includes('thanksgiving') && 
-                         !tagLower.includes('christmas') &&
-                         !tagLower.includes('pumpkin') &&
-                         !tagLower.includes('gingerbread');
-                });
-              } else if (season === 'winter' && category.toLowerCase().includes('holiday')) {
-                // Keep only winter-appropriate items
-                filteredRecommendations[category] = tags.filter(tag => {
-                  const tagLower = tag.toLowerCase();
-                  // Remove summer holidays
-                  return !tagLower.includes('4th of july') && 
-                         !tagLower.includes('labor day') &&
-                         !tagLower.includes('memorial day');
-                });
-              } else {
-                // Keep all tags for non-holiday categories
-                filteredRecommendations[category] = tags;
-              }
-            }
-          });
-          
-          // Update the data with filtered recommendations
-          data.recommendations = filteredRecommendations;
-        }
-        
-        setRecommendations(data);
-        
-        // Fetch external recipes for each category
-        if (data.recommendations) {
-          const externalData = {};
-          
-          // Create all promises at once to run in parallel
-          const categoryPromises = Object.entries(data.recommendations).map(async ([categoryName, tags]) => {
-            if (Array.isArray(tags)) {
-              try {
-                debugLogEmoji('🚀', `Starting parallel fetch for category: ${categoryName}`);
-                const externalRecipes = await searchRecipesByTags(tags, 3);
-                return { categoryName, recipes: externalRecipes };
-              } catch (error) {
-                console.error(`Error fetching external recipes for ${categoryName}:`, error);
-                return { categoryName, recipes: [] };
-              }
-            }
-            return { categoryName, recipes: [] };
-          });
-          
-          // Wait for all categories to complete in parallel
-          const results = await Promise.all(categoryPromises);
-          
-          // Build the externalData object from results
-          results.forEach(({ categoryName, recipes }) => {
-            externalData[categoryName] = recipes;
-          });
-          
-          debugLogEmoji('✅', 'All categories fetched in parallel', {
-            categoryCount: results.length,
-            totalRecipes: results.reduce((sum, { recipes }) => sum + recipes.length, 0)
-          });
-          
-          setExternalRecipes(externalData);
-        }
-      } else {
-        console.error('Failed to fetch recommendations:', res.status, res.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-    } finally {
-      setIsLoadingRecommendations(false);
+  // Centralized function to fetch recommendations - handles all cases
+  async function fetchRecommendations(location = null) {
+    debugLogEmoji('🚀', 'fetchRecommendations called', {
+      location,
+      userLocation,
+      lastProcessedLocation,
+      recipesByCategorySize: recipesByCategory?.size || 0,
+      isFetchingRecommendations,
+      shouldFetch: shouldFetchFreshRecommendations(),
+      callStack: new Error().stack?.split('\n').slice(1, 4).join('\n') || 'No stack trace'
+    });
+    
+    // Prevent multiple simultaneous calls
+    if (isFetchingRecommendations) {
+      debugLogEmoji('🔄', 'Recommendations fetch already in progress, skipping duplicate call');
+      return;
     }
-  }
-
-  async function fetchRecommendations() {
-    try {
-      setIsLoadingRecommendations(true);
-      
-      // Use the userLocation state that was set by the timeout system
-      let location = userLocation || '';
-      
-      // If we still don't have a location, use empty string for location-agnostic recommendations
-      if (!location) {
-        location = '';
-        debugLogEmoji('🌍', 'Using location-agnostic recommendations');
-      }
-      
-      const currentDate = new Date().toISOString().split('T')[0];
-      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', location);
-      
-      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location: location,
-          date: currentDate
-        })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        debugLogEmoji('✅', 'Recommendations received:', data);
-        
-        // Filter out inappropriate seasonal recommendations
-        if (data.recommendations && data.season) {
-          const filteredRecommendations = {};
-          const season = data.season.toLowerCase();
-          
-          Object.entries(data.recommendations).forEach(([category, tags]) => {
-            if (Array.isArray(tags)) {
-              // Filter out fall/winter holiday items in summer
-              if (season === 'summer' && category.toLowerCase().includes('holiday')) {
-                // Keep only summer-appropriate items
-                filteredRecommendations[category] = tags.filter(tag => {
-                  const tagLower = tag.toLowerCase();
-                  // Remove fall/winter holidays
-                  return !tagLower.includes('halloween') && 
-                         !tagLower.includes('thanksgiving') && 
-                         !tagLower.includes('christmas') &&
-                         !tagLower.includes('pumpkin') &&
-                         !tagLower.includes('gingerbread');
-                });
-              } else if (season === 'winter' && category.toLowerCase().includes('holiday')) {
-                // Keep only winter-appropriate items
-                filteredRecommendations[category] = tags.filter(tag => {
-                  const tagLower = tag.toLowerCase();
-                  // Remove summer holidays
-                  return !tagLower.includes('4th of july') && 
-                         !tagLower.includes('labor day') &&
-                         !tagLower.includes('memorial day');
-                });
-              } else {
-                // Keep all tags for non-holiday categories
-                filteredRecommendations[category] = tags;
-              }
-            }
-          });
-          
-          // Update the data with filtered recommendations
-          data.recommendations = filteredRecommendations;
-        }
-        
-        setRecommendations(data);
-      } else {
-        console.error('Failed to fetch recommendations:', res.status);
-        setRecommendations(null);
-      }
-    } catch (e) {
-      console.error('Error fetching recommendations:', e);
-      setRecommendations(null);
-    } finally {
-      setIsLoadingRecommendations(false);
+    
+    // Check if we've already made an API call
+    if (hasMadeApiCall.current) {
+      debugLogEmoji('🔄', 'API call already made, skipping duplicate call');
+      return;
     }
-  }
-
-  // New function to search for recipes matching recommendation category
-  async function searchRecipesByTags(tags, limit = 3) {
-    if (!tags || !Array.isArray(tags) || tags.length === 0) {
-      return [];
+    
+    // Check if we need to fetch fresh recommendations
+    if (!shouldFetchFreshRecommendations()) {
+      debugLogEmoji('✅', 'No need to fetch fresh recommendations, using existing recipesByCategory');
+      return;
     }
     
     try {
-      // Combine all tags into one search query for the category
-      const categoryQuery = tags.join(' ');
-      const cacheKey = `${categoryQuery}:${limit}`;
+      setIsFetchingRecommendations(true);
+      setIsLoadingRecommendations(true);
+      hasMadeApiCall.current = true; // Mark that we're making an API call
       
-      // Check cache first
-      if (recipeCache.has(cacheKey)) {
-        debugLogEmoji('💾', `Cache hit for category: "${categoryQuery}"`);
-        return recipeCache.get(cacheKey);
+      // Increment the API call counter
+      const newCallCount = recommendationCallCount + 1;
+      setRecommendationCallCount(newCallCount);
+      debugLogEmoji('📊', `API call #${newCallCount} initiated (previous count: ${recommendationCallCount})`);
+      debugLogEmoji('🔍', 'fetchRecommendations called with:', {
+        location,
+        userLocation,
+        lastProcessedLocation,
+        recipesByCategorySize: recipesByCategory?.size || 0,
+        shouldFetch: shouldFetchFreshRecommendations(),
+        timestamp: new Date().toISOString()
+      });
+      
+      // Determine the location to use:
+      // 1. Use passed location parameter if provided
+      // 2. Fall back to userLocation state if available
+      // 3. Use empty string for location-agnostic recommendations
+      let finalLocation = location;
+      if (finalLocation === null) {
+        finalLocation = userLocation || '';
       }
       
-      debugLogEmoji('🔍', `Searching for category with combined query: "${categoryQuery}"`);
-      
-      // Use smart search endpoint with the combined category query
-      const results = await searchWithSmartSearch(categoryQuery, limit);
-      
-      if (results && results.length > 0) {
-        // Transform results to frontend format
-        const transformedResults = results.map(node => {
-          const properties = node.properties;
-          return {
-            id: node.id,
-            name: properties.title || properties.name || 'Untitled Recipe',
-            description: properties.description || '',
-            image: properties.image || properties.image_url || '',
-            image_url: properties.image || properties.image_url || '',
-            prep_time: properties.prepTime || properties.prep_time || null,
-            cook_time: properties.cookTime || properties.cook_time || null,
-            recipe_yield: properties.servings || properties.recipeYield || properties.recipe_yield || null,
-            source_url: properties.url || properties.source_url || '',
-            ingredients: properties.ingredients || [],
-            instructions: properties.instructions || [],
-            recipeIngredient: properties.ingredients || [],
-            recipeInstructions: properties.instructions || [],
-            // Mark as external recipe
-            isExternal: true
-          };
-        });
-        
-        // Cache the results
-        setRecipeCache(prev => new Map(prev).set(cacheKey, transformedResults));
-        
-        debugLogEmoji('✅', `Category "${categoryQuery}" found ${transformedResults.length} recipes`);
-        return transformedResults;
+      // If we still don't have a location, use empty string for location-agnostic recommendations
+      if (!finalLocation) {
+        finalLocation = '';
+        debugLogEmoji('🌍', 'Using location-agnostic recommendations');
       }
       
-      debugLogEmoji('⚠️', `Category "${categoryQuery}" found no recipes`);
-      return [];
-    } catch (e) {
-      console.error(`Error searching for category "${tags.join(' ')}":`, e);
-      return [];
+      const currentDate = new Date().toISOString().split('T')[0];
+      debugLogEmoji('🔍', 'Fetching recommendations for date:', currentDate, 'location:', finalLocation);
+      
+      const res = await fetch(`${RECOMMENDATION_API_URL}/recommendations`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location: finalLocation,
+          date: currentDate
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        debugLogEmoji('✅', 'Recommendations received:', data);
+        
+        // Filter out inappropriate seasonal recommendations
+        if (data.recommendations && data.season) {
+          const filteredRecommendations = {};
+          const season = data.season.toLowerCase();
+          
+          Object.entries(data.recommendations).forEach(([category, tags]) => {
+            if (Array.isArray(tags)) {
+              // Filter out fall/winter holiday items in summer
+              if (season === 'summer' && category.toLowerCase().includes('holiday')) {
+                // Keep only summer-appropriate items
+                filteredRecommendations[category] = tags.filter(tag => {
+                  const tagLower = tag.toLowerCase();
+                  // Remove fall/winter holidays
+                  return !tagLower.includes('halloween') && 
+                         !tagLower.includes('thanksgiving') && 
+                         !tagLower.includes('christmas') &&
+                         !tagLower.includes('pumpkin') &&
+                         !tagLower.includes('gingerbread');
+                });
+              } else if (season === 'winter' && category.toLowerCase().includes('holiday')) {
+                // Keep only winter-appropriate items
+                filteredRecommendations[category] = tags.filter(tag => {
+                  const tagLower = tag.toLowerCase();
+                  // Remove summer holidays
+                  return !tagLower.includes('4th of july') && 
+                         !tagLower.includes('labor day') &&
+                         !tagLower.includes('memorial day');
+                });
+              } else {
+                // Keep all tags for non-holiday categories
+                filteredRecommendations[category] = tags;
+              }
+            }
+          });
+          
+          // Update the data with filtered recommendations
+          data.recommendations = filteredRecommendations;
+        }
+        
+        setRecommendations(data);
+        
+        // Update the last processed location to prevent unnecessary future API calls
+        setLastProcessedLocation(finalLocation || '');
+        debugLogEmoji('📍', 'Updated lastProcessedLocation to:', finalLocation || '');
+        
+        // Recommendations now include recipes directly, no additional fetching needed
+        debugLogEmoji('✅', 'Recommendations with recipes set, no additional fetching required');
+      } else {
+        console.error('Failed to fetch recommendations:', res.status, res.statusText);
+        setRecommendations(null);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      setRecommendations(null);
+    } finally {
+      setIsLoadingRecommendations(false);
+      setIsFetchingRecommendations(false);
     }
   }
+
+  // Function removed - recommendations now include recipes directly
 
   // Handle manual location input
   const handleManualLocationInput = (locationInput) => {
     const trimmedLocation = locationInput.trim();
-    if (trimmedLocation) {
+    if (trimmedLocation && !isFetchingRecommendations) {
+      // Clear any pending timeout since user is manually setting location
+      setLocationTimeout(null);
+      setIsResolvingLocation(false);
+      
       setUserLocation(trimmedLocation);
       onLocationUpdate?.(trimmedLocation); // Update parent component with manual location
       setShowLocationPrompt(false);
-      setIsResolvingLocation(false); // Mark location as resolved
       debugLogEmoji('📍', 'Manual location set:', trimmedLocation);
-      fetchRecommendations();
+      // fetchRecommendations will be called by useEffect when userLocation changes
     }
   };
 
   // Clear user location
   const clearUserLocation = () => {
-    setUserLocation(null);
-    onLocationUpdate?.(''); // Update parent component to clear location
-    setIsResolvingLocation(false); // Ensure resolving state is false
-    debugLogEmoji('🗑️', 'User location cleared');
-    fetchRecommendations();
+    if (!isFetchingRecommendations) {
+      // Clear any pending timeout since user is clearing location
+      setLocationTimeout(null);
+      setIsResolvingLocation(false);
+      
+      setUserLocation(null);
+      onLocationUpdate?.(''); // Update parent component to clear location
+      debugLogEmoji('🗑️', 'User location cleared');
+      // fetchRecommendations will be called by useEffect when userLocation changes
+    }
   };
 
   // Helper function to check if location permissions are available
@@ -551,21 +337,15 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
     return { available: true, state: 'unknown' };
   };
 
-  // Helper function to search using smart search endpoint
-  async function searchWithSmartSearch(query, limit = 1) {
-    try {
-      const res = await fetch(`${SEARCH_DB_URL}/api/smart-search?q=${encodeURIComponent(query)}&type=RECIPE&limit=${limit}`);
-      if (res.ok) {
-        const result = await res.json();
-        return result.results || [];
-      }
-    } catch (e) {
-      console.error(`Error searching for query "${query}":`, e);
-    }
-    return [];
-  }
+  // Function removed - recommendations now include recipes directly
 
   async function requestLocationManually() {
+    // Prevent multiple simultaneous location requests
+    if (isFetchingRecommendations) {
+      debugLogEmoji('🔄', 'Location request already in progress, skipping duplicate request');
+      return;
+    }
+    
     try {
       debugLogEmoji('📍', 'Manual location request initiated');
       setShowLocationPrompt(false);
@@ -605,16 +385,14 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
           setUserLocation(location);
           onLocationUpdate?.(location); // Update parent component with manual GPS location
           debugLogEmoji('📍', 'Manual location set:', location);
-          
-          // Refresh recommendations with new location
-          fetchRecommendations();
+          // fetchRecommendations will be called by useEffect when userLocation changes
         }
       } catch (geocodeError) {
         console.log('Reverse geocoding failed, using coordinates');
         const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
         setUserLocation(location);
         onLocationUpdate?.(location); // Update parent component with coordinate location
-        fetchRecommendations();
+        // fetchRecommendations will be called by useEffect when userLocation changes
       }
     } catch (error) {
       debugLogEmoji('❌', 'Manual location request failed:', error.message);
@@ -650,9 +428,8 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
             return entries.map(([categoryName, recipes]) => {
               debugLogEmoji('🎯', `Rendering category "${categoryName}" with ${recipes.length} recipes`);
               
-              // For now, show all recipes in each category without cross-category deduplication
-              // This prevents the blank page issue while we debug the data structure
-              const sortedRecipes = recipes.slice(0, 10);
+              // Show all recipes in each category without any limits
+              const sortedRecipes = recipes;
               
               debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes, ${sortedRecipes.length} displayed`);
               
@@ -818,6 +595,12 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                 Using default location in {locationTimeout} seconds
               </div>
             )}
+            {!locationTimeout && isResolvingLocation && (
+              <div style={{ fontSize: '14px', color: '#666' }}>
+                Waiting for location permission... (up to 2 minutes)
+              </div>
+            )}
+
             <style>{`
               @keyframes spin {
                 0% { transform: rotate(0deg); }
@@ -890,6 +673,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
             margin: '16px 0',
             textAlign: 'center'
           }}>
+
             <button
               onClick={() => setShowLocationPrompt(true)}
               style={{
@@ -1032,7 +816,7 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
                 <div key={categoryName} className="recommendation-category">
                   <h2 className="category-title">{categoryName}</h2>
                   <SwipeableRecipeGrid>
-                    {[1, 2, 3].map(index => (
+                    {[1, 2, 3, 4, 5].map(index => (
                       <div key={index} className="recipe-card loading-card">
                         <div className="recipe-card-image loading-pulse">
                           <div className="loading-shimmer"></div>
@@ -1050,29 +834,24 @@ function Recommendations({ onRecipeSelect, recipesByCategory, aiCardLoadingState
             // Track which recipes have been shown to avoid duplicates
             const shownRecipeIds = new Set();
             
-            return Object.entries(recommendations.recommendations).map(([categoryName, tags]) => {
-              // Ensure tags is an array
-              if (!Array.isArray(tags)) {
-                console.error(`Invalid tags format for category ${categoryName}:`, tags);
+            return Object.entries(recommendations.recommendations).map(([categoryName, recipes]) => {
+              // Ensure recipes is an array
+              if (!Array.isArray(recipes)) {
+                console.error(`Invalid recipes format for category ${categoryName}:`, recipes);
                 return null;
               }
               
-              debugLogEmoji('🔄', `Processing category: ${categoryName} with tags:`, tags);
-              
-              // Get external recipes for this category (no longer using local recipes)
-              const categoryExternalRecipes = externalRecipes[categoryName] || [];
-              
-              debugLogEmoji('📊', `Category "${categoryName}": ${categoryExternalRecipes.length} total recipes, ${tags.length} tags`);
+              debugLogEmoji('🔄', `Processing category: ${categoryName} with ${recipes.length} recipes`);
               
               // Filter out duplicates across categories
-              const uniqueExternalRecipes = categoryExternalRecipes.filter(external => 
-                !shownRecipeIds.has(external.id)
+              const uniqueRecipes = recipes.filter(recipe => 
+                !shownRecipeIds.has(recipe.id)
               );
               
-              // Take up to 10 recipes for this category
-              const sortedRecipes = uniqueExternalRecipes.slice(0, 10);
+              // Show all unique recipes for this category
+              const sortedRecipes = uniqueRecipes;
               
-              debugLogEmoji('🎯', `Category "${categoryName}": ${uniqueExternalRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
+              debugLogEmoji('🎯', `Category "${categoryName}": ${uniqueRecipes.length} unique recipes, ${sortedRecipes.length} displayed`);
               
               // Add selected recipes to the shown set
               sortedRecipes.forEach(recipe => shownRecipeIds.add(recipe.id));

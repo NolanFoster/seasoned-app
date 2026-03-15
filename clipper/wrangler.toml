@@ -11,7 +11,7 @@ binding = "AI"
 # Environment variables
 [vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 
 [env.preview]
 name = "preview-clipper"
@@ -30,7 +30,7 @@ service = "preview-recipe-save-worker"
 name = "staging-clipper"
 [env.staging.vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-IMAGE_DOMAIN = "https://staging-images.nolanfoster.me"
+IMAGE_DOMAIN = "https://staging-images.seasonedapp.com"
 
 [env.staging.ai]
 binding = "AI"
@@ -50,7 +50,7 @@ id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 name = "clipper"
 [env.production.vars]
 GPT_API_URL = "https://api.openai.com/v1/chat/completions"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 
 [env.production.ai]
 binding = "AI"

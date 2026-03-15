@@ -62,10 +62,13 @@ describe('Debug Logging Functions', () => {
 
       // Even though the component performs many operations during mount,
       // no debug logs should appear when DEBUG_MODE is false
-      const debugLogCalls = consoleSpy.mock.calls.filter(call =>
-        call[0]?.toString().includes('Debug') ||
-        call[0]?.toString().match(/^[🔍🔎📊💡⚡️🎯🔧📱]/)
-      );
+      // Filter out the test function availability message which is always logged
+      const debugLogCalls = consoleSpy.mock.calls.filter(call => {
+        const message = call[0]?.toString();
+        return (message?.includes('Debug') ||
+                message?.match(/^[🔍🔎📊💡⚡️🎯🔧📱]/)) &&
+               !message?.includes('Recipe generation worker test function available');
+      });
 
       expect(debugLogCalls).toHaveLength(0);
     });

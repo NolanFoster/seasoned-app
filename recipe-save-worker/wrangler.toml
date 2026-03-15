@@ -8,7 +8,7 @@ workers_dev = true
 # Environment variables
 [vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 # Preview environment
@@ -16,7 +16,7 @@ FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 name = "preview-recipe-save-worker"
 [env.preview.vars]
 SEARCH_DB_URL = "https://preview-recipe-search-db.nolanfoster.workers.dev"
-IMAGE_DOMAIN = "https://preview-images.nolanfoster.me"
+IMAGE_DOMAIN = "https://preview-images.seasonedapp.com"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 # Staging environment
@@ -24,7 +24,7 @@ FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 name = "staging-recipe-save-worker"
 [env.staging.vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 [[env.staging.kv_namespaces]]
@@ -35,6 +35,10 @@ id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
 
+[[env.staging.queues.producers]]
+queue = "recipe-embedding-queue"
+binding = "EMBEDDING_QUEUE"
+
 [[env.staging.durable_objects.bindings]]
 name = "RECIPE_SAVER"
 class_name = "RecipeSaver"
@@ -44,7 +48,7 @@ class_name = "RecipeSaver"
 name = "recipe-save-worker"
 [env.production.vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
-IMAGE_DOMAIN = "https://images.nolanfoster.me"
+IMAGE_DOMAIN = "https://images.seasonedapp.com"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 [[env.production.kv_namespaces]]
@@ -54,6 +58,10 @@ id = "dd001c20659a4d6982f6d650abcac880"
 [[env.production.r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
+
+[[env.production.queues.producers]]
+queue = "recipe-embedding-queue"
+binding = "EMBEDDING_QUEUE"
 
 [[env.production.durable_objects.bindings]]
 name = "RECIPE_SAVER"
@@ -79,6 +87,11 @@ new_sqlite_classes = ["RecipeSaver"]
 [[r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
+
+# Queue for recipe embedding
+[[queues.producers]]
+queue = "recipe-embedding-queue"
+binding = "EMBEDDING_QUEUE"
 
 # Optional: Analytics Engine (for monitoring)
 # [[analytics_engine_datasets]]

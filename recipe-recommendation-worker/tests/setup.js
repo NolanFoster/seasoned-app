@@ -21,7 +21,9 @@ global.createMockRequest = (method = 'GET', url = 'https://example.com', options
 };
 
 global.createMockEnv = () => ({
-  AI: null, // Testing without AI binding for now
+  AI: {
+    run: vi.fn()
+  },
   ENVIRONMENT: 'test'
 });
 

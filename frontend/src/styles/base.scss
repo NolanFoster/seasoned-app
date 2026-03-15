@@ -270,6 +270,17 @@ body {
       border-color: rgba(244, 67, 54, 0.9);
     }
   }
+  
+  // AI generation glow effect
+  &.ai-generating {
+    background: rgba(138, 43, 226, 0.2);
+    border: 1px solid rgba(138, 43, 226, 0.5);
+    box-shadow: 
+      0 0 20px rgba(138, 43, 226, 0.4),
+      0 0 40px rgba(138, 43, 226, 0.2),
+      inset 0 0 20px rgba(138, 43, 226, 0.1);
+    animation: ai-glow-pulse 2s ease-in-out infinite;
+  }
 }
 
 // Pulsating glow animation
@@ -282,6 +293,28 @@ body {
   }
   100% {
     box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+  }
+}
+
+// AI glow pulse animation
+@keyframes ai-glow-pulse {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(138, 43, 226, 0.4),
+      0 0 40px rgba(138, 43, 226, 0.2),
+      inset 0 0 20px rgba(138, 43, 226, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(138, 43, 226, 0.6),
+      0 0 60px rgba(138, 43, 226, 0.3),
+      inset 0 0 30px rgba(138, 43, 226, 0.2);
+  }
+  100% {
+    box-shadow: 
+      0 0 20px rgba(138, 43, 226, 0.4),
+      0 0 40px rgba(138, 43, 226, 0.2),
+      inset 0 0 20px rgba(138, 43, 226, 0.1);
   }
 }
 
@@ -337,6 +370,26 @@ body {
   justify-content: center;
   border-radius: 50%; // Make button circular
   transition: all $transition-normal; // Include all properties for smooth transitions
+  
+  // AI button specific styles
+  &.ai-button {
+    background: rgba(138, 43, 226, 0.2); // Purple glass effect
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    
+    &:hover {
+      background: rgba(138, 43, 226, 0.3);
+      border-color: rgba(138, 43, 226, 0.5);
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+    
+    svg {
+      color: #8a2be2; // Purple color for AI icon
+    }
+  }
   height: 100%; // Fill parent height
   aspect-ratio: 1; // Make button square (which becomes circular with border-radius)
   

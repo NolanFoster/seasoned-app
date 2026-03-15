@@ -45,6 +45,8 @@ describe('Image Service', () => {
     vi.clearAllMocks();
     // Mock Date.now for consistent testing
     vi.spyOn(Date, 'now').mockReturnValue(1234567890000);
+    // Re-initialize crypto mock after clearAllMocks
+    global.crypto.subtle.digest.mockResolvedValue(mockArrayBuffer);
   });
 
   afterEach(() => {
@@ -201,7 +203,7 @@ describe('Image Service', () => {
       const filename = 'test-image.jpg';
       const contentType = 'image/jpeg';
 
-      const result = await uploadImageToR2(mockR2Bucket, mockBuffer, filename, contentType);
+      const result = await uploadImageToR2(mockR2Bucket, mockBuffer, filename, contentType, 'https://images.nolanfoster.me');
 
       expect(mockR2Bucket.put).toHaveBeenCalledWith(filename, mockBuffer, {
         httpMetadata: {
@@ -219,7 +221,7 @@ describe('Image Service', () => {
       };
       const mockBuffer = new ArrayBuffer(1024);
 
-      await expect(uploadImageToR2(mockR2Bucket, mockBuffer, 'test.jpg', 'image/jpeg'))
+      await expect(uploadImageToR2(mockR2Bucket, mockBuffer, 'test.jpg', 'image/jpeg', 'https://images.nolanfoster.me'))
         .rejects.toThrow('Failed to upload image to R2: R2 upload failed');
     });
   });
@@ -364,6 +366,10 @@ describe('Image Service Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Date, 'now').mockReturnValue(1234567890000);
+    // Re-initialize crypto mock after clearAllMocks
+    const mockCryptoBuffer = new ArrayBuffer(32);
+    new Uint8Array(mockCryptoBuffer).fill(171);
+    global.crypto.subtle.digest.mockResolvedValue(mockCryptoBuffer);
   });
 
   afterEach(() => {

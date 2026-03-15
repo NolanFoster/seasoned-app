@@ -70,6 +70,27 @@ describe('Recipe Generation Worker - Integration Tests', () => {
     });
   });
 
+  describe('Generate route routing', () => {
+    it('should route POST /generate to the generate handler', async () => {
+      const request = createPostRequest('/generate', { ingredients: ['chicken'] });
+      const response = await worker.fetch(request, mockEnv);
+
+      // In mock mode (no AI binding), returns 200
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+    });
+
+    it('should return 404 for GET /generate (wrong method)', async () => {
+      const response = await worker.fetch(
+        new Request('https://example.com/generate', { method: 'GET' }),
+        mockEnv
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+
   describe('Environment handling', () => {
     it('should default to development environment when ENVIRONMENT is not set', async () => {
       const request = createMockRequest('/health');

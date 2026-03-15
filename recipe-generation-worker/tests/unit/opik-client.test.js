@@ -231,6 +231,33 @@ describe('Opik Client - Unit Tests', () => {
     });
   });
 
+  describe('Flush Operations', () => {
+    it('should skip flush and warn when client is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn');
+      await client.flush(); // client has null this.client (no API key)
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not initialized'));
+    });
+
+    it('should flush successfully when client is initialized', async () => {
+      const keyClient = new OpikClient('test-api-key');
+      vi.spyOn(keyClient.client, 'flush').mockResolvedValue(undefined);
+      const logSpy = vi.spyOn(console, 'log');
+      await keyClient.flush();
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Flushing'));
+    });
+
+    it('should handle flush errors gracefully', async () => {
+      const keyClient = new OpikClient('test-api-key');
+      vi.spyOn(keyClient.client, 'flush').mockRejectedValue(new Error('Network flush error'));
+      const errorSpy = vi.spyOn(console, 'error');
+      await keyClient.flush();
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to flush'),
+        expect.objectContaining({ message: 'Network flush error' })
+      );
+    });
+  });
+
   describe('Factory Functions', () => {
     it('should create client using factory function', () => {
       const factoryClient = createOpikClient('factory-key', 'factory-workspace');

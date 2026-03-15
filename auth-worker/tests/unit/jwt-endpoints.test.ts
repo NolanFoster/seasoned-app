@@ -151,7 +151,7 @@ describe('JWT Endpoints', () => {
       expect(result.message).toBe('Token refreshed successfully');
       expect(result.token).toBeDefined();
       expect(result.token).not.toBe(token); // Should be a new token
-      expect(result.expiresIn).toBe(86400);
+      expect(result.expiresIn).toBe(604800);
       expect(result.user.id).toBe('test-user-id');
       expect(result.user.email).toBe('test@example.com');
     });
@@ -201,16 +201,16 @@ describe('JWT Endpoints', () => {
       expect(result.message).toBeDefined();
     });
 
-    it('should reject tokens that are not close to expiration', async () => {
-      // Create a token that expires in 2 hours (not close to expiration)
+    it('should refresh a valid token regardless of time until expiration', async () => {
+      // Create a token that expires in 2 hours (sliding window refreshes any valid token)
       const { JWTService } = await import('../../src/services/jwt-service');
       const jwtService = new JWTService(mockEnv);
       const tokenResult = await jwtService.createToken('test-user-id', 'test@example.com', 7200);
-      
+
       expect(tokenResult.success).toBe(true);
       const token = tokenResult.token!;
 
-      // Try to refresh the token
+      // Refresh the token — sliding window allows refresh at any time
       const request = new Request('http://localhost/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,9 +220,11 @@ describe('JWT Endpoints', () => {
       const response = await app.fetch(request, mockEnv);
       const result = await response.json() as any;
 
-      expect(response.status).toBe(400);
-      expect(result.success).toBe(false);
-      expect(result.message).toBe('Token is not close to expiration yet');
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(true);
+      expect(result.token).toBeDefined();
+      expect(result.token).not.toBe(token);
+      expect(result.expiresIn).toBe(604800);
     });
 
     it('should reject expired tokens', async () => {

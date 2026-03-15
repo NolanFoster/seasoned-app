@@ -1,0 +1,27 @@
+# recipe-app/wrangler.toml
+name = "omni-recipe"
+compatibility_date = "2025-03-07"
+main = "src/worker.js"
+
+[[services]]
+binding = "FLAGGLY"
+service = "flaggly"
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"

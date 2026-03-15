@@ -16,7 +16,7 @@ async function testRecipeSave() {
   
   try {
     // First, we need to scrape the recipe data
-    // In a real scenario, this would be done by the recipe-scraper worker
+    // In a real scenario, this would be done by the recipe-clipper worker
     const recipeData = {
       url: recipeUrl,
       title: "Easy Beginner's Turkey with Stuffing",

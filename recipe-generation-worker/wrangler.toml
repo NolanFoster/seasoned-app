@@ -26,6 +26,11 @@ id = "dd001c20659a4d6982f6d650abcac880"
 binding = "RECIPE_VECTORS"
 index_name = "recipe-vectors-384"
 
+# Service binding to AI image generation worker
+[[services]]
+binding = "IMAGE_GENERATION_SERVICE"
+service = "ai-image-generation-worker"
+
 # Preview environment (for PR previews)
 [env.preview]
 name = "recipe-generation-worker-preview"
@@ -43,6 +48,10 @@ index_name = "recipe-vectors-384"
 [[env.preview.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
+
+[[env.preview.services]]
+binding = "IMAGE_GENERATION_SERVICE"
+service = "ai-image-generation-worker-preview"
 
 # Staging environment
 [env.staging]
@@ -65,6 +74,10 @@ index_name = "recipe-vectors-384"
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
 
+[[env.staging.services]]
+binding = "IMAGE_GENERATION_SERVICE"
+service = "ai-image-generation-worker-staging"
+
 # Production environment
 [env.production]
 name = "recipe-generation-worker"
@@ -85,6 +98,10 @@ index_name = "recipe-vectors-384"
 [[env.production.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
+
+[[env.production.services]]
+binding = "IMAGE_GENERATION_SERVICE"
+service = "ai-image-generation-worker"
 
 
 # development environment
@@ -107,3 +124,7 @@ index_name = "recipe-vectors-384"
 [[env.development.kv_namespaces]]
 binding = "RECIPE_STORAGE"
 id = "dd001c20659a4d6982f6d650abcac880"
+
+[[env.development.services]]
+binding = "IMAGE_GENERATION_SERVICE"
+service = "ai-image-generation-worker"

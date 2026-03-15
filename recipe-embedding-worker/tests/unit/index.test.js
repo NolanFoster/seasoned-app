@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import worker from '../../src/index.js';
 
 // Mock the embedding handler
@@ -180,6 +180,54 @@ describe('Worker - Queue Processing', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith('Error processing message msg-1:', expect.any(Error));
     expect(consoleSpy).toHaveBeenCalledWith('Error processing message msg-2:', expect.any(Error));
+  });
+});
+
+describe('Worker - Scheduled Cron', () => {
+  let mockEnv;
+
+  beforeEach(() => {
+    mockEnv = getMockEnv();
+    vi.clearAllMocks();
+    // Re-silence console after clearAllMocks resets spies
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('should run scheduled cron job successfully', async () => {
+    const mockController = { scheduledTime: Date.now() };
+    const logSpy = vi.spyOn(console, 'log');
+
+    await worker.scheduled(mockController, mockEnv, {});
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Cron Job Started'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Cron job completed'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Cron Job Ended'));
+  });
+
+  it('should log environment in scheduled handler', async () => {
+    const mockController = { scheduledTime: Date.now() };
+    const logSpy = vi.spyOn(console, 'log');
+
+    await worker.scheduled(mockController, mockEnv, {});
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('test'));
+  });
+
+  it('should handle errors in scheduled handler and rethrow', async () => {
+    const mockController = { scheduledTime: Date.now() };
+    const errorSpy = vi.spyOn(console, 'error');
+    let callCount = 0;
+    vi.spyOn(console, 'log').mockImplementation(() => {
+      callCount++;
+      if (callCount === 3) { // 3rd call is inside the try block
+        throw new Error('Cron internal error');
+      }
+    });
+
+    await expect(worker.scheduled(mockController, mockEnv, {})).rejects.toThrow('Cron internal error');
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('💥 Cron job failed'), expect.any(Error));
   });
 });
 

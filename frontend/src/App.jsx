@@ -1,8 +1,20 @@
 import { useEffect, useState, useRef } from 'react'
-import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js'
+import { formatDuration, isValidUrl, formatIngredientAmount } from '../../shared/utility-functions.js';
 import VideoPopup from './components/VideoPopup.jsx'
 import Recommendations from './components/Recommendations.jsx'
 import SwipeableRecipeGrid from './components/SwipeableRecipeGrid.jsx'
+import Header from './components/Header.jsx'
+import Timer from './components/Timer.jsx'
+import TimerUtils, { parseTimeString, formatTime, renderInstructionWithTimers } from './components/TimerUtils.jsx'
+import RecipeForm from './components/RecipeForm.jsx'
+import RecipePreview from './components/RecipePreview.jsx'
+import ClipRecipeForm from './components/ClipRecipeForm.jsx'
+import RecipeFullscreen from './components/RecipeFullscreen.jsx'
+import BackgroundCanvas from './components/BackgroundCanvas.jsx'
+import LoadingRecipes from './components/LoadingRecipes.jsx'
+import NoRecipesFound from './components/NoRecipesFound.jsx'
+import RecipeUtils, { getRecipeDescription, getFilteredIngredients, getFilteredInstructions, decodeHtmlEntities } from './components/RecipeUtils.jsx'
+import TimerManager from './components/TimerManager.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
@@ -672,12 +684,20 @@ function App() {
   const [showNutrition, setShowNutrition] = useState(false); // State for toggling nutrition view
   const [aiCardLoadingStates, setAiCardLoadingStates] = useState(new Map()); // Track loading state for AI cards
   const [userLocation, setUserLocation] = useState(''); // Store user's location from geolocation
+  const [previousLocation, setPreviousLocation] = useState(null); // Track previous location to prevent duplicate calls
+  const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track if we're resolving location permissions
+  const [isGeneratingAiRecipe, setIsGeneratingAiRecipe] = useState(false); // Track AI recipe generation state
   
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
   const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
   const [floatingTimer, setFloatingTimer] = useState(null); // Currently active floating timer
-  
+
+  // Screen wake lock state
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const wakeLockRef = useRef(null);      // WakeLockSentinel
+  const wakeLockTimerRef = useRef(null); // auto-off setTimeout id
+
   const seasoningCanvasRef = useRef(null);
   const seasoningRef = useRef(null);
   const recipeGridRef = useRef(null);
@@ -705,6 +725,28 @@ function App() {
     }).finally(() => {
       clearTimeout(timeoutId);
     });
+  }
+
+  // Helper function to fetch complete recipe data from KV storage
+  async function fetchCompleteRecipeData(recipeId) {
+    try {
+      const response = await fetchWithTimeout(`${API_URL}/recipe/get?id=${recipeId}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        timeout: 5000
+      });
+      
+      if (response.ok) {
+        const recipeData = await response.json();
+        return recipeData;
+      } else {
+        console.warn(`Failed to fetch recipe ${recipeId}: ${response.status}`);
+        return null;
+      }
+    } catch (error) {
+      console.warn(`Error fetching recipe ${recipeId}:`, error);
+      return null;
+    }
   }
 
   // Batch processing utility for parallel fetching with rate limiting
@@ -756,99 +798,127 @@ function App() {
     }
   }
 
-  // Function to fetch complete recipe data from KV storage via recipe-save-worker
-  // This fixes the issue where smart search returns limited data and full recipe data
-  // needs to be fetched from the recipe-save-worker which has direct KV access
-  async function fetchCompleteRecipeData(recipeId) {
+
+
+
+
+  // Function to check location permissions and get location
+  const checkLocationPermissionsAndGetLocation = async () => {
     try {
-      debugLogEmoji('🔍', `Fetching complete recipe data for ID: ${recipeId}`);
-      
-      // First try the recipe-save-worker which has direct KV access
-      // The worker routes /recipe/get to the Durable Object's /get endpoint
-      const response = await fetchWithTimeout(
-        `${SAVE_WORKER_URL}/recipe/get?id=${recipeId}`,
-        { timeout: 15000 }
-      );
-      
-      if (response.ok) {
-        const recipeData = await response.json();
+      // First check if geolocation is supported
+      if (!navigator.geolocation) {
+        debugLogEmoji('❌', 'Geolocation not supported - using location-agnostic recommendations');
+        return '';
+      }
+
+      // Check permission status first
+      if (navigator.permissions && navigator.permissions.query) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        debugLogEmoji('🔒', 'Location permission status:', permission.state);
         
-        // Validate that we got meaningful recipe data
-        // Recipe-save-worker returns data in a nested structure: { id, url, data: { actual recipe data } }
-        const actualRecipeData = recipeData.data || recipeData;
-        if (recipeData && actualRecipeData && (actualRecipeData.title || actualRecipeData.name)) {
-          debugLogEmoji('✅', `Complete recipe data fetched from save worker for ID: ${recipeId}`, {
-            hasData: !!actualRecipeData,
-            hasTitle: !!(actualRecipeData.title || actualRecipeData.name),
-            hasIngredients: !!(actualRecipeData.ingredients && actualRecipeData.ingredients.length > 0),
-            hasInstructions: !!(actualRecipeData.instructions && actualRecipeData.instructions.length > 0),
-            ingredientCount: actualRecipeData.ingredients?.length || 0,
-            instructionCount: actualRecipeData.instructions?.length || 0
-          });
-          
-          // Return the recipe data in the expected format
-          // If recipeData already has a data property, use it as-is, otherwise wrap it
-          return recipeData.data ? recipeData : {
-            id: recipeId,
-            data: recipeData
-          };
+        if (permission.state === 'granted') {
+          // Permission already granted, get location immediately
+          debugLogEmoji('✅', 'Location permission granted, getting location...');
+          return await getCurrentLocation();
+        } else if (permission.state === 'denied') {
+          // Permission denied, use location-agnostic recommendations
+          debugLogEmoji('❌', 'Location permission denied - using location-agnostic recommendations');
+          return '';
         } else {
-          debugLogEmoji('⚠️', `Invalid recipe data from save worker for ID: ${recipeId}`, recipeData);
+          // Permission state is 'prompt' - user hasn't decided yet
+          // For initialization, we'll use location-agnostic recommendations
+          // The user can manually enable location later
+          debugLogEmoji('🤔', 'Location permission not decided yet - using location-agnostic recommendations');
+          return '';
         }
       } else {
-        const errorText = await response.text();
-        debugLogEmoji('⚠️', `Save worker request failed for ID: ${recipeId}`, {
-          status: response.status,
-          error: errorText
-        });
-      }
-      
-      // Fallback to the old API endpoint
-      debugLogEmoji('🔄', `Falling back to old API for recipe ID: ${recipeId}`);
-      const fallbackResponse = await fetchWithTimeout(
-        `${API_URL}/recipes?id=${recipeId}`,
-        { timeout: 15000 }
-      );
-      
-      if (fallbackResponse.ok) {
-        const completeRecipe = await fallbackResponse.json();
-        debugLogEmoji('✅', `Complete recipe data fetched from fallback API for ID: ${recipeId}`, {
-          hasData: !!completeRecipe.data,
-          hasTitle: !!(completeRecipe.data?.title || completeRecipe.title),
-          hasIngredients: !!(completeRecipe.data?.ingredients || completeRecipe.ingredients),
-          hasInstructions: !!(completeRecipe.data?.instructions || completeRecipe.instructions)
-        });
-        return completeRecipe;
-      } else {
-        const errorText = await fallbackResponse.text();
-        console.warn(`⚠️ Both save worker and fallback API failed for recipe ID: ${recipeId}`, {
-          saveWorkerStatus: response?.status,
-          fallbackStatus: fallbackResponse.status,
-          fallbackError: errorText
-        });
-        return null;
+        // Permissions API not supported, try to get location directly
+        debugLogEmoji('⚠️', 'Permissions API not supported, trying direct location request...');
+        return await getCurrentLocation();
       }
     } catch (error) {
-      console.warn(`⚠️ Error fetching complete recipe data for ID: ${recipeId}:`, error);
-      return null;
+      debugLogEmoji('❌', 'Error checking location permission:', error);
+      // Fallback to location-agnostic recommendations
+      return '';
     }
-  }
+  };
 
-
+  // Function to get current location
+  const getCurrentLocation = async () => {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 10000, 
+          enableHighAccuracy: true, 
+          maximumAge: 300000 
+        });
+      });
+      
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      
+      // Try to get city name using reverse geocoding
+      try {
+        const geocodeResponse = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+        );
+        
+        if (geocodeResponse.ok) {
+          const geocodeData = await geocodeResponse.json();
+          const city = geocodeData.city || geocodeData.locality;
+          const region = geocodeData.principalSubdivision || geocodeData.countryName;
+          
+          let location;
+          if (city && region) {
+            location = `${city}, ${region}`;
+          } else if (city) {
+            location = city;
+          } else {
+            location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+          }
+          
+          debugLogEmoji('📍', 'Location obtained:', location);
+          return location;
+        }
+      } catch (geocodeError) {
+        // Fallback to coordinates if geocoding fails
+        const location = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°W`;
+        debugLogEmoji('📍', 'Location obtained (coordinates):', location);
+        return location;
+      }
+    } catch (error) {
+      debugLogEmoji('❌', 'Failed to get location:', error.message);
+      if (error.code === 1) { // PERMISSION_DENIED
+        debugLogEmoji('❌', 'Location permission denied during getCurrentPosition');
+        return '';
+      } else {
+        // Other errors - use location-agnostic recommendations
+        debugLogEmoji('⚠️', 'Location error, using location-agnostic recommendations');
+        return '';
+      }
+    }
+  };
 
   useEffect(() => {
-    // Initialize with recommendations instead of fetchRecipes
-    // First get categories for loading display, then get full recipes
+    // Initialize with location permission check and recommendations
     const initializeRecipes = async () => {
       setIsLoadingRecipes(true); // Start loading state immediately
+      setIsResolvingLocation(true); // Start location resolution
       
       // Add a small delay to prevent rapid state changes and ensure smooth loading
       const minLoadingTime = 800; // Minimum loading time in milliseconds
       const startTime = Date.now();
       
       try {
-        await getRecipeCategories(userLocation); // Get category names first
-        await getRecipesFromRecommendations(userLocation); // Then get full recipes
+        // Check location permissions and get location
+        const location = await checkLocationPermissionsAndGetLocation();
+        
+        // Set the location (this will trigger the userLocation useEffect)
+        setUserLocation(location);
+        setPreviousLocation(location);
+        
+        // Load recommendations with the determined location
+        await getRecipesFromRecommendations(location);
         
         // Ensure minimum loading time for smooth UX
         const elapsedTime = Date.now() - startTime;
@@ -859,9 +929,14 @@ function App() {
         console.error('❌ Error during initialization:', error);
         // Even if there's an error, we should show some content
         setRecipes([]);
+        // Set empty location and load without location
+        setUserLocation('');
+        setPreviousLocation('');
+        await getRecipesFromRecommendations('');
       } finally {
         setIsInitializing(false); // Mark initialization as complete
         setIsLoadingRecipes(false); // Ensure loading state is cleared
+        setIsResolvingLocation(false); // Mark location resolution as complete
         console.log('✅ Initialization completed');
       }
     };
@@ -901,6 +976,27 @@ function App() {
       }
     }
   }, [recipesByCategory]);
+
+  // Refresh recommendations when userLocation changes
+  useEffect(() => {
+    // Only call if:
+    // 1. Not during initialization (initialization handles the first call)
+    // 2. Not currently refreshing recipes
+    // 3. Location has actually changed from the previous location
+    if (!isInitializing && !isRefreshingRecipes && userLocation !== previousLocation) {
+      debugLogEmoji('📍', 'App: userLocation changed, refreshing recommendations:', {
+        currentLocation: userLocation,
+        previousLocation: previousLocation,
+        hasChanged: userLocation !== previousLocation
+      });
+      
+      // Update previous location to prevent duplicate calls
+      setPreviousLocation(userLocation);
+      
+      // Load recommendations with new location
+      getRecipesFromRecommendations(userLocation);
+    }
+  }, [userLocation, isInitializing, isRefreshingRecipes, previousLocation]);
 
   // Clear loading state when recipes are loaded and initialization is complete
   useEffect(() => {
@@ -997,7 +1093,7 @@ function App() {
       
       // Fade title based on scroll position
       const headerElement = document.querySelector('.header-container');
-      if (headerElement) {
+      if (headerElement && headerElement.classList) {
         if (scrollY > 50) {
           headerElement.classList.add('fade-out');
         } else {
@@ -1338,42 +1434,6 @@ function App() {
   }, [selectedRecipe]);
 
 
-  // Function to get just the category names first for loading display
-  async function getRecipeCategories(location = '') {
-    try {
-      const RECOMMENDATION_API_URL = import.meta.env.VITE_RECOMMENDATION_API_URL;
-      
-      const res = await fetchWithTimeout(`${RECOMMENDATION_API_URL}/recommendations`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location: location, // Use passed location or empty string for location-agnostic
-          date: new Date().toISOString().split('T')[0]
-        }),
-        timeout: 15000 // 15 second timeout for recommendations
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.recommendations) {
-          // Extract just the category names
-          const categories = Object.keys(data.recommendations);
-          setRecipeCategories(categories);
-          // Cache the category names for instant display on refreshes
-          setCachedCategoryNames(categories);
-          return categories;
-        }
-      }
-      return [];
-    } catch (e) {
-      console.error('Error getting recipe categories:', e);
-      return [];
-    }
-  }
 
   // Function to get recipes from recommendations system
   async function getRecipesFromRecommendations(location = '') {
@@ -1407,241 +1467,49 @@ function App() {
         },
         body: JSON.stringify({
           location: location, // Use passed location or empty string for location-agnostic
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          limit: 3,
+          aiGenerated: 2
         }),
-        timeout: 15000 // 15 second timeout for recommendations
+        timeout: 30000 // 30 second timeout for recommendations (AI generation can take time)
       });
       
       if (res.ok) {
         const data = await res.json();
+        debugLogEmoji('📡', 'Raw recommendation API response:', {
+          hasRecommendations: !!data.recommendations,
+          recommendationsType: typeof data.recommendations,
+          categories: Object.keys(data.recommendations || {}),
+          sampleCategory: data.recommendations ? Object.keys(data.recommendations)[0] : null,
+          sampleRecipes: data.recommendations ? data.recommendations[Object.keys(data.recommendations)[0]] : null,
+          fullResponse: data
+        });
         if (data.recommendations) {
           console.log('📋 Processing recommendations for categories:', Object.keys(data.recommendations));
-          // Collect all recipes from all categories using a Map
-          const newRecipesByCategory = new Map();
-          const searchPromises = [];
           
+          // Since recommendations now contain complete recipe data, we can use it directly
+          const newRecipesByCategory = new Map();
+          
+          // Process each category and its recipes directly from the API response
           for (const [categoryName, recipes] of Object.entries(data.recommendations)) {
             if (Array.isArray(recipes)) {
-              debugLogEmoji('📂', `Processing category "${categoryName}" with ${recipes.length} recipes from recommendations`);
-              // Initialize category in the map
-              newRecipesByCategory.set(categoryName, []);
+              debugLogEmoji('📂', `Processing category "${categoryName}" with ${recipes.length} recipes`);
               
-              // Process recipes directly from recommendation response
-              for (const recipe of recipes) {
-                debugLogEmoji('🍽️', `Processing recipe: "${recipe.name || recipe.id}"`);
-                
-                // Create an async function for processing each recipe
-                const processRecipe = async () => {
-                  try {
-                    let completeRecipe = null;
-                    
-                    // Check if this is a real recipe with an ID or a fallback dish suggestion
-                    if (recipe.id && !recipe.fallback && recipe.source !== 'ai_generated') {
-                      // Try to fetch complete recipe data from KV storage
-                      debugLogEmoji('🔄', `Fetching complete data for recipe ${recipe.id} from KV...`);
-                      completeRecipe = await fetchCompleteRecipeData(recipe.id);
-                      
-                      if (completeRecipe) {
-                        debugLogEmoji('✅', `Recipe ${recipe.id} fetched successfully from KV`);
-                      } else {
-                        console.warn(`⚠️ Recipe ${recipe.id} not found in KV storage - using recommendation data`);
-                        // Use the recipe data from recommendations as fallback
-                        completeRecipe = recipe;
-                      }
-                    } else {
-                      // This is a fallback dish suggestion from AI, use it directly
-                      debugLogEmoji('🤖', `Using AI-generated dish suggestion: ${recipe.name}`);
-                      completeRecipe = recipe;
-                    }
-                    
-                    if (completeRecipe) {
-                      // Transform the recipe to frontend format
-                      const recipeData = completeRecipe.data || completeRecipe;
-                      const transformedRecipe = {
-                        id: completeRecipe.id || recipeData.id,
-                        name: decodeHtmlEntities(recipeData.name || recipeData.title || ''),
-                        description: decodeHtmlEntities(recipeData.description || ''),
-                        image: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                        image_url: recipeData.image || recipeData.imageUrl || recipeData.image_url || '',
-                        ingredients: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                        ),
-                        instructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                          return inst;
-                        }),
-                        recipeIngredient: (recipeData.ingredients || recipeData.recipeIngredient || []).map(ing => 
-                          typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                        ),
-                        recipeInstructions: (recipeData.instructions || recipeData.recipeInstructions || []).map(inst => {
-                          if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                          if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                          if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                          return inst;
-                        }),
-                        prep_time: recipeData.prepTime || recipeData.prep_time || null,
-                        cook_time: recipeData.cookTime || recipeData.cook_time || null,
-                        recipe_yield: decodeHtmlEntities(recipeData.recipeYield || recipeData.recipe_yield || recipeData.yield || null),
-                        source_url: recipeData.source_url || recipeData.url || '',
-                        video_url: recipeData.video?.contentUrl || recipeData.video_url || null,
-                        video: recipeData.video || null,
-                        author: recipeData.author || '',
-                        datePublished: recipeData.datePublished || '',
-                        recipeCategory: recipeData.recipeCategory || '',
-                        recipeCuisine: recipeData.recipeCuisine || '',
-                        keywords: recipeData.keywords || '',
-                        nutrition: recipeData.nutrition || {},
-                        aggregateRating: recipeData.aggregateRating || {},
-                        // Add metadata from recommendation
-                        source: recipe.source || 'recommendation',
-                        type: recipe.type || 'recipe',
-                        fallback: recipe.fallback || false
-                      };
-                      
-                      debugLogEmoji('🔍', `Transformed recipe ${transformedRecipe.id}:`, {
-                        name: transformedRecipe.name,
-                        hasIngredients: transformedRecipe.ingredients.length > 0,
-                        hasInstructions: transformedRecipe.instructions.length > 0,
-                        source: transformedRecipe.source,
-                        fallback: transformedRecipe.fallback
-                      });
-                      
-                      // Add the recipe to the category
-                      const existingRecipes = newRecipesByCategory.get(categoryName) || [];
-                      newRecipesByCategory.set(categoryName, [...existingRecipes, transformedRecipe]);
-                      
-                      return { category: categoryName, recipes: [transformedRecipe] };
-                    }
-                    
-                    return { category: categoryName, recipes: [] };
-                  } catch (error) {
-                    console.error(`❌ Error processing recipe "${recipe.name || recipe.id}":`, error);
-                    return { category: categoryName, recipes: [] };
-                  }
-                };
-                
-                searchPromises.push(processRecipe());
-              }
+              // Use recipes directly from the API response - no additional processing needed
+              newRecipesByCategory.set(categoryName, recipes);
             }
           }
           
-          // Wait for all search promises to resolve (with timeout)
-          try {
-            const searchResults = await Promise.allSettled(searchPromises);
-            searchResults.forEach(result => {
-              if (result.status === 'fulfilled' && result.value && result.value.category) {
-                const { category, recipes } = result.value;
-                const existingRecipes = newRecipesByCategory.get(category) || [];
-                newRecipesByCategory.set(category, [...existingRecipes, ...recipes]);
-              }
-            });
-          } catch (error) {
-            console.error('Error processing search results:', error);
-          }
+          // Set the processed recipes directly - no additional processing needed
+          setRecipesByCategory(newRecipesByCategory);
           
-          // Log results by category and collect all unique recipes
-          let totalUniqueRecipes = 0;
-          const allRecipes = [];
-          const seenRecipeIds = new Set(); // Track seen recipe IDs across all categories
+          // Also populate the main recipes array for compatibility with existing code
+          const allRecipes = Array.from(newRecipesByCategory.values()).flat();
+          setRecipes(allRecipes);
           
-          // First pass: collect all recipes and track seen IDs
-          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            debugLogEmoji('📊', `Category "${categoryName}": ${recipes.length} total recipes`);
-            allRecipes.push(...recipes);
-          }
-          
-          // Remove duplicates across all categories
-          const uniqueRecipes = allRecipes.filter((recipe, index, self) => 
-            index === self.findIndex(r => r.id === recipe.id)
-          );
-          
-          debugLogEmoji('📊', `Found ${allRecipes.length} total recipes and ${uniqueRecipes.length} unique recipes across all categories`);
-          
-          // Now rebuild recipesByCategory with no duplicates across categories
-          const deduplicatedRecipesByCategory = new Map();
-          const usedRecipeIds = new Set();
-          let totalDuplicatesRemoved = 0;
-          const recipeCategoryMapping = new Map(); // Track which category each recipe ended up in
-          
-          // First pass: identify which category should "own" each recipe
-          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            for (const recipe of recipes) {
-              if (!recipeCategoryMapping.has(recipe.id)) {
-                recipeCategoryMapping.set(recipe.id, categoryName);
-              }
-            }
-          }
-          
-          // Second pass: build deduplicated categories based on ownership
-          for (const [categoryName, recipes] of newRecipesByCategory.entries()) {
-            const uniqueCategoryRecipes = [];
-            let categoryDuplicatesRemoved = 0;
-            
-            for (const recipe of recipes) {
-              if (recipeCategoryMapping.get(recipe.id) === categoryName) {
-                // This category owns this recipe
-                uniqueCategoryRecipes.push(recipe);
-                usedRecipeIds.add(recipe.id);
-              } else {
-                // This recipe belongs to another category
-                debugLogEmoji('🔄', `Skipping duplicate recipe ${recipe.id} in category "${categoryName}" (belongs to "${recipeCategoryMapping.get(recipe.id)}")`);
-                categoryDuplicatesRemoved++;
-                totalDuplicatesRemoved++;
-              }
-            }
-            
-            if (uniqueCategoryRecipes.length > 0) {
-              deduplicatedRecipesByCategory.set(categoryName, uniqueCategoryRecipes);
-              debugLogEmoji('📊', `Category "${categoryName}": ${uniqueCategoryRecipes.length} unique recipes after deduplication (${categoryDuplicatesRemoved} duplicates removed)`);
-            } else {
-              debugLogEmoji('⚠️', `Category "${categoryName}": No unique recipes remaining after deduplication (${categoryDuplicatesRemoved} duplicates removed)`);
-            }
-          }
-          
-          debugLogEmoji('🎯', `Deduplication complete: ${totalDuplicatesRemoved} total duplicates removed across all categories`);
-          
-          // Log recipe distribution summary
-          debugLogEmoji('📋', 'Recipe distribution summary:');
-          for (const [recipeId, categoryName] of recipeCategoryMapping.entries()) {
-            const recipe = allRecipes.find(r => r.id === recipeId);
-            if (recipe) {
-              debugLogEmoji('  -', `Recipe "${recipe.name}" (${recipeId}) → Category: "${categoryName}"`);
-            }
-          }
-          
-          // Debug: Log what's being set in recipesByCategory
-          debugLogEmoji('🔍', 'Setting recipesByCategory with:', {
-            categoryCount: deduplicatedRecipesByCategory.size,
-            categories: Array.from(deduplicatedRecipesByCategory.keys()),
-            totalRecipes: uniqueRecipes.length
-          });
-          
-          // Debug: Log a sample of recipes from each category
-          for (const [categoryName, recipes] of deduplicatedRecipesByCategory.entries()) {
-            if (recipes.length > 0) {
-              const sampleRecipe = recipes[0];
-              debugLogEmoji('📋', `Sample recipe from "${categoryName}":`, {
-                id: sampleRecipe.id,
-                name: sampleRecipe.name,
-                hasIngredients: sampleRecipe.ingredients.length > 0,
-                hasInstructions: sampleRecipe.instructions.length > 0,
-                ingredientCount: sampleRecipe.ingredients.length,
-                instructionCount: sampleRecipe.instructions.length
-              });
-            }
-          }
-          
-          setRecipes(uniqueRecipes);
-          // Create a new Map instance to ensure React detects the state change
-          const finalRecipesByCategory = new Map(deduplicatedRecipesByCategory);
-          setRecipesByCategory(finalRecipesByCategory); // Update the state with organized recipes
-          
-          // If no recipes found, still clear loading state to prevent hanging
-          if (uniqueRecipes.length === 0) {
-            console.warn('⚠️ No recipes found from search results, showing empty state');
-          }
+          // Log summary of what was processed
+          const totalRecipes = allRecipes.length;
+          debugLogEmoji('✅', `Successfully processed ${newRecipesByCategory.size} categories with ${totalRecipes} total recipes`);
         } else {
           console.warn('⚠️ No recommendations data received');
           setRecipes([]);
@@ -1651,7 +1519,11 @@ function App() {
         setRecipes([]);
       }
     } catch (e) {
-      console.error('Error getting recipes from recommendations:', e);
+      if (e.name === 'AbortError' || e.message.includes('aborted')) {
+        console.error('⏰ Recommendation API call timed out after 30 seconds. The AI generation process may be taking longer than expected.');
+      } else {
+        console.error('Error getting recipes from recommendations:', e);
+      }
       setRecipes([]);
       setIsRefreshingRecipes(false);
     } finally {
@@ -1821,6 +1693,80 @@ function App() {
       alert('Error updating recipe. Please try again.');
     }
   }
+
+  // ── Screen Wake Lock ──────────────────────────────────────────────────────
+
+  function parseDurationToMinutes(duration) {
+    if (!duration || typeof duration !== 'string' || !duration.startsWith('PT')) return 0;
+    let mins = 0;
+    const h = duration.match(/(\d+)H/); if (h) mins += parseInt(h[1]) * 60;
+    const m = duration.match(/(\d+)M/); if (m) mins += parseInt(m[1]);
+    return mins;
+  }
+
+  function getRecipeDurationMinutes(recipe) {
+    if (!recipe) return 0;
+    const total = recipe.total_time || recipe.totalTime;
+    if (total) return parseDurationToMinutes(total);
+    return parseDurationToMinutes(recipe.prep_time || recipe.prepTime)
+         + parseDurationToMinutes(recipe.cook_time || recipe.cookTime);
+  }
+
+  async function acquireWakeLock(autoOffMinutes = 0) {
+    try {
+      if (!('wakeLock' in navigator)) return;
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+      setWakeLockActive(true);
+      wakeLockRef.current.addEventListener('release', () => {
+        setWakeLockActive(false);
+        wakeLockRef.current = null;
+      });
+      if (autoOffMinutes > 0) {
+        clearTimeout(wakeLockTimerRef.current);
+        wakeLockTimerRef.current = setTimeout(() => releaseWakeLock(), autoOffMinutes * 60 * 1000);
+      }
+    } catch (e) {
+      // Permission denied or API unavailable
+    }
+  }
+
+  function releaseWakeLock() {
+    clearTimeout(wakeLockTimerRef.current);
+    wakeLockTimerRef.current = null;
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release();
+      wakeLockRef.current = null;
+    }
+    setWakeLockActive(false);
+  }
+
+  function handleWakeLockToggle() {
+    if (wakeLockActive) {
+      releaseWakeLock();
+    } else {
+      const recipeMins = getRecipeDurationMinutes(selectedRecipe);
+      const autoOff = recipeMins > 0 ? recipeMins + 15 : 0;
+      acquireWakeLock(autoOff);
+    }
+  }
+
+  // Release wake lock when the recipe view closes
+  useEffect(() => {
+    if (!selectedRecipe) releaseWakeLock();
+  }, [selectedRecipe]);
+
+  // Re-acquire wake lock after page becomes visible again (e.g. user switches tabs)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && wakeLockActive && !wakeLockRef.current) {
+        acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [wakeLockActive]);
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   async function deleteRecipe(id) {
     if (!confirm('Are you sure you want to delete this recipe?')) return;
@@ -2026,6 +1972,97 @@ function App() {
     setEditablePreview(null);
   }
 
+  // Generate AI recipe from search input
+  async function generateAiRecipeFromSearch(searchQuery) {
+    if (!RECIPE_GENERATION_URL) {
+      console.error('❌ RECIPE_GENERATION_URL environment variable is not set!');
+      alert('AI recipe generation is not configured. Please check your environment setup.');
+      return;
+    }
+
+    // Set loading state to trigger glow effect
+    setIsGeneratingAiRecipe(true);
+
+    try {
+      console.log('🚀 Generating AI recipe from search:', searchQuery);
+      
+      const requestBody = {
+        recipeName: searchQuery,
+        generateImage: true,
+      };
+      
+      const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        timeout: 30000 // 30 second timeout for AI generation
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📋 AI recipe generation result:', result);
+      
+      if (result.success && result.recipe) {
+        // Create a complete recipe object from the generated data
+        const generatedRecipe = {
+          id: `ai-${Date.now()}`,
+          source: 'ai_generated',
+          name: result.recipe.name,
+          description: result.recipe.description,
+          ingredients: result.recipe.ingredients,
+          instructions: result.recipe.instructions,
+          recipeIngredient: result.recipe.ingredients,
+          prep_time: result.recipe.prepTime,
+          cook_time: result.recipe.cookTime,
+          recipe_yield: result.recipe.servings,
+          prepTime: result.recipe.prepTime,
+          cookTime: result.recipe.cookTime,
+          servings: result.recipe.servings,
+          image: result.recipe.image_url || '',
+          image_url: result.recipe.image_url || '',
+          generatedAt: result.recipe.generatedAt || new Date().toISOString(),
+          mockMode: result.recipe.mockMode || false,
+          generationTime: result.generationTime,
+          similarRecipesFound: result.similarRecipesFound,
+          generationMethod: result.generationMethod
+        };
+
+        // Open the generated recipe directly in fullscreen view
+        setSelectedRecipe(generatedRecipe);
+        window.history.pushState({ recipeView: true }, '', window.location.href);
+        
+        // Clear search input
+        setSearchInput('');
+        setShowSearchResults(false);
+        
+        return true;
+      } else {
+        throw new Error(result.error || 'Failed to generate recipe');
+      }
+    } catch (error) {
+      console.error('Error generating AI recipe from search:', error);
+      
+      let userMessage = 'Failed to generate AI recipe. Please try again.';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        userMessage = 'Network error: Unable to reach the AI recipe generation service. Please check your internet connection and try again.';
+      } else if (error.message.includes('Failed to fetch')) {
+        userMessage = 'Network error: Unable to reach the AI recipe generation service. Please check your internet connection and try again.';
+      } else if (error.message.includes('timeout')) {
+        userMessage = 'Request timed out. The AI recipe generation is taking longer than expected. Please try again.';
+      }
+      
+      alert(userMessage);
+      return false;
+    } finally {
+      // Always clear loading state
+      setIsGeneratingAiRecipe(false);
+    }
+  }
+
   // Handle AI card recipe generation
   async function handleAiCardRecipeGeneration(recipe) {
     // Check if this is an AI card
@@ -2097,7 +2134,8 @@ function App() {
         ingredients: recipe.ingredients || [],
         servings: recipe.servings || '4',
         cuisine: recipe.cuisine || 'General',
-        dietary: recipe.dietary || []
+        dietary: recipe.dietary || [],
+        generateImage: true
       };
       
       const response = await fetchWithTimeout(`${RECIPE_GENERATION_URL}/generate`, {
@@ -2146,6 +2184,8 @@ function App() {
           prepTime: result.recipe.prepTime,
           cookTime: result.recipe.cookTime,
           servings: result.recipe.servings,
+          image: result.recipe.image_url || '',
+          image_url: result.recipe.image_url || '',
           generatedAt: result.recipe.generatedAt || new Date().toISOString(),
           mockMode: result.recipe.mockMode || false,
           // Add metadata from generation
@@ -2229,7 +2269,7 @@ function App() {
     setShowVideoPopup(true);
   }
 
-  async function saveRecipeToDatabase() {
+  async function saveRecipe() {
     try {
       // Double-check that we're not already saving
       if (isSavingRecipe) {
@@ -2521,189 +2561,26 @@ function App() {
 
   return (
     <>
-      {/* Seasoning background canvas for both light and dark modes */}
-      <canvas 
-        ref={seasoningCanvasRef} 
-        className="seasoning-background"
-        style={{ 
-          display: 'block',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          zIndex: -1,
-          pointerEvents: 'none'
-        }}
-      />
+              {/* Seasoning background canvas for both light and dark modes */}
+        <BackgroundCanvas isDarkMode={isDarkMode} />
       
-      {/* Fixed header container */}
-      <div className="header-container">
-        <h1 className="title">
-          <img src="/spoon.svg" alt="Seasoned" className="title-icon" />
-          Seasoned
-          {/* Search bar in the same panel */}
-          <div className={`title-search ${isSearchBarClipping ? 'clipping' : ''} ${searchBarClipError ? 'clip-error' : ''}`}>
-            <input 
-              type="text" 
-              className="title-search-input" 
-              placeholder="Search recipes or paste a URL to clip..."
-              aria-label="Search recipes"
-              value={searchInput}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                // Clear any existing timeout
-                if (searchTimeoutRef.current) {
-                  clearTimeout(searchTimeoutRef.current);
-                }
-                
-                // Trigger search if not a URL
-                if (!isValidUrl(e.target.value)) {
-                  if (e.target.value.trim().length >= 2) {
-                    // Debounce search with 300ms delay
-                    searchTimeoutRef.current = setTimeout(() => {
-                      searchRecipes(e.target.value);
-                    }, 300);
-                  } else {
-                    // Clear results if query is too short
-                    setSearchResults([]);
-                    setShowSearchResults(false);
-                  }
-                } else {
-                  // Clear search results if it's a URL
-                  setSearchResults([]);
-                  setShowSearchResults(false);
-                }
-              }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  if (isValidUrl(searchInput) && clipperStatus === 'available') {
-                    handleSearchBarClip();
-                  } else if (!isValidUrl(searchInput) && searchInput.trim()) {
-                    // Trigger search for non-URL inputs
-                    searchRecipes(searchInput);
-                  } else if (!searchInput.trim()) {
-                    // Only open clip dialog if input is empty
-                    setIsClipping(true);
-                  }
-                }
-              }}
-              disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
-            />
-            <button 
-              className={`title-search-button ${isValidUrl(searchInput) && clipperStatus === 'available' ? 'clipper-available' : ''}`}
-              aria-label={isValidUrl(searchInput) ? "Clip recipe" : "Search"}
-              title={isValidUrl(searchInput) ? 
-                (clipperStatus === 'available' ? "Clip recipe from website" : "Recipe clipper service is currently unavailable") : 
-                "Search recipes"
-              }
-              onClick={() => {
-                console.log('Button clicked, searchInput:', searchInput);
-                console.log('isValidUrl result:', isValidUrl(searchInput));
-                console.log('clipperStatus:', clipperStatus);
-                if (isValidUrl(searchInput) && clipperStatus === 'available') {
-                  handleSearchBarClip();
-                } else if (!isValidUrl(searchInput) && searchInput.trim()) {
-                  // Trigger search for non-URL inputs
-                  searchRecipes(searchInput);
-                } else if (!searchInput.trim()) {
-                  // Only open clip dialog if input is empty
-                  setIsClipping(true);
-                }
-              }}
-              disabled={isSearchBarClipping || (isValidUrl(searchInput) && clipperStatus !== 'available')}
-            >
-              {isSearchBarClipping ? (
-                <div className="loading-spinner">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12a9 9 0 11-6.219-8.56" />
-                  </svg>
-                </div>
-              ) : isValidUrl(searchInput) ? (
-                <img 
-                  src="/scissor.svg" 
-                  alt="Clip" 
-                  style={{ 
-                    width: '18px', 
-                    height: '18px',
-                    opacity: clipperStatus === 'available' ? 1 : 0.3
-                  }} 
-                  className={clipperStatus === 'available' ? 'clip-icon-available' : 'clip-icon'}
-                />
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
-              )}
-            </button>
-          </div>
-          {/* Desktop Add button - outside search panel, to the right */}
-          {/* TODO: Enable with feature flag */}
-          {/* <button className="fab fab-add fab-desktop" onClick={() => setShowAddForm(true)}>
-            <span className="fab-icon">+</span>
-          </button> */}
-        </h1>
-        
-        {/* Search Results Dropdown - now inside the header container */}
-        {showSearchResults && (
-          <div className="search-results-dropdown">
-            {isSearching ? (
-              <div className="search-loading">
-                <div className="loading-spinner">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 12a9 9 0 11-6.219-8.56" />
-                  </svg>
-                </div>
-                <span>Searching recipes...</span>
-              </div>
-            ) : searchResults.length > 0 ? (
-              <div className="search-results-list">
-                {searchResults.map((recipe) => (
-                  <div 
-                    key={recipe.id} 
-                    className="search-result-item"
-                    onClick={() => {
-                      // Open the recipe in fullscreen view
-                      openRecipeView(recipe);
-                      // Clear search
-                      setSearchInput('');
-                      setSearchResults([]);
-                      setShowSearchResults(false);
-                    }}
-                  >
-                    <div className="search-result-title">{recipe.name}</div>
-                    <div className="search-result-meta">
-                      {recipe.prep_time && (
-                        <span className="search-meta-item">
-                          <span className="meta-label">Prep:</span> {formatDuration(recipe.prep_time)}
-                        </span>
-                      )}
-                      {recipe.cook_time && (
-                        <span className="search-meta-item">
-                          <span className="meta-label">Cook:</span> {formatDuration(recipe.cook_time)}
-                        </span>
-                      )}
-                      {recipe.recipe_yield && (
-                        <span className="search-meta-item">
-                          <span className="meta-label">Yield:</span> {recipe.recipe_yield}
-                        </span>
-                      )}
-                      {!recipe.prep_time && !recipe.cook_time && !recipe.recipe_yield && (
-                        <span className="search-meta-item no-meta">No timing information</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="search-no-results">
-                No recipes found for "{searchInput}"
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              {/* Fixed header container */}
+        <Header 
+          searchInput={searchInput}
+          setSearchInput={setSearchInput}
+          isSearchBarClipping={isSearchBarClipping}
+          searchBarClipError={searchBarClipError}
+          clipperStatus={clipperStatus}
+          showSearchResults={showSearchResults}
+          searchResults={searchResults}
+          isSearching={isSearching}
+          onSearchBarClip={handleSearchBarClip}
+          onSearchRecipes={searchRecipes}
+          onRecipeSelect={openRecipeView}
+          onClipDialogOpen={() => setIsClipping(true)}
+          onGenerateAiRecipe={generateAiRecipeFromSearch}
+          isGeneratingAiRecipe={isGeneratingAiRecipe}
+        />
       
       {/* Mobile FAB - outside header, bottom left */}
       {/* TODO: Enable with feature flag */}
@@ -2716,39 +2593,12 @@ function App() {
         <div className="recipes-list">
         {/* Show recipe cards unless recipe is selected */}
         {!selectedRecipe && (
-          <>
-            {/* Show loading cards while recipes are loading */}
-            {isLoadingRecipes && (
-              <div className="loading-recommendations">
-                {/* Show green loading bar initially, then cached categories when available */}
-                {cachedCategoryNames.length > 0 ? (
-                  // Use cached category names for instant display
-                  cachedCategoryNames.map((categoryName, categoryIndex) => (
-                    <div key={categoryName} className="recommendation-category">
-                      <h2 className="category-title">{categoryName}</h2>
-                      <SwipeableRecipeGrid>
-                        {[1, 2, 3].map(index => (
-                          <div key={index} className="recipe-card loading-card">
-                            <div className="recipe-card-image loading-pulse">
-                              <div className="loading-shimmer"></div>
-                            </div>
-                            <div className="recipe-card-content">
-                              <div className="loading-text loading-pulse"></div>
-                              <div className="loading-text loading-pulse" style={{ width: '60%' }}></div>
-                            </div>
-                          </div>
-                        ))}
-                      </SwipeableRecipeGrid>
-                    </div>
-                  ))
-                ) : (
-                  // Show green loading bar when no cached categories
-                  <div className="loading-bar-container">
-                    <div className="loading-bar"></div>
-                  </div>
-                )}
-              </div>
-            )}
+                      <>
+              {/* Show loading cards while recipes are loading */}
+              <LoadingRecipes 
+                isLoadingRecipes={isLoadingRecipes}
+                cachedCategoryNames={cachedCategoryNames}
+              />
             
             {/* Show recommendations when loaded */}
             {!isLoadingRecipes && (
@@ -2761,788 +2611,163 @@ function App() {
                     onAiCardClick={handleAiCardRecipeGeneration}
                     onLocationUpdate={setUserLocation}
                   />
-                ) : (
-                  <div className="no-recipes-found">
-                    <div className="no-recipes-content">
-                      <h2>No Recipes Found</h2>
-                      <p>We couldn't load any recipes at the moment. This might be due to:</p>
-                      <ul>
-                        <li>Network connectivity issues</li>
-                        <li>Search service temporarily unavailable</li>
-                        <li>No recipes matching current recommendations</li>
-                      </ul>
-                      <button 
-                        className="retry-button"
-                        onClick={() => {
-                          setIsLoadingRecipes(true);
-                          getRecipesFromRecommendations(userLocation);
-                        }}
-                      >
-                        🔄 Try Again
-                      </button>
-                    </div>
-                  </div>
-                )}
+                                  ) : (
+                    <NoRecipesFound 
+                      onRetry={() => {
+                        setIsLoadingRecipes(true);
+                        getRecipesFromRecommendations(userLocation);
+                      }}
+                    />
+                  )}
               </>
             )}
           </>
         )}
 
         {/* Show Add Recipe Form when active */}
-        {showAddForm && (
-          <div className="overlay">
-            <div className="overlay-content">
-              <div className="form-panel glass">
-                <div className="form-panel-header">
-                  <h2>{editingRecipe ? 'Edit Recipe' : 'Add New Recipe'}</h2>
-                  <button className="close-btn" onClick={() => {
-                    setShowAddForm(false);
-                    resetForm();
-                  }}>×</button>
-                </div>
-                <div className="form-panel-content">
-                  {editingRecipe && isEditingRecipe && editableRecipe ? (
-                    // Edit Mode - matching clip edit format
-                    <>
-                      <div className="recipe-preview-content">
-                        <div className="recipe-preview-section">
-                          <h4>Recipe Name</h4>
-                          <input 
-                            type="text" 
-                            value={editableRecipe.name} 
-                            onChange={e => setEditableRecipe({...editableRecipe, name: e.target.value})}
-                            className="preview-edit-input"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Description</h4>
-                          <textarea 
-                            value={editableRecipe.description} 
-                            onChange={e => setEditableRecipe({...editableRecipe, description: e.target.value})}
-                            className="preview-edit-textarea"
-                            placeholder="Recipe description..."
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Ingredients</h4>
-                          <div className="ingredients-edit-container">
-                            {editableRecipe.ingredients.map((ingredient, index) => (
-                              <div key={index} className="ingredient-edit-row">
-                                <input 
-                                  type="text" 
-                                  value={ingredient} 
-                                  onChange={e => {
-                                    const newIngredients = [...editableRecipe.ingredients];
-                                    newIngredients[index] = e.target.value;
-                                    setEditableRecipe({...editableRecipe, ingredients: newIngredients});
-                                  }}
-                                  className="preview-edit-input ingredient-input"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newIngredients = editableRecipe.ingredients.filter((_, i) => i !== index);
-                                    setEditableRecipe({...editableRecipe, ingredients: newIngredients});
-                                  }}
-                                  className="remove-ingredient-btn"
-                                  title="Remove ingredient"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                            <button 
-                              onClick={() => {
-                                setEditableRecipe({
-                                  ...editableRecipe, 
-                                  ingredients: [...editableRecipe.ingredients, '']
-                                });
-                              }}
-                              className="add-ingredient-btn"
-                            >
-                              + Add Ingredient
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Instructions</h4>
-                          <div className="instructions-edit-container">
-                            {editableRecipe.instructions.map((instruction, index) => (
-                              <div key={index} className="instruction-edit-row">
-                                <textarea 
-                                  value={instruction} 
-                                  onChange={e => {
-                                    const newInstructions = [...editableRecipe.instructions];
-                                    newInstructions[index] = e.target.value;
-                                    setEditableRecipe({...editableRecipe, instructions: newInstructions});
-                                  }}
-                                  className="preview-edit-textarea instruction-textarea"
-                                  placeholder={`Step ${index + 1}`}
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newInstructions = editableRecipe.instructions.filter((_, i) => i !== index);
-                                    setEditableRecipe({...editableRecipe, instructions: newInstructions});
-                                  }}
-                                  className="remove-instruction-btn"
-                                  title="Remove instruction"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                            <button 
-                              onClick={() => {
-                                setEditableRecipe({
-                                  ...editableRecipe, 
-                                  instructions: [...editableRecipe.instructions, '']
-                                });
-                              }}
-                              className="add-instruction-btn"
-                            >
-                              + Add Instruction
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Prep Time (minutes)</h4>
-                          <input 
-                            type="number" 
-                            value={editableRecipe.prep_time || ''} 
-                            onChange={e => setEditableRecipe({...editableRecipe, prep_time: e.target.value ? parseInt(e.target.value) : null})}
-                            className="preview-edit-input"
-                            placeholder="Prep time in minutes"
-                            min="0"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Cook Time (minutes)</h4>
-                          <input 
-                            type="number" 
-                            value={editableRecipe.cook_time || ''} 
-                            onChange={e => setEditableRecipe({...editableRecipe, cook_time: e.target.value ? parseInt(e.target.value) : null})}
-                            className="preview-edit-input"
-                            placeholder="Cook time in minutes"
-                            min="0"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Yield</h4>
-                          <input 
-                            type="text" 
-                            value={editableRecipe.recipe_yield || ''} 
-                            onChange={e => setEditableRecipe({...editableRecipe, recipe_yield: e.target.value})}
-                            className="preview-edit-input"
-                            placeholder="e.g., 4 servings, 1 loaf"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Recipe Image</h4>
-                          <div className="image-upload">
-                            <label htmlFor="image-input" className="image-upload-label">
-                              {selectedImage ? selectedImage.name : 'Choose New Image (Optional)'}
-                            </label>
-                            <input
-                              id="image-input"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              style={{ display: 'none' }}
-                            />
-                          </div>
-                          {editableRecipe.image && (
-                            <img 
-                              src={editableRecipe.image} 
-                              alt={editableRecipe.name}
-                              className="preview-image"
-                              style={{ marginTop: '10px', maxWidth: '200px' }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="form-actions">
-                        <button onClick={updateRecipe} className="update-btn">
-                          ✓ Update Recipe
-                        </button>
-                        <button onClick={resetForm} className="cancel-btn">
-                          Cancel Edit
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    // Add Mode - updated to match edit panel format
-                    <>
-                      <div className="recipe-preview-content">
-                        <div className="recipe-preview-section">
-                          <h4>Recipe Name</h4>
-                          <input 
-                            type="text" 
-                            value={name} 
-                            onChange={e => setName(e.target.value)}
-                            className="preview-edit-input"
-                            placeholder="Enter recipe name"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Description</h4>
-                          <textarea 
-                            value={description} 
-                            onChange={e => setDescription(e.target.value)}
-                            className="preview-edit-textarea"
-                            placeholder="Recipe description..."
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Ingredients</h4>
-                          <div className="ingredients-edit-container">
-                            {ingredients.map((ingredient, index) => (
-                              <div key={index} className="ingredient-edit-row">
-                                <input 
-                                  type="text" 
-                                  value={ingredient} 
-                                  onChange={e => {
-                                    const newIngredients = [...ingredients];
-                                    newIngredients[index] = e.target.value;
-                                    setIngredients(newIngredients);
-                                  }}
-                                  className="preview-edit-input ingredient-input"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newIngredients = ingredients.filter((_, i) => i !== index);
-                                    setIngredients(newIngredients);
-                                  }}
-                                  className="remove-ingredient-btn"
-                                  title="Remove ingredient"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                            {ingredients.length === 0 && (
-                              <div className="ingredient-edit-row">
-                                <input 
-                                  type="text" 
-                                  value="" 
-                                  onChange={e => setIngredients([e.target.value])}
-                                  className="preview-edit-input ingredient-input"
-                                  placeholder="Add first ingredient"
-                                />
-                              </div>
-                            )}
-                            <button 
-                              onClick={() => {
-                                setIngredients([...ingredients, '']);
-                              }}
-                              className="add-ingredient-btn"
-                            >
-                              + Add Ingredient
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Instructions</h4>
-                          <div className="instructions-edit-container">
-                            {instructions.map((instruction, index) => (
-                              <div key={index} className="instruction-edit-row">
-                                <textarea 
-                                  value={instruction} 
-                                  onChange={e => {
-                                    const newInstructions = [...instructions];
-                                    newInstructions[index] = e.target.value;
-                                    setInstructions(newInstructions);
-                                  }}
-                                  className="preview-edit-textarea instruction-textarea"
-                                  placeholder={`Step ${index + 1}`}
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newInstructions = instructions.filter((_, i) => i !== index);
-                                    setInstructions(newInstructions);
-                                  }}
-                                  className="remove-instruction-btn"
-                                  title="Remove instruction"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                            {instructions.length === 0 && (
-                              <div className="instruction-edit-row">
-                                <textarea 
-                                  value="" 
-                                  onChange={e => setInstructions([e.target.value])}
-                                  className="preview-edit-textarea instruction-textarea"
-                                  placeholder="Step 1"
-                                />
-                              </div>
-                            )}
-                            <button 
-                              onClick={() => {
-                                setInstructions([...instructions, '']);
-                              }}
-                              className="add-instruction-btn"
-                            >
-                              + Add Instruction
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Prep Time (minutes)</h4>
-                          <input 
-                            type="number" 
-                            value={prepTime} 
-                            onChange={e => setPrepTime(e.target.value)}
-                            className="preview-edit-input"
-                            placeholder="Prep time in minutes"
-                            min="0"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Cook Time (minutes)</h4>
-                          <input 
-                            type="number" 
-                            value={cookTime} 
-                            onChange={e => setCookTime(e.target.value)}
-                            className="preview-edit-input"
-                            placeholder="Cook time in minutes"
-                            min="0"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Yield</h4>
-                          <input 
-                            type="text" 
-                            value={recipeYield} 
-                            onChange={e => setRecipeYield(e.target.value)}
-                            className="preview-edit-input"
-                            placeholder="e.g., 4 servings, 1 loaf"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Recipe Image</h4>
-                          <div className="image-upload">
-                            <label htmlFor="image-input-add" className="image-upload-label">
-                              {selectedImage ? selectedImage.name : 'Choose Image (Optional)'}
-                            </label>
-                            <input
-                              id="image-input-add"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              style={{ display: 'none' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="form-actions">
-                        <button onClick={addRecipe} className="add-btn">
-                          + Add Recipe
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <RecipeForm 
+          showAddForm={showAddForm}
+          editingRecipe={editingRecipe}
+          isEditingRecipe={isEditingRecipe}
+          editableRecipe={editableRecipe}
+          name={name}
+          description={description}
+          ingredients={ingredients}
+          instructions={instructions}
+          prepTime={prepTime}
+          cookTime={cookTime}
+          recipeYield={recipeYield}
+          selectedImage={selectedImage}
+          onNameChange={(value) => setEditableRecipe({...editableRecipe, name: value})}
+          onDescriptionChange={(value) => setEditableRecipe({...editableRecipe, description: value})}
+          onIngredientsChange={(index, value) => {
+            const newIngredients = [...editableRecipe.ingredients];
+            newIngredients[index] = value;
+            setEditableRecipe({...editableRecipe, ingredients: newIngredients});
+          }}
+          onInstructionsChange={(index, value) => {
+            const newInstructions = [...editableRecipe.instructions];
+            newInstructions[index] = value;
+            setEditableRecipe({...editableRecipe, instructions: newInstructions});
+          }}
+          onPrepTimeChange={(value) => setEditableRecipe({...editableRecipe, prep_time: value})}
+          onCookTimeChange={(value) => setEditableRecipe({...editableRecipe, cook_time: value})}
+          onRecipeYieldChange={(value) => setEditableRecipe({...editableRecipe, recipe_yield: value})}
+          onImageChange={handleImageChange}
+          onAddIngredient={() => {
+            setEditableRecipe({
+              ...editableRecipe, 
+              ingredients: [...editableRecipe.ingredients, '']
+            });
+          }}
+          onRemoveIngredient={(index) => {
+            const newIngredients = editableRecipe.ingredients.filter((_, i) => i !== index);
+            setEditableRecipe({...editableRecipe, ingredients: newIngredients});
+          }}
+          onAddInstruction={() => {
+            setEditableRecipe({
+              ...editableRecipe, 
+              instructions: [...editableRecipe.instructions, '']
+            });
+          }}
+          onRemoveInstruction={(index) => {
+            const newInstructions = editableRecipe.instructions.filter((_, i) => i !== index);
+            setEditableRecipe({...editableRecipe, instructions: newInstructions});
+          }}
+          onAddRecipe={addRecipe}
+          onUpdateRecipe={updateRecipe}
+          onResetForm={resetForm}
+          onCloseForm={() => {
+            setShowAddForm(false);
+            resetForm();
+          }}
+        />
 
         {/* Show Clipped Recipe Preview when active */}
-        {clippedRecipePreview && (
-          <div className="overlay">
-            <div className="overlay-content recipe-preview-overlay">
-              <div className="form-panel glass recipe-preview-panel">
-                {/* Save Progress Overlay */}
-                {false && isSavingRecipe && (
-                  <div className="save-progress-overlay">
-                    <div className="save-progress-content">
-                      <div className="save-spinner">🔄</div>
-                      <p>Saving recipe...</p>
-                      <p className="save-note">Please don't close this window</p>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Hero Image that extends under header */}
-                {!isEditingPreview && (clippedRecipePreview.image || clippedRecipePreview.image_url) && (
-                  <div className="recipe-preview-image-hero-full">
-                    <img 
-                      src={clippedRecipePreview.image || clippedRecipePreview.image_url} 
-                      alt={clippedRecipePreview.name}
-                      className="preview-hero-image"
-                    />
-                    <div className="recipe-preview-hero-gradient"></div>
-                  </div>
-                )}
-                
-                <div className="form-panel-header">
-                  <h2>Clipped Recipe Preview</h2>
-                  <button 
-                    className="close-btn" 
-                    onClick={() => {
-                      if (!isSavingRecipe) {
-                        setClippedRecipePreview(null);
-                        setClipUrl('');
-                        setClipError('');
-                        setIsEditingPreview(false);
-                        setEditablePreview(null);
-                      }
-                    }}
-                    disabled={isSavingRecipe}
-                  >×</button>
-                </div>
-                
-                <div className="form-panel-content">
-                  {!isEditingPreview ? (
-                    // Preview Mode
-                    <>
-                      <div className="recipe-preview-content">
-                        {/* Title and description - always shown */}
-                        <div className="recipe-preview-header-section">
-                          <h3 className="recipe-preview-title">{clippedRecipePreview.name}</h3>
-                          {clippedRecipePreview.description && (
-                            <p className="recipe-preview-description">{clippedRecipePreview.description}</p>
-                          )}
-                        </div>
-                        
-                        <div className="recipe-preview-sections">
-                          <div className="recipe-preview-section">
-                            <h4>Ingredients ({(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).length})</h4>
-                            <ul className="recipe-preview-ingredients">
-                              {(clippedRecipePreview.recipeIngredient || clippedRecipePreview.ingredients || []).map((ingredient, index) => (
-                                <li key={index}>{formatIngredientAmount(ingredient)}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          
-                          <div className="recipe-preview-section">
-                            <h4>Instructions ({(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).length})</h4>
-                            <ol className="recipe-preview-instructions">
-                              {(clippedRecipePreview.recipeInstructions || clippedRecipePreview.instructions || []).map((instruction, index) => (
-                                <li key={index}>
-                                  {typeof instruction === 'string' ? instruction : instruction.text || ''}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        </div>
-                        
-                        <div className="recipe-preview-source">
-                          <h4>Source</h4>
-                          <p><a href={clippedRecipePreview.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{clippedRecipePreview.source_url}</a></p>
-                        </div>
-                      </div>
-                      
-                      <div className="form-actions">
-                        {/* TODO: Enable with feature flag */}
-                        {/* <button onClick={editPreview} className="edit-btn" disabled={isSavingRecipe}>
-                          ✏️ Edit Recipe
-                        </button> */}
-                        <button 
-                          onClick={async () => {
-                            // Prevent rapid successive saves (debounce)
-                            const now = Date.now();
-                            if (now - lastSaveTime < 2000) { // 2 second debounce
-                              console.warn('Please wait a moment before trying to save again.');
-                              return;
-                            }
-                            
-                            if (isSavingRecipe) return; // Prevent double saves
-                            setIsSavingRecipe(true);
-                            setLastSaveTime(now);
-                            
-                            try {
-                              // Save recipe without duplicate check confirmation
-                              await saveRecipeToDatabase();
-                            } catch (error) {
-                              console.error('Error saving recipe:', error);
-                              console.error('Failed to save recipe. Please try again.');
-                            } finally {
-                              setIsSavingRecipe(false);
-                            }
-                          }} 
-                          className={`add-btn ${isSavingRecipe ? 'saving' : ''}`}
-                          disabled={isSavingRecipe}
-                        >
-                          {isSavingRecipe ? (
-                            <>
-                              <div className="loading-spinner">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M21 12a9 9 0 11-6.219-8.56" />
-                                </svg>
-                              </div>
-                              <span>Saving...</span>
-                            </>
-                          ) : 'Save Recipe'}
-                        </button>
-
-                        <button 
-                          onClick={() => {
-                            if (!isSavingRecipe) {
-                              setClippedRecipePreview(null);
-                              setClipError('');
-                              setIsEditingPreview(false);
-                              setEditablePreview(null);
-                            }
-                          }} 
-                          className="cancel-btn"
-                          disabled={isSavingRecipe}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    // Edit Mode
-                    <>
-                      <div className="recipe-preview-content">
-                        <div className="recipe-preview-section">
-                          <h4>Recipe Name</h4>
-                          <input 
-                            type="text" 
-                            value={editablePreview.name} 
-                            onChange={e => setEditablePreview({...editablePreview, name: e.target.value})}
-                            className="preview-edit-input"
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Description</h4>
-                          <textarea 
-                            value={editablePreview.description} 
-                            onChange={e => setEditablePreview({...editablePreview, description: e.target.value})}
-                            className="preview-edit-textarea"
-                            placeholder="Recipe description..."
-                          />
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Ingredients</h4>
-                          <div className="ingredients-edit-container">
-                            {editablePreview.ingredients.map((ingredient, index) => (
-                              <div key={index} className="ingredient-edit-row">
-                                <input 
-                                  type="text" 
-                                  value={ingredient} 
-                                  onChange={e => {
-                                    const newIngredients = [...editablePreview.ingredients];
-                                    newIngredients[index] = e.target.value;
-                                    setEditablePreview({...editablePreview, ingredients: newIngredients});
-                                  }}
-                                  className="preview-edit-input ingredient-input"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newIngredients = editablePreview.ingredients.filter((_, i) => i !== index);
-                                    setEditablePreview({...editablePreview, ingredients: newIngredients});
-                                  }}
-                                  className="remove-ingredient-btn"
-                                  title="Remove ingredient"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                            <button 
-                              onClick={() => {
-                                setEditablePreview({
-                                  ...editablePreview, 
-                                  ingredients: [...editablePreview.ingredients, '']
-                                });
-                              }}
-                              className="add-ingredient-btn"
-                            >
-                              + Add Ingredient
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="recipe-preview-section">
-                          <h4>Instructions</h4>
-                          <div className="instructions-edit-container">
-                            {editablePreview.instructions.map((instruction, index) => (
-                              <div key={index} className="instruction-edit-row">
-                                <textarea 
-                                  value={instruction} 
-                                  onChange={e => {
-                                    const newInstructions = [...editablePreview.instructions];
-                                    newInstructions[index] = e.target.value;
-                                    setEditablePreview({...editablePreview, instructions: newInstructions});
-                                  }}
-                                  className="preview-edit-textarea instruction-textarea"
-                                  placeholder={`Step ${index + 1}`}
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newInstructions = editablePreview.instructions.filter((_, i) => i !== index);
-                                    setEditablePreview({...editablePreview, instructions: newInstructions});
-                                  }}
-                                  className="remove-instruction-btn"
-                                  title="Remove instruction"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                            <button 
-                              onClick={() => {
-                                setEditablePreview({
-                                  ...editablePreview, 
-                                  instructions: [...editablePreview.instructions, '']
-                                });
-                              }}
-                              className="add-instruction-btn"
-                            >
-                              + Add Instruction
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {clippedRecipePreview.image_url && (
-                          <div className="recipe-preview-image">
-                            <h4>Recipe Image</h4>
-                            <img 
-                              src={clippedRecipePreview.image_url} 
-                              alt={clippedRecipePreview.name}
-                              className="preview-image"
-                            />
-                          </div>
-                        )}
-                        
-                        <div className="recipe-preview-source">
-                          <h4>Source</h4>
-                          <p><a href={clippedRecipePreview.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{clippedRecipePreview.source_url}</a></p>
-                        </div>
-                      </div>
-                      
-                      <div className="form-actions">
-                        <button onClick={updatePreview} className="update-btn" disabled={isSavingRecipe}>
-                          ✓ Update Preview
-                        </button>
-                        <button onClick={cancelEditPreview} className="cancel-btn" disabled={isSavingRecipe}>
-                          Cancel Edit
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <RecipePreview 
+          clippedRecipePreview={clippedRecipePreview}
+          isEditingPreview={isEditingPreview}
+          editablePreview={editablePreview}
+          isSavingRecipe={isSavingRecipe}
+          onEditPreview={() => setIsEditingPreview(true)}
+          onUpdatePreview={updatePreview}
+          onCancelEditPreview={cancelEditPreview}
+          onSaveRecipe={saveRecipe}
+          onClosePreview={() => {
+            if (!isSavingRecipe) {
+              setClippedRecipePreview(null);
+              setClipUrl('');
+              setClipError('');
+              setIsEditingPreview(false);
+              setEditablePreview(null);
+            }
+          }}
+        />
 
         {/* Show Clip Recipe Form when active */}
-        {isClipping && !clippedRecipePreview && (
-          <div className="overlay">
-            <div className="overlay-content">
-              <div className="form-panel glass">
-                <div className="form-panel-header">
-                  <h2>Clip Recipe from Website</h2>
-                  <button 
-                    className="close-btn" 
-                    onClick={() => {
-                      setIsClipping(false);
-                      setClipError('');
-                    }}
-                    title="Close"
-                  >×</button>
-                </div>
-                <div className="form-panel-content">
-                  <div className="recipe-preview-section">
-                    <h4>Recipe URL</h4>
-                    <input
-                      type="text"
-                      placeholder="Recipe URL"
-                      value={clipUrl}
-                      onChange={e => setClipUrl(e.target.value)}
-                      className="preview-edit-input"
-                    />
-                  </div>
-                  {clipError && (
-                    <p className="error-message">{clipError}</p>
-                  )}
-                  <div className="form-actions">
-                    <button 
-                      onClick={async () => {
-                        if (!isValidUrl(clipUrl)) return;
-                        try {
-                          setIsClipping(true);
-                          const res = await fetch(`${CLIPPER_API_URL}/clip`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: clipUrl })
-                          });
-                          if (!res.ok) {
-                            if (res.status === 404) {
-                              setClipError('No recipe found on this page');
-                            } else {
-                              const msg = await res.text();
-                              setClipError(msg || 'Failed to clip recipe');
-                            }
-                            return;
-                          }
-                          const result = await res.json();
-                          // Decode HTML entities in clipped recipe data
-                          const decodedResult = {
-                            ...result,
-                            name: decodeHtmlEntities(result.name || result.title || ''),
-                            title: decodeHtmlEntities(result.name || result.title || ''),
-                            description: decodeHtmlEntities(result.description || ''),
-                            ingredients: (result.ingredients || result.recipeIngredient || []).map(ing => 
-                              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                            ),
-                            recipeIngredient: (result.ingredients || result.recipeIngredient || []).map(ing => 
-                              typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
-                            ),
-                            instructions: (result.instructions || result.recipeInstructions || []).map(inst => {
-                              if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                              return inst;
-                            }),
-                            recipeInstructions: (result.instructions || result.recipeInstructions || []).map(inst => {
-                              if (typeof inst === 'string') return decodeHtmlEntities(inst);
-                              if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
-                              if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
-                              return inst;
-                            }),
-                            yield: decodeHtmlEntities(result.yield || result.recipeYield || result.recipe_yield || null)
-                          };
-                          setClippedRecipePreview(decodedResult);
-                          setClipError('');
-                        } catch (e) {
-                          setClipError('Failed to clip recipe. Please try again.');
-                        } finally {
-                          // Keep panel open until preview shows
-                        }
-                      }}
-                      className="add-btn"
-                      aria-label="Submit Clip Recipe"
-                    >
-                      Clip Recipe
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <ClipRecipeForm 
+          isClipping={isClipping}
+          clipUrl={clipUrl}
+          clipError={clipError}
+          onClipUrlChange={(value) => setClipUrl(value)}
+          onClipRecipe={async () => {
+            if (!isValidUrl(clipUrl)) return;
+            try {
+              setIsClipping(true);
+              const res = await fetch(`${CLIPPER_API_URL}/clip`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: clipUrl })
+              });
+              if (!res.ok) {
+                if (res.status === 404) {
+                  setClipError('No recipe found on this page');
+                } else {
+                  const msg = await res.text();
+                  setClipError(msg || 'Failed to clip recipe');
+                }
+                return;
+              }
+              const result = await res.json();
+              // Decode HTML entities in clipped recipe data
+              const decodedResult = {
+                ...result,
+                name: decodeHtmlEntities(result.name || result.title || ''),
+                title: decodeHtmlEntities(result.name || result.title || ''),
+                description: decodeHtmlEntities(result.description || ''),
+                ingredients: (result.ingredients || result.recipeIngredient || []).map(ing => 
+                  typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                ),
+                recipeIngredient: (result.ingredients || result.recipeIngredient || []).map(ing => 
+                  typeof ing === 'string' ? decodeHtmlEntities(ing) : ing
+                ),
+                instructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+                  if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                  if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                  if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                  return inst;
+                }),
+                recipeInstructions: (result.instructions || result.recipeInstructions || []).map(inst => {
+                  if (typeof inst === 'string') return decodeHtmlEntities(inst);
+                  if (inst && inst.text) return { ...inst, text: decodeHtmlEntities(inst.text) };
+                  if (inst && inst.name) return { ...inst, name: decodeHtmlEntities(inst.name) };
+                  return inst;
+                }),
+                yield: decodeHtmlEntities(result.yield || result.recipeYield || result.recipe_yield || null)
+              };
+              setClippedRecipePreview(decodedResult);
+              setClipError('');
+            } catch (e) {
+              setClipError('Failed to clip recipe. Please try again.');
+            } finally {
+              // Keep panel open until preview shows
+            }
+          }}
+          onCloseForm={() => {
+            setIsClipping(false);
+            setClipError('');
+          }}
+        />
       </div>
 
       {/* Full Screen Recipe View */}
@@ -3564,43 +2789,31 @@ function App() {
             
             {/* Timer FAB - integrated into header */}
             {floatingTimer && (
-              <div className="header-timer-fab">
-                <div className="header-timer-display">
-                  <span className="header-timer-time">{formatTime(floatingTimer.remainingSeconds)}</span>
-                  <span className="header-timer-label">{floatingTimer.timeText}</span>
-                </div>
-                <div className="header-timer-controls">
-                  <button 
-                    className="header-timer-control-btn"
-                    onClick={() => {
-                      if (floatingTimer.isRunning) {
-                        pauseTimer(floatingTimer.id);
-                      } else {
-                        startTimer(floatingTimer.id);
-                      }
-                    }}
-                    title={floatingTimer.isRunning ? "Pause timer" : "Start timer"}
-                  >
-                    {floatingTimer.isRunning ? (
-                      <img src="/pause.svg" alt="Pause" className="timer-icon" />
-                    ) : (
-                      <img src="/play.svg" alt="Play" className="timer-icon" />
-                    )}
-                  </button>
-                  <button 
-                    className="header-timer-dismiss"
-                    onClick={() => stopTimer(floatingTimer.id)}
-                    title="Stop timer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
+              <Timer 
+                floatingTimer={floatingTimer}
+                onStartTimer={() => startTimer(floatingTimer.id)}
+                onPauseTimer={() => pauseTimer(floatingTimer.id)}
+                onStopTimer={() => stopTimer(floatingTimer.id)}
+              />
             )}
             
+            {/* Screen Wake Lock Button - keep screen on while cooking */}
+            {'wakeLock' in navigator && (
+              <button
+                className={`fab-wake-lock-trigger${wakeLockActive ? ' wake-lock-active' : ''}`}
+                onClick={handleWakeLockToggle}
+                title={wakeLockActive ? 'Screen is staying on – tap to disable' : 'Keep screen on while cooking'}
+              >
+                <span className="wake-lock-icon">{wakeLockActive ? '☀️' : '🌙'}</span>
+                {wakeLockActive && getRecipeDurationMinutes(selectedRecipe) > 0 && (
+                  <span className="wake-lock-label">{getRecipeDurationMinutes(selectedRecipe) + 15}m</span>
+                )}
+              </button>
+            )}
+
             {/* Nutrition FAB - only show if nutrition data exists */}
             {selectedRecipe.nutrition && Object.keys(selectedRecipe.nutrition).length > 0 && (
-              <button 
+              <button
                 className="fab-nutrition-trigger"
                 onClick={() => setShowNutrition(!showNutrition)}
                 title={showNutrition ? "Show ingredients and instructions" : "Show nutrition information"}
@@ -3767,17 +2980,25 @@ function App() {
           
           {/* Full Background Image */}
           <div className="recipe-full-background">
-            {(selectedRecipe.image || selectedRecipe.image_url) ? (
-              <img 
-                src={selectedRecipe.image || selectedRecipe.image_url} 
-                alt={selectedRecipe.name}
-                className="recipe-full-background-image"
-              />
-            ) : (
-              <div className="recipe-full-background-placeholder">
-                <div className="placeholder-gradient"></div>
-              </div>
-            )}
+            {(() => {
+              // For AI-generated recipes, use the card image as background
+              const isAiGenerated = selectedRecipe.source === 'ai_generated' || selectedRecipe.fallback;
+              const backgroundImageUrl = isAiGenerated 
+                ? (selectedRecipe.image_url || selectedRecipe.image)  // For AI recipes, use image_url first (this is the card image)
+                : (selectedRecipe.image || selectedRecipe.image_url); // For regular recipes, use image first
+              
+              return backgroundImageUrl ? (
+                <img 
+                  src={backgroundImageUrl} 
+                  alt={selectedRecipe.name}
+                  className="recipe-full-background-image"
+                />
+              ) : (
+                <div className="recipe-full-background-placeholder">
+                  <div className="placeholder-gradient"></div>
+                </div>
+              );
+            })()}
           </div>
           
           {/* Recipe Content */}

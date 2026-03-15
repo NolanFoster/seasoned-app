@@ -26,8 +26,8 @@ describe('Embedding Handler - Queue Processing', () => {
     // Mock recipe data retrieval
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
 
-    // Mock vectorize query (no existing embeddings)
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    // Mock vectorize getByIds (no existing embeddings)
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI embedding generation
     mockEnv.AI.run.mockResolvedValue({
@@ -49,10 +49,10 @@ describe('Embedding Handler - Queue Processing', () => {
   });
 
   it('should skip recipes that already have embeddings', async () => {
-    // Mock vectorize query to return existing embeddings
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({
-      matches: [{ id: 'test-recipe-id' }]
-    });
+    // Mock vectorize getByIds to return existing embeddings
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([
+      { id: 'test-recipe-id', values: [0.1, 0.2, 0.3] }
+    ]);
 
     const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
@@ -97,7 +97,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(emptyRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
@@ -108,7 +108,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle AI embedding generation failure', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue(null); // AI returns null
 
     const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
@@ -120,7 +120,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle vectorize storage errors gracefully', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -131,7 +131,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should generate proper embedding text from recipe data', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -173,7 +173,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(nestedRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -215,7 +215,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithNoText));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
@@ -234,7 +234,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(validRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI binding to throw an error
     mockEnv.AI.run.mockRejectedValue(new Error('AI service unavailable'));
@@ -247,7 +247,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle AI response with invalid data structure', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI response with invalid structure
     mockEnv.AI.run.mockResolvedValue({
@@ -262,7 +262,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle AI response with empty data array', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI response with empty data array
     mockEnv.AI.run.mockResolvedValue({
@@ -277,7 +277,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle AI response with null data', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI response with null data
     mockEnv.AI.run.mockResolvedValue({
@@ -292,7 +292,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle AI response with undefined data', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI response with undefined data
     mockEnv.AI.run.mockResolvedValue({
@@ -307,7 +307,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle AI response with non-array first element', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
 
     // Mock AI response with non-array first element
     mockEnv.AI.run.mockResolvedValue({
@@ -330,7 +330,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithStringKeywords));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -353,7 +353,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(minimalRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -378,7 +378,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithEmptyArrays));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -415,7 +415,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithMixedTypes));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -436,7 +436,7 @@ describe('Embedding Handler - Queue Processing', () => {
 
   it('should handle vectorize storage errors in storeEmbedding', async () => {
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -448,9 +448,8 @@ describe('Embedding Handler - Queue Processing', () => {
   });
 
   it('should handle checkExistingEmbedding with getByIds failure', async () => {
-    // Mock getByIds to fail, forcing fallback to query method
+    // Mock getByIds to fail, but we assume no existing embedding and proceed
     mockEnv.RECIPE_VECTORS.getByIds.mockRejectedValue(new Error('getByIds failed'));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
@@ -460,15 +459,14 @@ describe('Embedding Handler - Queue Processing', () => {
     const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
     expect(result.success).toBe(true);
-    // Verify that getByIds was called and failed, then query was used as fallback
+    // Verify that getByIds was called and failed, but we proceed anyway
     expect(mockEnv.RECIPE_VECTORS.getByIds).toHaveBeenCalledWith(['test-recipe-id']);
-    expect(mockEnv.RECIPE_VECTORS.query).toHaveBeenCalled();
+    expect(mockEnv.RECIPE_VECTORS.query).not.toHaveBeenCalled();
   });
 
   it('should handle checkExistingEmbedding with query failure', async () => {
-    // Mock both getByIds and query to fail
+    // Mock getByIds to fail, but we assume no existing embedding and proceed
     mockEnv.RECIPE_VECTORS.getByIds.mockRejectedValue(new Error('getByIds failed'));
-    mockEnv.RECIPE_VECTORS.query.mockRejectedValue(new Error('query failed'));
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(mockRecipe));
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
@@ -478,9 +476,9 @@ describe('Embedding Handler - Queue Processing', () => {
     const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
 
     expect(result.success).toBe(true);
-    // Even though both checks failed, we assume no existing embedding and proceed
+    // Verify that getByIds was called and failed, but we proceed anyway
     expect(mockEnv.RECIPE_VECTORS.getByIds).toHaveBeenCalledWith(['test-recipe-id']);
-    expect(mockEnv.RECIPE_VECTORS.query).toHaveBeenCalled();
+    expect(mockEnv.RECIPE_VECTORS.query).not.toHaveBeenCalled();
   });
 
   it('should handle recipe with all optional fields populated', async () => {
@@ -512,7 +510,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(fullRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -547,7 +545,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(longRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -584,7 +582,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(unicodeRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -619,7 +617,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithMixedTypes));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -652,7 +650,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithMixedTypes));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -686,7 +684,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithWhitespaceIngredients));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -718,7 +716,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithYieldAndTime));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -754,7 +752,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithWhitespaceIngredients));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -772,6 +770,35 @@ describe('Embedding Handler - Queue Processing', () => {
     expect(callArgs.text).not.toContain('Ingredients:');
   });
 
+  it('should handle gzip-compressed recipe data from KV', async () => {
+    // Base64 gzip of: {"id":"test","data":{"name":"Compressed Recipe","description":"A compressed recipe","ingredients":["flour","eggs"],"instructions":["mix","bake"]}}
+    const compressedBase64 = 'H4sIAAAAAAAAA0XMTQoCMQyG4asM37onyE68gVuZRW1jCdofkgwIw9xdOiCu34d3h2QQnM0RkKNH0I4WK4Nw7XUom3Febpxk8CRsSWW49AbCZUl/oz8jrShn4eYGuuP57psigEsxrDOb65bm4uxVPgh4xBdjPY4vYis5n5IAAAA=';
+
+    // compressedBase64 is not valid JSON, so JSON.parse will fail → decompression path runs
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue(compressedBase64);
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
+    mockEnv.AI.run.mockResolvedValue({ data: [[0.1, 0.2, 0.3]] });
+    mockEnv.RECIPE_VECTORS.upsert.mockResolvedValue(true);
+
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
+
+    expect(result.success).toBe(true);
+    expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', {
+      text: expect.stringContaining('Compressed Recipe')
+    });
+  });
+
+  it('should return recipe_not_found when data is neither valid JSON nor valid gzip', async () => {
+    // Provide a string that fails both JSON.parse and decompressData
+    mockEnv.RECIPE_STORAGE.get.mockResolvedValue('not-valid-json-and-not-valid-gzip-!!!');
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
+
+    const result = await processEmbeddingMessage('test-recipe-id', mockEnv);
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe('recipe_not_found');
+  });
+
   it('should handle recipe with minimal valid data', async () => {
     const minimalRecipe = {
       data: {
@@ -782,7 +809,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(minimalRecipe));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -813,7 +840,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithoutUrlImage));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -850,7 +877,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithLongDescription));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -882,7 +909,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithAltFields));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -914,7 +941,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithArrayKeywords));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });
@@ -943,7 +970,7 @@ describe('Embedding Handler - Queue Processing', () => {
     };
 
     mockEnv.RECIPE_STORAGE.get.mockResolvedValue(JSON.stringify(recipeWithNestedData));
-    mockEnv.RECIPE_VECTORS.query.mockResolvedValue({ matches: [] });
+    mockEnv.RECIPE_VECTORS.getByIds.mockResolvedValue([]);
     mockEnv.AI.run.mockResolvedValue({
       data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
     });

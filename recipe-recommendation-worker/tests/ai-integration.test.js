@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getRecipeRecommendations } from '../src/index.js';
+import { getRecipeRecommendations } from '../src/recommendation-service.js';
 
 // Mock environment with AI binding
 const mockEnvWithAI = {
@@ -57,7 +57,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('San Francisco', '2024-07-15', 3, mockEnvWithAI, 'test-req-123');
+      const result = await getRecipeRecommendations('San Francisco', '2024-07-15', 3, 0, mockEnvWithAI, 'test-req-123');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -70,7 +70,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Summer'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
     });
@@ -93,7 +93,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('New York', '2024-01-15', 3, mockEnvWithAI, 'test-req-456');
+      const result = await getRecipeRecommendations('New York', '2024-01-15', 3, 0, mockEnvWithAI, 'test-req-456');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -117,7 +117,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('Portland', '2024-04-15', 3, mockEnvWithAI, 'test-req-789');
+      const result = await getRecipeRecommendations('Portland', '2024-04-15', 3, 0, mockEnvWithAI, 'test-req-789');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -138,11 +138,8 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('Miami', '2024-07-15', 3, mockEnvWithAI, 'test-req-string');
-
-      expect(result).toBeDefined();
-      expect(result.recommendations).toBeDefined();
-      expect(result.season).toBe('Summer');
+      await expect(getRecipeRecommendations('Miami', '2024-07-15', 3, 0, mockEnvWithAI, 'test-req-string'))
+        .rejects.toThrow('AI request failed: Invalid response from Cloudflare AI');
     });
 
     it('should extract JSON from response with extra text', async () => {
@@ -163,7 +160,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('Los Angeles', '2024-07-15', 3, mockEnvWithAI, 'test-req-extra-text');
+      const result = await getRecipeRecommendations('Los Angeles', '2024-07-15', 3, 0, mockEnvWithAI, 'test-req-extra-text');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -196,7 +193,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('Seattle, WA', '2024-07-15', 3, mockEnvWithAI, 'test-req-location');
+      const result = await getRecipeRecommendations('Seattle, WA', '2024-07-15', 3, 0, mockEnvWithAI, 'test-req-location');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -206,7 +203,7 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Seattle, WA'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
     });
@@ -229,7 +226,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('', '2024-07-15', 3, mockEnvWithAI, 'test-req-no-location');
+      const result = await getRecipeRecommendations('', '2024-07-15', 3, 0, mockEnvWithAI, 'test-req-no-location');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -239,42 +236,34 @@ describe('AI Integration', () => {
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Location: Not specified'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
     });
   });
 
   describe('AI error handling', () => {
-    it('should fallback to mock data when AI service fails', async () => {
+    it('should throw error when AI service fails', async () => {
       mockEnvWithAI.AI.run.mockRejectedValue(new Error('AI service unavailable'));
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-ai-fail');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
-      expect(result.recommendations).toBeDefined();
-      expect(Object.keys(result.recommendations)).toHaveLength(3);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-ai-fail'))
+        .rejects.toThrow('AI request failed: AI service unavailable');
     });
 
     it('should handle invalid AI response structure', async () => {
       const invalidResponse = { unexpected: 'structure' };
       mockEnvWithAI.AI.run.mockResolvedValue(invalidResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-invalid-structure');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-invalid-structure'))
+        .rejects.toThrow('AI request failed: Unexpected response structure from Cloudflare AI');
     });
 
     it('should handle AI response without expected fields', async () => {
       const emptyResponse = {};
       mockEnvWithAI.AI.run.mockResolvedValue(emptyResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-empty-response');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-empty-response'))
+        .rejects.toThrow('AI request failed: Unexpected response structure from Cloudflare AI');
     });
 
     it('should handle AI response with invalid JSON', async () => {
@@ -283,28 +272,22 @@ describe('AI Integration', () => {
       };
       mockEnvWithAI.AI.run.mockResolvedValue(invalidJSONResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-invalid-json');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-invalid-json'))
+        .rejects.toThrow('Could not parse AI response');
     });
 
     it('should handle AI timeout errors', async () => {
       mockEnvWithAI.AI.run.mockRejectedValue(new Error('Request timeout'));
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-timeout');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-timeout'))
+        .rejects.toThrow('AI request failed: Request timeout');
     });
 
     it('should handle AI model errors', async () => {
       mockEnvWithAI.AI.run.mockRejectedValue(new Error('Model not available'));
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-model-error');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-model-error'))
+        .rejects.toThrow('AI request failed: Model not available');
     });
   });
 
@@ -326,39 +309,39 @@ describe('AI Integration', () => {
       });
 
       // Test different seasons
-      await getRecipeRecommendations('Test', '2024-01-15', 3, mockEnvWithAI, 'winter-test');
+      await getRecipeRecommendations('Test', '2024-01-15', 3, 0, mockEnvWithAI, 'winter-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Winter'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
 
-      await getRecipeRecommendations('Test', '2024-04-15', 3, mockEnvWithAI, 'spring-test');
+      await getRecipeRecommendations('Test', '2024-04-15', 3, 0, mockEnvWithAI, 'spring-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Spring'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
 
-      await getRecipeRecommendations('Test', '2024-07-15', 3, mockEnvWithAI, 'summer-test');
+      await getRecipeRecommendations('Test', '2024-07-15', 3, 0, mockEnvWithAI, 'summer-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Summer'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
 
-      await getRecipeRecommendations('Test', '2024-10-15', 3, mockEnvWithAI, 'fall-test');
+      await getRecipeRecommendations('Test', '2024-10-15', 3, 0, mockEnvWithAI, 'fall-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Fall'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
     });
@@ -380,22 +363,22 @@ describe('AI Integration', () => {
       });
 
       // Test Christmas date
-      await getRecipeRecommendations('Test', '2024-12-25', 3, mockEnvWithAI, 'christmas-test');
+      await getRecipeRecommendations('Test', '2024-12-25', 3, 0, mockEnvWithAI, 'christmas-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Christmas'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
 
       // Test Thanksgiving date
-      await getRecipeRecommendations('Test', '2024-11-28', 3, mockEnvWithAI, 'thanksgiving-test');
+      await getRecipeRecommendations('Test', '2024-11-28', 3, 0, mockEnvWithAI, 'thanksgiving-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Thanksgiving'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
     });
@@ -416,12 +399,12 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      await getRecipeRecommendations('Seattle, WA', '2024-06-15', 3, mockEnvWithAI, 'location-test');
+      await getRecipeRecommendations('Seattle, WA', '2024-06-15', 3, 0, mockEnvWithAI, 'location-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
         '@cf/meta/llama-3.1-8b-instruct',
         expect.objectContaining({
           prompt: expect.stringContaining('Seattle, WA'),
-          max_tokens: 512
+          max_tokens: 1000
         })
       );
     });
@@ -432,10 +415,8 @@ describe('AI Integration', () => {
       const mockAIResponse = 'This is a plain string response';
       mockEnvWithAI.AI.run.mockResolvedValue(mockAIResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-plain-string');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-plain-string'))
+        .rejects.toThrow('AI request failed: Invalid response from Cloudflare AI');
     });
 
     it('should handle AI response with clean JSON (no extraction needed)', async () => {
@@ -449,7 +430,7 @@ describe('AI Integration', () => {
         ok: false
       });
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-clean-json');
+      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-clean-json');
 
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
@@ -462,33 +443,20 @@ describe('AI Integration', () => {
       };
       mockEnvWithAI.AI.run.mockResolvedValue(mockAIResponse);
 
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithAI, 'test-req-unknown-structure');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithAI, 'test-req-unknown-structure'))
+        .rejects.toThrow('AI request failed: Unexpected response structure from Cloudflare AI');
     });
   });
 
-  describe('Fallback behavior', () => {
-    it('should use mock data when AI is not available', async () => {
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 3, mockEnvWithoutAI, 'test-req-no-ai');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
-      expect(result.recommendations).toBeDefined();
-      expect(Object.keys(result.recommendations)).toHaveLength(3);
+  describe('Error handling', () => {
+    it('should throw error when AI is not available', async () => {
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 3, 0, mockEnvWithoutAI, 'test-req-no-ai'))
+        .rejects.toThrow('AI binding not configured - cannot generate recommendations');
     });
 
-    it('should respect the limit parameter in mock fallback', async () => {
-      const result = await getRecipeRecommendations('Test City', '2024-06-15', 2, mockEnvWithoutAI, 'test-req-limit-test');
-
-      expect(result).toBeDefined();
-      expect(result.isMockData).toBe(true);
-      
-      // Check that each category respects the limit
-      Object.values(result.recommendations).forEach(recipes => {
-        expect(recipes.length).toBeLessThanOrEqual(2);
-      });
+    it('should throw error when AI request fails', async () => {
+      await expect(getRecipeRecommendations('Test City', '2024-06-15', 2, 0, mockEnvWithoutAI, 'test-req-limit-test'))
+        .rejects.toThrow('AI binding not configured - cannot generate recommendations');
     });
   });
 });

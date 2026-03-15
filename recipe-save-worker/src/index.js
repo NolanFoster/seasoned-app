@@ -283,6 +283,21 @@ export class RecipeSaver {
           log('info', 'Syncing with search database', { requestId, recipeId });
           await this.syncWithSearchDB(recipeRecord, 'create', requestId);
 
+          // Add recipe to embedding queue
+          log('info', 'Adding recipe to embedding queue', { requestId, recipeId });
+          try {
+            await this.env.EMBEDDING_QUEUE.sendBatch([{ body: recipeId }]);
+            log('info', 'Recipe added to embedding queue successfully', { requestId, recipeId });
+          } catch (queueError) {
+            log('warn', 'Failed to add recipe to embedding queue', { 
+              requestId, 
+              recipeId, 
+              error: queueError.message 
+            });
+            // Don't fail the save operation if queue fails
+            // The recipe can be queued for embedding later through other means
+          }
+
           // Store operation status
           const operationStatus = {
             status: 'completed',
@@ -442,6 +457,21 @@ export class RecipeSaver {
           // Sync with search database
           log('info', 'Syncing updated recipe with search database', { requestId, recipeId });
           await this.syncWithSearchDB(updatedRecipe, 'update', requestId);
+
+          // Add updated recipe to embedding queue for re-embedding
+          log('info', 'Adding updated recipe to embedding queue', { requestId, recipeId });
+          try {
+            await this.env.EMBEDDING_QUEUE.sendBatch([{ body: recipeId }]);
+            log('info', 'Updated recipe added to embedding queue successfully', { requestId, recipeId });
+          } catch (queueError) {
+            log('warn', 'Failed to add updated recipe to embedding queue', { 
+              requestId, 
+              recipeId, 
+              error: queueError.message 
+            });
+            // Don't fail the update operation if queue fails
+            // The recipe can be queued for embedding later through other means
+          }
 
           // Store operation status
           const operationStatus = {
@@ -908,7 +938,7 @@ export class RecipeSaver {
       log('info', 'Image stored in R2 successfully', { requestId, recipeId, filename });
 
       // Return the R2 URL
-      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       const r2Url = `${imageDomain}/${filename}`;
       
       const duration = Date.now() - startTime;
@@ -1031,7 +1061,7 @@ export class RecipeSaver {
     if (!url) return false;
     try {
       const parsed = new URL(url);
-      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       return !url.startsWith(imageDomain) && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
     } catch {
       return false;
@@ -1053,7 +1083,7 @@ export class RecipeSaver {
 
   getR2KeyFromUrl(url) {
     try {
-      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.nolanfoster.me';
+      const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       if (url.startsWith(imageDomain)) {
         return url.substring(imageDomain.length + 1); // +1 for the trailing slash
       }
@@ -1321,6 +1351,21 @@ export default {
         const duration = Date.now() - startTime;
         log('info', 'Health check completed', { requestId, duration: `${duration}ms` });
         return response;
+      }
+
+      // Support GET /api/recipes/:id for recipe-app frontend
+      if (path.startsWith('/api/recipes/') && method === 'GET') {
+        const recipeId = path.slice('/api/recipes/'.length);
+        log('info', 'Routing /api/recipes/:id to Durable Object', { requestId, recipeId });
+        const doId = env.RECIPE_SAVER.idFromName('global-recipe-saver');
+        const stub = env.RECIPE_SAVER.get(doId);
+        const doUrl = new URL(request.url);
+        doUrl.pathname = '/get';
+        doUrl.searchParams.set('id', recipeId);
+        const doResponse = await stub.fetch(new Request(doUrl, request));
+        const newHeaders = new Headers(doResponse.headers);
+        Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+        return new Response(doResponse.body, { status: doResponse.status, headers: newHeaders });
       }
 
       // Route to Durable Object for all recipe operations

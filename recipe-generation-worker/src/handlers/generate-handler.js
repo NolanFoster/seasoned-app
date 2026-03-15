@@ -39,26 +39,58 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Check if we're in a local development environment without AI access
     if (!env.AI || !env.RECIPE_VECTORS) {
       // Running in local dev mode - returning mock response
+      const mockRecipe = {
+        name: `Mock Recipe for: ${requestBody.recipeName || requestBody.ingredients?.join(', ') || 'Unknown'}`,
+        description: 'This is a mock recipe generated for local testing',
+        ingredients: ['2 cups mock ingredient 1', '1 lb mock ingredient 2', '1 tbsp mock seasoning'],
+        instructions: ['1. Prepare mock ingredients', '2. Cook according to mock method', '3. Serve hot'],
+        prepTime: '15 minutes',
+        cookTime: '20 minutes',
+        totalTime: '35 minutes',
+        servings: requestBody.servings || '4',
+        difficulty: 'Easy',
+        cuisine: requestBody.cuisine || 'Mock Cuisine',
+        dietary: requestBody.dietary || [],
+        generatedAt: new Date().toISOString(),
+        sourceIngredients: requestBody.ingredients || [],
+        generationTime: 0,
+        similarRecipesFound: 0,
+        mockMode: true
+      };
+
+      // Check if elevation is requested in mock mode
+      let finalRecipe = mockRecipe;
+      if (requestBody.elevate === true) {
+        try {
+          finalRecipe = await elevateRecipe(mockRecipe, env);
+        } catch (elevationError) {
+          // If elevation fails, return the original recipe with a warning
+          console.warn('Recipe elevation failed in mock mode:', elevationError.message);
+          finalRecipe = {
+            ...mockRecipe,
+            elevationError: 'Recipe elevation failed, returning original recipe',
+            elevationFailed: true
+          };
+        }
+      }
+
+      // Check if image generation is requested in mock mode
+      if (requestBody.generateImage === true) {
+        try {
+          const imageUrl = await generateRecipeImage(finalRecipe, env);
+          if (imageUrl) {
+            finalRecipe.image_url = imageUrl;
+          }
+        } catch (imageError) {
+          // If image generation fails, log the error but don't fail the entire request
+          console.warn('Recipe image generation failed in mock mode:', imageError.message);
+          finalRecipe.imageGenerationError = 'Image generation failed, recipe generated without image';
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
-        recipe: {
-          name: `Mock Recipe for: ${requestBody.recipeName || requestBody.ingredients?.join(', ') || 'Unknown'}`,
-          description: 'This is a mock recipe generated for local testing',
-          ingredients: ['2 cups mock ingredient 1', '1 lb mock ingredient 2', '1 tbsp mock seasoning'],
-          instructions: ['1. Prepare mock ingredients', '2. Cook according to mock method', '3. Serve hot'],
-          prepTime: '15 minutes',
-          cookTime: '20 minutes',
-          totalTime: '35 minutes',
-          servings: requestBody.servings || '4',
-          difficulty: 'Easy',
-          cuisine: requestBody.cuisine || 'Mock Cuisine',
-          dietary: requestBody.dietary || [],
-          generatedAt: new Date().toISOString(),
-          sourceIngredients: requestBody.ingredients || [],
-          generationTime: 0,
-          similarRecipesFound: 0,
-          mockMode: true
-        },
+        recipe: finalRecipe,
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -72,9 +104,39 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
 
+    // Check if elevation is requested
+    let finalRecipe = generatedRecipe;
+    if (requestBody.elevate === true) {
+      try {
+        finalRecipe = await elevateRecipe(generatedRecipe, env);
+      } catch (elevationError) {
+        // If elevation fails, return the original recipe with a warning
+        console.warn('Recipe elevation failed:', elevationError.message);
+        finalRecipe = {
+          ...generatedRecipe,
+          elevationError: 'Recipe elevation failed, returning original recipe',
+          elevationFailed: true
+        };
+      }
+    }
+
+    // Check if image generation is requested
+    if (requestBody.generateImage === true) {
+      try {
+        const imageUrl = await generateRecipeImage(finalRecipe, env);
+        if (imageUrl) {
+          finalRecipe.image_url = imageUrl;
+        }
+      } catch (imageError) {
+        // If image generation fails, log the error but don't fail the entire request
+        console.warn('Recipe image generation failed:', imageError.message);
+        finalRecipe.imageGenerationError = 'Image generation failed, recipe generated without image';
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      recipe: generatedRecipe,
+      recipe: finalRecipe,
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -198,9 +260,9 @@ async function generateRecipeWithAI(requestData, env) {
           {
             metadata: {
               queryLength: queryText.length,
-              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
-            },
-            duration: queryDuration
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
+              duration: queryDuration
+            }
           },
           operationData.queryStartTime,
           operationData.queryEndTime
@@ -216,9 +278,9 @@ async function generateRecipeWithAI(requestData, env) {
             provider: 'cloudflare',
             metadata: {
               textLength: queryText.length,
-              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0
-            },
-            duration: embeddingDuration
+              embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
+              duration: embeddingDuration
+            }
           },
           operationData.embeddingStartTime,
           operationData.embeddingEndTime
@@ -232,9 +294,9 @@ async function generateRecipeWithAI(requestData, env) {
           {
             metadata: {
               embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
-              resultsFound: similarRecipes.length
-            },
-            duration: searchDuration
+              resultsFound: similarRecipes.length,
+              duration: searchDuration
+            }
           },
           operationData.searchStartTime,
           operationData.searchEndTime
@@ -247,14 +309,14 @@ async function generateRecipeWithAI(requestData, env) {
             { prompt: operationData.prompt },
             { response: operationData.llmResponse, structuredRecipe: generatedRecipe },
             {
-              model: 'llama-3-8b-instruct',
+              model: '@cf/meta/llama-4-scout-17b-16e-instruct',
               provider: 'cloudflare',
               metadata: {
                 similarRecipesCount: similarRecipes.length,
                 promptLength: operationData.prompt.length,
-                responseLength: operationData.llmResponse.length
-              },
-              duration: llmDuration
+                responseLength: operationData.llmResponse.length,
+                duration: llmDuration
+              }
             },
             operationData.llmStartTime,
             operationData.llmEndTime
@@ -375,7 +437,7 @@ async function generateQueryEmbedding(text, aiBinding) {
 async function findSimilarRecipes(queryEmbedding, vectorStorage, env) {
   try {
     const result = await vectorStorage.query(queryEmbedding, {
-      topK: 7,
+      topK: 3,
       returnMetadata: true
     });
 
@@ -432,19 +494,116 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   const prompt = buildLLaMAPrompt(requestData, contexts);
   operationData.prompt = prompt;
 
-  // Generate recipe using LLaMA
-  const response = await aiBinding.run('@cf/meta/llama-3.1-8b-instruct', {
+  // Define the recipe JSON schema for structured output
+  const recipeSchema = {
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        description: 'Creative and descriptive recipe name'
+      },
+      description: {
+        type: 'string',
+        description: 'Brief description of the dish, its flavors, and what makes it special'
+      },
+      ingredients: {
+        type: 'array',
+        items: {
+          type: 'string',
+          description: 'Ingredient with precise quantity and measurements'
+        },
+        description: 'Complete list of ingredients with quantities'
+      },
+      instructions: {
+        type: 'array',
+        items: {
+          type: 'string',
+          description: 'Clear and specific cooking instruction step'
+        },
+        description: 'Step-by-step cooking instructions'
+      },
+      prepTime: {
+        type: 'string',
+        description: 'Preparation time (e.g., \'15 minutes\')'
+      },
+      cookTime: {
+        type: 'string',
+        description: 'Cooking time (e.g., \'30 minutes\')'
+      },
+      totalTime: {
+        type: 'string',
+        description: 'Total time including prep and cook time'
+      },
+      servings: {
+        type: 'string',
+        description: 'Number of servings (e.g., \'4 servings\')'
+      },
+      difficulty: {
+        type: 'string',
+        enum: ['Easy', 'Medium', 'Hard'],
+        description: 'Difficulty level of the recipe'
+      },
+      cuisine: {
+        type: 'string',
+        description: 'Type of cuisine (e.g., \'Italian\', \'Mexican\')'
+      },
+      dietary: {
+        type: 'array',
+        items: {
+          type: 'string'
+        },
+        description: 'Dietary restrictions or preferences (e.g., \'vegetarian\', \'gluten-free\')'
+      },
+      tips: {
+        type: 'array',
+        items: {
+          type: 'string'
+        },
+        description: 'Helpful cooking tips and variations'
+      }
+    },
+    required: ['name', 'description', 'ingredients', 'instructions', 'prepTime', 'cookTime', 'totalTime', 'servings', 'difficulty']
+  };
+
+  // Generate recipe using LLaMA with structured JSON output
+  const response = await aiBinding.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
     messages: [
       {
         role: 'system',
-        content: 'You are a professional chef, an expert culinary AI specialized in generating high-quality, user-friendly recipes. Your primary goal is to create delicious, practical recipes tailored to user queries, while adhering to best practices for clarity, safety, and inclusivity. Always respond in a friendly, encouraging tone, as if you\'re a seasoned chef sharing kitchen wisdom.\n\n### Core Guidelines:\n- **Structure Every Recipe Consistently**: Start with an overview (title, description, prep time, cook time, total time, servings, difficulty level). Follow with a detailed ingredients list (with quantities, measurements in both metric and imperial where possible). Then provide step-by-step instructions, numbered for ease. End with tips, variations, nutritional info (estimated if not exact), and storage advice.\n- **Prioritize Accuracy and Safety**: Use precise measurements (e.g., "1 cup (240ml) flour" instead of vague terms). Include food safety notes like proper cooking temperatures (e.g., poultry to 165°F/74°C), handling raw ingredients, and warnings for common allergens (nuts, dairy, gluten). Avoid suggesting unsafe practices, like undercooking meats.\n- **Tailor to User Needs**: Ask clarifying questions if the query is vague (e.g., "Do you have any dietary restrictions like vegan or gluten-free?"). Incorporate preferences such as skill level, available ingredients, or cultural inspirations. Make recipes scalable (e.g., for 2-4 servings) and suggest substitutions for accessibility.\n- **Encourage Creativity and Feasibility**: Draw from global cuisines for inspiration, but ensure recipes are realistic for home cooks—no exotic, hard-to-find ingredients unless alternatives are provided. Balance flavors scientifically (e.g., acid, salt, sweet) and suggest pairings (e.g., sides or drinks).\n- **Inclusivity and Ethics**: Promote sustainable practices (e.g., seasonal ingredients, waste reduction). Respect cultural origins by crediting them (e.g., "Inspired by traditional Italian risotto"). Avoid promoting unhealthy extremes; focus on balanced nutrition.\n- **Output Format**: Keep responses concise yet comprehensive—aim for 500-800 words per recipe. Use bullet points for ingredients, numbered lists for steps. If generating multiple recipes, summarize options first.\n- **Edge Cases**: If a query is impractical (e.g., "Recipe for dragon meat"), respond humorously but pivot to a feasible alternative. Decline harmful requests (e.g., poisonous ingredients) politely.'
+        content: 'You are a professional chef, an expert culinary AI specialized in generating high-quality, ' +
+          'user-friendly recipes. Your primary goal is to create delicious, practical recipes tailored to user ' +
+          'queries, while adhering to best practices for clarity, safety, and inclusivity. Always respond in a ' +
+          'friendly, encouraging tone, as if you\'re a seasoned chef sharing kitchen wisdom.' +
+          '\n\n### Core Guidelines:' +
+          '\n- **Structure Every Recipe Consistently**: Provide complete recipe information including name, description, ' +
+          'ingredients with precise measurements, step-by-step instructions, timing, servings, and difficulty level.' +
+          '\n- **Prioritize Accuracy and Safety**: Use precise measurements with conversions when helpful ' +
+          '(e.g., "1 cup (240ml) flour"). Include food safety notes like proper cooking temperatures ' +
+          '(e.g., poultry to 165°F/74°C). All ingredients should be mentioned in the steps and all ingredients ' +
+          'mentioned in steps should be in the ingredients list.' +
+          '\n- **Tailor to User Needs**: Incorporate preferences such as dietary restrictions, cuisine style, ' +
+          'available ingredients, and cooking methods. Make recipes scalable and suggest substitutions for accessibility.' +
+          '\n- **Encourage Creativity and Feasibility**: Draw from global cuisines for inspiration, but ensure ' +
+          'recipes are realistic for home cooks. Balance flavors scientifically and suggest helpful tips.' +
+          '\n- **Inclusivity and Ethics**: Promote sustainable practices and respect cultural origins. ' +
+          'Focus on balanced nutrition.' +
+          '\n- **Output Format**: You must respond with STRICTLY VALID JSON only. Use double quotes for all strings and property names. ' +
+          'Follow the exact schema provided. Do not include any text outside the JSON structure. ' +
+          'Do not use JavaScript object syntax - use proper JSON format with double quotes.'
       },
       {
         role: 'user',
         content: prompt
       }
     ],
-    max_tokens: 1024,
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'recipe_generation',
+        schema: recipeSchema
+      }
+    },
+    max_tokens: 2048,
     temperature: 0.65
   });
 
@@ -455,8 +614,114 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   // Store LLM response for tracing
   operationData.llmResponse = response.response;
 
-  // Parse and structure the generated recipe
-  const structuredRecipe = parseGeneratedRecipe(response.response, requestData);
+  // Debug: Print raw LLM response
+  console.log('Raw LLM response:', JSON.stringify(response.response, null, 2));
+
+  // Parse the JSON response and flatten any nested structure
+  let structuredRecipe = response.response;
+
+  // Validate that the response is an object
+  if (!structuredRecipe || typeof structuredRecipe !== 'object') {
+    console.error('Invalid AI response for recipe generation:', structuredRecipe);
+    throw new Error(`AI returned invalid response type: ${typeof structuredRecipe}. Expected object.`);
+  }
+
+  // Handle nested recipe structure (flatten recipe.recipe to just recipe)
+  if (structuredRecipe.recipe && typeof structuredRecipe.recipe === 'object') {
+    structuredRecipe = structuredRecipe.recipe;
+  }
+
+  // Ensure we still have a valid object after flattening
+  if (!structuredRecipe || typeof structuredRecipe !== 'object') {
+    console.error('Invalid recipe object after flattening:', structuredRecipe);
+    throw new Error('Recipe generation failed: Invalid recipe structure returned by AI');
+  }
+
+  // Normalize field names (handle uppercase variants)
+  if (structuredRecipe.Ingredients && !structuredRecipe.ingredients) {
+    structuredRecipe.ingredients = structuredRecipe.Ingredients;
+    delete structuredRecipe.Ingredients;
+  }
+  if (structuredRecipe.Instructions && !structuredRecipe.instructions) {
+    structuredRecipe.instructions = structuredRecipe.Instructions;
+    delete structuredRecipe.Instructions;
+  }
+  if (structuredRecipe.Name && !structuredRecipe.name) {
+    structuredRecipe.name = structuredRecipe.Name;
+    delete structuredRecipe.Name;
+  }
+  if (structuredRecipe.Description && !structuredRecipe.description) {
+    structuredRecipe.description = structuredRecipe.Description;
+    delete structuredRecipe.Description;
+  }
+
+  // Add metadata fields
+  structuredRecipe.generatedAt = new Date().toISOString();
+  structuredRecipe.sourceIngredients = requestData.ingredients || [];
+
+  // Ensure required fields have fallback values
+  if (!structuredRecipe.name) {
+    structuredRecipe.name = requestData.recipeName || 'Generated Recipe';
+  }
+  if (!structuredRecipe.servings) {
+    structuredRecipe.servings = requestData.servings || '4 servings';
+  }
+  if (!structuredRecipe.cuisine) {
+    structuredRecipe.cuisine = requestData.cuisine || '';
+  }
+  if (!structuredRecipe.dietary) {
+    structuredRecipe.dietary = requestData.dietary || [];
+  }
+
+
+  // Normalize time formats (PT30M -> "30 minutes")
+  if (structuredRecipe.prepTime && structuredRecipe.prepTime.startsWith('PT')) {
+    structuredRecipe.prepTime = normalizeISOTime(structuredRecipe.prepTime);
+  }
+  if (structuredRecipe.cookTime && structuredRecipe.cookTime.startsWith('PT')) {
+    structuredRecipe.cookTime = normalizeISOTime(structuredRecipe.cookTime);
+  }
+  if (structuredRecipe.totalTime && structuredRecipe.totalTime.startsWith('PT')) {
+    structuredRecipe.totalTime = normalizeISOTime(structuredRecipe.totalTime);
+  }
+
+  // Ensure servings is a string
+  if (typeof structuredRecipe.servings === 'number') {
+    structuredRecipe.servings = `${structuredRecipe.servings} servings`;
+  }
+
+  // Handle dietary considerations field name variations
+  if (structuredRecipe.dietaryConsiderations && !structuredRecipe.dietary) {
+    structuredRecipe.dietary = Array.isArray(structuredRecipe.dietaryConsiderations)
+      ? structuredRecipe.dietaryConsiderations
+      : [structuredRecipe.dietaryConsiderations];
+    delete structuredRecipe.dietaryConsiderations;
+  }
+
+  // Ensure ingredients and instructions are arrays (handle object responses)
+  if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
+    console.warn('Converting ingredients object to array:', structuredRecipe.ingredients);
+    // Convert object to array format: "ingredient name: quantity"
+    structuredRecipe.ingredients = Object.entries(structuredRecipe.ingredients)
+      .map(([name, quantity]) => `${name}: ${quantity}`)
+      .filter(item => typeof item === 'string');
+  } else if (!Array.isArray(structuredRecipe.ingredients)) {
+    structuredRecipe.ingredients = [];
+  }
+
+  // Debug: Print processed ingredients
+  console.log('Processed ingredients:', JSON.stringify(structuredRecipe.ingredients, null, 2));
+
+  if (structuredRecipe.instructions && typeof structuredRecipe.instructions === 'object' && !Array.isArray(structuredRecipe.instructions)) {
+    console.warn('Converting instructions object to array:', structuredRecipe.instructions);
+    structuredRecipe.instructions = Object.values(structuredRecipe.instructions).filter(item => typeof item === 'string');
+  } else if (!Array.isArray(structuredRecipe.instructions)) {
+    structuredRecipe.instructions = [];
+  }
+
+  if (!Array.isArray(structuredRecipe.dietary)) {
+    structuredRecipe.dietary = [];
+  }
 
   return structuredRecipe;
 }
@@ -535,14 +800,14 @@ function formatFullRecipeContext(recipeData) {
 }
 
 /**
- * Build prompt for LLaMA model using the new format
+ * Build prompt for LLaMA model using the structured JSON format
  */
 function buildLLaMAPrompt(requestData, contexts) {
   let prompt = '';
 
   // Add context recipes if available
   if (contexts && contexts.length > 0) {
-    prompt += `Based on these recipes:\n${contexts.join('\n\n')}\n\n`;
+    prompt += `Based on these similar recipes for inspiration:\n${contexts.join('\n\n')}\n\n`;
   }
 
   // Generate recipe query
@@ -553,263 +818,471 @@ function buildLLaMAPrompt(requestData, contexts) {
     // Build query from ingredients and preferences
     const queryParts = [];
     if (requestData.ingredients && requestData.ingredients.length > 0) {
-      queryParts.push(requestData.ingredients.join(', '));
+      queryParts.push(`using ingredients: ${requestData.ingredients.join(', ')}`);
     }
     if (requestData.cuisine) {
-      queryParts.push(`${requestData.cuisine} style`);
+      queryParts.push(`${requestData.cuisine} cuisine`);
     }
     if (requestData.mealType) {
-      queryParts.push(requestData.mealType);
+      queryParts.push(`${requestData.mealType} meal`);
     }
-    query = queryParts.join(' ') || 'recipe';
+    query = queryParts.join(', ') || 'a delicious recipe';
   }
 
-  prompt += `Generate a full recipe for: ${query}`;
+  prompt += `Create a complete recipe ${query}.`;
 
   // Add any specific requirements
   const requirements = [];
   if (requestData.dietary && requestData.dietary.length > 0) {
-    requirements.push(`dietary requirements: ${requestData.dietary.join(', ')}`);
+    requirements.push(`must be ${requestData.dietary.join(' and ')}`);
   }
   if (requestData.servings) {
-    requirements.push(`serves ${requestData.servings}`);
+    requirements.push(`serves ${requestData.servings} people`);
   }
   if (requestData.maxCookTime) {
-    requirements.push(`maximum cook time: ${requestData.maxCookTime} minutes`);
+    requirements.push(`total cooking time under ${requestData.maxCookTime} minutes`);
   }
   if (requestData.cookingMethod) {
-    requirements.push(`cooking method: ${requestData.cookingMethod}`);
+    requirements.push(`using ${requestData.cookingMethod} cooking method`);
   }
 
   if (requirements.length > 0) {
-    prompt += `\n\nRequirements: ${requirements.join(', ')}`;
+    prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;
   }
 
-  // Add recipe template structure
-  prompt += `\n\nPlease format your response using this exact structure:
+  // Add instructions for JSON output
+  prompt += `\n\nProvide a complete recipe with:
+- A creative and descriptive name
+- A brief description highlighting the dish's appeal
+- Complete ingredients list with precise measurements
+- Clear step-by-step cooking instructions
+- Accurate prep time, cook time, and total time
+- Number of servings
+- Difficulty level (Easy, Medium, or Hard)
+- Cuisine type
+- Any dietary considerations
+- Helpful cooking tips and variations
 
-Name: [Creative and descriptive recipe name]
-
-Description: [Brief description of the dish, its flavors, and what makes it special]
-
-Ingredients:
-- [Ingredient 1 with quantity]
-- [Ingredient 2 with quantity]
-- [Continue with all ingredients]
-
-Instructions:
-1. [Step 1 - clear and specific]
-2. [Step 2 - clear and specific]
-3. [Continue with numbered steps]
-
-Prep Time: [X minutes]
-Cook Time: [X minutes]
-
-Total Time: [Prep + Cook time]`;
+Make the recipe practical for home cooks with commonly available ingredients. Include food safety notes where appropriate and provide measurement conversions when helpful.`;
 
   return prompt;
 }
 
 /**
- * Parse generated recipe text into structured format
- *
- * This function handles the actual LLaMA response format where everything
- * is returned as numbered instructions including recipe metadata
+ * Elevate a generated recipe using AI with culinary expert guidance
+ * This function takes a generated recipe and enhances it with professional culinary techniques,
+ * better ingredient specificity, and educational cooking insights.
  */
-function parseGeneratedRecipe(recipeText, originalRequest) {
-  const lines = recipeText.split('\n').filter(line => line.trim());
+export async function elevateRecipe(recipe, env) {
+  // Check if we're in a local development environment without AI access
+  if (!env.AI) {
+    // Ensure ingredients and instructions are arrays before mapping
+    const safeIngredients = Array.isArray(recipe.ingredients)
+      ? recipe.ingredients
+      : [];
+    const safeInstructions = Array.isArray(recipe.instructions)
+      ? recipe.instructions
+      : [];
+    const safeTips = Array.isArray(recipe.tips)
+      ? recipe.tips
+      : [];
 
-  const recipe = {
-    name: originalRequest.recipeName || 'Generated Recipe',
-    description: '',
-    ingredients: [],
-    instructions: [],
-    prepTime: '',
-    cookTime: '',
-    totalTime: '',
-    servings: originalRequest.servings || '',
-    difficulty: 'Medium',
-    cuisine: originalRequest.cuisine || '',
-    dietary: originalRequest.dietary || [],
-    generatedAt: new Date().toISOString(),
-    sourceIngredients: originalRequest.ingredients
+    // Return mock elevated recipe for local testing
+    return {
+      ...recipe,
+      name: `Elevated ${recipe.name}`,
+      description: `${recipe.description} (Enhanced with professional culinary techniques)`,
+      ingredients: safeIngredients.map(ingredient =>
+        ingredient.includes('(') ? ingredient : `${ingredient} (preferably fresh, high-quality)`
+      ),
+      instructions: safeInstructions.map((instruction, index) =>
+        `${instruction}${index === 0 ? ' (Pro tip: This step is crucial for building flavor layers)' : ''}`
+      ),
+      tips: [
+        ...safeTips,
+        'Use high-quality, fresh ingredients for best results',
+        'Taste and adjust seasoning throughout the cooking process',
+        'Let the dish rest for a few minutes before serving to allow flavors to meld'
+      ],
+      elevatedAt: new Date().toISOString(),
+      elevationMethod: 'mock-ai',
+      mockMode: true
+    };
+  }
+
+  // Create the culinary expert system prompt
+  const culinaryExpertPrompt = `You are an expert culinary teacher and professional chef with decades of experience in fine dining and culinary education. Your mission is to elevate recipes by adding professional techniques, ingredient specificity, and educational insights that help home cooks achieve restaurant-quality results.
+
+IMPORTANT: You must respond with valid JSON only. Do not include any text outside the JSON structure. Use double quotes for all strings and property names.
+
+### Your Expertise Areas:
+- **Ingredient Specificity**: Add precise details about ingredient types, quality grades, and purchasing tips
+- **Technique Enhancement**: Explain the "why" behind cooking methods and suggest professional refinements
+- **Flavor Development**: Guide proper seasoning, layering flavors, and building complexity
+- **Educational Value**: Teach fundamental cooking principles that apply beyond this single recipe
+- **Practical Accessibility**: Ensure suggestions are achievable for home cooks with standard equipment
+
+### Elevation Guidelines:
+
+**1. Add Specificity to Ingredients:**
+- Instead of "dry white wine," suggest: "2 tbsp (30ml) dry white wine (e.g., Pinot Grigio or Sauvignon Blanc)"
+- For canned goods: "2 cups (475ml) canned clams, drained (reserve juice for another use), preferably whole baby clams or sea clams packed in juice, not water"
+- Include quality indicators: "1 lb (450g) boneless, skinless chicken thighs, preferably free-range or organic"
+
+**2. Explain the "Why" in Techniques:**
+- Add instructional notes explaining cooking science
+- Example: "Reserve 1 cup of pasta water before draining. The starchy water helps emulsify the sauce and allows it to cling to the pasta perfectly"
+- Explain temperature importance: "Cook until golden brown (about 3-4 minutes) - this creates the Maillard reaction for deeper flavor"
+
+**3. Professional Refinements:**
+- Suggest mise en place organization
+- Add timing coordination tips
+- Include temperature and texture cues
+- Recommend equipment upgrades where beneficial
+
+**4. Educational Tips:**
+- Explain fundamental cooking principles
+- Suggest variations and substitutions
+- Include troubleshooting advice
+- Add food safety reminders where relevant
+
+### Output Requirements:
+- Maintain the original recipe structure and format
+- Preserve all original information while adding enhancements
+- Use clear, encouraging language that builds confidence
+- Include specific measurements and timing
+- Add 2-3 professional tips that teach broader cooking skills
+- Ensure all suggestions are practical for home kitchens
+
+Remember: Your goal is to transform a good recipe into an exceptional one while teaching valuable cooking skills that will benefit the cook in all their future culinary endeavors.`;
+
+  // Ensure arrays are properly handled for the prompt
+  const safeIngredients = Array.isArray(recipe.ingredients)
+    ? recipe.ingredients
+    : [];
+  const safeInstructions = Array.isArray(recipe.instructions)
+    ? recipe.instructions
+    : [];
+
+  // Sanitize recipe fields to prevent undefined/null values in prompt
+  const safeName = recipe.name || 'Unnamed Recipe';
+  const safeDescription = recipe.description || 'No description available';
+  const safePrepTime = recipe.prepTime || 'Not specified';
+  const safeCookTime = recipe.cookTime || 'Not specified';
+  const safeTotalTime = recipe.totalTime || 'Not specified';
+  const safeServings = recipe.servings || 'Not specified';
+  const safeDifficulty = recipe.difficulty || 'Not specified';
+  const safeCuisine = recipe.cuisine || 'Not specified';
+
+  const safeDietary = recipe.dietary && Array.isArray(recipe.dietary)
+    ? recipe.dietary.join(', ')
+    : (recipe.dietary || 'None specified');
+
+  const safeTips = recipe.tips && Array.isArray(recipe.tips)
+    ? recipe.tips.join(', ')
+    : (recipe.tips || 'None provided');
+
+  // Create the user prompt with the recipe to elevate
+  const userPrompt = `Please elevate this recipe with your professional culinary expertise:
+
+**Original Recipe:**
+name: ${safeName}
+description: ${safeDescription}
+
+ingredients:
+${safeIngredients.map(ing => `- ${ing}`).join('\n')}
+
+instructions:
+${safeInstructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}
+
+additionalDetails:
+- prepTime: ${safePrepTime}
+- cookTime: ${safeCookTime}
+- totalTime: ${safeTotalTime}
+- servings: ${safeServings}
+- difficulty: ${safeDifficulty}
+- cuisine: ${safeCuisine}
+- dietary: ${safeDietary}
+- tips: ${safeTips}
+
+Please provide the elevated version following the same JSON structure, with enhanced ingredients, improved instructions, and additional professional tips.`;
+
+  // Validate prompt length and content
+  if (userPrompt.length > 8000) {
+    console.warn('Recipe elevation prompt is very long:', userPrompt.length, 'characters');
+  }
+
+  // Use the same recipe schema as the original generated recipe
+  const recipeSchema = {
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        description: 'Creative and descriptive recipe name'
+      },
+      description: {
+        type: 'string',
+        description: 'Brief description of the dish, its flavors, and what makes it special'
+      },
+      ingredients: {
+        type: 'array',
+        items: {
+          type: 'string',
+          description: 'Ingredient with precise quantity and measurements'
+        },
+        description: 'Complete list of ingredients with quantities'
+      },
+      instructions: {
+        type: 'array',
+        items: {
+          type: 'string',
+          description: 'Clear and specific cooking instruction step'
+        },
+        description: 'Step-by-step cooking instructions'
+      },
+      prepTime: {
+        type: 'string',
+        description: 'Preparation time (e.g., \'15 minutes\')'
+      },
+      cookTime: {
+        type: 'string',
+        description: 'Cooking time (e.g., \'30 minutes\')'
+      },
+      totalTime: {
+        type: 'string',
+        description: 'Total time including prep and cook time'
+      },
+      servings: {
+        type: 'string',
+        description: 'Number of servings (e.g., \'4 servings\')'
+      },
+      difficulty: {
+        type: 'string',
+        enum: ['Easy', 'Medium', 'Hard'],
+        description: 'Difficulty level of the recipe'
+      },
+      cuisine: {
+        type: 'string',
+        description: 'Type of cuisine (e.g., \'Italian\', \'Mexican\')'
+      },
+      dietary: {
+        type: 'array',
+        items: {
+          type: 'string'
+        },
+        description: 'Dietary restrictions or preferences (e.g., \'vegetarian\', \'gluten-free\')'
+      },
+      tips: {
+        type: 'array',
+        items: {
+          type: 'string'
+        },
+        description: 'Helpful cooking tips and variations'
+      }
+    },
+    required: ['name', 'description', 'ingredients', 'instructions', 'prepTime', 'cookTime', 'totalTime', 'servings', 'difficulty']
   };
 
-  let currentSection = 'unknown';
-  let extractedName = '';
-  let extractedDescription = '';
+  // Validate system prompt length
+  if (culinaryExpertPrompt.length > 10000) {
+    console.warn('System prompt is very long:', culinaryExpertPrompt.length, 'characters');
+  }
 
-  // Process each line to extract structured data
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    // Remove numbered prefixes like "1. ", "2. ", etc.
-    const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
-    const cleanLowerLine = cleanLine.toLowerCase();
-
-    // Extract recipe name (look for bold markers ** around the name)
-    if (cleanLine.includes('**') && !extractedName) {
-      const nameMatch = cleanLine.match(/\*\*([^*]+)\*\*/);
-      if (nameMatch && nameMatch[1]) {
-        const potentialName = nameMatch[1].trim();
-        // Make sure it's not a section header
-        if (!potentialName.toLowerCase().includes('description') &&
-            !potentialName.toLowerCase().includes('ingredients') &&
-            !potentialName.toLowerCase().includes('instructions') &&
-            !potentialName.toLowerCase().includes('prep time') &&
-            !potentialName.toLowerCase().includes('cook time') &&
-            potentialName.length > 3 && potentialName.length < 100) {
-          extractedName = potentialName;
-          recipe.name = extractedName;
-          continue;
+  // Generate elevated recipe using LLaMA with culinary expert guidance
+  let response;
+  try {
+    console.log('Making AI call for recipe elevation...');
+    response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+      messages: [
+        {
+          role: 'system',
+          content: culinaryExpertPrompt
+        },
+        {
+          role: 'user',
+          content: userPrompt
         }
-      }
-    }
-
-    // Extract description (look for "Description:" followed by descriptive text)
-    if ((cleanLowerLine.includes('description:') || cleanLowerLine.includes('**description')) && !extractedDescription) {
-      const desc = cleanLine.replace(/^\*\*description\*\*:?\s*/i, '')
-        .replace(/^description:?\s*/i, '')
-        .trim();
-      if (desc.length > 10 && desc.length < 500) {
-        extractedDescription = desc;
-        recipe.description = desc;
-        continue;
-      }
-    }
-
-    // Detect section headers
-    if (cleanLowerLine.includes('ingredients:') || cleanLowerLine.includes('**ingredients')) {
-      currentSection = 'ingredients';
-      continue;
-    } else if (cleanLowerLine.includes('instructions:') || cleanLowerLine.includes('**instructions')) {
-      currentSection = 'instructions';
-      continue;
-    }
-
-    // Extract timing information from any line that mentions it
-    if (cleanLowerLine.includes('prep time:') || cleanLowerLine.includes('**prep time')) {
-      recipe.prepTime = extractTime(cleanLine);
-      continue;
-    }
-    if (cleanLowerLine.includes('cook time:') || cleanLowerLine.includes('**cook time')) {
-      recipe.cookTime = extractTime(cleanLine);
-      continue;
-    }
-    if (cleanLowerLine.includes('total time:') || cleanLowerLine.includes('**total time')) {
-      recipe.totalTime = extractTime(cleanLine);
-      continue;
-    }
-
-    // Process ingredients and instructions based on patterns
-    if (currentSection === 'ingredients' && isIngredientLine(cleanLine)) {
-      const ingredient = cleanLine.replace(/^[-•*]\s*/, '').trim();
-      if (ingredient.length > 3 && !ingredient.toLowerCase().includes('ingredients')) {
-        recipe.ingredients.push(ingredient);
-      }
-    } else if (currentSection === 'instructions' && isInstructionLine(cleanLine)) {
-      const instruction = cleanLine.replace(/^[-•*]\s*/, '').trim();
-      if (instruction.length > 10 &&
-          !instruction.toLowerCase().includes('instructions') &&
-          !instruction.toLowerCase().includes('prep time') &&
-          !instruction.toLowerCase().includes('cook time') &&
-          !instruction.toLowerCase().includes('total time')) {
-        recipe.instructions.push(instruction);
-      }
-    } else if (currentSection === 'unknown') {
-      // Auto-detect ingredients and instructions when no section is set
-      if (isIngredientLine(cleanLine)) {
-        const ingredient = cleanLine.replace(/^[-•*]\s*/, '').trim();
-        if (ingredient.length > 3) {
-          recipe.ingredients.push(ingredient);
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'recipe_generation',
+          schema: recipeSchema
         }
-      } else if (isInstructionLine(cleanLine) && recipe.ingredients.length > 0) {
-        // Only start collecting instructions after we have some ingredients
-        const instruction = cleanLine.replace(/^[-•*]\s*/, '').trim();
-        if (instruction.length > 10) {
-          recipe.instructions.push(instruction);
-        }
-      }
-    }
+      },
+      max_tokens: 2048,
+      temperature: 0.7
+    });
+    console.log('AI elevation call completed successfully');
+  } catch (aiError) {
+    console.error('AI elevation error:', aiError);
+    console.error('System prompt length:', culinaryExpertPrompt.length);
+    console.error('User prompt length:', userPrompt.length);
+    throw new Error(`AI elevation failed: ${aiError.message || aiError.toString()}`);
   }
 
-  // Clean up and validate the extracted data
-  if (!recipe.name || recipe.name === 'Generated Recipe') {
-    recipe.name = originalRequest.recipeName || extractedName || 'Generated Recipe';
+  if (!response || !response.response) {
+    throw new Error('Invalid response from LLaMA model for recipe elevation');
   }
 
-  if (!recipe.description && extractedDescription) {
-    recipe.description = extractedDescription;
+  // Parse the JSON response
+  let elevatedRecipe = response.response;
+
+  // Validate that the response is an object
+  if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
+    console.error('Invalid AI response for recipe elevation:', elevatedRecipe);
+    throw new Error(`AI returned invalid response type: ${typeof elevatedRecipe}. Expected object.`);
   }
 
-  // Ensure we have at least some ingredients and instructions
-  if (recipe.ingredients.length === 0) {
-    // Fallback: extract from any line with measurements
-    const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls)/i;
-    for (const line of lines) {
-      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
-      if (measurementPattern.test(cleanLine) && cleanLine.length < 200) {
-        const ingredient = cleanLine.replace(/^[-•*]\s*/, '').trim();
-        recipe.ingredients.push(ingredient);
-      }
-    }
+  // Handle nested recipe structure (flatten recipe.recipe to just recipe)
+  if (elevatedRecipe.recipe && typeof elevatedRecipe.recipe === 'object') {
+    elevatedRecipe = elevatedRecipe.recipe;
   }
 
-  if (recipe.instructions.length === 0) {
-    // Fallback: use lines that look like cooking instructions
-    for (const line of lines) {
-      const cleanLine = line.replace(/^\d+\.\s*/, '').trim();
-      if (isInstructionLine(cleanLine) && cleanLine.length > 15 && cleanLine.length < 500) {
-        recipe.instructions.push(cleanLine);
-      }
-    }
+  // Ensure we still have a valid object after flattening
+  if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
+    console.error('Invalid recipe object after flattening:', elevatedRecipe);
+    throw new Error('Recipe elevation failed: Invalid recipe structure returned by AI');
   }
 
-  return recipe;
+  // Normalize field names (handle uppercase variants)
+  if (elevatedRecipe.Ingredients && !elevatedRecipe.ingredients) {
+    elevatedRecipe.ingredients = elevatedRecipe.Ingredients;
+    delete elevatedRecipe.Ingredients;
+  }
+  if (elevatedRecipe.Instructions && !elevatedRecipe.instructions) {
+    elevatedRecipe.instructions = elevatedRecipe.Instructions;
+    delete elevatedRecipe.Instructions;
+  }
+  if (elevatedRecipe.Name && !elevatedRecipe.name) {
+    elevatedRecipe.name = elevatedRecipe.Name;
+    delete elevatedRecipe.Name;
+  }
+  if (elevatedRecipe.Description && !elevatedRecipe.description) {
+    elevatedRecipe.description = elevatedRecipe.Description;
+    delete elevatedRecipe.Description;
+  }
+
+  // Add metadata fields
+  elevatedRecipe.elevatedAt = new Date().toISOString();
+  elevatedRecipe.elevationMethod = 'llama-ai-culinary-expert';
+
+  // Ensure required fields have fallback values
+  if (!elevatedRecipe.name) {
+    elevatedRecipe.name = `Elevated ${recipe.name}`;
+  }
+  if (!elevatedRecipe.servings) {
+    elevatedRecipe.servings = recipe.servings || '4 servings';
+  }
+  if (!elevatedRecipe.cuisine) {
+    elevatedRecipe.cuisine = recipe.cuisine || '';
+  }
+  if (!elevatedRecipe.dietary) {
+    elevatedRecipe.dietary = recipe.dietary || [];
+  }
+
+  // Ensure ingredients and instructions are arrays (handle object responses)
+  if (elevatedRecipe.ingredients && typeof elevatedRecipe.ingredients === 'object' && !Array.isArray(elevatedRecipe.ingredients)) {
+    console.warn('Converting ingredients object to array:', elevatedRecipe.ingredients);
+    // Convert object to array format: "ingredient name: quantity"
+    elevatedRecipe.ingredients = Object.entries(elevatedRecipe.ingredients)
+      .map(([name, quantity]) => `${name}: ${quantity}`)
+      .filter(item => typeof item === 'string');
+  }
+  if (elevatedRecipe.instructions && typeof elevatedRecipe.instructions === 'object' && !Array.isArray(elevatedRecipe.instructions)) {
+    console.warn('Converting instructions object to array:', elevatedRecipe.instructions);
+    elevatedRecipe.instructions = Object.values(elevatedRecipe.instructions).filter(item => typeof item === 'string');
+  }
+
+  // Ensure servings is a string
+  if (typeof elevatedRecipe.servings === 'number') {
+    elevatedRecipe.servings = `${elevatedRecipe.servings} servings`;
+  }
+
+  // Handle dietary considerations field name variations
+  if (elevatedRecipe.dietaryConsiderations) {
+    elevatedRecipe.dietary = Array.isArray(elevatedRecipe.dietaryConsiderations)
+      ? elevatedRecipe.dietaryConsiderations
+      : [elevatedRecipe.dietaryConsiderations];
+    delete elevatedRecipe.dietaryConsiderations;
+  }
+
+  return elevatedRecipe;
 }
 
 /**
- * Check if a line looks like an ingredient (contains measurements)
+ * Normalize ISO 8601 duration format (PT30M) to readable format ("30 minutes")
  */
-function isIngredientLine(line) {
-  const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls|inch|inches|medium|large|small)/i;
-  const fractionPattern = /\d+\/\d+/;
-  const ingredientIndicators = /\b(fresh|dried|chopped|minced|sliced|diced|grated|ground|extra-virgin|olive oil|salt|pepper|garlic|onion|cheese|butter|flour|sugar|egg|milk|cream|water|stock|broth)/i;
+function normalizeISOTime(isoTime) {
+  if (!isoTime || !isoTime.startsWith('PT')) {
+    return isoTime;
+  }
 
-  // Exclude action words that indicate instructions
-  const actionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble)/i;
+  const match = isoTime.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!match) {
+    return isoTime;
+  }
 
-  return (measurementPattern.test(line) || fractionPattern.test(line) || ingredientIndicators.test(line)) &&
-         line.length < 150 &&
-         !line.toLowerCase().includes('minute') &&
-         !line.toLowerCase().includes('hour') &&
-         !actionWords.test(line);
+  const hours = parseInt(match[1] || 0);
+  const minutes = parseInt(match[2] || 0);
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes > 1 ? 's' : ''}`;
+  } else if (hours > 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''}`;
+  } else if (minutes > 0) {
+    return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+  }
+
+  return isoTime;
 }
 
 /**
- * Check if a line looks like an instruction (cooking action words)
+ * Generate an image for a recipe using the AI image generation service
  */
-function isInstructionLine(line) {
-  const actionWords = /\b(preheat|heat|cook|grill|bake|roast|sauté|sear|boil|simmer|mix|combine|add|place|remove|serve|garnish|drizzle|season|prepare|cut|slice|chop|dice|mince|whisk|stir|fold|pour|brush|arrange|assemble|transfer|divide|spread|layer|cover|wrap|chill|refrigerate|freeze|marinate|rest|let|allow|until|for|about|approximately)/i;
-  const instructionIndicators = /\b(step|then|next|meanwhile|while|after|before|once|when|until|degrees|temperature|minutes|hours|golden|tender|crispy|bubbling|thick|smooth)/i;
+async function generateRecipeImage(recipe, env) {
+  // Check if image generation service is available
+  if (!env.IMAGE_GENERATION_SERVICE) {
+    throw new Error('Image generation service not available');
+  }
 
-  // Exclude measurement patterns that indicate ingredients
-  const measurementPattern = /\d+(\.\d+)?\s*(\/\d+\s*)?(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|pound|pounds|lb|lbs|oz|ounce|ounces|gram|grams|g|ml|milliliter|milliliters|liter|liters|l|clove|cloves|slice|slices|piece|pieces|ball|balls)/i;
+  try {
+    // Prepare the request payload for the image generation service
+    const imageRequestPayload = {
+      recipe: {
+        name: recipe.name,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        cuisine: recipe.cuisine,
+        dietary: recipe.dietary
+      },
+      style: 'realistic',
+      aspectRatio: '1:1'
+    };
 
-  return (actionWords.test(line) || instructionIndicators.test(line)) &&
-         line.length > 15 &&
-         line.length < 500 &&
-         !measurementPattern.test(line);
+    // Call the image generation service
+    const imageResponse = await env.IMAGE_GENERATION_SERVICE.fetch('https://ai-image-generation-worker/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(imageRequestPayload)
+    });
+
+    if (!imageResponse.ok) {
+      throw new Error(`Image generation service returned ${imageResponse.status}: ${imageResponse.statusText}`);
+    }
+
+    const imageResult = await imageResponse.json();
+
+    if (!imageResult.success || !imageResult.imageUrl) {
+      throw new Error('Image generation service returned unsuccessful response');
+    }
+
+    return imageResult.imageUrl;
+  } catch (error) {
+    console.error('Error calling image generation service:', error);
+    throw error;
+  }
 }
-
-
-
-/**
- * Extract time from text (e.g., "Prep time: 15 minutes" -> "15 minutes")
- */
-function extractTime(text) {
-  const timeMatch = text.match(/(\d+(?:\.\d+)?)\s*(minute|minutes|min|hour|hours|hr)/i);
-  return timeMatch ? `${timeMatch[1]} ${timeMatch[2]}` : '';
-}
-
-

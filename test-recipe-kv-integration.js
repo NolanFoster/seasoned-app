@@ -151,8 +151,8 @@ async function testRecipeIntegration() {
 
 // Display usage instructions
 console.log('📋 Usage Instructions:');
-console.log('1. Start the recipe-scraper worker:');
-console.log('   cd recipe-scraper && npx wrangler dev --port 8788');
+console.log('1. Start the recipe-clipper worker:');
+console.log('   cd recipe-clipper && npx wrangler dev --port 8788');
 console.log('');
 console.log('2. Start the recipe-save-worker:');
 console.log('   cd recipe-save-worker && npx wrangler dev --port 8787');

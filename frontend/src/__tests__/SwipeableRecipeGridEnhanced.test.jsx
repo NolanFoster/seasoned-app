@@ -59,7 +59,7 @@ describe('SwipeableRecipeGrid Enhanced Coverage', () => {
     it('should render without children', () => {
       render(<SwipeableRecipeGrid />);
       
-      const container = screen.getByRole('generic');
+      const container = document.querySelector('.carousel-container');
       expect(container).toBeInTheDocument();
     });
   });
@@ -170,7 +170,7 @@ describe('SwipeableRecipeGrid Enhanced Coverage', () => {
       );
       
       const grid = screen.getByText('Test Child').closest('.recipe-grid');
-      expect(grid).toHaveStyle('background-color: red');
+      expect(grid).toHaveStyle('background-color: rgb(255, 0, 0)');
       expect(grid).toHaveStyle('padding: 10px');
     });
   });
@@ -179,7 +179,7 @@ describe('SwipeableRecipeGrid Enhanced Coverage', () => {
     it('should handle undefined children', () => {
       render(<SwipeableRecipeGrid>{undefined}</SwipeableRecipeGrid>);
       
-      const container = screen.getByRole('generic');
+      const container = document.querySelector('.carousel-container');
       expect(container).toBeInTheDocument();
     });
 

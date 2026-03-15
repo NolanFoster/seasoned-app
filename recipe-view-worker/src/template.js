@@ -1,23 +1,38 @@
-import { formatDuration, formatIngredientAmount } from '../../shared/utility-functions.js';
+import { renderRecipeCard } from './renderRecipeCard.js';
+
+// Normalise an ingredient to a plain string (mirrors RecipeCardDisplay logic)
+function ingredientToString(ing) {
+  if (typeof ing === 'string') return ing;
+  return ing.name || ing.text || JSON.stringify(ing);
+}
 
 // Generate the HTML template for the recipe page
 export function generateRecipeHTML(recipe) {
-  // Extract recipe data
-  const name = recipe.name || 'Untitled Recipe';
-  const description = recipe.description || '';
-  const prepTime = recipe.prep_time || recipe.prepTime;
-  const cookTime = recipe.cook_time || recipe.cookTime;
-  const totalTime = recipe.total_time || recipe.totalTime;
-  const recipeYield = recipe.recipe_yield || recipe.recipeYield || recipe.yield;
-  const ingredients = recipe.ingredients || [];
-  const instructions = recipe.instructions || [];
-  const imageUrl = recipe.image_url || recipe.imageUrl || recipe.image || '';
-  const sourceUrl = recipe.source_url || recipe.sourceUrl || recipe.url || '';
-  const videoUrl = recipe.video_url || recipe.videoUrl || '';
-  const nutrition = recipe.nutrition || {};
+  // Normalise field aliases so RecipeCardDisplay always gets the canonical names
+  const normalised = {
+    ...recipe,
+    name: recipe.name || recipe.title || 'Untitled Recipe',
+    prep_time: recipe.prep_time || recipe.prepTime,
+    cook_time: recipe.cook_time || recipe.cookTime,
+    recipe_yield: recipe.recipe_yield || recipe.recipeYield || recipe.yield,
+    image: recipe.image || recipe.image_url || recipe.imageUrl,
+    source_url: recipe.source_url || recipe.sourceUrl || recipe.url,
+  };
 
-  // Generate styles
-  const styles = generateStyles();
+  const name = normalised.name;
+  const description = normalised.description || '';
+  const imageUrl = normalised.image || '';
+  const prepTime = normalised.prep_time;
+  const cookTime = normalised.cook_time;
+  const ingredients = normalised.ingredients || [];
+  const instructions = normalised.instructions || [];
+  const videoUrl = recipe.video_url || recipe.videoUrl || '';
+
+  // Compute total cook duration for wake lock auto-off
+  const recipeDurationMins = parseDurationToMinutes(prepTime) + parseDurationToMinutes(cookTime);
+
+  // SSR the recipe card using the shared React component
+  const cardHTML = renderRecipeCard(normalised);
 
   // Generate the HTML
   return `<!DOCTYPE html>
@@ -27,305 +42,322 @@ export function generateRecipeHTML(recipe) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(name)} - Recipe</title>
   <meta name="description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
-  
+
   <!-- Open Graph meta tags for social sharing -->
   <meta property="og:title" content="${escapeHtml(name)}">
   <meta property="og:description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
   <meta property="og:type" content="website">
   ${imageUrl ? `<meta property="og:image" content="${escapeHtml(imageUrl)}">` : ''}
-  
+
   <!-- Twitter Card meta tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(name)}">
   <meta name="twitter:description" content="${escapeHtml(description || `View the recipe for ${name}`)}">
   ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ''}
-  
-  <style>${styles}</style>
+
+  <style>${generateStyles()}</style>
 </head>
 <body>
-  <div class="recipe-fullscreen">
-    <!-- Background Image -->
-    <div class="recipe-full-background">
-      ${imageUrl ? 
-        `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" class="recipe-full-background-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-         <div class="recipe-full-background-placeholder" style="display:none;"><div class="placeholder-gradient"></div></div>` : 
-        `<div class="recipe-full-background-placeholder"><div class="placeholder-gradient"></div></div>`
-      }
-    </div>
-
-    <!-- Title Section -->
-    <div class="recipe-title-section">
-      <h1 class="recipe-fullscreen-title">${escapeHtml(name)}</h1>
-      
-      <!-- Recipe Timing Info -->
-      ${(prepTime || cookTime || totalTime || recipeYield) ? `
-        <div class="recipe-timing-info">
-          ${prepTime ? `
-            <div class="timing-item">
-              <span class="timing-icon">⏱️</span>
-              <span class="timing-label">Prep:<span class="timing-value">${formatDuration(prepTime)}</span></span>
-            </div>
-          ` : ''}
-          ${cookTime ? `
-            <div class="timing-item">
-              <span class="timing-icon">🔥</span>
-              <span class="timing-label">Cook:<span class="timing-value">${formatDuration(cookTime)}</span></span>
-            </div>
-          ` : ''}
-          ${totalTime ? `
-            <div class="timing-item">
-              <span class="timing-icon">⏰</span>
-              <span class="timing-label">Total:<span class="timing-value">${formatDuration(totalTime)}</span></span>
-            </div>
-          ` : ''}
-          ${recipeYield ? `
-            <div class="timing-item">
-              <span class="timing-icon">🍽️</span>
-              <span class="timing-label">Servings:<span class="timing-value">${escapeHtml(recipeYield)}</span></span>
-            </div>
-          ` : ''}
-        </div>
-      ` : ''}
-      
-      <!-- Recipe Links -->
-      <div class="recipe-links">
-        ${sourceUrl ? `
-          <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="recipe-link source-link">
-            <span>🔗</span>
-            <span>View Original</span>
-          </a>
-        ` : ''}
-        ${videoUrl ? `
-          <a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="recipe-link video-link">
-            <span>🎥</span>
-            <span>Watch Video</span>
-          </a>
-        ` : ''}
-      </div>
-    </div>
-    
-    <!-- Recipe Content -->
-    <div class="recipe-fullscreen-content">
-      <!-- Ingredients Panel -->
-      <div class="recipe-panel">
-        <h2>Ingredients</h2>
-        <ul class="ingredients-list">
-          ${ingredients.map(ingredient => {
-            const formatted = formatIngredientAmount(ingredient);
-            return `<li>${escapeHtml(formatted)}</li>`;
-          }).join('')}
-        </ul>
-      </div>
-      
-      <!-- Instructions Panel -->
-      <div class="recipe-panel">
-        <h2>Instructions</h2>
-        <ol class="instructions-list">
-          ${instructions.map((instruction, index) => {
-            const text = typeof instruction === 'string' ? instruction : 
-                       (instruction.text || instruction.name || String(instruction));
-            return `<li>${renderInstructionWithTimers(escapeHtml(text))}</li>`;
-          }).join('')}
-        </ol>
-      </div>
-    </div>
+  <div class="page-wrapper">
+    ${cardHTML}
+    ${videoUrl ? `<div class="page-video-link"><a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch Video ↗</a></div>` : ''}
+    <!-- Wake lock: floating button, touch devices only (CSS media query) -->
+    <button class="wake-lock-float" id="wake-lock-btn" title="Keep screen on while cooking" aria-label="Keep screen on">
+      <span id="wake-lock-icon">🌙</span>
+    </button>
   </div>
   
   <script>
-    // Timer state management
-    window.activeTimers = new Map();
-    
-    // Handle timer button clicks
-    window.handleTimerClick = function(button) {
-      const timerId = button.getAttribute('data-timer-id');
-      const duration = parseInt(button.getAttribute('data-duration'));
-      const timeText = button.getAttribute('data-time-text');
-      
-      if (window.activeTimers.has(timerId)) {
-        // Timer is active, toggle play/pause
-        const timer = window.activeTimers.get(timerId);
-        if (timer.isPaused) {
-          resumeTimer(timerId);
-        } else {
-          pauseTimer(timerId);
-        }
-      } else {
-        // Start new timer
-        startTimer(button, timerId, duration, timeText);
+    // Wake Lock
+    (function() {
+      var btn = document.getElementById('wake-lock-btn');
+      var icon = document.getElementById('wake-lock-icon');
+      if (!btn) return;
+
+      if (!('wakeLock' in navigator)) {
+        btn.style.display = 'none';
+        return;
       }
-    };
-    
-    // Toggle timer play/pause
-    window.toggleTimer = function(timerId) {
-      const timer = window.activeTimers.get(timerId);
-      if (timer) {
-        if (timer.isPaused) {
-          resumeTimer(timerId);
+
+      var wakeLock = null;
+      var wakeLockTimer = null;
+      var recipeDurationMins = ${recipeDurationMins};
+
+      function setActive(active) {
+        if (active) {
+          btn.classList.add('active');
+          btn.title = 'Screen is staying on – tap to disable';
+          icon.textContent = '☀️';
         } else {
-          pauseTimer(timerId);
+          btn.classList.remove('active');
+          btn.title = 'Keep screen on while cooking';
+          icon.textContent = '🌙';
         }
       }
-    };
-    
-    function startTimer(button, timerId, duration, timeText) {
-      // Transform button into timer display
-      const timerContainer = document.createElement('div');
-      timerContainer.className = 'timer-active-container';
-      timerContainer.innerHTML = \\\`
-        <div class="timer-display">
-          <span class="timer-time">\\\${formatTime(duration)}</span>
-          <span class="timer-label">\\\${timeText}</span>
-        </div>
-        <button class="timer-control-btn play-pause-btn" data-timer-id="\\\${timerId}" onclick="window.toggleTimer('\\\${timerId}')">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-          </svg>
-        </button>
-        <button class="timer-control-btn stop-btn" onclick="window.stopTimer('\\\${timerId}')">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 6h12v12H6z"/>
-          </svg>
-        </button>
-      \\\`;
-      
-      // Store reference to original button in container
-      const hiddenButton = button.cloneNode(true);
-      hiddenButton.style.display = 'none';
-      timerContainer.appendChild(hiddenButton);
-      
-      button.parentNode.replaceChild(timerContainer, button);
-      
-      // Create timer object
-      const timer = {
-        id: timerId,
-        duration: duration,
-        remaining: duration,
-        isPaused: false,
-        container: timerContainer,
-        originalButton: hiddenButton,
-        interval: undefined
-      };
-      
-      window.activeTimers.set(timerId, timer);
-      
-      // Start countdown
-      timer.interval = setInterval(() => updateTimer(timerId), 1000);
-    }
-    
-    function updateTimer(timerId) {
-      const timer = window.activeTimers.get(timerId);
-      if (!timer || timer.isPaused) return;
-      
-      timer.remaining--;
-      
-      // Update display
-      const timeDisplay = timer.container.querySelector('.timer-time');
-      timeDisplay.textContent = formatTime(timer.remaining);
-      
-      if (timer.remaining <= 0) {
-        // Timer finished
-        clearInterval(timer.interval);
-        playTimerSound();
-        showTimerComplete(timerId);
+
+      function releaseWakeLock() {
+        clearTimeout(wakeLockTimer);
+        wakeLockTimer = null;
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        setActive(false);
       }
-    }
-    
-    function pauseTimer(timerId) {
-      const timer = window.activeTimers.get(timerId);
-      if (!timer) return;
-      
-      timer.isPaused = true;
-      clearInterval(timer.interval);
-      
-      // Update button icon to play
-      const playPauseBtn = timer.container.querySelector('.play-pause-btn');
-      playPauseBtn.innerHTML = \\\`
-        <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon">
-          <path d="M8 5v14l11-7z"/>
-        </svg>
-      \\\`;
-    }
-    
-    function resumeTimer(timerId) {
-      const timer = window.activeTimers.get(timerId);
-      if (!timer) return;
-      
-      timer.isPaused = false;
-      timer.interval = setInterval(() => updateTimer(timerId), 1000);
-      
-      // Update button icon to pause
-      const playPauseBtn = timer.container.querySelector('.play-pause-btn');
-      playPauseBtn.innerHTML = \\\`
-        <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-        </svg>
-      \\\`;
-    }
-    
-    window.stopTimer = function(timerId) {
-      const timer = window.activeTimers.get(timerId);
-      if (!timer) return;
-      
-      clearInterval(timer.interval);
-      
-      // Restore original button
-      timer.container.parentNode.replaceChild(timer.originalButton, timer.container);
-      timer.originalButton.style.display = '';
-      
-      window.activeTimers.delete(timerId);
-    }
-    
-    function showTimerComplete(timerId) {
-      const timer = window.activeTimers.get(timerId);
-      if (!timer) return;
-      
-      // Flash completion state
-      timer.container.classList.add('timer-complete');
-      const timeDisplay = timer.container.querySelector('.timer-time');
-      timeDisplay.textContent = 'Done!';
-      
-      // Auto-remove after 3 seconds
-      setTimeout(() => window.stopTimer(timerId), 3000);
-    }
-    
-    function formatTime(seconds) {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
-      
-      if (hours > 0) {
-        return \\\`\\\${hours}:\\\${minutes.toString().padStart(2, '0')}:\\\${secs.toString().padStart(2, '0')}\\\`;
-      } else {
-        return \\\`\\\${minutes}:\\\${secs.toString().padStart(2, '0')}\\\`;
+
+      async function acquireWakeLock() {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          setActive(true);
+          var autoOff = recipeDurationMins > 0 ? recipeDurationMins + 15 : 0;
+          if (autoOff > 0) {
+            wakeLockTimer = setTimeout(releaseWakeLock, autoOff * 60 * 1000);
+          }
+          wakeLock.addEventListener('release', function() {
+            wakeLock = null;
+            setActive(false);
+          });
+        } catch(e) {
+          console.error('Wake Lock failed:', e);
+          setActive(false);
+        }
       }
-    }
-    
-    function playTimerSound() {
-      // Create a simple beep sound using Web Audio API
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-      } catch (e) {
-        // Fallback if Web Audio API is not supported
-        console.log('Timer complete!');
+
+      btn.addEventListener('click', function() {
+        if (wakeLock) { releaseWakeLock(); } else { acquireWakeLock(); }
+      });
+
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && !wakeLock && btn.classList.contains('active')) {
+          acquireWakeLock();
+        }
+      });
+    })();
+
+    // ── Cooking Navigator ──────────────────────────────────────────────────────
+    (function() {
+      var cookBtn = document.getElementById('cook-btn');
+      if (!cookBtn) return;
+
+      var rawIngredients = ${JSON.stringify(
+        ingredients.map(ing => ingredientToString(ing))
+      )};
+      var rawInstructions = ${JSON.stringify(
+        instructions.map(inst => typeof inst === 'string' ? inst : (inst.text || inst.name || String(inst)))
+      )};
+
+      var currentStep = 0;
+      var cnTimers = {};
+      var cnSoundIntervals = {};
+
+      function playBeep() {
+        try {
+          var ctx = new (window.AudioContext || window.webkitAudioContext)();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 800;
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.6);
+        } catch(e) {}
       }
-    }
+
+      function startRepeatingSound(id) {
+        clearInterval(cnSoundIntervals[id]);
+        playBeep();
+        cnSoundIntervals[id] = setInterval(playBeep, 2000);
+        setTimeout(function() {
+          clearInterval(cnSoundIntervals[id]);
+          delete cnSoundIntervals[id];
+        }, 120000);
+      }
+
+      function stopSound(id) {
+        clearInterval(cnSoundIntervals[id]);
+        delete cnSoundIntervals[id];
+      }
+
+      // Use [0-9] instead of \d and space literals instead of \s —
+      // template-literal escape processing strips backslashes in the output.
+      var TIME_RE = /([0-9]+)(?:-([0-9]+))? *(second|minute|min|hour|hr)s?/gi;
+      var QTY_RE = /^([0-9][0-9/.,]*|[¼½¾⅓⅔⅛⅜⅝⅞]|tbsp|tsp|cup|oz|lb|g|kg|ml|l|liter|litre|tablespoon|teaspoon|pinch|handful|bunch|clove|cloves|can|cans|slice|slices|piece|pieces|sprig|sprigs)s?$/i;
+
+      function parseTimers(text) {
+        TIME_RE.lastIndex = 0;
+        var out = [], m;
+        while ((m = TIME_RE.exec(text)) !== null) {
+          var n = m[2] != null ? parseInt(m[2]) : parseInt(m[1]);
+          var u = m[3].toLowerCase();
+          var secs = u === 'second' ? n : (u === 'hour' || u === 'hr') ? n * 3600 : n * 60;
+          out.push({ start: m.index, end: m.index + m[0].length, label: m[0], seconds: secs });
+        }
+        return out;
+      }
+
+      function matchIngredients(stepText) {
+        var lower = stepText.toLowerCase();
+        return rawIngredients.map(function(ing) {
+          var tokens = ing.toLowerCase().split(' ');
+          var nameTokens = tokens.filter(function(t) { return !QTY_RE.test(t); });
+          var relevant = nameTokens.length > 0 && nameTokens.some(function(t) { return t.length > 2 && lower.indexOf(t) !== -1; });
+          return { text: ing, relevant: relevant };
+        });
+      }
+
+      function esc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      function fmtTime(secs) {
+        var m = Math.floor(secs / 60), s = secs % 60;
+        return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      }
+
+      function buildStepHTML(stepText, stepIdx) {
+        var timers = parseTimers(stepText);
+        if (!timers.length) return esc(stepText);
+        var html = '', cursor = 0;
+        timers.forEach(function(t, mi) {
+          if (t.start > cursor) html += esc(stepText.slice(cursor, t.start));
+          var id = 'cn-t-' + stepIdx + '-' + mi;
+          var active = !!cnTimers[id];
+          // Use data-cn-action — no quoted string args needed in event handlers
+          html += '<button class="cn-timer-btn' + (active ? ' cn-timer-btn--active' : '') + '"' +
+            ' data-cn-action="timer-start" data-cn-id="' + id +
+            '" data-label="' + esc(t.label) + '" data-secs="' + t.seconds + '"' +
+            (active ? ' disabled' : '') + '>&#9201; ' + esc(t.label) + '</button>';
+          cursor = t.end;
+        });
+        if (cursor < stepText.length) html += esc(stepText.slice(cursor));
+        return html;
+      }
+
+      function buildTimerStrip() {
+        var ids = Object.keys(cnTimers);
+        if (!ids.length) return '';
+        var html = '<div class="cn-timer-strip">';
+        ids.forEach(function(id) {
+          var t = cnTimers[id];
+          var cls = 'cn-timer-pill' + (t.isPaused ? ' cn-timer-pill--paused' : '') + (t.isDone ? ' cn-timer-pill--done' : '');
+          html += '<div class="' + cls + '">';
+          html += '<span class="cn-timer-pill-label">' + esc(t.label) + '</span>';
+          html += '<span class="cn-timer-pill-time" id="cn-pt-' + id + '">' + fmtTime(t.remainingSeconds) + '</span>';
+          if (t.isDone) {
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-stop" data-cn-id="' + id + '">&#10003;</button>';
+          } else if (t.isPaused) {
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-resume" data-cn-id="' + id + '">&#9654;&#xFE0E;</button>';
+          } else {
+            html += '<button class="cn-timer-pill-action" data-cn-action="timer-pause" data-cn-id="' + id + '">&#9208;&#xFE0E;</button>';
+          }
+          html += '<button class="cn-timer-pill-stop" data-cn-action="timer-stop" data-cn-id="' + id + '">&#10005;</button>';
+          html += '</div>';
+        });
+        return html + '</div>';
+      }
+
+      function render() {
+        var overlay = document.getElementById('cn-overlay');
+        if (!overlay) return;
+        var total = rawInstructions.length;
+        var stepText = rawInstructions[currentStep] || '';
+        var chips = matchIngredients(stepText);
+        var pct = ((currentStep + 1) / total * 100).toFixed(1);
+        var html = buildTimerStrip();
+        html += '<div class="cn-progress-bar"><div class="cn-progress-fill" style="width:' + pct + '%"></div></div>';
+        html += '<div class="cn-header"><span class="cn-step-counter">Step ' + (currentStep + 1) + ' of ' + total + '</span>' +
+          '<button class="cn-close-btn" data-cn-action="close">&#10005;</button></div>';
+        html += '<div class="cn-step-body"><p class="cn-step-text">' + buildStepHTML(stepText, currentStep) + '</p></div>';
+        if (chips.length) {
+          html += '<div class="cn-ingredients"><span class="cn-ingredients-label">Ingredients this step</span><div class="cn-ingredient-chips">';
+          chips.forEach(function(c) {
+            html += '<span class="cn-ingredient-chip' + (c.relevant ? ' cn-ingredient-chip--active' : '') + '">' + esc(c.text) + '</span>';
+          });
+          html += '</div></div>';
+        }
+        html += '<div class="cn-nav">' +
+          '<button class="cn-nav-btn cn-nav-btn--prev" data-cn-action="prev"' + (currentStep === 0 ? ' disabled' : '') + '>&#8592; Prev</button>' +
+          '<button class="cn-nav-btn cn-nav-btn--next" data-cn-action="next"' + (currentStep === total - 1 ? ' disabled' : '') + '>Next &#8594;</button>' +
+          '</div>';
+        overlay.innerHTML = html;
+      }
+
+      // Single delegated listener on overlay — avoids inline onclick with quoted args
+      function handleOverlayClick(e) {
+        var btn = e.target.closest('[data-cn-action]');
+        if (!btn || btn.disabled) return;
+        var action = btn.getAttribute('data-cn-action');
+        var id = btn.getAttribute('data-cn-id');
+        if (action === 'close') {
+          Object.keys(cnTimers).forEach(function(tid) { clearInterval(cnTimers[tid].intervalId); stopSound(tid); });
+          cnTimers = {};
+          var ov = document.getElementById('cn-overlay');
+          if (ov) ov.remove();
+        } else if (action === 'prev') {
+          if (currentStep > 0) { currentStep--; render(); }
+        } else if (action === 'next') {
+          if (currentStep < rawInstructions.length - 1) { currentStep++; render(); }
+        } else if (action === 'timer-start') {
+          if (cnTimers[id]) return;
+          var label = btn.getAttribute('data-label');
+          var secs = parseInt(btn.getAttribute('data-secs'));
+          cnTimers[id] = { label: label, remainingSeconds: secs, isPaused: false, isDone: false, intervalId: null };
+          cnTimers[id].intervalId = setInterval(function() {
+            var t = cnTimers[id];
+            if (!t || t.isPaused) return;
+            t.remainingSeconds--;
+            var el = document.getElementById('cn-pt-' + id);
+            if (el) el.textContent = fmtTime(t.remainingSeconds);
+            if (t.remainingSeconds <= 0) { clearInterval(t.intervalId); t.isDone = true; startRepeatingSound(id); render(); }
+          }, 1000);
+          render();
+        } else if (action === 'timer-pause') {
+          if (cnTimers[id]) { clearInterval(cnTimers[id].intervalId); cnTimers[id].isPaused = true; render(); }
+        } else if (action === 'timer-resume') {
+          var t = cnTimers[id];
+          if (!t) return;
+          t.isPaused = false;
+          t.intervalId = setInterval(function() {
+            var ct = cnTimers[id];
+            if (!ct || ct.isPaused) return;
+            ct.remainingSeconds--;
+            var el = document.getElementById('cn-pt-' + id);
+            if (el) el.textContent = fmtTime(ct.remainingSeconds);
+            if (ct.remainingSeconds <= 0) { clearInterval(ct.intervalId); ct.isDone = true; startRepeatingSound(id); render(); }
+          }, 1000);
+          render();
+        } else if (action === 'timer-stop') {
+          if (cnTimers[id]) { clearInterval(cnTimers[id].intervalId); delete cnTimers[id]; stopSound(id); render(); }
+        }
+      }
+
+      cookBtn.addEventListener('click', function() {
+        currentStep = 0;
+        var existing = document.getElementById('cn-overlay');
+        if (existing) existing.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'cn-overlay';
+        overlay.id = 'cn-overlay';
+        overlay.addEventListener('click', handleOverlayClick);
+        document.querySelector('.recipe-card').appendChild(overlay);
+        render();
+      });
+    })();
   </script>
 </body>
 </html>`;
+}
+
+// Server-side duration parser (minutes) for wake lock auto-off
+function parseDurationToMinutes(val) {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  const str = String(val).trim().toUpperCase();
+  if (!str.startsWith('PT') && !str.startsWith('P')) return 0;
+  let mins = 0;
+  const h = str.match(/(\d+)H/); if (h) mins += parseInt(h[1]) * 60;
+  const m = str.match(/(\d+)M/); if (m) mins += parseInt(m[1]);
+  return mins;
 }
 
 // Server-side HTML escaping
@@ -339,637 +371,508 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
-// Render instruction text with timer buttons
-function renderInstructionWithTimers(text) {
-  if (!text) return '';
-  
-  // Pattern to match time expressions (e.g., "5 minutes", "1 hour", "30 seconds", "1-2 minutes")
-  const timePattern = /(\d+(?:-\d+)?)\s*(hours?|minutes?|mins?|seconds?|secs?)/gi;
-  let lastIndex = 0;
-  let result = '';
-  let match;
-  let timerCount = 0;
-  
-  while ((match = timePattern.exec(text)) !== null) {
-    // Add text before the match
-    result += text.slice(lastIndex, match.index);
-    
-    // Extract time value and unit
-    const timeValue = match[1];
-    const timeUnit = match[2].toLowerCase();
-    
-    // Normalize unit
-    let normalizedUnit = timeUnit;
-    if (timeUnit.startsWith('hour')) normalizedUnit = 'hour';
-    else if (timeUnit.startsWith('min')) normalizedUnit = 'min';
-    else if (timeUnit.startsWith('sec')) normalizedUnit = 'sec';
-    
-    // Calculate duration in seconds (use max value for ranges)
-    const maxValue = timeValue.includes('-') ? 
-      parseInt(timeValue.split('-')[1]) : 
-      parseInt(timeValue);
-    
-    let durationInSeconds = maxValue;
-    if (normalizedUnit === 'hour') durationInSeconds *= 3600;
-    else if (normalizedUnit === 'min') durationInSeconds *= 60;
-    
-    // Add the time text with a timer button
-    timerCount++;
-    result += match[0] + ` <button class="timer-button-inline" 
-              data-duration="${durationInSeconds}" 
-              data-timer-id="timer-${Date.now()}-${timerCount}"
-              data-time-text="${match[0]}"
-              onclick="window.handleTimerClick(this)">
-        <svg class="timer-icon-inline" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/>
-        </svg>
-      </button>`;
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add remaining text
-  result += text.slice(lastIndex);
-  
-  return result;
-}
-
 // Generate the complete CSS styles
 function generateStyles() {
   return `
     /* Reset and Base Styles */
-    * {
+    *, *::before, *::after {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #000;
-      overflow-x: hidden;
+    :root {
+      --bg: #0d1a0f;
+      --surface: #142016;
+      --surface2: #1b2c1d;
+      --border: #2a3d2c;
+      --text: #e8f0e4;
+      --text-muted: #7a9b80;
+      --accent: #c8a96e;
+      --radius: 14px;
+      --radius-sm: 8px;
     }
 
-    /* Full Screen Recipe View */
-    .recipe-fullscreen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: transparent;
-      overflow-y: auto;
-      color: white;
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Page wrapper — centers the card like the recipe-app */
+    .page-wrapper {
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
-    }
-
-    /* Recipe Title Section */
-    .recipe-title-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      padding-top: 60px;
-      z-index: 2;
-      text-align: center;
-      padding-left: 40px;
-      padding-right: 40px;
-      padding-bottom: 20px;
-    }
-
-    .recipe-fullscreen-title {
-      color: white;
-      font-size: 2.5em;
-      font-weight: 600;
-      margin: 0 auto;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-      padding: 15px 25px;
-      display: inline-block;
-      width: fit-content;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
-    }
-
-    /* Recipe Timing Info */
-    .recipe-timing-info {
-      display: flex;
-      gap: 2rem;
+      align-items: flex-start;
       justify-content: center;
-      align-items: center;
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
-      flex-wrap: wrap;
+      padding: 40px 16px 60px;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% -10%, rgba(91,184,122,0.08) 0%, transparent 70%),
+        var(--bg);
     }
 
-    .timing-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .timing-icon {
-      font-size: 1.2em;
-    }
-
-    .timing-label {
-      font-size: 0.9em;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      opacity: 0.9;
-      font-weight: 500;
-    }
-
-    .timing-value {
-      font-weight: 600;
-      margin-left: 0.25rem;
-    }
-
-    /* Recipe Links */
-    .recipe-links {
-      display: flex;
-      gap: 1rem;
-      margin-top: 0.5rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .recipe-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-      text-decoration: none;
-      border-radius: 25px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
-      cursor: pointer;
-    }
-
-    .recipe-link:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
-    }
-
-    .recipe-link.source-link {
-      background: rgba(52, 152, 219, 0.2);
-      border: 1px solid rgba(52, 152, 219, 0.3);
-    }
-
-    .recipe-link.source-link:hover {
-      background: rgba(52, 152, 219, 0.4);
-      border-color: rgba(52, 152, 219, 0.5);
-    }
-
-    .recipe-link.video-link {
-      background: rgba(231, 76, 60, 0.2);
-      border: 1px solid rgba(231, 76, 60, 0.3);
-    }
-
-    .recipe-link.video-link:hover {
-      background: rgba(231, 76, 60, 0.4);
-      border-color: rgba(231, 76, 60, 0.5);
-    }
-
-    /* Recipe Content */
-    .recipe-fullscreen-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      padding: 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-      margin-top: 30px;
-      position: relative;
-      z-index: 1;
+    /* Recipe Card */
+    .recipe-card {
       width: 100%;
-      box-sizing: border-box;
+      max-width: 720px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
     }
 
-    /* Recipe Panels */
-    .recipe-panel {
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 15px;
-      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
-      overflow: hidden;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+    /* Card Header */
+    .recipe-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    /* Title row — matches RecipeCardDisplay structure */
+    .recipe-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .recipe-title {
+      font-size: 1.375rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
       min-width: 0;
     }
 
-    .recipe-panel h2 {
-      color: white;
-      margin: 0 0 20px 0;
-      font-size: 1.5em;
+    .recipe-source-badge {
+      flex-shrink: 0;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
       font-weight: 600;
-    }
-
-    .ingredients-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .ingredients-list li {
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-      color: white;
-      font-size: 1.1em;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-    }
-
-    .ingredients-list li:last-child {
-      border-bottom: none;
-    }
-
-    .instructions-list {
-      padding-left: 20px;
-      margin: 0;
-    }
-
-    .instructions-list li {
-      padding: 15px 0;
-      color: white;
-      font-size: 1.1em;
-      line-height: 1.6;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-    }
-
-    .instructions-list li:last-child {
-      border-bottom: none;
-    }
-
-    /* Full Background Image */
-    .recipe-full-background {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: -1;
-    }
-
-    .recipe-full-background::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.3);
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .recipe-full-background-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .recipe-full-background-placeholder {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
-
-    .placeholder-gradient {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    /* Mobile responsiveness */
-    @media (max-width: 1024px) {
-      .recipe-fullscreen-content {
-        grid-template-columns: 1fr;
-        gap: 25px;
-        padding: 30px;
-        max-width: 800px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .recipe-fullscreen-content {
-        padding: 0 20px 20px;
-        margin-top: 20px;
-        gap: 20px;
-        max-width: 600px;
-      }
-      
-      .recipe-title-section {
-        padding: 40px 20px 20px 20px;
-      }
-      
-      .recipe-fullscreen-title {
-        font-size: 1.8em;
-        line-height: 1.2;
-      }
-      
-      .recipe-timing-info {
-        gap: 1.5rem;
-        margin-top: 0.8rem;
-        margin-bottom: 0.4rem;
-      }
-      
-      .timing-item {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.9em;
-      }
-      
-      .timing-icon {
-        font-size: 1em;
-      }
-      
-      .timing-label {
-        font-size: 0.85em;
-      }
-      
-      .recipe-links {
-        margin-top: 0.5rem;
-      }
-      
-      .recipe-link {
-        padding: 0.5rem 1rem;
-        font-size: 0.85rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .recipe-fullscreen-title {
-        font-size: 1.5em;
-      }
-      
-      .recipe-title-section {
-        padding: 30px 15px 15px 15px;
-      }
-      
-      .recipe-timing-info {
-        gap: 1rem;
-        margin-top: 0.6rem;
-      }
-      
-      .timing-item {
-        padding: 0.3rem 0.6rem;
-        font-size: 0.8em;
-      }
-      
-      .timing-icon {
-        font-size: 0.9em;
-      }
-      
-      .timing-label {
-        font-size: 0.8em;
-      }
-      
-      .recipe-fullscreen-content {
-        padding: 0 15px 15px;
-        margin-top: 15px;
-        gap: 15px;
-        max-width: 100%;
-        width: 100%;
-      }
-      
-      .recipe-panel {
-        padding: 20px;
-        margin: 0 auto;
-        width: 100%;
-        max-width: 500px;
-      }
-      
-      .recipe-panel h2 {
-        font-size: 1.3em;
-        margin-bottom: 15px;
-      }
-      
-      .ingredients-list li,
-      .instructions-list li {
-        font-size: 1em;
-        padding: 10px 0;
-      }
-      
-      .instructions-list {
-        padding-left: 15px;
-      }
-    }
-
-    /* Timer Button Styles */
-
-    .timer-button-inline {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4px 8px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      vertical-align: middle;
-      color: white;
-      margin-left: 4px;
-    }
-
-    .timer-button-inline:hover {
-      background: rgba(255, 255, 255, 0.25);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .timer-button-inline:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-
-    .timer-icon-inline {
-      width: 16px;
-      height: 16px;
-      fill: white;
-    }
-
-    /* Active Timer Styles */
-    .timer-active-container {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 20px;
-      padding: 6px 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-      animation: timer-pulse 2s ease-in-out infinite;
-      margin-left: 8px;
-    }
-
-    @keyframes timer-pulse {
-      0%, 100% {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-      }
-      50% {
-        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
-      }
-    }
-
-    .timer-display {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
-    }
-
-    .timer-time {
-      font-size: 1.1em;
-      font-weight: 600;
-      color: white;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .timer-label {
-      font-size: 0.75em;
-      color: rgba(255, 255, 255, 0.8);
+      color: #fff;
       white-space: nowrap;
     }
 
-    .timer-control-btn {
+    /* Source link inside recipe-meta */
+    .recipe-meta a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 3px 8px;
+    }
+    .recipe-meta a:hover {
+      text-decoration: underline;
+    }
+
+    /* Page-level video link */
+    .page-video-link {
+      max-width: 720px;
+      margin: 8px auto 0;
+      padding: 0 16px;
+      text-align: right;
+    }
+    .page-video-link a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+    .page-video-link a:hover { text-decoration: underline; }
+
+    /* Recipe Image */
+    .recipe-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Description */
+    .recipe-description {
+      padding: 16px 20px 0;
+      font-size: 0.9375rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Meta pills */
+    .recipe-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      padding: 14px 20px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .recipe-meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface2);
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-size: 0.85rem;
+    }
+
+    .recipe-meta-pill strong {
+      color: var(--text);
+    }
+
+    .meta-link {
+      color: var(--accent);
+      text-decoration: none;
+      padding: 3px 10px;
+    }
+    .meta-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Recipe Body — two-column grid */
+    .recipe-body {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+    }
+
+    @media (max-width: 560px) {
+      .recipe-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .recipe-section {
+      padding: 20px;
+    }
+    .recipe-section + .recipe-section {
+      border-left: 1px solid var(--border);
+    }
+
+    @media (max-width: 560px) {
+      .recipe-section + .recipe-section {
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+    }
+
+    .recipe-section h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .recipe-section:first-child h3 {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .recipe-section ul,
+    .recipe-section ol {
+      padding-left: 18px;
+    }
+
+    .recipe-section li {
+      font-size: 0.9rem;
+      line-height: 1.75;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    /* Wake Lock — floating button, touch devices only */
+    .wake-lock-float {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 50;
+      width: 44px;
+      height: 44px;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .wake-lock-float { display: flex; }
+    }
+    .wake-lock-float.active {
+      background: rgba(255, 200, 0, 0.15);
+      border-color: rgba(255, 200, 0, 0.4);
+      box-shadow: 0 0 12px rgba(255, 200, 0, 0.4);
+    }
+
+    /* ── Cook Button ── */
+    .cook-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: rgba(91,184,122,0.12);
+      border: 1px solid rgba(91,184,122,0.3);
+      border-radius: var(--radius-sm);
+      color: #5bb87a;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cook-btn:hover {
+      background: rgba(91,184,122,0.22);
+    }
+
+    /* ── CookingNavigator ── */
+    @keyframes cn-slide-up {
+      from { opacity: 0; transform: translateY(24px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .cn-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--surface);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      animation: cn-slide-up 0.28s ease;
+    }
+
+    .cn-timer-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .cn-timer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(200,169,110,0.12);
+      border: 1px solid rgba(200,169,110,0.35);
+      border-radius: 99px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      animation: cn-timer-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes cn-timer-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(200,169,110,0); }
+      50%       { box-shadow: 0 0 0 3px rgba(200,169,110,0.25); }
+    }
+
+    .cn-timer-pill.cn-timer-pill--paused {
+      animation: none;
+      opacity: 0.65;
+    }
+
+    .cn-timer-pill.cn-timer-pill--done {
+      border-color: #5bb87a;
+      color: #5bb87a;
+      background: rgba(91,184,122,0.1);
+      animation: none;
+    }
+
+    .cn-timer-pill-label { font-weight: 500; }
+
+    .cn-timer-pill-time {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .cn-timer-pill-action,
+    .cn-timer-pill-stop {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+      font-size: 0.75rem;
+      padding: 0 2px;
+      line-height: 1;
+      opacity: 0.8;
+      transition: opacity 0.15s;
+    }
+    .cn-timer-pill-action:hover,
+    .cn-timer-pill-stop:hover { opacity: 1; }
+
+    .cn-progress-bar {
+      height: 3px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .cn-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .cn-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 8px;
+      flex-shrink: 0;
+    }
+
+    .cn-step-counter {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+    }
+
+    .cn-close-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       width: 28px;
       height: 28px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s ease;
-      padding: 0;
+      font-size: 0.8rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .cn-close-btn:hover {
+      background: var(--border);
+      color: var(--text);
     }
 
-    .timer-control-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: scale(1.1);
+    .cn-step-body {
+      flex: 1;
+      padding: 16px 24px 8px;
+      overflow-y: auto;
     }
 
-    .timer-control-btn svg {
-      width: 16px;
-      height: 16px;
-      fill: white;
+    .cn-step-text {
+      font-size: 1.1rem;
+      line-height: 1.75;
+      color: var(--text);
     }
 
-    .play-pause-btn svg {
-      width: 14px;
-      height: 14px;
+    .cn-timer-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      margin: 0 2px;
+      background: rgba(200,169,110,0.12);
+      border: 1px solid rgba(200,169,110,0.4);
+      border-radius: 99px;
+      color: var(--accent);
+      font-size: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cn-timer-btn:hover:not([disabled]) {
+      background: rgba(200,169,110,0.22);
+    }
+    .cn-timer-btn.cn-timer-btn--active {
+      opacity: 0.5;
+      cursor: default;
     }
 
-    .stop-btn svg {
-      width: 12px;
-      height: 12px;
+    .cn-ingredients {
+      padding: 8px 24px 12px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
-    /* Timer Complete State */
-    .timer-active-container.timer-complete {
-      background: rgba(76, 175, 80, 0.3);
-      border-color: rgba(76, 175, 80, 0.5);
-      animation: timer-complete 0.5s ease;
+    .cn-ingredients-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
     }
 
-    @keyframes timer-complete {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.1);
-      }
-      100% {
-        transform: scale(1);
-      }
+    .cn-ingredient-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
-    .timer-complete .timer-time {
-      color: #4CAF50;
-      text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    .cn-ingredient-chip {
+      font-size: 0.8rem;
+      padding: 3px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      color: var(--text-muted);
     }
 
-    /* Mobile Timer Styles */
-    @media (max-width: 480px) {
-      .timer-button-inline {
-        padding: 3px 6px;
-        font-size: 12px;
-      }
-      
-      .timer-icon-inline {
-        width: 14px;
-        height: 14px;
-      }
-      
-      .timer-active-container {
-        padding: 4px 8px;
-        gap: 6px;
-      }
-      
-      .timer-time {
-        font-size: 0.9em;
-      }
-      
-      .timer-label {
-        font-size: 0.7em;
-      }
-      
-      .timer-control-btn {
-        width: 24px;
-        height: 24px;
-      }
-      
-      .timer-control-btn svg {
-        width: 14px;
-        height: 14px;
-      }
+    .cn-ingredient-chip.cn-ingredient-chip--active {
+      border-color: var(--accent);
+      background: rgba(200,169,110,0.1);
+      color: var(--text);
     }
 
-    /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-      .recipe-panel {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .recipe-link {
-        background: rgba(0, 0, 0, 0.3);
-        border-color: rgba(255, 255, 255, 0.2);
-      }
-      
-      .recipe-link:hover {
-        background: rgba(0, 0, 0, 0.4);
-        border-color: rgba(255, 255, 255, 0.3);
-      }
+    .cn-nav {
+      display: flex;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .cn-nav-btn {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .cn-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .cn-nav-btn:not(:disabled):hover {
+      background: var(--border);
+      color: var(--text);
+    }
+    .cn-nav-btn.cn-nav-btn--next {
+      color: var(--accent);
+      border-color: rgba(200,169,110,0.4);
+    }
+    .cn-nav-btn.cn-nav-btn--next:not(:disabled):hover {
+      background: rgba(200,169,110,0.1);
+      color: var(--accent);
+      border-color: var(--accent);
     }
   `;
 }
