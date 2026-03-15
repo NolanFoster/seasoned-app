@@ -14,7 +14,8 @@
     "test:integration": "vitest run tests/integration",
     "test:ui": "vitest --ui",
     "lint": "eslint src tests",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "audit": "audit-ci --config audit-ci.json"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",
@@ -32,5 +33,10 @@
   },
   "dependencies": {
     "opik": "^1.8.34"
+  },
+  "overrides": {
+    "miniflare": {
+      "undici": "7.24.3"
+    }
   }
 }
