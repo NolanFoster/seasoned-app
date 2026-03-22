@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
 import AuthScreen from './AuthScreen.jsx'
+import PWAInstallPrompt from './PWAInstallPrompt.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
 import { useAuth } from './useAuth.js'
 
@@ -421,6 +422,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <PWAInstallPrompt />
       <UserMenu user={auth.user} onSignOut={auth.signOut} />
       <div className="omnibox-wrapper">
         <div className="brand">
