@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "vite",
+    "prebuild": "python3 ../scripts/generate-pwa-icons.py",
     "build": "vite build",
     "preview": "vite preview",
     "test": "jest",
