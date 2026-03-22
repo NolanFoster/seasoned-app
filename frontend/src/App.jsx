@@ -2030,13 +2030,14 @@ function App() {
           generationMethod: result.generationMethod
         };
 
+        // Clear search input BEFORE opening fullscreen to prevent the
+        // dropdown from briefly overlapping the generated recipe view
+        setSearchInput('');
+        setShowSearchResults(false);
+
         // Open the generated recipe directly in fullscreen view
         setSelectedRecipe(generatedRecipe);
         window.history.pushState({ recipeView: true }, '', window.location.href);
-        
-        // Clear search input
-        setSearchInput('');
-        setShowSearchResults(false);
         
         return true;
       } else {
@@ -2576,6 +2577,7 @@ function App() {
           isSearching={isSearching}
           onSearchBarClip={handleSearchBarClip}
           onSearchRecipes={searchRecipes}
+          onSearchResultsClear={() => { setShowSearchResults(false); setSearchResults([]); }}
           onRecipeSelect={openRecipeView}
           onClipDialogOpen={() => setIsClipping(true)}
           onGenerateAiRecipe={generateAiRecipeFromSearch}

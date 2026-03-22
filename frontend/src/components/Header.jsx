@@ -12,24 +12,25 @@ const Header = ({
   isSearching,
   onSearchBarClip,
   onSearchRecipes,
+  onSearchResultsClear,
   onRecipeSelect,
   onClipDialogOpen,
   onGenerateAiRecipe,
   isGeneratingAiRecipe
 }) => {
   const handleSearchInputChange = (e) => {
-    setSearchInput(e.target.value);
+    const value = e.target.value;
+    setSearchInput(value);
     
-    // Clear search results if it's a URL
-    if (isValidUrl(e.target.value)) {
-      // Clear search results if it's a URL
-      // This will be handled by the parent component
-    } else if (e.target.value.trim().length >= 2) {
+    if (isValidUrl(value)) {
+      // URL entered — clear any open search results
+      onSearchResultsClear();
+    } else if (value.trim().length >= 2) {
       // Trigger search for non-URL inputs
-      onSearchRecipes(e.target.value);
+      onSearchRecipes(value);
     } else {
-      // Clear results if query is too short
-      // This will be handled by the parent component
+      // Input cleared or too short — explicitly hide search results
+      onSearchResultsClear();
     }
   };
 
@@ -143,9 +144,8 @@ const Header = ({
                   key={recipe.id} 
                   className="search-result-item"
                   onClick={() => {
-                    // Open the recipe in fullscreen view
                     onRecipeSelect(recipe);
-                    // Clear search - this will be handled by parent
+                    onSearchResultsClear();
                   }}
                 >
                   <div className="search-result-title">{recipe.name}</div>
