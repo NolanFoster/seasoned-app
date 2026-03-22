@@ -2202,6 +2202,11 @@ function App() {
           return newMap;
         });
 
+        // Clear search input before opening fullscreen
+        setSearchInput('');
+        setShowSearchResults(false);
+        setSearchResults([]);
+
         // Open the generated recipe directly in fullscreen view
         setSelectedRecipe(generatedRecipe);
         window.history.pushState({ recipeView: true }, '', window.location.href);
@@ -2241,6 +2246,11 @@ function App() {
   }
 
   function openRecipeView(recipe) {
+    // Always clear search dropdown when opening any recipe
+    setSearchInput('');
+    setShowSearchResults(false);
+    setSearchResults([]);
+
     // Check if this is an AI card that needs recipe generation
     // Only trigger generation if it doesn't have generated content yet
     if ((recipe.source === 'ai_generated' || recipe.fallback) && !recipe.generatedAt) {
