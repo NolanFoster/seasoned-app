@@ -229,7 +229,11 @@ export default function App() {
     if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
       debouncedSearch(val.trim())
     } else {
-      setShowDropdown(val.trim().length === 0 && (recentRecipes.length > 0 || searchResults.length > 0))
+      // Don't re-open the dropdown if a generation/clip/elevate is in
+      // flight — clearing the input during those flows would otherwise
+      // cause the dropdown to pop back up over the recipe/generating card
+      const inFlight = status === 'generating' || status === 'elevating' || status === 'clipping'
+      setShowDropdown(!inFlight && val.trim().length === 0 && (recentRecipes.length > 0 || searchResults.length > 0))
     }
   }
 
