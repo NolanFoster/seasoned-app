@@ -190,11 +190,11 @@ export default function App() {
   // Restore focus after a blocking async action completes, but don't steal focus
   // from elements the user has intentionally focused.
   useEffect(() => {
-    if (!inputBusy) {
+    if (!inputBusy && !recipe) {
       const active = document.activeElement
       if (!active || active === document.body) inputRef.current?.focus()
     }
-  }, [inputBusy])
+  }, [inputBusy, recipe])
 
   // --- Auth gates (after all hooks) ---
 
