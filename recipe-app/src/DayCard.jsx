@@ -1,6 +1,7 @@
 import React from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
-import { PlusIcon } from './MealPlanner.jsx'
+import EmptyDropZone from './EmptyDropZone.jsx'
+import DragPortal from './DragPortal.jsx'
 
 function checkIsToday(dateStr) {
   const today = new Date()
@@ -8,7 +9,7 @@ function checkIsToday(dateStr) {
   return dateStr === `${months[today.getMonth()]} ${today.getDate()}`
 }
 
-export default function DayCard({ day, date, dateString, meals, onAddMeal, onRemoveMeal }) {
+export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) {
   const todayCard = checkIsToday(date)
   const wideCard = day === 'Sunday'
 
@@ -32,10 +33,10 @@ export default function DayCard({ day, date, dateString, meals, onAddMeal, onRem
             {...provided.droppableProps}
             className={`day-card-meals${snapshot.isDraggingOver ? ' day-card--drag-over' : ''}`}
           >
-            {meals.length === 0 && !snapshot.isDraggingOver ? (
-              <div className="meal-slot-empty">No meals planned</div>
-            ) : (
-              meals.map((meal, index) => (
+            {/* Empty drop-zone — shown only when there are no meals */}
+            {meals.length === 0 && <EmptyDropZone />}
+
+            {meals.map((meal, index) => (
                 /* Draggable — draggableId must be globally unique and stable;
                    combine date + index to avoid collisions across days */
                 <Draggable
@@ -44,51 +45,45 @@ export default function DayCard({ day, date, dateString, meals, onAddMeal, onRem
                   index={index}
                 >
                   {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
-                    >
-                      {/* Drag handle — only this element initiates a drag */}
-                      <span
-                        {...provided.dragHandleProps}
-                        className="drag-handle"
-                        title="Drag to reorder"
-                        aria-label="Drag handle"
+                    /* DragPortal moves the element to document.body while
+                       dragging, escaping the drawer's CSS transform stacking
+                       context so position:fixed ghost coords are viewport-
+                       relative. See DragPortal.jsx for the full explanation. */
+                    <DragPortal isActive={snapshot.isDragging}>
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
                       >
-                        ⠿
-                      </span>
-                      <span className="meal-item-name">{meal.name}</span>
-                      <button
-                        type="button"
-                        className="meal-item-remove"
-                        onClick={() => onRemoveMeal(meal.id)}
-                        aria-label={`Remove ${meal.name}`}
-                      >
-                        ×
-                      </button>
-                    </div>
+                        {/* Drag handle — only this element initiates a drag */}
+                        <span
+                          {...provided.dragHandleProps}
+                          className="drag-handle"
+                          title="Drag to reorder"
+                          aria-label="Drag handle"
+                        >
+                          ⠿
+                        </span>
+                        <span className="meal-item-name">{meal.name}</span>
+                        <button
+                          type="button"
+                          className="meal-item-remove"
+                          onClick={() => onRemoveMeal(meal.id)}
+                          aria-label={`Remove ${meal.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </DragPortal>
                   )}
                 </Draggable>
-              ))
-            )}
+            ))}
             {/* Placeholder preserves list height while an item is being dragged */}
             {provided.placeholder}
           </div>
         )}
       </Droppable>
 
-      <div className="day-card-actions">
-        <button
-          type="button"
-          className="add-meal-btn"
-          onClick={() => onAddMeal(day)}
-          aria-label={`Add meal for ${day}`}
-        >
-          <PlusIcon size={12} />
-          Add meal
-        </button>
-      </div>
     </div>
   )
 }
