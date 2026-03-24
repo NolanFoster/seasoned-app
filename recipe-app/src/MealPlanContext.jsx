@@ -25,7 +25,7 @@ export function MealPlanProvider({ children }) {
       const dayMeals = prev[dateString] || [];
       return {
         ...prev,
-        [dateString]: [...dayMeals, recipe],
+        [dateString]: [...dayMeals, { ...recipe, id: crypto.randomUUID() }],
       };
     });
   };

@@ -266,6 +266,14 @@
   transform: translateY(-1px);
 }
 
+/* Suppress hover lift while a drag is active — prevents the droppable zone
+   from shifting mid-drag and avoids creating a CSS containing block for
+   position:fixed elements inside transformed day cards. */
+.meal-planner-drawer.is-dragging .day-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 /* "Today" highlight */
 .day-card--today {
   border-color: rgba(200, 169, 110, 0.5);
