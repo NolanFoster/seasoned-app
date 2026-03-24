@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import CookingNavigator from './CookingNavigator.jsx'
 import { useFlag } from './flaggly.js'
 import RecipeCardDisplay, { parseDuration } from './RecipeCardDisplay.jsx'
+import DaySelector from './DaySelector.jsx'
+import { useMealPlan } from './MealPlanContext.jsx'
 
 export { parseDuration }
 
@@ -23,9 +25,16 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
   const [wakeLockActive, setWakeLockActive] = useState(false)
   // null | 'remix' | 'options'
   const [openMenu, setOpenMenu] = useState(null)
+  const [showDaySelector, setShowDaySelector] = useState(false)
+  // null | 'success' | 'error'
+  const [plannerFeedback, setPlannerFeedback] = useState(null)
+  const plannerFeedbackTimerRef = useRef(null)
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
   const menusRef = useRef(null)
+
+  const mealPlanContext = useMealPlan()
+  const canAddToPlanner = Boolean(mealPlanContext && recipe?.id && recipe?.name)
 
   const recipeDurationMins =
     parseDurationToMinutes(recipe.prep_time) + parseDurationToMinutes(recipe.cook_time)
@@ -67,8 +76,11 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     }
   }
 
-  // Release on unmount
-  useEffect(() => () => releaseWakeLock(), [])
+  // Release on unmount; clear planner feedback timer
+  useEffect(() => () => {
+    releaseWakeLock()
+    clearTimeout(plannerFeedbackTimerRef.current)
+  }, [])
 
   // Re-acquire after tab switch
   useEffect(() => {
@@ -80,6 +92,19 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [wakeLockActive])
+
+  function handleDaySelected(dateString) {
+    setShowDaySelector(false)
+    setOpenMenu(null)
+    try {
+      mealPlanContext.addMeal(dateString, recipe)
+      setPlannerFeedback('success')
+    } catch {
+      setPlannerFeedback('error')
+    }
+    clearTimeout(plannerFeedbackTimerRef.current)
+    plannerFeedbackTimerRef.current = setTimeout(() => setPlannerFeedback(null), 2500)
+  }
 
   // Close menus on outside click
   useEffect(() => {
@@ -156,6 +181,22 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
                 Close
               </button>
               <button
+                className="action-menu-item"
+                onClick={() => { setOpenMenu(null); setShowDaySelector(true) }}
+                disabled={!canAddToPlanner}
+                title={canAddToPlanner ? 'Add to meal planner' : 'Meal planner unavailable'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                  <line x1="12" y1="14" x2="12" y2="18"/>
+                  <line x1="10" y1="16" x2="14" y2="16"/>
+                </svg>
+                Add to Planner
+              </button>
+              <button
                 className={`action-menu-item${saveState === 'saved' ? ' saved' : saveState === 'error' ? ' error' : ''}`}
                 onClick={() => { if (saveState !== 'saving' && saveState !== 'saved') { onSave(); setOpenMenu(null); } }}
                 disabled={saveState === 'saving' || saveState === 'saved'}
@@ -229,6 +270,43 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
       <RecipeCardDisplay recipe={recipe} onCookClick={() => setIsCooking(true)} />
 
       {isCooking && <CookingNavigator recipe={recipe} onClose={() => setIsCooking(false)} />}
+
+      {showDaySelector && (
+        <DaySelector
+          onDaySelected={handleDaySelected}
+          onClose={() => setShowDaySelector(false)}
+        />
+      )}
+
+      {plannerFeedback && (
+        <div
+          className={`planner-feedback planner-feedback--${plannerFeedback}`}
+          role="status"
+          aria-live="polite"
+        >
+          {plannerFeedback === 'success' ? (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              Added to planner
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+              Could not add to planner
+            </>
+          )}
+          <button
+            type="button"
+            className="planner-feedback-dismiss"
+            onClick={() => setPlannerFeedback(null)}
+            aria-label="Dismiss"
+          >×</button>
+        </div>
+      )}
     </div>
   )
 }
