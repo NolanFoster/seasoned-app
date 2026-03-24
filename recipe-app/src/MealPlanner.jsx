@@ -102,13 +102,24 @@ export default function MealPlanner() {
   // Controls whether the slide-over drawer is visible
   const [isOpen, setIsOpen] = useState(false)
 
+  // Tracks whether a drag operation is in progress.
+  // Passed to MealPlannerDrawer so it can remove its CSS transform while dragging.
+  // See MealPlanner.css — .meal-planner-drawer.is-open.is-dragging — for why this
+  // is necessary: any ancestor with a `transform` breaks position:fixed coordinates
+  // used by @hello-pangea/dnd's drag portal, causing a cursor-offset visual glitch.
+  const [isDragging, setIsDragging] = useState(false)
+
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
   const weekDays = buildWeekDays()
 
   const toggleDrawer = () => setIsOpen((prev) => !prev)
   const closeDrawer = () => setIsOpen(false)
 
+  const handleDragStart = () => setIsDragging(true)
+
   const handleDragEnd = (result) => {
+    setIsDragging(false)
+
     // Ignore cancelled drags or drops outside valid zones
     if (!result.destination) return
 
@@ -136,8 +147,8 @@ export default function MealPlanner() {
       </button>
 
       {/* Slide-over drawer — MealPlannerDrawer controls animation and backdrop */}
-      <MealPlannerDrawer isOpen={isOpen} onClose={closeDrawer}>
-        <DragDropContext onDragEnd={handleDragEnd}>
+      <MealPlannerDrawer isOpen={isOpen} onClose={closeDrawer} isDragging={isDragging}>
+        <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {weekDays.map(({ day, date, dateString }) => (
             <DayCard
               key={dateString}
@@ -145,7 +156,6 @@ export default function MealPlanner() {
               date={date}
               dateString={dateString}
               meals={mealPlan[dateString] || []}
-              onAddMeal={handleAddMeal}
               onRemoveMeal={(recipeId) => {
                 if (recipeId) removeMeal(dateString, recipeId)
               }}

@@ -134,6 +134,27 @@
   transform: translateX(0);
 }
 
+/*
+ * Drag-offset fix for @hello-pangea/dnd
+ *
+ * ROOT CAUSE: Any CSS `transform` — including translateX(0) — creates a new
+ * "containing block" for position:fixed descendants (CSS Transforms spec §2.3).
+ * @hello-pangea/dnd positions the drag ghost with position:fixed, so it
+ * calculates coordinates relative to the nearest transformed ancestor rather
+ * than the viewport, producing a visible cursor/ghost offset.
+ *
+ * FIX: Remove the transform entirely while a drag is in progress. The drawer
+ * is position:fixed with right:0 / top:0 / bottom:0, so it stays correctly
+ * placed without any transform — translateX(0) is visually a no-op for an
+ * already-open drawer. The `is-dragging` class is toggled by MealPlanner.jsx
+ * via the DragDropContext onDragStart / onDragEnd callbacks.
+ *
+ * Ref: https://github.com/atlassian/react-beautiful-dnd/issues/499
+ */
+.meal-planner-drawer.is-open.is-dragging {
+  transform: none;
+}
+
 /* --------------------------------------------------------------------------
    4. Drawer Header
    -------------------------------------------------------------------------- */
@@ -462,6 +483,12 @@
 
   .meal-planner-drawer.is-open {
     transform: translateY(0);
+  }
+
+  /* Same drag-offset fix as the desktop rule above — translateY(0) also creates
+     a containing block, breaking position:fixed ghost positioning on mobile. */
+  .meal-planner-drawer.is-open.is-dragging {
+    transform: none;
   }
 
   /* Single-column cards on mobile */

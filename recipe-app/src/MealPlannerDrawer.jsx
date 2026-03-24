@@ -17,7 +17,13 @@ const XIcon = ({ size = 16 }) => (
   </svg>
 )
 
-export default function MealPlannerDrawer({ isOpen, onClose, children }) {
+export default function MealPlannerDrawer({ isOpen, onClose, isDragging, children }) {
+  // Build the drawer class list. The `is-dragging` class removes the CSS transform
+  // while a drag is active — see MealPlanner.css for the full explanation.
+  let drawerClassName = 'meal-planner-drawer'
+  if (isOpen) drawerClassName += ' is-open'
+  if (isDragging) drawerClassName += ' is-dragging'
+
   return (
     <>
       <div
@@ -26,7 +32,7 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
         aria-hidden="true"
       />
       <aside
-        className={`meal-planner-drawer${isOpen ? ' is-open' : ''}`}
+        className={drawerClassName}
         aria-label="Meal planner"
         aria-hidden={!isOpen}
       >
