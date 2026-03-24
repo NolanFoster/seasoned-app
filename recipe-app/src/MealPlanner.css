@@ -1,0 +1,472 @@
+/* ==========================================================================
+   MealPlanner.css
+   Slide-over meal planner drawer with Bento-box day cards.
+   Dark-theme aligned with index.css custom properties.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. MealPlanner-scoped CSS custom properties
+
+   Z-Index hierarchy (all meal-planner layers, relative to each other):
+     --mp-z-button   (162)  Calendar toggle — floats above the open drawer so
+                            it stays clickable at all times (toggle to close).
+     --mp-z-drawer   (161)  Slide-over panel — above backdrop, below button.
+     --mp-z-backdrop (160)  Semi-transparent overlay — above page content
+                            (incl. UserMenu at z-index:150) but below drawer.
+
+   Sizing / spacing:
+     --mp-btn-size   matches UserMenu .user-avatar-btn (34×34px) for a
+                     cohesive top-right control group.
+     --mp-icon-size  SVG icon rendered inside the button.
+     --mp-btn-right  right-edge offset for the toggle button, calculated as:
+                     UserMenu right(16px) + avatar width(34px) + gap(12px) = 62px
+   -------------------------------------------------------------------------- */
+
+:root {
+  --mp-z-backdrop: 160;
+  --mp-z-drawer:   161;
+  --mp-z-button:   162;
+
+  --mp-btn-size:      34px;   /* matches .user-avatar-btn in index.css  */
+  --mp-icon-size:     20px;   /* SVG icon inside the button             */
+  --mp-btn-top:       16px;   /* matches UserMenu top offset            */
+  --mp-btn-right:     62px;   /* 16 (UserMenu right) + 34 (avatar) + 12 (gap) */
+
+  --mp-drawer-width-desktop: 420px;
+  --mp-drawer-width-tablet:  320px;
+
+  --mp-transition-drawer:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --mp-transition-backdrop: 0.3s  cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --------------------------------------------------------------------------
+   1. Calendar Toggle Button
+   Fixed top-right, vertically aligned with UserMenu avatar.
+   z-index is above the drawer so it stays clickable when the drawer is open
+   (acts as a second close affordance in addition to the drawer's X button).
+   -------------------------------------------------------------------------- */
+
+.meal-planner-toggle {
+  position: fixed;
+  top: var(--mp-btn-top);
+  right: var(--mp-btn-right);
+  z-index: var(--mp-z-button);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mp-btn-size);
+  height: var(--mp-btn-size);
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  padding: 0;
+}
+
+.meal-planner-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.meal-planner-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.meal-planner-toggle:active {
+  background: var(--surface);
+  transform: scale(0.95);
+}
+
+/* Indicate "open" state — border glows with accent colour */
+.meal-planner-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface);
+}
+
+/* --------------------------------------------------------------------------
+   2. Backdrop
+   Full-screen overlay. Pointer events disabled when closed to keep the page
+   fully interactive. Enabled (.is-open) to intercept clicks and close drawer.
+   -------------------------------------------------------------------------- */
+
+.meal-planner-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mp-z-backdrop);
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--mp-transition-backdrop);
+}
+
+.meal-planner-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+   3. Drawer
+   Right-aligned slide-over. GPU-accelerated via transform (no layout shift).
+   -------------------------------------------------------------------------- */
+
+.meal-planner-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--mp-z-drawer);
+  width: var(--mp-drawer-width-desktop);
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform var(--mp-transition-drawer);
+  overflow: hidden;
+}
+
+.meal-planner-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* --------------------------------------------------------------------------
+   4. Drawer Header
+   -------------------------------------------------------------------------- */
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.drawer-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  padding: 0;
+}
+
+.drawer-close-btn:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.drawer-close-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   5. Drawer Content & Scroll Area
+   -------------------------------------------------------------------------- */
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.drawer-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.drawer-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drawer-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   6. Day Cards Grid (Bento-box layout)
+   -------------------------------------------------------------------------- */
+
+.day-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   7. Day Card
+   -------------------------------------------------------------------------- */
+
+.day-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 140px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  cursor: default;
+}
+
+.day-card:hover {
+  border-color: rgba(200, 169, 110, 0.3); /* --accent at low opacity */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+/* "Today" highlight */
+.day-card--today {
+  border-color: rgba(200, 169, 110, 0.5);
+  background: linear-gradient(135deg, var(--surface2) 0%, rgba(200, 169, 110, 0.06) 100%);
+}
+
+.day-card--today .day-name {
+  color: var(--accent);
+}
+
+/* Wider "featured" card spanning both columns */
+.day-card--wide {
+  grid-column: span 2;
+}
+
+/* --------------------------------------------------------------------------
+   8. Day Card Header
+   -------------------------------------------------------------------------- */
+
+.day-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.day-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.day-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* --------------------------------------------------------------------------
+   9. Meal Slots
+   -------------------------------------------------------------------------- */
+
+.day-card-meals {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.meal-slot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-height: 22px;
+}
+
+.meal-slot-label {
+  width: 60px;
+  flex-shrink: 0;
+  text-transform: capitalize;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+.meal-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  color: var(--text);
+  transition: border-color 0.12s ease;
+}
+
+.meal-item:hover {
+  border-color: var(--accent);
+}
+
+.meal-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-item-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: color 0.12s ease;
+}
+
+.meal-item-remove:hover {
+  color: var(--error);
+}
+
+/* Empty slot placeholder */
+.meal-slot-empty {
+  flex: 1;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+  opacity: 0.4;
+}
+
+/* --------------------------------------------------------------------------
+   10. Add Meal Button
+   -------------------------------------------------------------------------- */
+
+.day-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.add-meal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.add-meal-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(200, 169, 110, 0.06);
+}
+
+.add-meal-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.add-meal-btn svg {
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   11. Drawer Footer (reserved for future actions, e.g. "Clear week")
+   -------------------------------------------------------------------------- */
+
+.drawer-footer {
+  flex-shrink: 0;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   12. Responsive — Mobile (< 768px)
+   Drawer becomes a bottom sheet (slides up from bottom) for thumb reachability.
+   Cards collapse to a single column.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  /* Bottom-sheet drawer: full width, slides up from bottom */
+  .meal-planner-drawer {
+    width: 100vw;
+    max-width: 100vw;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    top: auto;
+    bottom: 0;
+    height: 92dvh;
+    /* Override right-to-left slide with bottom-to-top slide */
+    transform: translateY(100%);
+    transition: transform var(--mp-transition-drawer);
+  }
+
+  .meal-planner-drawer.is-open {
+    transform: translateY(0);
+  }
+
+  /* Single-column cards on mobile */
+  .day-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Wide-span cards are just full-width on single column */
+  .day-card--wide {
+    grid-column: span 1;
+  }
+
+  /* Keep button flush to match UserMenu (both at right: 16px area) */
+  .meal-planner-toggle {
+    right: var(--mp-btn-right); /* unchanged — avatar + gap calc still applies */
+  }
+}
+
+/* --------------------------------------------------------------------------
+   13. Responsive — Tablet (768px – 1023px)
+   Narrower drawer (320px); right-slide animation retained.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .meal-planner-drawer {
+    width: var(--mp-drawer-width-tablet);
+  }
+}
