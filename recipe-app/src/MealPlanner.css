@@ -406,7 +406,49 @@
 }
 
 /* --------------------------------------------------------------------------
-   11. Drawer Footer (reserved for future actions, e.g. "Clear week")
+   11. Drag-and-Drop States
+   -------------------------------------------------------------------------- */
+
+/* Drag handle — braille pattern ⠿ used as a grip icon */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0.4;
+  cursor: grab;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0 2px;
+  transition: opacity 0.12s ease;
+  user-select: none;
+}
+
+.meal-item:hover .drag-handle {
+  opacity: 0.8;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Dragged meal — lifted appearance while dragging */
+.meal-item--dragging {
+  opacity: 0.85;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border-color: var(--accent) !important;
+  background: var(--surface2);
+}
+
+/* Drop target day card — subtle highlight when a meal hovers over it */
+.day-card--drag-over {
+  border-color: rgba(200, 169, 110, 0.6);
+  background: linear-gradient(135deg, var(--surface2) 0%, rgba(200, 169, 110, 0.08) 100%);
+  box-shadow: 0 0 0 2px rgba(200, 169, 110, 0.2);
+}
+
+/* --------------------------------------------------------------------------
+   12. Drawer Footer (reserved for future actions, e.g. "Clear week")
    -------------------------------------------------------------------------- */
 
 .drawer-footer {
@@ -419,7 +461,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   12. Responsive — Mobile (< 768px)
+   13. Responsive — Mobile (< 768px)
    Drawer becomes a bottom sheet (slides up from bottom) for thumb reachability.
    Cards collapse to a single column.
    -------------------------------------------------------------------------- */
@@ -461,7 +503,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   13. Responsive — Tablet (768px – 1023px)
+   14. Responsive — Tablet (768px – 1023px)
    Narrower drawer (320px); right-slide animation retained.
    -------------------------------------------------------------------------- */
 
