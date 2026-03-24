@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
 import DayCard from './DayCard.jsx'
+import { useMealPlan } from './MealPlanContext.jsx'
 import './MealPlanner.css'
 
 // --- Inline SVG Icons ---
@@ -64,20 +65,20 @@ const PlusIcon = ({ size = 20, className = '' }) => (
 // Export icons so child components (MealPlannerDrawer, DayCard) can reuse them
 export { CalendarIcon, ChevronRightIcon, PlusIcon }
 
-// --- Sample week data ---
-// Provides a default 7-day scaffold; meal data will come from state/API in later steps.
+// --- Week data ---
+// Builds a 7-day scaffold starting from today.
+// Returns both a display date and an ISO dateString used to key into mealPlan context.
 function buildWeekDays() {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const today = new Date()
-  // Start the week from today so the planner always shows the current week onward
-  return days.map((day, i) => {
+  return Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today)
     date.setDate(today.getDate() + i)
     return {
-      day: days[date.getDay()],
+      day: dayNames[date.getDay()],
       date: `${months[date.getMonth()]} ${date.getDate()}`,
-      meals: [],
+      dateString: date.toISOString().split('T')[0],
     }
   })
 }
@@ -100,21 +101,15 @@ export default function MealPlanner() {
   // Controls whether the slide-over drawer is visible
   const [isOpen, setIsOpen] = useState(false)
 
-  // Week data is static for now; will be replaced with persisted state in a later step
+  const { mealPlan, removeMeal } = useMealPlan()
   const weekDays = buildWeekDays()
 
   const toggleDrawer = () => setIsOpen((prev) => !prev)
   const closeDrawer = () => setIsOpen(false)
 
-  // Placeholder handlers — real implementations come in a later step
   const handleAddMeal = (day, type) => {
     // TODO: open a recipe picker for the given day and meal type
     console.log('Add meal:', day, type)
-  }
-
-  const handleRemoveMeal = (id) => {
-    // TODO: remove meal from state/persistence
-    console.log('Remove meal:', id)
   }
 
   return (
@@ -133,14 +128,16 @@ export default function MealPlanner() {
 
       {/* Slide-over drawer — MealPlannerDrawer controls animation and backdrop */}
       <MealPlannerDrawer isOpen={isOpen} onClose={closeDrawer}>
-        {weekDays.map(({ day, date, meals }) => (
+        {weekDays.map(({ day, date, dateString }) => (
           <DayCard
-            key={`${day}-${date}`}
+            key={dateString}
             day={day}
             date={date}
-            meals={meals}
+            meals={mealPlan[dateString] || []}
             onAddMeal={handleAddMeal}
-            onRemoveMeal={handleRemoveMeal}
+            onRemoveMeal={(recipeId) => {
+              if (recipeId) removeMeal(dateString, recipeId)
+            }}
           />
         ))}
       </MealPlannerDrawer>
