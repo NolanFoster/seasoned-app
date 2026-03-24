@@ -15,6 +15,7 @@ import LoadingRecipes from './components/LoadingRecipes.jsx'
 import NoRecipesFound from './components/NoRecipesFound.jsx'
 import RecipeUtils, { getRecipeDescription, getFilteredIngredients, getFilteredInstructions, decodeHtmlEntities } from './components/RecipeUtils.jsx'
 import TimerManager from './components/TimerManager.jsx'
+import MealPlanner from './components/MealPlanner.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL; // Main recipe worker with KV storage
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL; // Clipper worker
@@ -687,6 +688,7 @@ function App() {
   const [previousLocation, setPreviousLocation] = useState(null); // Track previous location to prevent duplicate calls
   const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track if we're resolving location permissions
   const [isGeneratingAiRecipe, setIsGeneratingAiRecipe] = useState(false); // Track AI recipe generation state
+  const [showMealPlanner, setShowMealPlanner] = useState(false); // Toggle between recipe grid and meal planner
   
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
@@ -2594,14 +2596,29 @@ function App() {
           isGeneratingAiRecipe={isGeneratingAiRecipe}
         />
       
-      {/* Mobile FAB - outside header, bottom left */}
-      {/* TODO: Enable with feature flag */}
-      {/* <button className="fab fab-add fab-mobile" onClick={() => setShowAddForm(true)}>
-        <span className="fab-icon">+</span>
-      </button> */}
+      {/* Planner toggle button — fixed top-right */}
+      <div className="header-actions">
+        <button
+          className={`icon-button${showMealPlanner ? ' icon-button--active' : ''}`}
+          aria-label={showMealPlanner ? 'Close meal planner' : 'Open meal planner'}
+          title={showMealPlanner ? 'Close meal planner' : 'Open meal planner'}
+          onClick={() => setShowMealPlanner(prev => !prev)}
+        >
+          {/* Calendar icon */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Meal planner view — replaces main recipe grid when active */}
+      {showMealPlanner && <MealPlanner />}
 
       {/* Main container - scrollable content */}
-      <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
+      <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}${showMealPlanner ? ' hidden' : ''}`}>
         <div className="recipes-list">
         {/* Show recipe cards unless recipe is selected */}
         {!selectedRecipe && (
