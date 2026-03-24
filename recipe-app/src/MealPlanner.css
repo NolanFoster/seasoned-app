@@ -5,21 +5,57 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
+   0. MealPlanner-scoped CSS custom properties
+
+   Z-Index hierarchy (all meal-planner layers, relative to each other):
+     --mp-z-button   (162)  Calendar toggle — floats above the open drawer so
+                            it stays clickable at all times (toggle to close).
+     --mp-z-drawer   (161)  Slide-over panel — above backdrop, below button.
+     --mp-z-backdrop (160)  Semi-transparent overlay — above page content
+                            (incl. UserMenu at z-index:150) but below drawer.
+
+   Sizing / spacing:
+     --mp-btn-size   matches UserMenu .user-avatar-btn (34×34px) for a
+                     cohesive top-right control group.
+     --mp-icon-size  SVG icon rendered inside the button.
+     --mp-btn-right  right-edge offset for the toggle button, calculated as:
+                     UserMenu right(16px) + avatar width(34px) + gap(12px) = 62px
+   -------------------------------------------------------------------------- */
+
+:root {
+  --mp-z-backdrop: 160;
+  --mp-z-drawer:   161;
+  --mp-z-button:   162;
+
+  --mp-btn-size:      34px;   /* matches .user-avatar-btn in index.css  */
+  --mp-icon-size:     20px;   /* SVG icon inside the button             */
+  --mp-btn-top:       16px;   /* matches UserMenu top offset            */
+  --mp-btn-right:     62px;   /* 16 (UserMenu right) + 34 (avatar) + 12 (gap) */
+
+  --mp-drawer-width-desktop: 420px;
+  --mp-drawer-width-tablet:  320px;
+
+  --mp-transition-drawer:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --mp-transition-backdrop: 0.3s  cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --------------------------------------------------------------------------
    1. Calendar Toggle Button
-   Fixed top-right, sitting 12px to the left of the UserMenu avatar (34px
-   wide at right:16px → right: 62px puts us flush next to it).
+   Fixed top-right, vertically aligned with UserMenu avatar.
+   z-index is above the drawer so it stays clickable when the drawer is open
+   (acts as a second close affordance in addition to the drawer's X button).
    -------------------------------------------------------------------------- */
 
 .meal-planner-toggle {
   position: fixed;
-  top: 16px;
-  right: 62px;
-  z-index: 151; /* above UserMenu (z-index: 150) */
+  top: var(--mp-btn-top);
+  right: var(--mp-btn-right);
+  z-index: var(--mp-z-button);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: var(--mp-btn-size);
+  height: var(--mp-btn-size);
   border-radius: 50%;
   background: var(--surface2);
   border: 1.5px solid var(--border);
@@ -44,20 +80,27 @@
   transform: scale(0.95);
 }
 
+/* Indicate "open" state — border glows with accent colour */
+.meal-planner-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface);
+}
+
 /* --------------------------------------------------------------------------
    2. Backdrop
-   Full-screen overlay; sits above all page content and the UserMenu so the
-   drawer is fully modal. Pointer events are set to none when closed.
+   Full-screen overlay. Pointer events disabled when closed to keep the page
+   fully interactive. Enabled (.is-open) to intercept clicks and close drawer.
    -------------------------------------------------------------------------- */
 
 .meal-planner-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 160;
+  z-index: var(--mp-z-backdrop);
   background: rgba(0, 0, 0, 0.6);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity var(--mp-transition-backdrop);
 }
 
 .meal-planner-backdrop.is-open {
@@ -67,7 +110,7 @@
 
 /* --------------------------------------------------------------------------
    3. Drawer
-   Slides in from the right. Uses transform for GPU-accelerated animation.
+   Right-aligned slide-over. GPU-accelerated via transform (no layout shift).
    -------------------------------------------------------------------------- */
 
 .meal-planner-drawer {
@@ -75,15 +118,15 @@
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 161; /* above backdrop */
-  width: 420px;
+  z-index: var(--mp-z-drawer);
+  width: var(--mp-drawer-width-desktop);
   max-width: 100vw;
   display: flex;
   flex-direction: column;
   background: var(--surface);
   border-left: 1px solid var(--border);
   transform: translateX(100%);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--mp-transition-drawer);
   overflow: hidden;
 }
 
@@ -146,7 +189,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px;
-  /* Custom scrollbar to match dark theme */
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -364,7 +406,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   11. Drawer Footer (optional, reserved for future use)
+   11. Drawer Footer (reserved for future actions, e.g. "Clear week")
    -------------------------------------------------------------------------- */
 
 .drawer-footer {
@@ -377,28 +419,29 @@
 }
 
 /* --------------------------------------------------------------------------
-   12. Responsive — Tablet (≥ 768px, drawer is already comfortable at 420px)
+   12. Responsive — Mobile (< 768px)
+   Drawer becomes a bottom sheet (slides up from bottom) for thumb reachability.
+   Cards collapse to a single column.
    -------------------------------------------------------------------------- */
 
-@media (max-width: 768px) {
-  /* Full-width drawer on mobile */
+@media (max-width: 767px) {
+  /* Bottom-sheet drawer: full width, slides up from bottom */
   .meal-planner-drawer {
     width: 100vw;
+    max-width: 100vw;
     border-left: none;
     border-top: 1px solid var(--border);
     border-radius: var(--radius) var(--radius) 0 0;
     top: auto;
+    bottom: 0;
     height: 92dvh;
+    /* Override right-to-left slide with bottom-to-top slide */
     transform: translateY(100%);
+    transition: transform var(--mp-transition-drawer);
   }
 
   .meal-planner-drawer.is-open {
     transform: translateY(0);
-  }
-
-  /* On mobile the toggle slides up from bottom, so we adjust transition */
-  .meal-planner-backdrop {
-    /* backdrop is same for all sizes */
   }
 
   /* Single-column cards on mobile */
@@ -406,19 +449,24 @@
     grid-template-columns: 1fr;
   }
 
+  /* Wide-span cards are just full-width on single column */
   .day-card--wide {
     grid-column: span 1;
   }
 
-  /* Move toggle button left slightly on small screens to avoid crowding */
+  /* Keep button flush to match UserMenu (both at right: 16px area) */
   .meal-planner-toggle {
-    right: 60px;
+    right: var(--mp-btn-right); /* unchanged — avatar + gap calc still applies */
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
+/* --------------------------------------------------------------------------
+   13. Responsive — Tablet (768px – 1023px)
+   Narrower drawer (320px); right-slide animation retained.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 768px) and (max-width: 1023px) {
   .meal-planner-drawer {
-    width: 60vw;
-    min-width: 320px;
+    width: var(--mp-drawer-width-tablet);
   }
 }

@@ -119,15 +119,16 @@ export default function MealPlanner() {
 
   return (
     <>
-      {/* Calendar toggle button — positioned in the top-right by MealPlanner.css */}
+      {/* Calendar toggle button — fixed top-right by MealPlanner.css.
+          aria-expanded drives the accent-border open-state style. */}
       <button
         type="button"
         className="meal-planner-toggle"
         onClick={toggleDrawer}
-        aria-label="Open meal planner"
+        aria-label={isOpen ? 'Close meal planner' : 'Open meal planner'}
         aria-expanded={isOpen}
       >
-        <CalendarIcon size={22} />
+        <CalendarIcon size={20} />
       </button>
 
       {/* Slide-over drawer — MealPlannerDrawer controls animation and backdrop */}
