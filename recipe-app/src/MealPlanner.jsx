@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { DragDropContext } from '@hello-pangea/dnd'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
 import DayCard from './DayCard.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
@@ -101,11 +102,19 @@ export default function MealPlanner() {
   // Controls whether the slide-over drawer is visible
   const [isOpen, setIsOpen] = useState(false)
 
-  const { mealPlan, removeMeal } = useMealPlan()
+  const { mealPlan, removeMeal, moveMeal } = useMealPlan()
   const weekDays = buildWeekDays()
 
   const toggleDrawer = () => setIsOpen((prev) => !prev)
   const closeDrawer = () => setIsOpen(false)
+
+  const handleDragEnd = (result) => {
+    // Ignore cancelled drags or drops outside valid zones
+    if (!result.destination) return
+
+    const { draggableId, source, destination } = result
+    moveMeal(draggableId, source.droppableId, destination.droppableId, destination.index)
+  }
 
   const handleAddMeal = (day, type) => {
     // TODO: open a recipe picker for the given day and meal type
@@ -128,18 +137,21 @@ export default function MealPlanner() {
 
       {/* Slide-over drawer — MealPlannerDrawer controls animation and backdrop */}
       <MealPlannerDrawer isOpen={isOpen} onClose={closeDrawer}>
-        {weekDays.map(({ day, date, dateString }) => (
-          <DayCard
-            key={dateString}
-            day={day}
-            date={date}
-            meals={mealPlan[dateString] || []}
-            onAddMeal={handleAddMeal}
-            onRemoveMeal={(recipeId) => {
-              if (recipeId) removeMeal(dateString, recipeId)
-            }}
-          />
-        ))}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          {weekDays.map(({ day, date, dateString }) => (
+            <DayCard
+              key={dateString}
+              day={day}
+              date={date}
+              dateString={dateString}
+              meals={mealPlan[dateString] || []}
+              onAddMeal={handleAddMeal}
+              onRemoveMeal={(recipeId) => {
+                if (recipeId) removeMeal(dateString, recipeId)
+              }}
+            />
+          ))}
+        </DragDropContext>
       </MealPlannerDrawer>
     </>
   )
