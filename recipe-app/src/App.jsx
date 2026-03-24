@@ -6,6 +6,7 @@ import PWAInstallPrompt from './PWAInstallPrompt.jsx'
 import MealPlanner from './MealPlanner.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
 import { useAuth } from './useAuth.js'
+import { MealPlanProvider } from './MealPlanContext.jsx'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -426,6 +427,7 @@ export default function App() {
     : null
 
   return (
+    <MealPlanProvider>
     <div className="app">
       <PWAInstallPrompt />
       <MealPlanner />
@@ -602,5 +604,6 @@ export default function App() {
         )}
       </div>
     </div>
+    </MealPlanProvider>
   )
 }
