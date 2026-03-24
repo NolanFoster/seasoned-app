@@ -356,53 +356,31 @@
   color: var(--error);
 }
 
-/* Empty slot placeholder */
-.meal-slot-empty {
-  flex: 1;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  border: 1px dashed var(--border);
-  opacity: 0.4;
-}
-
 /* --------------------------------------------------------------------------
-   10. Add Meal Button
+   10. Empty Drop-Zone
+   Displayed when a day card has no scheduled meals.
+   Serves as a visual affordance for drag-and-drop; purely passive (no
+   interactive elements). Must not use CSS transform to avoid breaking
+   @hello-pangea/dnd offset calculations.
    -------------------------------------------------------------------------- */
 
-.day-card-actions {
+.day-card__empty-state {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.02);
 }
 
-.add-meal-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: transparent;
-  border: 1px solid var(--border);
+.day-card__empty-state__text {
   color: var(--text-muted);
   font-size: 0.72rem;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-  white-space: nowrap;
-}
-
-.add-meal-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(200, 169, 110, 0.06);
-}
-
-.add-meal-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.add-meal-btn svg {
-  flex-shrink: 0;
+  text-align: center;
+  opacity: 0.6;
+  user-select: none;
 }
 
 /* --------------------------------------------------------------------------
