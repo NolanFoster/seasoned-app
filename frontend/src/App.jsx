@@ -688,8 +688,12 @@ function App() {
   const [previousLocation, setPreviousLocation] = useState(null); // Track previous location to prevent duplicate calls
   const [isResolvingLocation, setIsResolvingLocation] = useState(true); // Track if we're resolving location permissions
   const [isGeneratingAiRecipe, setIsGeneratingAiRecipe] = useState(false); // Track AI recipe generation state
-  const [showMealPlanner, setShowMealPlanner] = useState(false); // Toggle between recipe grid and meal planner
-  
+  const [viewMode, setViewMode] = useState('home'); // 'home' | 'planner'
+
+  const handleToggleMealPlanner = () => {
+    setViewMode(prev => prev === 'home' ? 'planner' : 'home');
+  };
+
   // Timer state management
   const [activeTimers, setActiveTimers] = useState(new Map()); // Map of timer ID to timer state
   const [timerIntervals, setTimerIntervals] = useState(new Map()); // Map of timer ID to interval reference
@@ -2599,10 +2603,10 @@ function App() {
       {/* Planner toggle button — fixed top-right */}
       <div className="header-actions">
         <button
-          className={`icon-button${showMealPlanner ? ' icon-button--active' : ''}`}
-          aria-label={showMealPlanner ? 'Close meal planner' : 'Open meal planner'}
-          title={showMealPlanner ? 'Close meal planner' : 'Open meal planner'}
-          onClick={() => setShowMealPlanner(prev => !prev)}
+          className={`icon-button${viewMode === 'planner' ? ' icon-button--active' : ''}`}
+          aria-label={viewMode === 'planner' ? 'Back to Search' : 'Open Meal Planner'}
+          title={viewMode === 'planner' ? 'Back to Search' : 'Open Meal Planner'}
+          onClick={handleToggleMealPlanner}
         >
           {/* Calendar icon */}
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -2614,11 +2618,11 @@ function App() {
         </button>
       </div>
 
-      {/* Meal planner view — replaces main recipe grid when active */}
-      {showMealPlanner && <MealPlanner />}
-
-      {/* Main container - scrollable content */}
-      <div className={`container ${selectedRecipe ? 'recipe-view-active' : ''}${showMealPlanner ? ' hidden' : ''}`}>
+      {/* Main content area — home view or meal planner */}
+      {viewMode === 'planner' ? (
+        <MealPlanner />
+      ) : (
+      <div className={`omnibox-wrapper container ${selectedRecipe ? 'recipe-view-active' : ''}`}>
         <div className="recipes-list">
         {/* Show recipe cards unless recipe is selected */}
         {!selectedRecipe && (
@@ -3181,16 +3185,16 @@ function App() {
         </div>
       )}
 
-      {/* Video Popup */}
+      </div>
+      )} {/* end viewMode === 'home' branch */}
+
+      {/* Video Popup — rendered outside view ternary so it works in both views */}
       {showVideoPopup && (
-        <VideoPopup 
-          videoUrl={currentVideoUrl} 
-          onClose={() => setShowVideoPopup(false)} 
+        <VideoPopup
+          videoUrl={currentVideoUrl}
+          onClose={() => setShowVideoPopup(false)}
         />
       )}
-
-
-      </div>
     </>
   );
 }
