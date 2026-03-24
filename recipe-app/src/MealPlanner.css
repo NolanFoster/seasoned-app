@@ -8,11 +8,13 @@
    0. MealPlanner-scoped CSS custom properties
 
    Z-Index hierarchy (all meal-planner layers, relative to each other):
-     --mp-z-button   (162)  Calendar toggle — floats above the open drawer so
-                            it stays clickable at all times (toggle to close).
-     --mp-z-drawer   (161)  Slide-over panel — above backdrop, below button.
-     --mp-z-backdrop (160)  Semi-transparent overlay — above page content
-                            (incl. UserMenu at z-index:150) but below drawer.
+     --mp-z-drag-portal (9999) Portaled drag ghost — rendered into document.body
+                               via DragPortal.jsx; must clear the drawer (161).
+     --mp-z-button      (162)  Calendar toggle — floats above the open drawer so
+                               it stays clickable at all times (toggle to close).
+     --mp-z-drawer      (161)  Slide-over panel — above backdrop, below button.
+     --mp-z-backdrop    (160)  Semi-transparent overlay — above page content
+                               (incl. UserMenu at z-index:150) but below drawer.
 
    Sizing / spacing:
      --mp-btn-size   matches UserMenu .user-avatar-btn (34×34px) for a
@@ -23,9 +25,10 @@
    -------------------------------------------------------------------------- */
 
 :root {
-  --mp-z-backdrop: 160;
-  --mp-z-drawer:   161;
-  --mp-z-button:   162;
+  --mp-z-backdrop:     160;
+  --mp-z-drawer:       161;
+  --mp-z-button:       162;
+  --mp-z-drag-portal: 9999; /* portaled drag ghost; clears all drawer layers  */
 
   --mp-btn-size:      34px;   /* matches .user-avatar-btn in index.css  */
   --mp-icon-size:     20px;   /* SVG icon inside the button             */
@@ -153,6 +156,9 @@
  */
 .meal-planner-drawer.is-open.is-dragging {
   transform: none;
+  /* Belt-and-suspenders: suppress transition so the drawer cannot re-trigger
+     its slide animation if a React state flush happens mid-drag. */
+  transition: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -380,20 +386,33 @@
 /* --------------------------------------------------------------------------
    10. Empty Drop-Zone
    Displayed when a day card has no scheduled meals.
-   Serves as a visual affordance for drag-and-drop; purely passive (no
-   interactive elements). Must not use CSS transform to avoid breaking
-   @hello-pangea/dnd offset calculations.
+   Purely passive visual affordance for drag-and-drop (no interactive elements,
+   no CSS transform — transforms would break @hello-pangea/dnd offset math).
+
+   States:
+     default     — dashed border, faint background
+     drag-over   — accent-tinted border/background via .day-card--drag-over
+                   (the .day-card-meals container gets this class when
+                    snapshot.isDraggingOver is true in DayCard.jsx)
    -------------------------------------------------------------------------- */
 
 .day-card__empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80px;
+  /* 120px gives adequate visual presence and touch/drop target area */
+  min-height: 120px;
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
   background: rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+/* Highlight when a meal is dragged over an empty day */
+.day-card--drag-over .day-card__empty-state {
+  border-color: rgba(200, 169, 110, 0.5); /* --accent at mid opacity */
+  background: rgba(200, 169, 110, 0.05);
 }
 
 .day-card__empty-state__text {
@@ -447,7 +466,26 @@
 }
 
 /* --------------------------------------------------------------------------
-   12. Drawer Footer (reserved for future actions, e.g. "Clear week")
+   12. Portal Drag Preview
+   When a meal is actively dragged, DragPortal.jsx renders the element into
+   document.body via React.createPortal (see src/DragPortal.jsx). This breaks
+   it out of the drawer's stacking context so @hello-pangea/dnd's position:fixed
+   ghost tracks the cursor correctly.
+
+   @hello-pangea/dnd applies z-index via inline style; the rule below acts as a
+   CSS-layer fallback using the named variable so the value stays in one place.
+   `pointer-events: none` is safe here — the library tracks drag events via
+   document-level listeners, not element-level ones.
+   -------------------------------------------------------------------------- */
+
+/* Targets the .meal-item div when it has been portaled to document.body */
+body > .meal-item {
+  z-index: var(--mp-z-drag-portal);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   13. Drawer Footer (reserved for future actions, e.g. "Clear week")
    -------------------------------------------------------------------------- */
 
 .drawer-footer {
@@ -460,7 +498,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   13. Responsive — Mobile (< 768px)
+   14. Responsive — Mobile (< 768px)
    Drawer becomes a bottom sheet (slides up from bottom) for thumb reachability.
    Cards collapse to a single column.
    -------------------------------------------------------------------------- */
@@ -489,6 +527,7 @@
      a containing block, breaking position:fixed ghost positioning on mobile. */
   .meal-planner-drawer.is-open.is-dragging {
     transform: none;
+    transition: none;
   }
 
   /* Single-column cards on mobile */
@@ -508,7 +547,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   14. Responsive — Tablet (768px – 1023px)
+   15. Responsive — Tablet (768px – 1023px)
    Narrower drawer (320px); right-slide animation retained.
    -------------------------------------------------------------------------- */
 
