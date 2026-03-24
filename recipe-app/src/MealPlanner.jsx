@@ -3,6 +3,8 @@ import { DragDropContext } from '@hello-pangea/dnd'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
 import DayCard from './DayCard.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { DragProvider } from './DragContext.jsx'
+import { useDragContext } from './useDragContext.js'
 import './MealPlanner.css'
 
 // --- Inline SVG Icons ---
@@ -87,49 +89,55 @@ function buildWeekDays() {
 /**
  * MealPlanner
  *
- * Main meal planning component that manages the visibility state of the meal planner drawer.
- * Provides a calendar icon button entry point to toggle the drawer open/closed.
- *
- * Child components:
- *  - MealPlannerDrawer — slide-over panel container with header and close button
- *  - DayCard           — individual day cards showing planned meals
+ * Thin shell component. Owns drawer open/close state and provides the
+ * DragProvider context to the entire subtree. Delegates all drag-aware
+ * logic to MealPlannerContent so that useDragContext() can be called
+ * inside the provider boundary.
  *
  * @component
  * @example
  * return <MealPlanner />
  */
 export default function MealPlanner() {
-  // Controls whether the slide-over drawer is visible
   const [isOpen, setIsOpen] = useState(false)
 
-  // Tracks whether a drag operation is in progress.
-  // Passed to MealPlannerDrawer so it can remove its CSS transform while dragging.
-  // See MealPlanner.css — .meal-planner-drawer.is-open.is-dragging — for why this
-  // is necessary: any ancestor with a `transform` breaks position:fixed coordinates
-  // used by @hello-pangea/dnd's drag portal, causing a cursor-offset visual glitch.
-  const [isDragging, setIsDragging] = useState(false)
+  return (
+    <DragProvider>
+      <MealPlannerContent
+        isOpen={isOpen}
+        onToggle={() => setIsOpen((prev) => !prev)}
+        onClose={() => setIsOpen(false)}
+      />
+    </DragProvider>
+  )
+}
 
+/**
+ * MealPlannerContent
+ *
+ * Inner component that runs inside the DragProvider boundary.
+ * Consumes useDragContext to wire up DragDropContext callbacks
+ * without prop drilling through intermediate components.
+ */
+function MealPlannerContent({ isOpen, onToggle, onClose }) {
+  const { setDragging, clearDrag } = useDragContext()
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
   const weekDays = buildWeekDays()
 
-  const toggleDrawer = () => setIsOpen((prev) => !prev)
-  const closeDrawer = () => setIsOpen(false)
-
-  const handleDragStart = () => setIsDragging(true)
+  const handleDragStart = (start) => {
+    // Signal drag start; pass the draggable ID so context-aware consumers
+    // (e.g. portals, visual overlays) know which item is being dragged.
+    setDragging(true, start.draggableId)
+  }
 
   const handleDragEnd = (result) => {
-    setIsDragging(false)
+    clearDrag()
 
     // Ignore cancelled drags or drops outside valid zones
     if (!result.destination) return
 
     const { draggableId, source, destination } = result
     moveMeal(draggableId, source.droppableId, destination.droppableId, destination.index)
-  }
-
-  const handleAddMeal = (day, type) => {
-    // TODO: open a recipe picker for the given day and meal type
-    console.log('Add meal:', day, type)
   }
 
   return (
@@ -139,15 +147,15 @@ export default function MealPlanner() {
       <button
         type="button"
         className="meal-planner-toggle"
-        onClick={toggleDrawer}
+        onClick={onToggle}
         aria-label={isOpen ? 'Close meal planner' : 'Open meal planner'}
         aria-expanded={isOpen}
       >
         <CalendarIcon size={20} />
       </button>
 
-      {/* Slide-over drawer — MealPlannerDrawer controls animation and backdrop */}
-      <MealPlannerDrawer isOpen={isOpen} onClose={closeDrawer} isDragging={isDragging}>
+      {/* Slide-over drawer — MealPlannerDrawer reads isDragging from context */}
+      <MealPlannerDrawer isOpen={isOpen} onClose={onClose}>
         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {weekDays.map(({ day, date, dateString }) => (
             <DayCard

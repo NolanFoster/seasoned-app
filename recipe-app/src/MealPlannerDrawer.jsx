@@ -1,4 +1,5 @@
 import React from 'react'
+import { useDragContext } from './useDragContext.js'
 
 const XIcon = ({ size = 16 }) => (
   <svg
@@ -17,9 +18,25 @@ const XIcon = ({ size = 16 }) => (
   </svg>
 )
 
-export default function MealPlannerDrawer({ isOpen, onClose, isDragging, children }) {
-  // Build the drawer class list. The `is-dragging` class removes the CSS transform
-  // while a drag is active — see MealPlanner.css for the full explanation.
+/**
+ * MealPlannerDrawer
+ *
+ * Slide-over panel housing the weekly meal grid. Reads `isDragging` from
+ * DragContext (rather than receiving it as a prop) to apply the `.is-dragging`
+ * CSS class that strips the drawer's CSS transform during drag operations.
+ *
+ * Why the transform must be removed during drag:
+ *   Any `transform` on an ancestor creates a containing block for
+ *   `position: fixed` children. @hello-pangea/dnd uses `position: fixed` for
+ *   its drag ghost, so the ghost's coordinates become drawer-relative rather
+ *   than viewport-relative, producing a visible cursor offset.
+ *   See MealPlanner.css (.meal-planner-drawer.is-open.is-dragging) for the rule.
+ *   DragPortal in DayCard.jsx provides belt-and-suspenders coverage at the
+ *   individual draggable level.
+ */
+export default function MealPlannerDrawer({ isOpen, onClose, children }) {
+  const { isDragging } = useDragContext()
+
   let drawerClassName = 'meal-planner-drawer'
   if (isOpen) drawerClassName += ' is-open'
   if (isDragging) drawerClassName += ' is-dragging'
