@@ -2605,6 +2605,7 @@ function App() {
         <button
           className={`icon-button${viewMode === 'planner' ? ' icon-button--active' : ''}`}
           aria-label={viewMode === 'planner' ? 'Back to Search' : 'Open Meal Planner'}
+          aria-pressed={viewMode === 'planner'}
           title={viewMode === 'planner' ? 'Back to Search' : 'Open Meal Planner'}
           onClick={handleToggleMealPlanner}
         >

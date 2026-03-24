@@ -40,7 +40,7 @@ const MealPlanner = () => (
           aria-label={`${day.label} meal plan`}
         >
           <header className="day-header">
-            <h2>{day.label}</h2>
+            <h3>{day.label}</h3>
             <span className="day-date">{day.abbreviation}</span>
           </header>
 
