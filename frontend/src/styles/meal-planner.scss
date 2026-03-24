@@ -1,0 +1,410 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// ============================================================
+// Header Actions Container
+// Top-right fixed area housing the planner toggle + UserMenu
+// ============================================================
+
+.header-actions {
+  position: fixed;
+  top: $spacing-lg;
+  right: $spacing-lg;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  z-index: $z-fab;
+
+  // GPU-composite layer to avoid layout shifts from the header glass panel
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+
+  @media (max-width: #{$breakpoint-tablet}) {
+    top: $spacing-md;
+    right: $spacing-md;
+    gap: $spacing-xs + 2;
+  }
+
+  @media (max-width: #{$breakpoint-mobile}) {
+    top: $spacing-md + 50px; // Drop below the header bar on small screens
+    right: $spacing-sm;
+    gap: $spacing-xs;
+  }
+}
+
+// ============================================================
+// Icon Button (planner calendar toggle)
+// Shares glass-morphism aesthetic with existing FAB buttons
+// ============================================================
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  border-radius: $border-radius-full; // fully circular
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: $shadow-sm,
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: background $transition-normal,
+              box-shadow $transition-normal,
+              transform $transition-fast,
+              border-color $transition-normal;
+  flex-shrink: 0;
+
+  svg, img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    pointer-events: none;
+    transition: transform $transition-fast;
+  }
+
+  // Hover — lift and brighten
+  &:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow: $shadow-md,
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px) scale(1.05);
+
+    svg, img {
+      transform: scale(1.1);
+    }
+  }
+
+  // Active — press feedback
+  &:active {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(0) scale(0.95);
+    box-shadow: $shadow-sm;
+  }
+
+  // Keyboard focus — WCAG AA visible outline
+  &:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 2px;
+  }
+
+  // Suppress focus ring for mouse users
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  // Active/selected state when planner is open
+  &.icon-button--active {
+    background: rgba($primary-color, 0.35);
+    border-color: rgba($primary-color, 0.6);
+    box-shadow: 0 4px 12px rgba($primary-color, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+    &:hover {
+      background: rgba($primary-color, 0.48);
+      border-color: rgba($primary-color, 0.8);
+    }
+  }
+
+  @media (max-width: #{$breakpoint-mobile}) {
+    width: 40px;
+    height: 40px;
+
+    svg, img {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+// Dark mode overrides for icon button
+@media (prefers-color-scheme: dark) {
+  .icon-button {
+    background: rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    &.icon-button--active {
+      background: rgba($primary-color, 0.3);
+      border-color: rgba($primary-color, 0.55);
+    }
+  }
+}
+
+// ============================================================
+// Meal Planner — top-level container
+// Fills the full viewport below any fixed header elements
+// ============================================================
+
+.meal-planner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  // Extra top padding so content starts below fixed header-container
+  padding: calc(#{$spacing-xl} + #{$spacing-xl} + #{$spacing-md}) $spacing-md $spacing-lg;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // Planner-specific heading/toolbar row
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-md;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+
+    h2 {
+      margin: 0;
+      font-size: $font-size-2xl;
+      font-weight: 700;
+      color: white;
+      text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  @media (max-width: #{$breakpoint-tablet}) {
+    padding: calc(#{$spacing-xl} + #{$spacing-xl}) $spacing-sm $spacing-lg;
+  }
+
+  @media (max-width: #{$breakpoint-mobile}) {
+    padding: calc(#{$spacing-xl} + #{$spacing-xl} + #{$spacing-lg}) $spacing-xs $spacing-md;
+  }
+}
+
+// ============================================================
+// Week Container — responsive CSS Grid for 7 day cards
+// ============================================================
+
+.week-container {
+  display: grid;
+  // min 280px per card; fills remaining space proportionally
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: $spacing-md;
+  align-items: start; // cards grow independently
+  width: 100%;
+
+  // Tablet — cap at 3 columns to keep cards readable
+  @media (max-width: #{$breakpoint-desktop}) and (min-width: #{$breakpoint-tablet + 1}) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  // Tablet portrait / small tablet — 2 columns
+  @media (max-width: #{$breakpoint-tablet}) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm + 5px;
+  }
+
+  // Mobile — single column, full width
+  @media (max-width: #{$breakpoint-mobile}) {
+    grid-template-columns: 1fr;
+    gap: $spacing-sm;
+  }
+}
+
+// ============================================================
+// Day Card — individual day container with glass finish
+// ============================================================
+
+.day-card {
+  position: relative;
+  border-radius: $border-radius-md;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: $shadow-md,
+              inset 0 1px 0 rgba(255, 255, 255, 0.3),
+              inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  padding: 0; // header / slots have their own padding
+  overflow: hidden;
+  transition: box-shadow $transition-normal, transform $transition-normal;
+
+  &:hover {
+    box-shadow: $shadow-lg,
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+  }
+
+  // "Today" highlight — subtle accent border on the left edge
+  &.day-card--today {
+    border-left: 4px solid $primary-color;
+    box-shadow: $shadow-md,
+                -2px 0 12px rgba($primary-color, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(30, 40, 55, 0.55);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+  }
+
+  @media (max-width: #{$breakpoint-mobile}) {
+    border-radius: $border-radius-sm;
+  }
+}
+
+// ============================================================
+// Day Header — displays the day name (e.g. "Monday")
+// ============================================================
+
+.day-header {
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: 700;
+    color: white;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.02em;
+  }
+
+  // Date sub-label (e.g. "Mar 24")
+  .day-date {
+    font-size: $font-size-xs;
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  // Highlight current day header
+  .day-card--today & {
+    background: rgba($primary-color, 0.18);
+    border-bottom-color: rgba($primary-color, 0.35);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+// ============================================================
+// Meal Slots Container — wraps all meal rows within a day
+// ============================================================
+
+.meal-slots-container {
+  display: flex;
+  flex-direction: column;
+  // No extra padding — each .meal-slot handles its own
+}
+
+// ============================================================
+// Meal Slot — individual meal row (Breakfast, Lunch, etc.)
+// ============================================================
+
+.meal-slot {
+  display: flex;
+  flex-direction: column;
+  min-height: 80px;
+  padding: $spacing-sm $spacing-md;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  transition: background $transition-fast;
+
+  // First slot — no top border (day-header already acts as divider)
+  &:first-child {
+    border-top: none;
+  }
+
+  // Hover — gentle highlight to indicate interactivity
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    border-top-color: rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  @media (max-width: #{$breakpoint-mobile}) {
+    min-height: 68px;
+    padding: $spacing-xs + 3 $spacing-sm;
+  }
+}
+
+// ============================================================
+// Meal Label — e.g. "Breakfast", "Lunch"
+// ============================================================
+
+.meal-label {
+  font-size: $font-size-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: $spacing-xs;
+
+  @media (prefers-color-scheme: dark) {
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+// ============================================================
+// Meal Content — area for recipe cards / placeholder text
+// ============================================================
+
+.meal-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-height: 44px; // reserve space even when empty
+
+  // Empty state placeholder
+  &:empty::before {
+    content: 'Tap to add a recipe';
+    font-size: $font-size-xs;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    align-self: flex-start;
+    padding-top: 2px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:empty::before {
+      color: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+// ============================================================
+// Reduced-motion overrides
+// Disables transitions/transforms for users who prefer it
+// ============================================================
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-button,
+  .day-card,
+  .meal-slot {
+    transition: none;
+  }
+
+  .icon-button:hover,
+  .day-card:hover {
+    transform: none;
+  }
+}
