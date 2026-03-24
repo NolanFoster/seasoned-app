@@ -185,8 +185,11 @@
 
 // ============================================================
 // Week Container — responsive CSS Grid for 7 day cards
+// .meal-week is the canonical class; .week-container is an alias kept for
+// backward compatibility with earlier generated markup.
 // ============================================================
 
+.meal-week,
 .week-container {
   display: grid;
   // min 280px per card; fills remaining space proportionally
@@ -348,8 +351,10 @@
 
 // ============================================================
 // Meal Label — e.g. "Breakfast", "Lunch"
+// .meal-type-label is the canonical class; .meal-label is kept as an alias.
 // ============================================================
 
+.meal-type-label,
 .meal-label {
   font-size: $font-size-xs;
   font-weight: 700;

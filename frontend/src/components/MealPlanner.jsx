@@ -1,77 +1,67 @@
 import React from 'react';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+// ── Data ──────────────────────────────────────────────────────────────────────
+
+const WEEK_DAYS = [
+  { id: 'monday',    label: 'Monday',    abbreviation: 'Mon' },
+  { id: 'tuesday',   label: 'Tuesday',   abbreviation: 'Tue' },
+  { id: 'wednesday', label: 'Wednesday', abbreviation: 'Wed' },
+  { id: 'thursday',  label: 'Thursday',  abbreviation: 'Thu' },
+  { id: 'friday',    label: 'Friday',    abbreviation: 'Fri' },
+  { id: 'saturday',  label: 'Saturday',  abbreviation: 'Sat' },
+  { id: 'sunday',    label: 'Sunday',    abbreviation: 'Sun' },
+];
+
+const MEAL_TYPES = [
+  { id: 'breakfast', label: 'Breakfast', icon: '🌅' },
+  { id: 'lunch',     label: 'Lunch',     icon: '🍽️' },
+  { id: 'dinner',    label: 'Dinner',    icon: '🌙' },
+];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * Returns the Monday-anchored dates for the current week.
- * Monday is index 0, Sunday is index 6.
+ * MealPlanner — displays a seven-day weekly meal planning grid.
+ *
+ * Presentation-only at this stage. Each day card renders empty meal slots
+ * (breakfast, lunch, dinner) ready for future meal CRUD integration.
  */
-function getCurrentWeekDates() {
-  const today = new Date();
-  // getDay() → 0=Sun … 6=Sat; convert to Mon=0 … Sun=6
-  const dayOfWeek = (today.getDay() + 6) % 7;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - dayOfWeek);
+const MealPlanner = () => (
+  <section className="meal-planner" aria-label="Weekly meal planner">
+    <header className="meal-planner__header">
+      <h2>Meal Planner</h2>
+    </header>
 
-  return DAYS.map((_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
+    <div className="meal-week">
+      {WEEK_DAYS.map((day) => (
+        <article
+          key={day.id}
+          className="day-card"
+          aria-label={`${day.label} meal plan`}
+        >
+          <header className="day-header">
+            <h2>{day.label}</h2>
+            <span className="day-date">{day.abbreviation}</span>
+          </header>
 
-function formatDate(date) {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function isToday(date) {
-  const today = new Date();
-  return (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
-  );
-}
-
-const MealPlanner = () => {
-  const weekDates = getCurrentWeekDates();
-
-  return (
-    <div className="meal-planner">
-      <div className="meal-planner__header">
-        <h2>Meal Planner</h2>
-      </div>
-
-      <div className="week-container">
-        {DAYS.map((day, i) => {
-          const date = weekDates[i];
-          const today = isToday(date);
-
-          return (
-            <div
-              key={day}
-              className={`day-card${today ? ' day-card--today' : ''}`}
-            >
-              <div className="day-header">
-                <h3>{day}</h3>
-                <div className="day-date">{formatDate(date)}</div>
+          <div className="meal-slots-container">
+            {MEAL_TYPES.map((meal) => (
+              <div
+                key={`${day.id}-${meal.id}`}
+                className="meal-slot"
+                aria-label={`${day.label} ${meal.label}`}
+              >
+                <span className="meal-type-label">
+                  {meal.icon} {meal.label}
+                </span>
+                <div className="meal-content" />
               </div>
-
-              <div className="meal-slots-container">
-                {MEALS.map((meal) => (
-                  <div key={meal} className="meal-slot">
-                    <div className="meal-label">{meal}</div>
-                    <div className="meal-content" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            ))}
+          </div>
+        </article>
+      ))}
     </div>
-  );
-};
+  </section>
+);
 
 export default MealPlanner;
