@@ -55,12 +55,13 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                       <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                         className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
                         data-testid={`meal-item-${meal.id}`}
                       >
-                        {/* Drag handle — only this element initiates a drag */}
+                        {/* Drag handle icon — visual affordance only; dragHandleProps
+                            have moved to the parent div so the entire card is draggable */}
                         <span
-                          {...provided.dragHandleProps}
                           className="drag-handle"
                           title="Drag to reorder"
                           aria-label="Drag handle"
@@ -80,7 +81,12 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                         <button
                           type="button"
                           className="meal-item-remove"
-                          onClick={() => onRemoveMeal(meal.id)}
+                          onClick={(e) => {
+                            // Stop propagation so the drag handler on the parent div
+                            // does not intercept this click and initiate a drag.
+                            e.stopPropagation()
+                            onRemoveMeal(meal.id)
+                          }}
                           aria-label={`Remove ${meal.name}`}
                         >
                           ×

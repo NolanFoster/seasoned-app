@@ -356,6 +356,23 @@
   font-size: 0.72rem;
   color: var(--text);
   transition: border-color 0.12s ease;
+
+  /* Prevent text selection highlighting during touch drag interactions */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+
+  /* Suppress iOS press-and-hold context menu (Copy / Share / Look Up) */
+  -webkit-touch-callout: none;
+
+  /* Allow vertical scroll in the container while the drag library handles
+     horizontal and diagonal gestures; use 'none' if vertical scroll is
+     never needed within the card itself */
+  touch-action: pan-y;
+
+  /* Remove the gray tap flash on Android so drag feedback is not obscured */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .meal-item:hover {
