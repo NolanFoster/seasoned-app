@@ -359,6 +359,7 @@
   color: var(--text);
   transition: border-color 0.12s ease;
   overflow: hidden;
+  cursor: pointer;
 
   /* Prevent text selection highlighting during touch drag interactions */
   user-select: none;
@@ -382,53 +383,71 @@
   border-color: var(--accent);
 }
 
+.meal-item:hover .meal-item-name {
+  color: var(--accent);
+}
+
 .meal-item-name {
-  /* Reset button appearance */
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  /* Layout */
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
+  transition: color 0.12s ease;
 }
 
-.meal-item-name:hover {
-  color: var(--accent);
+.meal-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
-.meal-item-name:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-.meal-item-remove {
+.meal-item-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  /* Ensure a good touch target size on mobile by using padding and negative margins */
+  width: 20px;
+  height: 20px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -14px -8px -14px 0;
+  padding: 14px 8px;
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  font-size: 0.8rem;
-  line-height: 1;
-  transition: color 0.12s ease;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.meal-item-action-btn:last-child {
+  margin-right: -14px;
+  padding-right: 14px;
+}
+
+.meal-item-action-btn:hover {
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.meal-item-action-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.meal-item-view:hover {
+  color: var(--accent);
+}
+
+.meal-item-move:hover {
+  color: var(--accent);
 }
 
 .meal-item-remove:hover {
   color: var(--error);
+  background: rgba(217, 79, 79, 0.08);
 }
+
 
 /* --------------------------------------------------------------------------
    9b. Meal-Type Sections
@@ -578,44 +597,6 @@
 body > .meal-item {
   z-index: var(--mp-z-drag-portal);
   pointer-events: none;
-}
-
-/* --------------------------------------------------------------------------
-   13. Move button — tap-to-move affordance on each recipe item.
-   Sits between the recipe name and the remove (×) button.
-   Colour intentionally distinct from the danger-red remove button.
-   -------------------------------------------------------------------------- */
-
-.meal-item-move {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* 44×44px touch-target area with visual appearance similar to remove btn */
-  min-width: 44px;
-  min-height: 44px;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  transition: color 0.12s ease, background 0.12s ease;
-  /* Override touch target: use negative margin to avoid layout impact */
-  margin: -14px -14px -14px 0;
-  padding: 14px;
-}
-
-.meal-item-move:hover {
-  color: var(--accent);
-  background: rgba(200, 169, 110, 0.08);
-}
-
-.meal-item-move:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 /* --------------------------------------------------------------------------
@@ -833,17 +814,6 @@ body > .meal-item {
   /* Keep button flush to match UserMenu (both at right: 16px area) */
   .meal-planner-toggle {
     right: var(--mp-btn-right); /* unchanged — avatar + gap calc still applies */
-  }
-
-  /* ── Mobile touch-target expansion ────────────────────────────────────────
-     On desktop, 16 × 16 px icon buttons are fine for pointer precision.
-     On touch screens they must be ≥ 44 × 44 px (WCAG 2.5.5 AAA).
-     Use the padding + negative-margin trick so the clickable area expands
-     without affecting surrounding layout.
-     ─────────────────────────────────────────────────────────────────────── */
-  .meal-item-remove {
-    margin: -14px 0 -14px -8px;
-    padding: 14px 8px;
   }
 
   /* Slightly larger section labels and "No meals" text for legibility */

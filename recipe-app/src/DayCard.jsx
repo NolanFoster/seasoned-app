@@ -111,6 +111,7 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                             {...provided.dragHandleProps}
                             className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
                             data-testid={`meal-item-${meal.id}`}
+                            onClick={() => setActiveRecipe(meal)}
                           >
                             <span
                               className="drag-handle"
@@ -119,36 +120,55 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                             >
                               ⠿
                             </span>
-                            <button
-                              type="button"
+                            <span
                               className="meal-item-name"
-                              onClick={() => setActiveRecipe(meal)}
                               aria-label={`View ${meal.name}`}
                             >
                               {meal.name}
-                            </button>
-                            <button
-                              type="button"
-                              className="meal-item-move"
-                              onClick={(e) => handleMoveClick(e, meal, mealType, index)}
-                              aria-label={`Move ${meal.name}`}
-                              title="Move to another slot"
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
-                                <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="meal-item-remove"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onRemoveMeal(mealType, meal.id)
-                              }}
-                              aria-label={`Remove ${meal.name}`}
-                            >
-                              ×
-                            </button>
+                            </span>
+                            <div className="meal-item-actions">
+                              <button
+                                type="button"
+                                className="meal-item-action-btn meal-item-view"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setActiveRecipe(meal)
+                                }}
+                                aria-label={`View ${meal.name}`}
+                                title="View recipe"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="meal-item-action-btn meal-item-move"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleMoveClick(e, meal, mealType, index)
+                                }}
+                                aria-label={`Move ${meal.name}`}
+                                title="Move to another slot"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
+                                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="meal-item-action-btn meal-item-remove"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onRemoveMeal(mealType, meal.id)
+                                }}
+                                aria-label={`Remove ${meal.name}`}
+                                title="Remove recipe"
+                              >
+                                ×
+                              </button>
+                            </div>
                           </div>
                         </DragPortal>
                       )}
