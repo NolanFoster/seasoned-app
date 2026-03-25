@@ -93,11 +93,11 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [wakeLockActive])
 
-  function handleDaySelected(dateString) {
+  function handleDaySelected(dateString, mealType) {
     setShowDaySelector(false)
     setOpenMenu(null)
     try {
-      mealPlanContext.addMeal(dateString, recipe)
+      mealPlanContext.addMeal(dateString, mealType, recipe)
       setPlannerFeedback('success')
     } catch {
       setPlannerFeedback('error')

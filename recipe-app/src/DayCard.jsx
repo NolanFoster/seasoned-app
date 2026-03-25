@@ -3,11 +3,20 @@ import { Droppable, Draggable } from '@hello-pangea/dnd'
 import EmptyDropZone from './EmptyDropZone.jsx'
 import DragPortal from './DragPortal.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { MEAL_TYPES, MEAL_TYPE_DISPLAY } from './utils/mealPlanMigration.js'
 
 function checkIsToday(dateStr) {
   const today = new Date()
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return dateStr === `${months[today.getMonth()]} ${today.getDate()}`
+}
+
+/**
+ * Encodes a date + mealType into a single droppableId string.
+ * Used as the key between DayCard and MealPlanner's drag handlers.
+ */
+export function encodeDroppableId(dateString, mealType) {
+  return `${dateString}||${mealType}`
 }
 
 export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) {
@@ -26,82 +35,77 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
         <span className="day-date">{date}</span>
       </div>
 
-      {/* Droppable zone — droppableId is the ISO date string so MealPlanner's
-          onDragEnd handler can map it back to the correct day in context state */}
-      <Droppable droppableId={dateString} type="MEAL">
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={`day-card-meals${snapshot.isDraggingOver ? ' day-card--drag-over' : ''}`}
-          >
-            {/* Empty drop-zone — shown only when there are no meals */}
-            {meals.length === 0 && <EmptyDropZone />}
+      {MEAL_TYPES.map((mealType) => {
+        const slotMeals = meals?.[mealType] ?? []
+        const droppableId = encodeDroppableId(dateString, mealType)
 
-            {meals.map((meal, index) => (
-                /* Draggable — draggableId must be globally unique and stable;
-                   combine date + index to avoid collisions across days */
-                <Draggable
-                  key={meal.id}
-                  draggableId={meal.id}
-                  index={index}
+        return (
+          <div key={mealType} className="day-card-meal-section">
+            <span className="meal-type-label">{MEAL_TYPE_DISPLAY[mealType]}</span>
+
+            {/* Each meal type is its own drop zone */}
+            <Droppable droppableId={droppableId} type="MEAL">
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={`day-card-meals${snapshot.isDraggingOver ? ' day-card--drag-over' : ''}`}
                 >
-                  {(provided, snapshot) => (
-                    /* DragPortal moves the element to document.body while
-                       dragging, escaping the drawer's CSS transform stacking
-                       context so position:fixed ghost coords are viewport-
-                       relative. See DragPortal.jsx for the full explanation. */
-                    <DragPortal isActive={snapshot.isDragging}>
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
-                        data-testid={`meal-item-${meal.id}`}
-                      >
-                        {/* Drag handle icon — visual affordance only; dragHandleProps
-                            have moved to the parent div so the entire card is draggable */}
-                        <span
-                          className="drag-handle"
-                          title="Drag to reorder"
-                          aria-label="Drag handle"
-                        >
-                          ⠿
-                        </span>
-                        {/* Clicking the name opens the full RecipeCard via context;
-                            App.jsx watches activeRecipe and closes the drawer. */}
-                        <button
-                          type="button"
-                          className="meal-item-name"
-                          onClick={() => setActiveRecipe(meal)}
-                          aria-label={`View ${meal.name}`}
-                        >
-                          {meal.name}
-                        </button>
-                        <button
-                          type="button"
-                          className="meal-item-remove"
-                          onClick={(e) => {
-                            // Stop propagation so the drag handler on the parent div
-                            // does not intercept this click and initiate a drag.
-                            e.stopPropagation()
-                            onRemoveMeal(meal.id)
-                          }}
-                          aria-label={`Remove ${meal.name}`}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </DragPortal>
-                  )}
-                </Draggable>
-            ))}
-            {/* Placeholder preserves list height while an item is being dragged */}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
+                  {slotMeals.length === 0 && <EmptyDropZone />}
 
+                  {slotMeals.map((meal, index) => (
+                    <Draggable
+                      key={meal.id}
+                      draggableId={meal.id}
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
+                        <DragPortal isActive={snapshot.isDragging}>
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
+                            data-testid={`meal-item-${meal.id}`}
+                          >
+                            <span
+                              className="drag-handle"
+                              title="Drag to reorder"
+                              aria-label="Drag handle"
+                            >
+                              ⠿
+                            </span>
+                            <button
+                              type="button"
+                              className="meal-item-name"
+                              onClick={() => setActiveRecipe(meal)}
+                              aria-label={`View ${meal.name}`}
+                            >
+                              {meal.name}
+                            </button>
+                            <button
+                              type="button"
+                              className="meal-item-remove"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onRemoveMeal(mealType, meal.id)
+                              }}
+                              aria-label={`Remove ${meal.name}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </DragPortal>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </div>
+        )
+      })}
     </div>
   )
 }

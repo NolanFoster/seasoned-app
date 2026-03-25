@@ -1,10 +1,11 @@
 import React from 'react'
 import { DragDropContext } from '@hello-pangea/dnd'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
-import DayCard from './DayCard.jsx'
+import DayCard, { encodeDroppableId } from './DayCard.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { DragProvider } from './DragContext.jsx'
 import { useDragContext } from './useDragContext.js'
+import { createEmptyDay } from './utils/mealPlanMigration.js'
 import './MealPlanner.css'
 
 // --- Inline SVG Icons ---
@@ -135,8 +136,11 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
     // Ignore cancelled drags or drops outside valid zones
     if (!result.destination) return
 
-    const { draggableId, source, destination } = result
-    moveMeal(draggableId, source.droppableId, destination.droppableId, destination.index)
+    const { source, destination } = result
+    // droppableId format: "${dateString}||${mealType}"
+    const [sourceDate, sourceMealType] = source.droppableId.split('||')
+    const [destDate, destMealType] = destination.droppableId.split('||')
+    moveMeal(sourceDate, sourceMealType, destDate, destMealType, source.index, destination.index)
   }
 
   return (
@@ -163,9 +167,9 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
               day={day}
               date={date}
               dateString={dateString}
-              meals={mealPlan[dateString] || []}
-              onRemoveMeal={(recipeId) => {
-                if (recipeId) removeMeal(dateString, recipeId)
+              meals={mealPlan[dateString] || createEmptyDay()}
+              onRemoveMeal={(mealType, recipeId) => {
+                if (mealType && recipeId) removeMeal(dateString, mealType, recipeId)
               }}
             />
           ))}
