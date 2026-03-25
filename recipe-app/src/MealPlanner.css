@@ -40,6 +40,14 @@
 
   --mp-transition-drawer:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
   --mp-transition-backdrop: 0.3s  cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing scale (multiples of 4 px) */
+  --spacing-xs:  4px;
+  --spacing-sm:  8px;
+  --spacing-md:  12px;
+  --spacing-lg:  16px;
+  --spacing-xl:  24px;
+  --spacing-2xl: 32px;
 }
 
 /* --------------------------------------------------------------------------
@@ -428,6 +436,55 @@
 }
 
 /* --------------------------------------------------------------------------
+   9b. Meal-Type Sections
+   Each DayCard now contains four named sections (Breakfast / Lunch / Dinner /
+   Snack). Sections appear only when at least one slot has recipes; the
+   card-level EmptyDropZone is shown instead when every slot is empty.
+   -------------------------------------------------------------------------- */
+
+/* Wrapper for each meal type within a DayCard */
+.day-card-meal-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* Separator line between sections for visual clarity */
+.day-card-meal-section + .day-card-meal-section {
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--border);
+}
+
+/* Section label — "Breakfast", "Lunch", etc. */
+.meal-type-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  opacity: 0.7;
+  user-select: none;
+  line-height: 1;
+}
+
+/* "No meals" inline placeholder — shown inside an otherwise-empty slot
+   when the rest of the day still has meals in other slots.
+   Kept visually subtle to avoid competing with actual recipe items. */
+.meal-slot-empty {
+  margin: 0;
+  padding: var(--spacing-xs) 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-style: italic;
+  user-select: none;
+  /* Ensure the droppable area remains a usable drop target */
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+/* --------------------------------------------------------------------------
    10. Empty Drop-Zone
    Displayed when a day card has no scheduled meals.
    Purely passive visual affordance for drag-and-drop (no interactive elements,
@@ -787,6 +844,26 @@ body > .meal-item {
   .meal-planner-toggle {
     right: var(--mp-btn-right); /* unchanged — avatar + gap calc still applies */
   }
+
+  /* ── Mobile touch-target expansion ────────────────────────────────────────
+     On desktop, 16 × 16 px icon buttons are fine for pointer precision.
+     On touch screens they must be ≥ 44 × 44 px (WCAG 2.5.5 AAA).
+     Use the padding + negative-margin trick so the clickable area expands
+     without affecting surrounding layout.
+     ─────────────────────────────────────────────────────────────────────── */
+  .meal-item-remove {
+    margin: -14px 0 -14px -8px;
+    padding: 14px 8px;
+  }
+
+  /* Slightly larger section labels and "No meals" text for legibility */
+  .meal-type-label {
+    font-size: 0.7rem;
+  }
+
+  .meal-slot-empty {
+    font-size: 0.7rem;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -797,5 +874,43 @@ body > .meal-item {
 @media (min-width: 768px) and (max-width: 1023px) {
   .meal-planner-drawer {
     width: var(--mp-drawer-width-tablet);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   16. Reduced Motion
+   Honour the user's OS-level "reduce motion" preference. Replace slide/fade
+   animations with an instant opacity toggle. Structural transitions
+   (drawer transform) are preserved at a shortened duration to retain
+   positional cues without vestibular discomfort.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Drawer: keep slide but cut duration to imperceptible */
+  .meal-planner-drawer {
+    transition-duration: 0.01ms;
+  }
+
+  /* Backdrop: instant fade */
+  .meal-planner-backdrop {
+    transition-duration: 0.01ms;
+  }
+
+  /* Remove all other transitions in the meal planner subtree */
+  .meal-planner-toggle,
+  .day-card,
+  .meal-item,
+  .meal-item-name,
+  .meal-item-move,
+  .meal-item-remove,
+  .drag-handle,
+  .day-card__empty-state,
+  .move-meal-modal,
+  .move-meal-modal__backdrop,
+  .move-meal-modal__back,
+  .move-meal-modal__close,
+  .move-meal-modal__item {
+    transition: none;
+    animation: none;
   }
 }
