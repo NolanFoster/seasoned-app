@@ -282,6 +282,17 @@
   box-shadow: none;
 }
 
+/* Lock drawer scroll while a drag is in progress so touch scroll momentum
+   cannot steal the gesture from the drag library mid-drag. */
+.meal-planner-drawer.is-dragging .drawer-content {
+  overflow-y: hidden;
+}
+
+/* Same treatment for the Up Next horizontal strip. */
+.meal-planner-drawer.is-dragging .up-next__container {
+  overflow-x: hidden;
+}
+
 /* "Today" highlight */
 .day-card--today {
   border-color: rgba(200, 169, 110, 0.5);
@@ -370,10 +381,11 @@
   /* Suppress iOS press-and-hold context menu (Copy / Share / Look Up) */
   -webkit-touch-callout: none;
 
-  /* Allow vertical scroll in the container while the drag library handles
-     horizontal and diagonal gestures; use 'none' if vertical scroll is
-     never needed within the card itself */
-  touch-action: pan-y;
+  /* Prevent the browser from claiming touch gestures as scroll — lets the
+     drag library own the full touch lifecycle. Without this, pan-y causes
+     vertical swipes to scroll the drawer instead of initiating a drag.
+     The user can still scroll by touching empty space outside recipe items. */
+  touch-action: none;
 
   /* Remove the gray tap flash on Android so drag feedback is not obscured */
   -webkit-tap-highlight-color: transparent;
@@ -555,6 +567,8 @@
   padding: 0 2px;
   transition: opacity 0.12s ease;
   user-select: none;
+  /* Belt-and-suspenders: ensure the handle itself never triggers browser scroll */
+  touch-action: none;
 }
 
 .meal-item:hover .drag-handle {
