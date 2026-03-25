@@ -169,9 +169,9 @@ describe('DayCard — Move button', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Move' }));
     // Confirm Move fires onMove('2026-04-01', 'dinner', 0)
     expect(mockMoveMeal).toHaveBeenCalledWith(
-      '2026-03-25', 'lunch',   // source date + type
-      '2026-04-01', 'dinner',  // dest date + type
-      0, 0                      // source index + dest index
+      { droppableId: '2026-03-25::lunch', index: 0 },    // source
+      { droppableId: '2026-04-01::dinner', index: 0 },   // destination
+      0, 0                                                // sourceIndex, destIndex
     );
   });
 
