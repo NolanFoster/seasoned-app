@@ -128,13 +128,23 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Mar 25')).toBeInTheDocument();
   });
 
-  test('renders an EmptyDropZone for every slot with no meals', () => {
+  test('renders a single card-level EmptyDropZone when all meal slots are empty', () => {
     renderDayCard(EMPTY_MEALS);
-    // All 4 meal type slots are empty → 4 EmptyDropZones
-    expect(screen.getAllByTestId('empty-drop-zone')).toHaveLength(4);
+    expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
   });
 
-  test('renders meal type section labels', () => {
+  test('does not render EmptyDropZone when at least one slot has meals', () => {
+    renderDayCard(); // lunch has 2 meals
+    expect(screen.queryByTestId('empty-drop-zone')).not.toBeInTheDocument();
+  });
+
+  test('does not render meal type sections when all slots are empty', () => {
+    renderDayCard(EMPTY_MEALS);
+    expect(screen.queryByText('Breakfast')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lunch')).not.toBeInTheDocument();
+  });
+
+  test('renders meal type section labels when at least one slot has meals', () => {
     renderDayCard();
     expect(screen.getByText('Breakfast')).toBeInTheDocument();
     expect(screen.getByText('Lunch')).toBeInTheDocument();
@@ -142,15 +152,34 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Snack')).toBeInTheDocument();
   });
 
-  test('renders EmptyDropZone only for empty slots when some meals are present', () => {
-    renderDayCard();
-    // lunch has 2 meals → no EmptyDropZone; the other 3 slots are empty → 3 EmptyDropZones
-    expect(screen.getAllByTestId('empty-drop-zone')).toHaveLength(3);
+  test('renders "No meals" placeholder for empty slots when day is not all empty', () => {
+    renderDayCard(); // breakfast, dinner, snack are empty; lunch has meals
+    // 3 empty slots → 3 "No meals" placeholders
+    expect(screen.getAllByText('No meals')).toHaveLength(3);
   });
 
   test('renders all meal names', () => {
     renderDayCard();
     expect(screen.getByText('Spaghetti Carbonara')).toBeInTheDocument();
     expect(screen.getByText('Grilled Salmon')).toBeInTheDocument();
+  });
+
+  test('renders null meals gracefully (defaults to empty state)', () => {
+    renderDayCard(null);
+    expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
+  });
+});
+
+// ── droppableId encoding ────────────────────────────────────────────────────
+
+describe('DayCard — encodeDroppableId', () => {
+  const { encodeDroppableId } = jest.requireActual('../DayCard');
+
+  test('encodes dateString and mealType with :: separator', () => {
+    expect(encodeDroppableId('2026-03-25', 'lunch')).toBe('2026-03-25::lunch');
+  });
+
+  test('encodes breakfast slot correctly', () => {
+    expect(encodeDroppableId('2026-10-24', 'breakfast')).toBe('2026-10-24::breakfast');
   });
 });

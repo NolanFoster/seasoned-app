@@ -137,9 +137,9 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
     if (!result.destination) return
 
     const { source, destination } = result
-    // droppableId format: "${dateString}||${mealType}"
-    const [sourceDate, sourceMealType] = source.droppableId.split('||')
-    const [destDate, destMealType] = destination.droppableId.split('||')
+    // droppableId format: "${dateString}::${mealType}"
+    const [sourceDate, sourceMealType] = source.droppableId.split('::')
+    const [destDate, destMealType] = destination.droppableId.split('::')
     moveMeal(sourceDate, sourceMealType, destDate, destMealType, source.index, destination.index)
   }
 
