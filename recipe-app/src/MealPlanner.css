@@ -761,19 +761,6 @@ body > .meal-item {
 }
 
 /* --------------------------------------------------------------------------
-   15. Drawer Footer (reserved for future actions, e.g. "Clear week")
-   -------------------------------------------------------------------------- */
-
-.drawer-footer {
-  flex-shrink: 0;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-/* --------------------------------------------------------------------------
    14. Responsive — Mobile (< 768px)
    Drawer becomes a bottom sheet (slides up from bottom) for thumb reachability.
    Cards collapse to a single column.
@@ -869,7 +856,17 @@ body > .meal-item {
   .move-meal-modal__backdrop,
   .move-meal-modal__back,
   .move-meal-modal__close,
-  .move-meal-modal__item {
+  .move-meal-modal__item,
+  /* Up Next staging area */
+  .up-next__card,
+  .up-next__card-remove,
+  .drawer-grocery-btn,
+  /* Grocery list modal */
+  .grocery-modal-overlay,
+  .grocery-modal-container,
+  .grocery-modal-close,
+  .grocery-item__label,
+  .grocery-item__text {
     transition: none;
     animation: none;
   }
@@ -1236,12 +1233,21 @@ body > .meal-item {
 }
 
 /* --------------------------------------------------------------------------
-   Reduced motion: suppress grocery modal animations
+   Responsive — Grocery modal (≥ 480px)
+   On wider viewports the modal gains a max-width and rounded corners on all
+   sides so it looks like a centered sheet rather than a full-bleed bottom bar.
    -------------------------------------------------------------------------- */
 
-@media (prefers-reduced-motion: reduce) {
-  .grocery-modal-overlay,
+@media (min-width: 480px) {
+  .grocery-modal-overlay {
+    align-items: flex-end;
+    padding: 0 12px;
+  }
+
   .grocery-modal-container {
-    animation: none;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    border-radius: var(--radius) var(--radius) 0 0;
   }
 }
