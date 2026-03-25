@@ -56,6 +56,7 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
+                        data-testid={`meal-item-${meal.id}`}
                       >
                         {/* Drag handle — only this element initiates a drag */}
                         <span

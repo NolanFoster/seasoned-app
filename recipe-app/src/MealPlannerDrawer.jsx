@@ -52,6 +52,7 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
         className={drawerClassName}
         aria-label="Meal planner"
         aria-hidden={!isOpen}
+        data-testid="meal-planner-drawer"
       >
         <div className="drawer-header">
           <span className="drawer-title">Meal Planner</span>

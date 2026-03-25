@@ -149,6 +149,7 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
         onClick={onToggle}
         aria-label={isOpen ? 'Close meal planner' : 'Open meal planner'}
         aria-expanded={isOpen}
+        data-testid="open-meal-planner-btn"
       >
         <CalendarIcon size={20} />
       </button>
