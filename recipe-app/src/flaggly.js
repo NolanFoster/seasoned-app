@@ -11,6 +11,8 @@ try {
   flaggly = new Flaggly({
     url: FLAGGLY_PROXY_URL,
     apiKey: '',
+    app: import.meta.env.VITE_FLAGGLY_APP_ID || 'default',
+    env: import.meta.env.VITE_FLAGGLY_ENV_ID || 'production',
     lazy: true, // prevent SDK's internal fetch which has binding issues in Vite modules
     bootstrap: {
       'voice-control': true,
@@ -32,6 +34,17 @@ export { flaggly }
  * Uses the SDK so the request matches Flaggly (`id`, `user`, `page.url`). The Pages
  * worker overwrites `Authorization` when proxying to Flaggly.
  */
+function formatFlagglyErrorCause(err) {
+  const c = err?.cause
+  if (c == null) return ''
+  if (typeof c === 'string') return c
+  try {
+    return JSON.stringify(c)
+  } catch {
+    return String(c)
+  }
+}
+
 export async function syncFlagglyUser(user) {
   if (typeof flaggly.fetchFlags !== 'function') return
   try {
@@ -44,8 +57,25 @@ export async function syncFlagglyUser(user) {
       flaggly.user = undefined
       await flaggly.fetchFlags()
     }
-  } catch {
+
+    const state = flaggly.store.get()
+    const keys = state ? Object.keys(state) : []
+    if (keys.length === 0) {
+      console.warn(
+        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
+      )
+    } else if (import.meta.env.DEV) {
+      console.info(`[flaggly] Eval OK — ${keys.length} flag(s):`, keys.join(', '))
+    }
+  } catch (err) {
     // bootstrap / previous store values remain on error
+    const cause = formatFlagglyErrorCause(err)
+    console.warn(
+      '[flaggly] Flag sync failed:',
+      err?.message || err,
+      cause ? `(response: ${cause})` : '',
+      '— Pages secret FLAGGLY_API_KEY must be the `user` JWT from Flaggly POST /__generate (not the admin JWT, not JWT_SECRET). Put the secret on this **Pages** project (omni-recipe), and ensure the FLAGGLY service binding targets your Flaggly worker.'
+    )
   }
 }
 

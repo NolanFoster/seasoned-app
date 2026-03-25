@@ -1,8 +1,33 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const flagglyTarget = env.FLAGGLY_EVAL_URL?.replace(/\/$/, '')
+  const flagglyJwt = env.FLAGGLY_USER_JWT
+  const flagglyAppId = env.FLAGGLY_APP_ID || 'default'
+  const flagglyEnvId = env.FLAGGLY_ENV_ID || 'production'
+
+  const devFlagglyProxy =
+    mode === 'development' && flagglyTarget && flagglyJwt
+      ? {
+          '/api/eval': {
+            target: flagglyTarget,
+            changeOrigin: true,
+            secure: true,
+            configure: (proxy) => {
+              proxy.on('proxyReq', (proxyReq) => {
+                proxyReq.setHeader('Authorization', `Bearer ${flagglyJwt}`)
+                proxyReq.setHeader('x-app-id', flagglyAppId)
+                proxyReq.setHeader('x-env-id', flagglyEnvId)
+              })
+            },
+          },
+        }
+      : undefined
+
+  return {
   plugins: [
     react(),
     VitePWA({
@@ -84,5 +109,7 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist'
+  },
+  server: devFlagglyProxy ? { proxy: devFlagglyProxy } : undefined,
   }
 })
