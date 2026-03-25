@@ -2,6 +2,7 @@ import React from 'react'
 import { DragDropContext } from '@hello-pangea/dnd'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
 import DayCard from './DayCard.jsx'
+import UpNextCard from './UpNextCard.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { DragProvider } from './DragContext.jsx'
 import { useDragContext } from './useDragContext.js'
@@ -138,27 +139,8 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
     // Guard: dropped outside any droppable zone
     if (!destination) return
 
-    // Guard: dropped back onto the same position — no state change needed
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return
-
-    // Parse droppableId format: "${dateString}::${mealType}"
-    const [sourceDate, sourceMealType] = source.droppableId.split('::')
-    const [destDate, destMealType] = destination.droppableId.split('::')
-
-    // Validate that both IDs were well-formed
-    if (!sourceDate || !sourceMealType || !destDate || !destMealType) {
-      console.error(`MealPlanner: malformed droppableId — source="${source.droppableId}" dest="${destination.droppableId}"`)
-      return
-    }
-
-    // Validate meal types
-    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack']
-    if (!validMealTypes.includes(sourceMealType) || !validMealTypes.includes(destMealType)) {
-      console.error(`MealPlanner: invalid mealType — sourceMealType="${sourceMealType}" destMealType="${destMealType}"`)
-      return
-    }
-
-    moveMeal(sourceDate, sourceMealType, destDate, destMealType, source.index, destination.index)
+    // Delegate all routing (including upNext ↔ slot) to moveMeal in context
+    moveMeal(source, destination, source.index, destination.index)
   }
 
   return (
@@ -178,19 +160,27 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
 
       {/* Slide-over drawer — MealPlannerDrawer reads isDragging from context */}
       <MealPlannerDrawer isOpen={isOpen} onClose={onClose}>
+        {/* Single DragDropContext covers both UpNextCard and DayCards so recipes
+            can be dragged between the staging area and any date/meal slot. */}
         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          {weekDays.map(({ day, date, dateString }) => (
-            <DayCard
-              key={dateString}
-              day={day}
-              date={date}
-              dateString={dateString}
-              meals={mealPlan[dateString] || createEmptyDay()}
-              onRemoveMeal={(mealType, recipeId) => {
-                if (mealType && recipeId) removeMeal(dateString, mealType, recipeId)
-              }}
-            />
-          ))}
+          {/* Staging area — rendered first so it appears above the week grid */}
+          <UpNextCard />
+
+          {/* Weekly meal grid */}
+          <div className="day-cards-grid">
+            {weekDays.map(({ day, date, dateString }) => (
+              <DayCard
+                key={dateString}
+                day={day}
+                date={date}
+                dateString={dateString}
+                meals={mealPlan[dateString] || createEmptyDay()}
+                onRemoveMeal={(mealType, recipeId) => {
+                  if (mealType && recipeId) removeMeal(dateString, mealType, recipeId)
+                }}
+              />
+            ))}
+          </div>
         </DragDropContext>
       </MealPlannerDrawer>
     </>

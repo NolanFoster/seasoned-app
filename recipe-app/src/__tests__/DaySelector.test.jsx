@@ -2,6 +2,11 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import DaySelector from '../DaySelector';
 
+const mockAddUpNext = jest.fn();
+jest.mock('../MealPlanContext.jsx', () => ({
+  useMealPlan: () => ({ addUpNext: mockAddUpNext }),
+}));
+
 function renderSelector(props = {}) {
   const onDaySelected = jest.fn();
   const onClose = jest.fn();
@@ -220,5 +225,56 @@ describe('DaySelector — re-selection', () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     expect(dateArg).toBe(tomorrow.toISOString().split('T')[0]);
     expect(mealTypeArg).toBe('lunch');
+  });
+});
+
+// ── Save to Up Next ──────────────────────────────────────────────────────────
+
+const RECIPE = { id: 'r1', name: 'Pasta Carbonara', ingredients: ['pasta', 'eggs'] };
+
+describe('DaySelector — Save to Up Next', () => {
+  beforeEach(() => {
+    mockAddUpNext.mockClear();
+  });
+
+  test('renders the "Save to Up Next" button on Step 1', () => {
+    renderSelector({ recipe: RECIPE });
+    expect(screen.getByRole('button', { name: /save to up next/i })).toBeInTheDocument();
+  });
+
+  test('"Save to Up Next" button is disabled when no recipe is passed', () => {
+    renderSelector();
+    expect(screen.getByRole('button', { name: /save to up next/i })).toBeDisabled();
+  });
+
+  test('clicking "Save to Up Next" calls addUpNext with the recipe', () => {
+    renderSelector({ recipe: RECIPE });
+    fireEvent.click(screen.getByRole('button', { name: /save to up next/i }));
+    expect(mockAddUpNext).toHaveBeenCalledWith(RECIPE);
+  });
+
+  test('clicking "Save to Up Next" calls onClose immediately', () => {
+    const { onClose } = renderSelector({ recipe: RECIPE });
+    fireEvent.click(screen.getByRole('button', { name: /save to up next/i }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('clicking "Save to Up Next" does not call onDaySelected', () => {
+    const { onDaySelected } = renderSelector({ recipe: RECIPE });
+    fireEvent.click(screen.getByRole('button', { name: /save to up next/i }));
+    expect(onDaySelected).not.toHaveBeenCalled();
+  });
+
+  test('"Save to Up Next" button is not shown on Step 2 (meal selection)', () => {
+    renderSelector({ recipe: RECIPE });
+    fireEvent.click(screen.getByRole('button', { name: /Add to Today/i }));
+    expect(screen.queryByRole('button', { name: /save to up next/i })).not.toBeInTheDocument();
+  });
+
+  test('day selection flow still works after "Save to Up Next" button is present', () => {
+    const { onDaySelected } = renderSelector({ recipe: RECIPE });
+    fireEvent.click(screen.getByRole('button', { name: /Add to Today/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add to Lunch/i }));
+    expect(onDaySelected).toHaveBeenCalledWith(expect.any(String), 'lunch');
   });
 });

@@ -60,7 +60,9 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
   }
 
   function handleMoveConfirm(destDate, destMealType, destIndex) {
-    moveMeal(dateString, movingMeal.mealType, destDate, destMealType, movingMeal.index, destIndex)
+    const source = { droppableId: encodeDroppableId(dateString, movingMeal.mealType), index: movingMeal.index }
+    const destination = { droppableId: encodeDroppableId(destDate, destMealType), index: destIndex }
+    moveMeal(source, destination, movingMeal.index, destIndex)
     setMovingMeal(null)
   }
 

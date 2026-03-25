@@ -2004,6 +2004,40 @@ html, body {
   outline-offset: 2px;
 }
 
+/* ── Save to Up Next button ─────────────────────────────────────── */
+.day-selector-up-next-section {
+  padding: 10px 12px 4px;
+}
+
+.day-selector__up-next-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  min-height: 44px;
+}
+.day-selector__up-next-btn:hover {
+  opacity: 0.88;
+}
+.day-selector__up-next-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.day-selector__up-next-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Planner feedback toast ─────────────────────────────────────── */
 .planner-feedback {
   position: absolute;

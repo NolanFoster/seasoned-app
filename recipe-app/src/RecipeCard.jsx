@@ -286,6 +286,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
 
       {mealPlannerEnabled && showDaySelector && (
         <DaySelector
+          recipe={recipe}
           onDaySelected={handleDaySelected}
           onClose={() => setShowDaySelector(false)}
         />

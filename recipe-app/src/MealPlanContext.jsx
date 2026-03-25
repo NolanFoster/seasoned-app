@@ -33,6 +33,7 @@ function loadFromStorage() {
 
 export function MealPlanProvider({ children }) {
   const [mealPlan, setMealPlan] = useState(loadFromStorage);
+  const [upNext, setUpNext] = useState([]);
   const [activeRecipe, setActiveRecipe] = useState(null);
 
   useEffect(() => {
@@ -67,6 +68,33 @@ export function MealPlanProvider({ children }) {
   };
 
   /**
+   * Appends a recipe to the upNext staging area.
+   * Adding the same recipe twice is allowed (e.g. to schedule it multiple times).
+   * @param {Object} recipe - recipe object with at least { id, name, ingredients }
+   */
+  const addUpNext = (recipe) => {
+    if (!recipe?.id || !recipe?.name) {
+      console.warn('addUpNext: recipe missing id or name; skipping');
+      return;
+    }
+    setUpNext((prev) => [...prev, recipe]);
+  };
+
+  /**
+   * Removes the first recipe matching recipeId from the upNext staging area.
+   * If the ID does not exist, the call is a no-op (no error thrown).
+   * @param {string} recipeId - the id of the recipe to remove
+   */
+  const removeUpNext = (recipeId) => {
+    if (!recipeId) return;
+    setUpNext((prev) => {
+      const idx = prev.findIndex((r) => r.id === recipeId);
+      if (idx === -1) return prev; // graceful no-op
+      return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
+  };
+
+  /**
    * Removes a recipe from a specific date and meal type slot by ID.
    * @param {string} dateString
    * @param {string} mealType
@@ -91,19 +119,140 @@ export function MealPlanProvider({ children }) {
   };
 
   /**
-   * Moves a recipe between slots (same or different date/mealType).
-   * @param {string} sourceDate
-   * @param {string} sourceMealType
-   * @param {string} destDate
-   * @param {string} destMealType
-   * @param {number} sourceIndex
-   * @param {number} destIndex
+   * Moves a recipe between any combination of droppable zones, including the
+   * upNext staging area and date/meal-type slots.
+   *
+   * Handles four scenarios:
+   *   1. upNext → upNext  : reorder within the staging area
+   *   2. upNext → slot    : move from staging into a date/meal slot
+   *   3. slot  → upNext   : move from a date/meal slot back to staging
+   *   4. slot  → slot     : move within the scheduled meal plan (existing behaviour)
+   *
+   * droppableId format for date/meal slots: "${dateString}::${mealType}"
+   * (e.g. "2025-10-24::breakfast").  The upNext zone uses the literal id "upNext".
+   *
+   * @param {{ droppableId: string, index: number }} source      - drag source from @hello-pangea/dnd
+   * @param {{ droppableId: string, index: number }} destination - drag destination from @hello-pangea/dnd
+   * @param {number} sourceIndex      - source position (mirrors source.index; kept for call-site convenience)
+   * @param {number} destinationIndex - destination position (mirrors destination.index)
    */
-  const moveMeal = (sourceDate, sourceMealType, destDate, destMealType, sourceIndex, destIndex) => {
-    if (!isValidMealType(sourceMealType) || !isValidMealType(destMealType)) {
-      console.warn('moveMeal: invalid mealType in source or destination');
+  const moveMeal = (source, destination, sourceIndex, destinationIndex) => {
+    // No-op if dropped outside any droppable
+    if (!destination) return;
+
+    // No-op if dropped back onto the exact same position
+    if (source.droppableId === destination.droppableId && sourceIndex === destinationIndex) return;
+
+    const isSourceUpNext = source.droppableId === 'upNext';
+    const isDestUpNext = destination.droppableId === 'upNext';
+
+    /**
+     * Parses a slot droppableId of the form "YYYY-MM-DD::mealType" into
+     * { date, mealType }.  Returns null for "upNext" or malformed ids.
+     */
+    function parseSlotId(droppableId) {
+      if (droppableId === 'upNext') return null;
+      const sep = droppableId.lastIndexOf('::');
+      if (sep === -1) return null;
+      const date = droppableId.slice(0, sep);
+      const mealType = droppableId.slice(sep + 2);
+      if (!date || !isValidMealType(mealType)) return null;
+      return { date, mealType };
+    }
+
+    // ── Scenario 1: upNext → upNext (reorder within staging area) ──────────
+    if (isSourceUpNext && isDestUpNext) {
+      setUpNext((prev) => {
+        if (sourceIndex < 0 || sourceIndex >= prev.length) return prev;
+        const reordered = [...prev];
+        const [moved] = reordered.splice(sourceIndex, 1);
+        const clampedDest = Math.min(destinationIndex, reordered.length);
+        reordered.splice(clampedDest, 0, moved);
+        return reordered;
+      });
       return;
     }
+
+    // ── Scenario 2: upNext → slot (move from staging to schedule) ──────────
+    if (isSourceUpNext && !isDestUpNext) {
+      const destSlot = parseSlotId(destination.droppableId);
+      if (!destSlot) {
+        console.warn('moveMeal: malformed destination droppableId:', destination.droppableId);
+        return;
+      }
+      const { date: destDate, mealType: destMealType } = destSlot;
+
+      // Capture recipe from current upNext before any state mutation
+      if (sourceIndex < 0 || sourceIndex >= upNext.length) return;
+      const recipe = upNext[sourceIndex];
+
+      // Remove from upNext
+      setUpNext([...upNext.slice(0, sourceIndex), ...upNext.slice(sourceIndex + 1)]);
+
+      // Insert into mealPlan slot
+      setMealPlan((prev) => {
+        const destDay = prev[destDate] ?? createEmptyDay();
+        const destMeals = destDay[destMealType] ?? [];
+        const clampedDest = Math.min(destinationIndex, destMeals.length);
+        const newDestMeals = [...destMeals];
+        newDestMeals.splice(clampedDest, 0, recipe);
+        return {
+          ...prev,
+          [destDate]: { ...destDay, [destMealType]: newDestMeals },
+        };
+      });
+      return;
+    }
+
+    // ── Scenario 3: slot → upNext (move from schedule back to staging) ──────
+    if (!isSourceUpNext && isDestUpNext) {
+      const srcSlot = parseSlotId(source.droppableId);
+      if (!srcSlot) {
+        console.warn('moveMeal: malformed source droppableId:', source.droppableId);
+        return;
+      }
+      const { date: srcDate, mealType: srcMealType } = srcSlot;
+
+      // Capture recipe from current mealPlan before any state mutation
+      const srcDay = mealPlan[srcDate];
+      if (!srcDay) return;
+      const srcMeals = srcDay[srcMealType] ?? [];
+      if (sourceIndex < 0 || sourceIndex >= srcMeals.length) return;
+      const recipe = srcMeals[sourceIndex];
+
+      // Remove from mealPlan slot
+      setMealPlan((prev) => {
+        const day = prev[srcDate];
+        if (!day) return prev;
+        const meals = day[srcMealType] ?? [];
+        return {
+          ...prev,
+          [srcDate]: { ...day, [srcMealType]: meals.filter((_, i) => i !== sourceIndex) },
+        };
+      });
+
+      // Insert into upNext at destination index
+      setUpNext((prev) => {
+        const clampedDest = Math.min(destinationIndex, prev.length);
+        const newUpNext = [...prev];
+        newUpNext.splice(clampedDest, 0, recipe);
+        return newUpNext;
+      });
+      return;
+    }
+
+    // ── Scenario 4: slot → slot (existing behaviour) ────────────────────────
+    const srcSlot = parseSlotId(source.droppableId);
+    const destSlot = parseSlotId(destination.droppableId);
+
+    if (!srcSlot || !destSlot) {
+      console.warn('moveMeal: malformed droppableId in slot→slot move');
+      return;
+    }
+
+    const { date: sourceDate, mealType: sourceMealType } = srcSlot;
+    const { date: destDate, mealType: destMealType } = destSlot;
+
     setMealPlan((prev) => {
       const sourceDay = prev[sourceDate] ?? createEmptyDay();
       const sourceMeals = sourceDay[sourceMealType] ?? [];
@@ -111,14 +260,13 @@ export function MealPlanProvider({ children }) {
       if (sourceIndex < 0 || sourceIndex >= sourceMeals.length) return prev;
 
       const meal = sourceMeals[sourceIndex];
-
       const isSameSlot = sourceDate === destDate && sourceMealType === destMealType;
 
       if (isSameSlot) {
-        if (sourceIndex === destIndex) return prev;
+        if (sourceIndex === destinationIndex) return prev;
         const reordered = [...sourceMeals];
         reordered.splice(sourceIndex, 1);
-        const clampedDest = Math.min(destIndex, reordered.length);
+        const clampedDest = Math.min(destinationIndex, reordered.length);
         reordered.splice(clampedDest, 0, meal);
         return {
           ...prev,
@@ -132,7 +280,7 @@ export function MealPlanProvider({ children }) {
       // Insert into destination
       const destDay = prev[destDate] ?? createEmptyDay();
       const destMeals = destDay[destMealType] ?? [];
-      const clampedDest = Math.min(destIndex, destMeals.length);
+      const clampedDest = Math.min(destinationIndex, destMeals.length);
       const newDestMeals = [...destMeals];
       newDestMeals.splice(clampedDest, 0, meal);
 
@@ -158,7 +306,7 @@ export function MealPlanProvider({ children }) {
 
   return (
     <MealPlanContext.Provider
-      value={{ mealPlan, addMeal, removeMeal, moveMeal, activeRecipe, setActiveRecipe, clearActiveRecipe }}
+      value={{ mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal, activeRecipe, setActiveRecipe, clearActiveRecipe }}
     >
       {children}
     </MealPlanContext.Provider>
