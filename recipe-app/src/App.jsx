@@ -100,6 +100,7 @@ function UserMenu({ user, onSignOut }) {
 export default function App() {
   const auth = useAuth()
   const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -197,6 +198,15 @@ export default function App() {
       if (!active || active === document.body) inputRef.current?.focus()
     }
   }, [inputBusy, activeRecipe])
+
+  // When a recipe is selected from the MealPlannerDrawer (via DayCard calling
+  // setActiveRecipe), automatically close the drawer so the RecipeCard is visible.
+  // Only fires on non-null values — clearing activeRecipe does not re-open the drawer.
+  useEffect(() => {
+    if (activeRecipe) {
+      setIsDrawerOpen(false)
+    }
+  }, [activeRecipe])
 
   // --- Auth gates (after all hooks) ---
 
@@ -429,7 +439,11 @@ export default function App() {
   return (
     <div className="app">
       <PWAInstallPrompt />
-      <MealPlanner />
+      <MealPlanner
+        isOpen={isDrawerOpen}
+        onToggle={() => setIsDrawerOpen((prev) => !prev)}
+        onClose={() => setIsDrawerOpen(false)}
+      />
       <UserMenu user={auth.user} onSignOut={auth.signOut} />
       <div className="omnibox-wrapper">
         <div className="brand">
