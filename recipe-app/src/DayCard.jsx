@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
 import EmptyDropZone from './EmptyDropZone.jsx'
 import DragPortal from './DragPortal.jsx'
+import MoveMealModal from './MoveMealModal.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { MEAL_TYPES, MEAL_TYPE_DISPLAY } from './utils/mealPlanMigration.js'
 
@@ -28,6 +29,9 @@ export function encodeDroppableId(dateString, mealType) {
  * (Breakfast, Lunch, Dinner, Snack) become visible, each with its own
  * Droppable zone.
  *
+ * Each recipe item shows a Move button (↔) that opens MoveMealModal — a
+ * two-step tap-to-move flow for mobile-friendly repositioning.
+ *
  * @param {string}   day           - Display day name, e.g. "Monday"
  * @param {string}   date          - Display date, e.g. "Mar 25"
  * @param {string}   dateString    - ISO date string used as droppable key, e.g. "2026-03-25"
@@ -35,7 +39,9 @@ export function encodeDroppableId(dateString, mealType) {
  * @param {function} onRemoveMeal  - Called with (mealType, recipeId) when a recipe is removed
  */
 export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) {
-  const { setActiveRecipe } = useMealPlan()
+  const { setActiveRecipe, moveMeal } = useMealPlan()
+  const [movingMeal, setMovingMeal] = useState(null) // { recipe, mealType, index } | null
+
   const todayCard = checkIsToday(date)
   const wideCard = day === 'Sunday'
 
@@ -49,6 +55,16 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
   let className = 'day-card'
   if (todayCard) className += ' day-card--today'
   if (wideCard) className += ' day-card--wide'
+
+  function handleMoveClick(e, meal, mealType, index) {
+    e.stopPropagation()
+    setMovingMeal({ recipe: meal, mealType, index })
+  }
+
+  function handleMoveConfirm(destDate, destMealType, destIndex) {
+    moveMeal(dateString, movingMeal.mealType, destDate, destMealType, movingMeal.index, destIndex)
+    setMovingMeal(null)
+  }
 
   return (
     <div className={className}>
@@ -120,6 +136,17 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                               </button>
                               <button
                                 type="button"
+                                className="meal-item-move"
+                                onClick={(e) => handleMoveClick(e, meal, mealType, index)}
+                                aria-label={`Move ${meal.name}`}
+                                title="Move to another slot"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
+                                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
                                 className="meal-item-remove"
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -141,6 +168,18 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
             </div>
           )
         })
+      )}
+
+      {movingMeal && (
+        <MoveMealModal
+          isOpen={true}
+          onClose={() => setMovingMeal(null)}
+          sourceDate={dateString}
+          sourceMealType={movingMeal.mealType}
+          sourceIndex={movingMeal.index}
+          sourceRecipe={movingMeal.recipe}
+          onMove={handleMoveConfirm}
+        />
       )}
     </div>
   )

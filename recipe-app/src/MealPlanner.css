@@ -529,7 +529,206 @@ body > .meal-item {
 }
 
 /* --------------------------------------------------------------------------
-   13. Drawer Footer (reserved for future actions, e.g. "Clear week")
+   13. Move button — tap-to-move affordance on each recipe item.
+   Sits between the recipe name and the remove (×) button.
+   Colour intentionally distinct from the danger-red remove button.
+   -------------------------------------------------------------------------- */
+
+.meal-item-move {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 44×44px touch-target area with visual appearance similar to remove btn */
+  min-width: 44px;
+  min-height: 44px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s ease, background 0.12s ease;
+  /* Override touch target: use negative margin to avoid layout impact */
+  margin: -14px -14px -14px 0;
+  padding: 14px;
+}
+
+.meal-item-move:hover {
+  color: var(--accent);
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.meal-item-move:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   14. MoveMealModal — two-step tap-to-move modal.
+   Mirrors the .day-selector visual pattern for consistency.
+   -------------------------------------------------------------------------- */
+
+.move-meal-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300; /* above the drawer (161) and day-selector (200) */
+  padding: 16px;
+}
+
+.move-meal-modal {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 320px;
+  overflow: hidden;
+  animation: slide-up 0.18s ease;
+}
+
+.move-meal-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.move-meal-modal__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.move-meal-modal__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.move-meal-modal__back {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 1.2rem;
+  line-height: 1;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.1s;
+}
+.move-meal-modal__back:hover {
+  color: var(--text);
+}
+.move-meal-modal__back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.move-meal-modal__close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: color 0.1s;
+}
+.move-meal-modal__close:hover {
+  color: var(--text);
+}
+.move-meal-modal__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Source recipe context strip */
+.move-meal-modal__context {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(200, 169, 110, 0.05);
+  border-bottom: 1px solid var(--border);
+}
+
+.move-meal-modal__context-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.move-meal-modal__context-recipe {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Step prompt */
+.move-meal-modal__prompt {
+  margin: 0;
+  padding: 8px 16px 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Option list — same structure as .day-selector-list */
+.move-meal-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.move-meal-modal__item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  min-height: 44px; /* WCAG touch target */
+}
+.move-meal-modal__item:hover,
+.move-meal-modal__item:focus {
+  background: var(--border);
+  color: var(--text);
+  outline: none;
+}
+
+/* --------------------------------------------------------------------------
+   15. Drawer Footer (reserved for future actions, e.g. "Clear week")
    -------------------------------------------------------------------------- */
 
 .drawer-footer {

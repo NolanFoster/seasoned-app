@@ -19,9 +19,27 @@ jest.mock('@hello-pangea/dnd', () => ({
 jest.mock('../EmptyDropZone.jsx', () => () => <div data-testid="empty-drop-zone" />);
 jest.mock('../DragPortal.jsx', () => ({ children }) => children);
 
+// Capture the props that MoveMealModal was last opened with
+let lastModalProps = null;
+jest.mock('../MoveMealModal.jsx', () => (props) => {
+  lastModalProps = props;
+  if (!props.isOpen) return null;
+  return (
+    <div data-testid="move-meal-modal">
+      <span data-testid="modal-recipe-name">{props.sourceRecipe?.name}</span>
+      <button onClick={() => props.onMove('2026-04-01', 'dinner', 0)}>Confirm Move</button>
+      <button onClick={props.onClose}>Close Modal</button>
+    </div>
+  );
+});
+
 const mockSetActiveRecipe = jest.fn();
+const mockMoveMeal = jest.fn();
 jest.mock('../MealPlanContext.jsx', () => ({
-  useMealPlan: () => ({ setActiveRecipe: mockSetActiveRecipe }),
+  useMealPlan: () => ({
+    setActiveRecipe: mockSetActiveRecipe,
+    moveMeal: mockMoveMeal,
+  }),
 }));
 
 // New meals shape: organised by meal type
@@ -56,11 +74,15 @@ function renderDayCard(meals = BASE_MEALS) {
   return { onRemoveMeal };
 }
 
+beforeEach(() => {
+  mockSetActiveRecipe.mockClear();
+  mockMoveMeal.mockClear();
+  lastModalProps = null;
+});
+
 // ── Recipe clickability ─────────────────────────────────────────────────────
 
 describe('DayCard — recipe clickability', () => {
-  beforeEach(() => mockSetActiveRecipe.mockClear());
-
   test('recipe names render as buttons', () => {
     renderDayCard();
     expect(screen.getByRole('button', { name: /View Spaghetti Carbonara/i })).toBeInTheDocument();
@@ -106,6 +128,58 @@ describe('DayCard — recipe clickability', () => {
     fireEvent.click(btn);
     expect(mockSetActiveRecipe).toHaveBeenCalledTimes(3);
     expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_1);
+  });
+});
+
+// ── Move button ─────────────────────────────────────────────────────────────
+
+describe('DayCard — Move button', () => {
+  test('each meal item has a Move button', () => {
+    renderDayCard();
+    expect(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move Grilled Salmon' })).toBeInTheDocument();
+  });
+
+  test('clicking Move opens the MoveMealModal with correct source info', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    expect(screen.getByTestId('move-meal-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('modal-recipe-name').textContent).toBe('Spaghetti Carbonara');
+    expect(lastModalProps.sourceDate).toBe('2026-03-25');
+    expect(lastModalProps.sourceMealType).toBe('lunch');
+    expect(lastModalProps.sourceIndex).toBe(0);
+  });
+
+  test('modal is not shown before Move is clicked', () => {
+    renderDayCard();
+    expect(screen.queryByTestId('move-meal-modal')).not.toBeInTheDocument();
+  });
+
+  test('closing the modal without confirming does not call moveMeal', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close Modal' }));
+    expect(mockMoveMeal).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('move-meal-modal')).not.toBeInTheDocument();
+  });
+
+  test('confirming the modal calls moveMeal with correct arguments', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Move' }));
+    // Confirm Move fires onMove('2026-04-01', 'dinner', 0)
+    expect(mockMoveMeal).toHaveBeenCalledWith(
+      '2026-03-25', 'lunch',   // source date + type
+      '2026-04-01', 'dinner',  // dest date + type
+      0, 0                      // source index + dest index
+    );
+  });
+
+  test('modal closes after confirming the move', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Move' }));
+    expect(screen.queryByTestId('move-meal-modal')).not.toBeInTheDocument();
   });
 });
 
