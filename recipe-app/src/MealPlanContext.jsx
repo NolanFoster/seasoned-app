@@ -1,4 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  isLegacyFormat,
+  migrateFromLegacy,
+  isValidMealType,
+  createEmptyDay,
+} from './utils/mealPlanMigration.js';
+
+const STORAGE_KEY = 'seasoned_meal_plan';
 
 const MealPlanContext = createContext();
 
@@ -6,70 +14,142 @@ export function useMealPlan() {
   return useContext(MealPlanContext);
 }
 
-export function MealPlanProvider({ children }) {
-  const [mealPlan, setMealPlan] = useState(() => {
-    try {
-      const localData = localStorage.getItem('seasoned_meal_plan');
-      return localData ? JSON.parse(localData) : {};
-    } catch (e) {
-      return {};
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (isLegacyFormat(parsed)) {
+      console.info('🔄 Meal plan migrated from legacy format');
+      const migrated = migrateFromLegacy(parsed);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      return migrated;
     }
-  });
+    return parsed;
+  } catch {
+    return {};
+  }
+}
 
+export function MealPlanProvider({ children }) {
+  const [mealPlan, setMealPlan] = useState(loadFromStorage);
   const [activeRecipe, setActiveRecipe] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem('seasoned_meal_plan', JSON.stringify(mealPlan));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mealPlan));
   }, [mealPlan]);
 
-  const addMeal = (dateString, recipe) => {
+  /**
+   * Adds a recipe to a specific date and meal type slot.
+   * @param {string} dateString - e.g. '2025-10-24'
+   * @param {string} mealType - one of 'breakfast' | 'lunch' | 'dinner' | 'snack'
+   * @param {Object} recipe - recipe object with at least { id, name }
+   */
+  const addMeal = (dateString, mealType, recipe) => {
+    if (!isValidMealType(mealType)) {
+      console.warn(`Invalid mealType: "${mealType}". Allowed: breakfast, lunch, dinner, snack`);
+      return;
+    }
+    if (!recipe?.id || !recipe?.name) {
+      console.warn('Recipe missing id or name; skipping');
+      return;
+    }
     setMealPlan((prev) => {
-      const dayMeals = prev[dateString] || [];
+      const day = prev[dateString] ?? createEmptyDay();
       return {
         ...prev,
-        [dateString]: [...dayMeals, { ...recipe, id: crypto.randomUUID() }],
+        [dateString]: {
+          ...day,
+          [mealType]: [...day[mealType], { ...recipe, id: crypto.randomUUID() }],
+        },
       };
     });
   };
 
-  const removeMeal = (dateString, recipeId) => {
+  /**
+   * Removes a recipe from a specific date and meal type slot by ID.
+   * @param {string} dateString
+   * @param {string} mealType
+   * @param {string} recipeId
+   */
+  const removeMeal = (dateString, mealType, recipeId) => {
+    if (!isValidMealType(mealType)) {
+      console.warn(`Invalid mealType: "${mealType}". Allowed: breakfast, lunch, dinner, snack`);
+      return;
+    }
     setMealPlan((prev) => {
-      const dayMeals = prev[dateString] || [];
+      const day = prev[dateString];
+      if (!day) return prev;
       return {
         ...prev,
-        [dateString]: dayMeals.filter((r) => r.id !== recipeId),
+        [dateString]: {
+          ...day,
+          [mealType]: day[mealType].filter((r) => r.id !== recipeId),
+        },
       };
     });
   };
 
-  const moveMeal = (recipeId, sourceDate, destinationDate, destinationIndex) => {
+  /**
+   * Moves a recipe between slots (same or different date/mealType).
+   * @param {string} sourceDate
+   * @param {string} sourceMealType
+   * @param {string} destDate
+   * @param {string} destMealType
+   * @param {number} sourceIndex
+   * @param {number} destIndex
+   */
+  const moveMeal = (sourceDate, sourceMealType, destDate, destMealType, sourceIndex, destIndex) => {
+    if (!isValidMealType(sourceMealType) || !isValidMealType(destMealType)) {
+      console.warn('moveMeal: invalid mealType in source or destination');
+      return;
+    }
     setMealPlan((prev) => {
-      const sourceMeals = prev[sourceDate] || [];
-      const meal = sourceMeals.find((r) => r.id === recipeId);
+      const sourceDay = prev[sourceDate] ?? createEmptyDay();
+      const sourceMeals = sourceDay[sourceMealType] ?? [];
 
-      // Meal not found in source; no-op
-      if (!meal) return prev;
+      if (sourceIndex < 0 || sourceIndex >= sourceMeals.length) return prev;
 
-      if (sourceDate === destinationDate) {
-        // Same-day reorder: remove then insert at destination index
-        const withoutMeal = sourceMeals.filter((r) => r.id !== recipeId);
-        const clampedIndex = Math.min(destinationIndex, withoutMeal.length);
-        const reordered = [...withoutMeal];
-        reordered.splice(clampedIndex, 0, meal);
-        return { ...prev, [sourceDate]: reordered };
+      const meal = sourceMeals[sourceIndex];
+
+      const isSameSlot = sourceDate === destDate && sourceMealType === destMealType;
+
+      if (isSameSlot) {
+        if (sourceIndex === destIndex) return prev;
+        const reordered = [...sourceMeals];
+        reordered.splice(sourceIndex, 1);
+        const clampedDest = Math.min(destIndex, reordered.length);
+        reordered.splice(clampedDest, 0, meal);
+        return {
+          ...prev,
+          [sourceDate]: { ...sourceDay, [sourceMealType]: reordered },
+        };
       }
 
-      // Cross-day move
-      const newSourceMeals = sourceMeals.filter((r) => r.id !== recipeId);
-      const destMeals = prev[destinationDate] || [];
-      const clampedIndex = Math.min(destinationIndex, destMeals.length);
+      // Remove from source
+      const newSourceMeals = sourceMeals.filter((_, i) => i !== sourceIndex);
+
+      // Insert into destination
+      const destDay = prev[destDate] ?? createEmptyDay();
+      const destMeals = destDay[destMealType] ?? [];
+      const clampedDest = Math.min(destIndex, destMeals.length);
       const newDestMeals = [...destMeals];
-      newDestMeals.splice(clampedIndex, 0, meal);
+      newDestMeals.splice(clampedDest, 0, meal);
+
+      if (sourceDate === destDate) {
+        // Same date, different meal type — update both in one day object
+        const updatedDay = {
+          ...sourceDay,
+          [sourceMealType]: newSourceMeals,
+          [destMealType]: newDestMeals,
+        };
+        return { ...prev, [sourceDate]: updatedDay };
+      }
 
       return {
         ...prev,
-        [sourceDate]: newSourceMeals,
-        [destinationDate]: newDestMeals,
+        [sourceDate]: { ...sourceDay, [sourceMealType]: newSourceMeals },
+        [destDate]: { ...destDay, [destMealType]: newDestMeals },
       };
     });
   };
@@ -77,7 +157,9 @@ export function MealPlanProvider({ children }) {
   const clearActiveRecipe = () => setActiveRecipe(null);
 
   return (
-    <MealPlanContext.Provider value={{ mealPlan, addMeal, removeMeal, moveMeal, activeRecipe, setActiveRecipe, clearActiveRecipe }}>
+    <MealPlanContext.Provider
+      value={{ mealPlan, addMeal, removeMeal, moveMeal, activeRecipe, setActiveRecipe, clearActiveRecipe }}
+    >
       {children}
     </MealPlanContext.Provider>
   );

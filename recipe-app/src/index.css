@@ -1965,6 +1965,45 @@ html, body {
   outline: none;
 }
 
+/* Step prompt — "Which day?" / "Which meal?" */
+.day-selector-prompt {
+  margin: 0;
+  padding: 8px 16px 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+/* Back button shown in Step 2 header */
+.day-selector-back {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 1.2rem;
+  line-height: 1;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.1s;
+  /* Adequate touch target */
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.day-selector-back:hover {
+  color: var(--text);
+}
+.day-selector-back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── Planner feedback toast ─────────────────────────────────────── */
 .planner-feedback {
   position: absolute;

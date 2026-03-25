@@ -5,6 +5,7 @@ import DayCard from './DayCard.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { DragProvider } from './DragContext.jsx'
 import { useDragContext } from './useDragContext.js'
+import { createEmptyDay } from './utils/mealPlanMigration.js'
 import './MealPlanner.css'
 
 // --- Inline SVG Icons ---
@@ -132,11 +133,32 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
   const handleDragEnd = (result) => {
     clearDrag()
 
-    // Ignore cancelled drags or drops outside valid zones
-    if (!result.destination) return
+    const { source, destination } = result
 
-    const { draggableId, source, destination } = result
-    moveMeal(draggableId, source.droppableId, destination.droppableId, destination.index)
+    // Guard: dropped outside any droppable zone
+    if (!destination) return
+
+    // Guard: dropped back onto the same position — no state change needed
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return
+
+    // Parse droppableId format: "${dateString}::${mealType}"
+    const [sourceDate, sourceMealType] = source.droppableId.split('::')
+    const [destDate, destMealType] = destination.droppableId.split('::')
+
+    // Validate that both IDs were well-formed
+    if (!sourceDate || !sourceMealType || !destDate || !destMealType) {
+      console.error(`MealPlanner: malformed droppableId — source="${source.droppableId}" dest="${destination.droppableId}"`)
+      return
+    }
+
+    // Validate meal types
+    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack']
+    if (!validMealTypes.includes(sourceMealType) || !validMealTypes.includes(destMealType)) {
+      console.error(`MealPlanner: invalid mealType — sourceMealType="${sourceMealType}" destMealType="${destMealType}"`)
+      return
+    }
+
+    moveMeal(sourceDate, sourceMealType, destDate, destMealType, source.index, destination.index)
   }
 
   return (
@@ -163,9 +185,9 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
               day={day}
               date={date}
               dateString={dateString}
-              meals={mealPlan[dateString] || []}
-              onRemoveMeal={(recipeId) => {
-                if (recipeId) removeMeal(dateString, recipeId)
+              meals={mealPlan[dateString] || createEmptyDay()}
+              onRemoveMeal={(mealType, recipeId) => {
+                if (mealType && recipeId) removeMeal(dateString, mealType, recipeId)
               }}
             />
           ))}

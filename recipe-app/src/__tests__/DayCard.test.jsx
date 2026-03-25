@@ -19,15 +19,46 @@ jest.mock('@hello-pangea/dnd', () => ({
 jest.mock('../EmptyDropZone.jsx', () => () => <div data-testid="empty-drop-zone" />);
 jest.mock('../DragPortal.jsx', () => ({ children }) => children);
 
+// Capture the props that MoveMealModal was last opened with
+let lastModalProps = null;
+jest.mock('../MoveMealModal.jsx', () => (props) => {
+  lastModalProps = props;
+  if (!props.isOpen) return null;
+  return (
+    <div data-testid="move-meal-modal">
+      <span data-testid="modal-recipe-name">{props.sourceRecipe?.name}</span>
+      <button onClick={() => props.onMove('2026-04-01', 'dinner', 0)}>Confirm Move</button>
+      <button onClick={props.onClose}>Close Modal</button>
+    </div>
+  );
+});
+
 const mockSetActiveRecipe = jest.fn();
+const mockMoveMeal = jest.fn();
 jest.mock('../MealPlanContext.jsx', () => ({
-  useMealPlan: () => ({ setActiveRecipe: mockSetActiveRecipe }),
+  useMealPlan: () => ({
+    setActiveRecipe: mockSetActiveRecipe,
+    moveMeal: mockMoveMeal,
+  }),
 }));
 
-const BASE_MEALS = [
-  { id: 'meal-1', name: 'Spaghetti Carbonara' },
-  { id: 'meal-2', name: 'Grilled Salmon' },
-];
+// New meals shape: organised by meal type
+const MEAL_1 = { id: 'meal-1', name: 'Spaghetti Carbonara' };
+const MEAL_2 = { id: 'meal-2', name: 'Grilled Salmon' };
+
+const BASE_MEALS = {
+  breakfast: [],
+  lunch: [MEAL_1, MEAL_2],
+  dinner: [],
+  snack: [],
+};
+
+const EMPTY_MEALS = {
+  breakfast: [],
+  lunch: [],
+  dinner: [],
+  snack: [],
+};
 
 function renderDayCard(meals = BASE_MEALS) {
   const onRemoveMeal = jest.fn();
@@ -43,11 +74,15 @@ function renderDayCard(meals = BASE_MEALS) {
   return { onRemoveMeal };
 }
 
+beforeEach(() => {
+  mockSetActiveRecipe.mockClear();
+  mockMoveMeal.mockClear();
+  lastModalProps = null;
+});
+
 // ── Recipe clickability ─────────────────────────────────────────────────────
 
 describe('DayCard — recipe clickability', () => {
-  beforeEach(() => mockSetActiveRecipe.mockClear());
-
   test('recipe names render as buttons', () => {
     renderDayCard();
     expect(screen.getByRole('button', { name: /View Spaghetti Carbonara/i })).toBeInTheDocument();
@@ -58,13 +93,13 @@ describe('DayCard — recipe clickability', () => {
     renderDayCard();
     fireEvent.click(screen.getByRole('button', { name: /View Spaghetti Carbonara/i }));
     expect(mockSetActiveRecipe).toHaveBeenCalledTimes(1);
-    expect(mockSetActiveRecipe).toHaveBeenCalledWith(BASE_MEALS[0]);
+    expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_1);
   });
 
   test('clicking the second recipe calls setActiveRecipe with that recipe', () => {
     renderDayCard();
     fireEvent.click(screen.getByRole('button', { name: /View Grilled Salmon/i }));
-    expect(mockSetActiveRecipe).toHaveBeenCalledWith(BASE_MEALS[1]);
+    expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_2);
   });
 
   test('clicking a recipe name does not call onRemoveMeal', () => {
@@ -79,10 +114,10 @@ describe('DayCard — recipe clickability', () => {
     expect(mockSetActiveRecipe).not.toHaveBeenCalled();
   });
 
-  test('clicking the remove button calls onRemoveMeal with the meal id', () => {
+  test('clicking the remove button calls onRemoveMeal with mealType and meal id', () => {
     const { onRemoveMeal } = renderDayCard();
     fireEvent.click(screen.getByRole('button', { name: /Remove Spaghetti Carbonara/i }));
-    expect(onRemoveMeal).toHaveBeenCalledWith('meal-1');
+    expect(onRemoveMeal).toHaveBeenCalledWith('lunch', 'meal-1');
   });
 
   test('rapid clicks on the same recipe call setActiveRecipe each time', () => {
@@ -92,7 +127,59 @@ describe('DayCard — recipe clickability', () => {
     fireEvent.click(btn);
     fireEvent.click(btn);
     expect(mockSetActiveRecipe).toHaveBeenCalledTimes(3);
-    expect(mockSetActiveRecipe).toHaveBeenCalledWith(BASE_MEALS[0]);
+    expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_1);
+  });
+});
+
+// ── Move button ─────────────────────────────────────────────────────────────
+
+describe('DayCard — Move button', () => {
+  test('each meal item has a Move button', () => {
+    renderDayCard();
+    expect(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move Grilled Salmon' })).toBeInTheDocument();
+  });
+
+  test('clicking Move opens the MoveMealModal with correct source info', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    expect(screen.getByTestId('move-meal-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('modal-recipe-name').textContent).toBe('Spaghetti Carbonara');
+    expect(lastModalProps.sourceDate).toBe('2026-03-25');
+    expect(lastModalProps.sourceMealType).toBe('lunch');
+    expect(lastModalProps.sourceIndex).toBe(0);
+  });
+
+  test('modal is not shown before Move is clicked', () => {
+    renderDayCard();
+    expect(screen.queryByTestId('move-meal-modal')).not.toBeInTheDocument();
+  });
+
+  test('closing the modal without confirming does not call moveMeal', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close Modal' }));
+    expect(mockMoveMeal).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('move-meal-modal')).not.toBeInTheDocument();
+  });
+
+  test('confirming the modal calls moveMeal with correct arguments', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Move' }));
+    // Confirm Move fires onMove('2026-04-01', 'dinner', 0)
+    expect(mockMoveMeal).toHaveBeenCalledWith(
+      '2026-03-25', 'lunch',   // source date + type
+      '2026-04-01', 'dinner',  // dest date + type
+      0, 0                      // source index + dest index
+    );
+  });
+
+  test('modal closes after confirming the move', () => {
+    renderDayCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Spaghetti Carbonara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Move' }));
+    expect(screen.queryByTestId('move-meal-modal')).not.toBeInTheDocument();
   });
 });
 
@@ -115,19 +202,58 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Mar 25')).toBeInTheDocument();
   });
 
-  test('renders EmptyDropZone when there are no meals', () => {
-    renderDayCard([]);
+  test('renders a single card-level EmptyDropZone when all meal slots are empty', () => {
+    renderDayCard(EMPTY_MEALS);
     expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
   });
 
-  test('does not render EmptyDropZone when meals are present', () => {
-    renderDayCard();
+  test('does not render EmptyDropZone when at least one slot has meals', () => {
+    renderDayCard(); // lunch has 2 meals
     expect(screen.queryByTestId('empty-drop-zone')).not.toBeInTheDocument();
+  });
+
+  test('does not render meal type sections when all slots are empty', () => {
+    renderDayCard(EMPTY_MEALS);
+    expect(screen.queryByText('Breakfast')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lunch')).not.toBeInTheDocument();
+  });
+
+  test('renders meal type section labels when at least one slot has meals', () => {
+    renderDayCard();
+    expect(screen.getByText('Breakfast')).toBeInTheDocument();
+    expect(screen.getByText('Lunch')).toBeInTheDocument();
+    expect(screen.getByText('Dinner')).toBeInTheDocument();
+    expect(screen.getByText('Snack')).toBeInTheDocument();
+  });
+
+  test('renders "No meals" placeholder for empty slots when day is not all empty', () => {
+    renderDayCard(); // breakfast, dinner, snack are empty; lunch has meals
+    // 3 empty slots → 3 "No meals" placeholders
+    expect(screen.getAllByText('No meals')).toHaveLength(3);
   });
 
   test('renders all meal names', () => {
     renderDayCard();
     expect(screen.getByText('Spaghetti Carbonara')).toBeInTheDocument();
     expect(screen.getByText('Grilled Salmon')).toBeInTheDocument();
+  });
+
+  test('renders null meals gracefully (defaults to empty state)', () => {
+    renderDayCard(null);
+    expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
+  });
+});
+
+// ── droppableId encoding ────────────────────────────────────────────────────
+
+describe('DayCard — encodeDroppableId', () => {
+  const { encodeDroppableId } = jest.requireActual('../DayCard');
+
+  test('encodes dateString and mealType with :: separator', () => {
+    expect(encodeDroppableId('2026-03-25', 'lunch')).toBe('2026-03-25::lunch');
+  });
+
+  test('encodes breakfast slot correctly', () => {
+    expect(encodeDroppableId('2026-10-24', 'breakfast')).toBe('2026-10-24::breakfast');
   });
 });
