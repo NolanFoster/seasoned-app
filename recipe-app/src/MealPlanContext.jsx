@@ -16,6 +16,8 @@ export function MealPlanProvider({ children }) {
     }
   });
 
+  const [activeRecipe, setActiveRecipe] = useState(null);
+
   useEffect(() => {
     localStorage.setItem('seasoned_meal_plan', JSON.stringify(mealPlan));
   }, [mealPlan]);
@@ -72,8 +74,10 @@ export function MealPlanProvider({ children }) {
     });
   };
 
+  const clearActiveRecipe = () => setActiveRecipe(null);
+
   return (
-    <MealPlanContext.Provider value={{ mealPlan, addMeal, removeMeal, moveMeal }}>
+    <MealPlanContext.Provider value={{ mealPlan, addMeal, removeMeal, moveMeal, activeRecipe, setActiveRecipe, clearActiveRecipe }}>
       {children}
     </MealPlanContext.Provider>
   );
