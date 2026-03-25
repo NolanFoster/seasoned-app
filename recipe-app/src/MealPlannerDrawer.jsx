@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useDragContext } from './useDragContext.js'
 
 const XIcon = ({ size = 16 }) => (
@@ -36,6 +36,18 @@ const XIcon = ({ size = 16 }) => (
  */
 export default function MealPlannerDrawer({ isOpen, onClose, children }) {
   const { isDragging } = useDragContext()
+
+  // Lock body scroll when the drawer is open to prevent "scroll leakage"
+  // to the main page background.
+  useEffect(() => {
+    if (isOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalStyle
+      }
+    }
+  }, [isOpen])
 
   let drawerClassName = 'meal-planner-drawer'
   if (isOpen) drawerClassName += ' is-open'
