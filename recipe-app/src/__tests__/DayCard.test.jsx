@@ -24,10 +24,23 @@ jest.mock('../MealPlanContext.jsx', () => ({
   useMealPlan: () => ({ setActiveRecipe: mockSetActiveRecipe }),
 }));
 
-const BASE_MEALS = [
-  { id: 'meal-1', name: 'Spaghetti Carbonara' },
-  { id: 'meal-2', name: 'Grilled Salmon' },
-];
+// New meals shape: organised by meal type
+const MEAL_1 = { id: 'meal-1', name: 'Spaghetti Carbonara' };
+const MEAL_2 = { id: 'meal-2', name: 'Grilled Salmon' };
+
+const BASE_MEALS = {
+  breakfast: [],
+  lunch: [MEAL_1, MEAL_2],
+  dinner: [],
+  snack: [],
+};
+
+const EMPTY_MEALS = {
+  breakfast: [],
+  lunch: [],
+  dinner: [],
+  snack: [],
+};
 
 function renderDayCard(meals = BASE_MEALS) {
   const onRemoveMeal = jest.fn();
@@ -58,13 +71,13 @@ describe('DayCard — recipe clickability', () => {
     renderDayCard();
     fireEvent.click(screen.getByRole('button', { name: /View Spaghetti Carbonara/i }));
     expect(mockSetActiveRecipe).toHaveBeenCalledTimes(1);
-    expect(mockSetActiveRecipe).toHaveBeenCalledWith(BASE_MEALS[0]);
+    expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_1);
   });
 
   test('clicking the second recipe calls setActiveRecipe with that recipe', () => {
     renderDayCard();
     fireEvent.click(screen.getByRole('button', { name: /View Grilled Salmon/i }));
-    expect(mockSetActiveRecipe).toHaveBeenCalledWith(BASE_MEALS[1]);
+    expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_2);
   });
 
   test('clicking a recipe name does not call onRemoveMeal', () => {
@@ -79,10 +92,10 @@ describe('DayCard — recipe clickability', () => {
     expect(mockSetActiveRecipe).not.toHaveBeenCalled();
   });
 
-  test('clicking the remove button calls onRemoveMeal with the meal id', () => {
+  test('clicking the remove button calls onRemoveMeal with mealType and meal id', () => {
     const { onRemoveMeal } = renderDayCard();
     fireEvent.click(screen.getByRole('button', { name: /Remove Spaghetti Carbonara/i }));
-    expect(onRemoveMeal).toHaveBeenCalledWith('meal-1');
+    expect(onRemoveMeal).toHaveBeenCalledWith('lunch', 'meal-1');
   });
 
   test('rapid clicks on the same recipe call setActiveRecipe each time', () => {
@@ -92,7 +105,7 @@ describe('DayCard — recipe clickability', () => {
     fireEvent.click(btn);
     fireEvent.click(btn);
     expect(mockSetActiveRecipe).toHaveBeenCalledTimes(3);
-    expect(mockSetActiveRecipe).toHaveBeenCalledWith(BASE_MEALS[0]);
+    expect(mockSetActiveRecipe).toHaveBeenCalledWith(MEAL_1);
   });
 });
 
@@ -115,14 +128,24 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Mar 25')).toBeInTheDocument();
   });
 
-  test('renders EmptyDropZone when there are no meals', () => {
-    renderDayCard([]);
-    expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
+  test('renders an EmptyDropZone for every slot with no meals', () => {
+    renderDayCard(EMPTY_MEALS);
+    // All 4 meal type slots are empty → 4 EmptyDropZones
+    expect(screen.getAllByTestId('empty-drop-zone')).toHaveLength(4);
   });
 
-  test('does not render EmptyDropZone when meals are present', () => {
+  test('renders meal type section labels', () => {
     renderDayCard();
-    expect(screen.queryByTestId('empty-drop-zone')).not.toBeInTheDocument();
+    expect(screen.getByText('Breakfast')).toBeInTheDocument();
+    expect(screen.getByText('Lunch')).toBeInTheDocument();
+    expect(screen.getByText('Dinner')).toBeInTheDocument();
+    expect(screen.getByText('Snack')).toBeInTheDocument();
+  });
+
+  test('renders EmptyDropZone only for empty slots when some meals are present', () => {
+    renderDayCard();
+    // lunch has 2 meals → no EmptyDropZone; the other 3 slots are empty → 3 EmptyDropZones
+    expect(screen.getAllByTestId('empty-drop-zone')).toHaveLength(3);
   });
 
   test('renders all meal names', () => {
