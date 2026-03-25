@@ -20,6 +20,7 @@ function parseDurationToMinutes(val) {
 
 export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
   const elevateRecipeEnabled = useFlag('elevate-recipe')
+  const mealPlannerEnabled = useFlag('meal-planner')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
@@ -34,7 +35,9 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
   const menusRef = useRef(null)
 
   const mealPlanContext = useMealPlan()
-  const canAddToPlanner = Boolean(mealPlanContext && recipe?.id && recipe?.name)
+  const canAddToPlanner = Boolean(
+    mealPlannerEnabled && mealPlanContext && recipe?.id && recipe?.name
+  )
 
   const recipeDurationMins =
     parseDurationToMinutes(recipe.prep_time) + parseDurationToMinutes(recipe.cook_time)
@@ -92,6 +95,10 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [wakeLockActive])
+
+  useEffect(() => {
+    if (!mealPlannerEnabled) setShowDaySelector(false)
+  }, [mealPlannerEnabled])
 
   function handleDaySelected(dateString, mealType) {
     setShowDaySelector(false)
@@ -184,7 +191,13 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
                 className="action-menu-item"
                 onClick={() => { setOpenMenu(null); setShowDaySelector(true) }}
                 disabled={!canAddToPlanner}
-                title={canAddToPlanner ? 'Add to meal planner' : 'Meal planner unavailable'}
+                title={
+                  canAddToPlanner
+                    ? 'Add to meal planner'
+                    : !mealPlannerEnabled
+                      ? 'Meal planner is off'
+                      : 'Meal planner unavailable'
+                }
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -271,7 +284,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
 
       {isCooking && <CookingNavigator recipe={recipe} onClose={() => setIsCooking(false)} />}
 
-      {showDaySelector && (
+      {mealPlannerEnabled && showDaySelector && (
         <DaySelector
           onDaySelected={handleDaySelected}
           onClose={() => setShowDaySelector(false)}

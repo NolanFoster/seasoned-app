@@ -15,8 +15,9 @@ import { MealPlanProvider } from '../MealPlanContext.jsx';
 // ── Module mocks ────────────────────────────────────────────────────────────
 
 jest.mock('../flaggly.js', () => ({
-  useFlag: () => false,
+  useFlag: (key) => (key === 'meal-planner' ? true : false),
   flaggly: {},
+  syncFlagglyUser: jest.fn(),
 }));
 
 jest.mock('../useAuth', () => ({

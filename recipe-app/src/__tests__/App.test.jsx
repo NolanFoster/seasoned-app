@@ -12,6 +12,7 @@ function renderApp() {
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => true,
   flaggly: {},
+  syncFlagglyUser: jest.fn(),
 }))
 
 jest.mock('../useAuth', () => ({

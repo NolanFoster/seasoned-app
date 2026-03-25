@@ -17,6 +17,7 @@ try {
       'gesture-support': true,
       'dictation': true,
       'elevate-recipe': true,
+      'meal-planner': true,
     },
   })
 } catch (err) {
@@ -26,16 +27,26 @@ try {
 
 export { flaggly }
 
-// Manually fetch flags and push into the store — bypasses SDK's internal fetch entirely
-if (typeof window !== 'undefined') {
-  fetch('/api/eval', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ page: { url: window.location.href } }),
-  })
-    .then((r) => r.json())
-    .then((data) => flaggly.store.set(data))
-    .catch(() => {}) // bootstrap values remain on error
+/**
+ * Re-evaluate flags with the logged-in user (for JEXL segments, e.g. `user.email`).
+ * Uses the SDK so the request matches Flaggly (`id`, `user`, `page.url`). The Pages
+ * worker overwrites `Authorization` when proxying to Flaggly.
+ */
+export async function syncFlagglyUser(user) {
+  if (typeof flaggly.fetchFlags !== 'function') return
+  try {
+    if (user?.id != null && String(user.id).length > 0) {
+      const traits = {}
+      if (user.email) traits.email = user.email
+      await flaggly.identify(String(user.id), traits)
+    } else {
+      flaggly.id = undefined
+      flaggly.user = undefined
+      await flaggly.fetchFlags()
+    }
+  } catch {
+    // bootstrap / previous store values remain on error
+  }
 }
 
 // Log each flag's resolved value once when the store updates.

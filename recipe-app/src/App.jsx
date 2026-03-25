@@ -7,6 +7,7 @@ import MealPlanner from './MealPlanner.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
 import { useAuth } from './useAuth.js'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { syncFlagglyUser, useFlag } from './flaggly.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -100,6 +101,12 @@ function UserMenu({ user, onSignOut }) {
 export default function App() {
   const auth = useAuth()
   const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
+  const mealPlannerEnabled = useFlag('meal-planner')
+
+  useEffect(() => {
+    if (auth.loading) return
+    void syncFlagglyUser(auth.user ?? null)
+  }, [auth.loading, auth.user])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
@@ -207,6 +214,10 @@ export default function App() {
       setIsDrawerOpen(false)
     }
   }, [activeRecipe])
+
+  useEffect(() => {
+    if (!mealPlannerEnabled) setIsDrawerOpen(false)
+  }, [mealPlannerEnabled])
 
   // --- Auth gates (after all hooks) ---
 
@@ -439,11 +450,13 @@ export default function App() {
   return (
     <div className="app">
       <PWAInstallPrompt />
-      <MealPlanner
-        isOpen={isDrawerOpen}
-        onToggle={() => setIsDrawerOpen((prev) => !prev)}
-        onClose={() => setIsDrawerOpen(false)}
-      />
+      {mealPlannerEnabled && (
+        <MealPlanner
+          isOpen={isDrawerOpen}
+          onToggle={() => setIsDrawerOpen((prev) => !prev)}
+          onClose={() => setIsDrawerOpen(false)}
+        />
+      )}
       <UserMenu user={auth.user} onSignOut={auth.signOut} />
       <div className="omnibox-wrapper">
         <div className="brand">
