@@ -202,20 +202,17 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Mar 25')).toBeInTheDocument();
   });
 
-  test('renders a single card-level EmptyDropZone when all meal slots are empty', () => {
+  test('never renders a card-level EmptyDropZone even when all meal slots are empty', () => {
     renderDayCard(EMPTY_MEALS);
-    expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
-  });
-
-  test('does not render EmptyDropZone when at least one slot has meals', () => {
-    renderDayCard(); // lunch has 2 meals
     expect(screen.queryByTestId('empty-drop-zone')).not.toBeInTheDocument();
   });
 
-  test('does not render meal type sections when all slots are empty', () => {
+  test('always renders meal type section labels even when all slots are empty', () => {
     renderDayCard(EMPTY_MEALS);
-    expect(screen.queryByText('Breakfast')).not.toBeInTheDocument();
-    expect(screen.queryByText('Lunch')).not.toBeInTheDocument();
+    expect(screen.getByText('Breakfast')).toBeInTheDocument();
+    expect(screen.getByText('Lunch')).toBeInTheDocument();
+    expect(screen.getByText('Dinner')).toBeInTheDocument();
+    expect(screen.getByText('Snack')).toBeInTheDocument();
   });
 
   test('renders meal type section labels when at least one slot has meals', () => {
@@ -226,7 +223,13 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Snack')).toBeInTheDocument();
   });
 
-  test('renders "No meals" placeholder for empty slots when day is not all empty', () => {
+  test('renders "No meals" placeholder for each empty slot', () => {
+    renderDayCard(EMPTY_MEALS);
+    // 4 empty slots → 4 "No meals" placeholders
+    expect(screen.getAllByText('No meals')).toHaveLength(4);
+  });
+
+  test('renders "No meals" placeholder for empty slots when day has some meals', () => {
     renderDayCard(); // breakfast, dinner, snack are empty; lunch has meals
     // 3 empty slots → 3 "No meals" placeholders
     expect(screen.getAllByText('No meals')).toHaveLength(3);
@@ -238,9 +241,10 @@ describe('DayCard — rendering', () => {
     expect(screen.getByText('Grilled Salmon')).toBeInTheDocument();
   });
 
-  test('renders null meals gracefully (defaults to empty state)', () => {
+  test('renders null meals gracefully (defaults to empty slots)', () => {
     renderDayCard(null);
-    expect(screen.getByTestId('empty-drop-zone')).toBeInTheDocument();
+    expect(screen.getByText('Breakfast')).toBeInTheDocument();
+    expect(screen.getAllByText('No meals')).toHaveLength(4);
   });
 });
 

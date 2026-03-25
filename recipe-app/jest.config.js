@@ -3,6 +3,9 @@ module.exports = {
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!@hello-pangea/dnd)'
+  ],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },

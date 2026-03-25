@@ -223,7 +223,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px;
+  padding: 16px 20px;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -247,7 +247,7 @@
 
 .day-cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -292,11 +292,6 @@
   color: var(--accent);
 }
 
-/* Wider "featured" card spanning both columns */
-.day-card--wide {
-  grid-column: span 2;
-}
-
 /* --------------------------------------------------------------------------
    8. Day Card Header
    -------------------------------------------------------------------------- */
@@ -330,7 +325,6 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  flex: 1;
 }
 
 .meal-slot {
@@ -364,6 +358,7 @@
   font-size: 0.72rem;
   color: var(--text);
   transition: border-color 0.12s ease;
+  overflow: hidden;
 
   /* Prevent text selection highlighting during touch drag interactions */
   user-select: none;
@@ -479,7 +474,7 @@
   font-style: italic;
   user-select: none;
   /* Ensure the droppable area remains a usable drop target */
-  min-height: 28px;
+  min-height: 24px;
   display: flex;
   align-items: center;
 }
@@ -806,8 +801,8 @@ body > .meal-item {
 @media (max-width: 767px) {
   /* Bottom-sheet drawer: full width, slides up from bottom */
   .meal-planner-drawer {
-    width: 100vw;
-    max-width: 100vw;
+    width: 100%;
+    max-width: 100%;
     border-left: none;
     border-top: 1px solid var(--border);
     border-radius: var(--radius) var(--radius) 0 0;
@@ -832,12 +827,7 @@ body > .meal-item {
 
   /* Single-column cards on mobile */
   .day-cards-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Wide-span cards are just full-width on single column */
-  .day-card--wide {
-    grid-column: span 1;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   /* Keep button flush to match UserMenu (both at right: 16px area) */

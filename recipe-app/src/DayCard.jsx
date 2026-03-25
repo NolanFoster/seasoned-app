@@ -43,7 +43,6 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
   const [movingMeal, setMovingMeal] = useState(null) // { recipe, mealType, index } | null
 
   const todayCard = checkIsToday(date)
-  const wideCard = day === 'Sunday'
 
   // Defensive: if meals is missing or a slot key is absent, treat as empty array
   const safeMeals = meals || { breakfast: [], lunch: [], dinner: [], snack: [] }
@@ -54,7 +53,6 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
 
   let className = 'day-card'
   if (todayCard) className += ' day-card--today'
-  if (wideCard) className += ' day-card--wide'
 
   function handleMoveClick(e, meal, mealType, index) {
     e.stopPropagation()
@@ -73,102 +71,96 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
         <span className="day-date">{date}</span>
       </div>
 
-      {isAllEmpty ? (
-        // Single card-level placeholder when the entire day has no meals
-        <EmptyDropZone />
-      ) : (
-        // Four named sections — each with its own droppable zone
-        MEAL_TYPES.map((mealType) => {
-          const slotMeals = safeMeals[mealType] ?? []
-          const droppableId = encodeDroppableId(dateString, mealType)
+      {MEAL_TYPES.map((mealType) => {
+        const slotMeals = safeMeals[mealType] ?? []
+        const droppableId = encodeDroppableId(dateString, mealType)
 
-          return (
-            <div
-              key={mealType}
-              className={`day-card-meal-section meal-zone-${mealType}`}
-              role="region"
-              aria-label={MEAL_TYPE_DISPLAY[mealType]}
-            >
-              <span className="meal-type-label">{MEAL_TYPE_DISPLAY[mealType]}</span>
+        return (
+          <div
+            key={mealType}
+            className={`day-card-meal-section meal-zone-${mealType}`}
+            role="region"
+            aria-label={MEAL_TYPE_DISPLAY[mealType]}
+          >
+            <span className="meal-type-label">{MEAL_TYPE_DISPLAY[mealType]}</span>
 
-              <Droppable droppableId={droppableId} type="MEAL">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`day-card-meals${snapshot.isDraggingOver ? ' day-card--drag-over' : ''}`}
-                  >
-                    {slotMeals.length === 0 && (
-                      <p className="meal-slot-empty" aria-label="No meals planned for this slot">
-                        No meals
-                      </p>
-                    )}
+            <Droppable droppableId={droppableId} type="MEAL">
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={`day-card-meals${snapshot.isDraggingOver ? ' day-card--drag-over' : ''}`}
+                >
+                  {slotMeals.length === 0 && (
+                    <p className="meal-slot-empty" aria-label="No meals planned for this slot">
+                      No meals
+                    </p>
+                  )}
 
-                    {slotMeals.map((meal, index) => (
-                      <Draggable
-                        key={meal.id}
-                        draggableId={meal.id}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <DragPortal isActive={snapshot.isDragging}>
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
-                              data-testid={`meal-item-${meal.id}`}
+                  {slotMeals.map((meal, index) => (
+                    <Draggable
+                      key={meal.id}
+                      draggableId={meal.id}
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
+                        <DragPortal isActive={snapshot.isDragging}>
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
+                            data-testid={`meal-item-${meal.id}`}
+                          >
+                            <span
+                              className="drag-handle"
+                              title="Drag to reorder"
+                              aria-label="Drag handle"
                             >
-                              <span
-                                className="drag-handle"
-                                title="Drag to reorder"
-                                aria-label="Drag handle"
-                              >
-                                ⠿
-                              </span>
-                              <button
-                                type="button"
-                                className="meal-item-name"
-                                onClick={() => setActiveRecipe(meal)}
-                                aria-label={`View ${meal.name}`}
-                              >
-                                {meal.name}
-                              </button>
-                              <button
-                                type="button"
-                                className="meal-item-move"
-                                onClick={(e) => handleMoveClick(e, meal, mealType, index)}
-                                aria-label={`Move ${meal.name}`}
-                                title="Move to another slot"
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
-                                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="meal-item-remove"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onRemoveMeal(mealType, meal.id)
-                                }}
-                                aria-label={`Remove ${meal.name}`}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </DragPortal>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-          )
-        })
-      )}
+                              ⠿
+                            </span>
+                            <button
+                              type="button"
+                              className="meal-item-name"
+                              onClick={() => setActiveRecipe(meal)}
+                              aria-label={`View ${meal.name}`}
+                            >
+                              {meal.name}
+                            </button>
+                            <button
+                              type="button"
+                              className="meal-item-move"
+                              onClick={(e) => handleMoveClick(e, meal, mealType, index)}
+                              aria-label={`Move ${meal.name}`}
+                              title="Move to another slot"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" aria-hidden="true">
+                                <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="meal-item-remove"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onRemoveMeal(mealType, meal.id)
+                              }}
+                              aria-label={`Remove ${meal.name}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </DragPortal>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </div>
+        )
+      })}
 
       {movingMeal && (
         <MoveMealModal
