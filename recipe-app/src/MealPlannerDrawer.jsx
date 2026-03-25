@@ -98,7 +98,7 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
           </button>
         </div>
         <div className="drawer-content">
-          <div className="day-cards-grid">{children}</div>
+          {children}
         </div>
         <div className="drawer-footer">
           <button

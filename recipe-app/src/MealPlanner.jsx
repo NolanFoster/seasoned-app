@@ -2,6 +2,7 @@ import React from 'react'
 import { DragDropContext } from '@hello-pangea/dnd'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
 import DayCard from './DayCard.jsx'
+import UpNextCard from './UpNextCard.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { DragProvider } from './DragContext.jsx'
 import { useDragContext } from './useDragContext.js'
@@ -159,19 +160,27 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
 
       {/* Slide-over drawer — MealPlannerDrawer reads isDragging from context */}
       <MealPlannerDrawer isOpen={isOpen} onClose={onClose}>
+        {/* Single DragDropContext covers both UpNextCard and DayCards so recipes
+            can be dragged between the staging area and any date/meal slot. */}
         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          {weekDays.map(({ day, date, dateString }) => (
-            <DayCard
-              key={dateString}
-              day={day}
-              date={date}
-              dateString={dateString}
-              meals={mealPlan[dateString] || createEmptyDay()}
-              onRemoveMeal={(mealType, recipeId) => {
-                if (mealType && recipeId) removeMeal(dateString, mealType, recipeId)
-              }}
-            />
-          ))}
+          {/* Staging area — rendered first so it appears above the week grid */}
+          <UpNextCard />
+
+          {/* Weekly meal grid */}
+          <div className="day-cards-grid">
+            {weekDays.map(({ day, date, dateString }) => (
+              <DayCard
+                key={dateString}
+                day={day}
+                date={date}
+                dateString={dateString}
+                meals={mealPlan[dateString] || createEmptyDay()}
+                onRemoveMeal={(mealType, recipeId) => {
+                  if (mealType && recipeId) removeMeal(dateString, mealType, recipeId)
+                }}
+              />
+            ))}
+          </div>
         </DragDropContext>
       </MealPlannerDrawer>
     </>
