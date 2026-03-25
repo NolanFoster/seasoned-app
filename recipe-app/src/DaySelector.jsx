@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react'
 import { MEAL_TYPES, MEAL_TYPE_DISPLAY } from './utils/mealPlanMigration.js'
+import { useMealPlan } from './MealPlanContext.jsx'
 
 const DAY_COUNT = 7
 
@@ -38,7 +39,8 @@ function generateUpcomingDays(count) {
  *   currentStep   {string}      - STEP_DATE | STEP_MEAL
  *   selectedDate  {string|null} - ISO date string chosen in Step 1, null until confirmed
  */
-export default function DaySelector({ onDaySelected, onClose }) {
+export default function DaySelector({ onDaySelected, onClose, recipe }) {
+  const { addUpNext } = useMealPlan() ?? {}
   const days = useMemo(() => generateUpcomingDays(DAY_COUNT), [])
   const [currentStep, setCurrentStep] = useState(STEP_DATE)
   const [selectedDate, setSelectedDate] = useState(null)
@@ -95,6 +97,14 @@ export default function DaySelector({ onDaySelected, onClose }) {
     setSelectedDate(null)
   }
 
+  /** Save recipe to the upNext staging area and close immediately */
+  function handleSaveToUpNext() {
+    if (recipe && addUpNext) {
+      addUpNext(recipe)
+      onClose()
+    }
+  }
+
   const selectedDayLabel =
     currentStep === STEP_MEAL
       ? (days.find((d) => d.dateString === selectedDate)?.displayLabel ?? selectedDate)
@@ -138,6 +148,23 @@ export default function DaySelector({ onDaySelected, onClose }) {
             </svg>
           </button>
         </div>
+
+        {currentStep === STEP_DATE && (
+          <div className="day-selector-up-next-section">
+            <button
+              type="button"
+              className="day-selector__up-next-btn"
+              onClick={handleSaveToUpNext}
+              disabled={!recipe || !addUpNext}
+              aria-label="Save to Up Next"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+              Save to Up Next
+            </button>
+          </div>
+        )}
 
         <p className="day-selector-prompt">
           {currentStep === STEP_MEAL ? 'Which meal?' : 'Which day?'}
