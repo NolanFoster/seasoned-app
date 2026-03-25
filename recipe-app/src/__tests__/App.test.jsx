@@ -2,6 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { MealPlanProvider } from '../MealPlanContext.jsx';
+
+// Wrap App in the providers it requires (MealPlanProvider lives in main.jsx in production)
+function renderApp() {
+  return render(<MealPlanProvider><App /></MealPlanProvider>);
+}
 
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => true,
@@ -97,39 +103,39 @@ const GENERATE_RESPONSE = {
 
 describe('Omnibox input mode detection', () => {
   test('shows Generate button for plain text input', () => {
-    render(<App />);
+    renderApp();
     setInputValue('pasta');
     expect(screen.getByText('Generate')).toBeInTheDocument();
   });
 
   test('shows Clip button when input is a valid https URL', () => {
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/recipe');
     expect(screen.getByText('Clip')).toBeInTheDocument();
     expect(screen.queryByText('Generate')).not.toBeInTheDocument();
   });
 
   test('shows Clip button for http:// URLs', () => {
-    render(<App />);
+    renderApp();
     setInputValue('http://example.com/recipe');
     expect(screen.getByText('Clip')).toBeInTheDocument();
   });
 
   test('no action buttons shown for empty input', () => {
-    render(<App />);
+    renderApp();
     expect(screen.queryByText('Search')).not.toBeInTheDocument();
     expect(screen.queryByText('Generate')).not.toBeInTheDocument();
     expect(screen.queryByText('Clip')).not.toBeInTheDocument();
   });
 
   test('Generate button is not shown for URL input', () => {
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/recipe');
     expect(screen.queryByText('Generate')).not.toBeInTheDocument();
   });
 
   test('input under 2 characters does not show Generate button', () => {
-    render(<App />);
+    renderApp();
     setInputValue('a');
     expect(screen.queryByText('Generate')).not.toBeInTheDocument();
   });
@@ -142,7 +148,7 @@ describe('Search behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -157,7 +163,7 @@ describe('Search behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -169,7 +175,7 @@ describe('Search behaviour', () => {
   test('shows "No results" message when search returns empty', async () => {
     mockFetchOk({ results: [] });
 
-    render(<App />);
+    renderApp();
     setInputValue('xyzzy');
     pressEnter();
 
@@ -182,7 +188,7 @@ describe('Search behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -196,7 +202,7 @@ describe('Search behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -210,7 +216,7 @@ describe('Search behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -223,7 +229,7 @@ describe('Search behaviour', () => {
   test('shows error message when search fetch fails', async () => {
     mockFetchFail(500);
 
-    render(<App />);
+    renderApp();
     setInputValue('fail');
     pressEnter();
 
@@ -236,7 +242,7 @@ describe('Search behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -254,7 +260,7 @@ describe('Clip behaviour', () => {
   test('Enter with URL calls the clipper endpoint', async () => {
     mockFetchOk(CLIP_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/soup');
     pressEnter();
 
@@ -269,7 +275,7 @@ describe('Clip behaviour', () => {
   test('Clip button click calls the clipper endpoint', async () => {
     mockFetchOk(CLIP_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/soup');
     fireEvent.click(screen.getByText('Clip'));
 
@@ -284,7 +290,7 @@ describe('Clip behaviour', () => {
   test('sends the URL in the POST body', async () => {
     mockFetchOk(CLIP_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/soup');
     pressEnter();
 
@@ -297,7 +303,7 @@ describe('Clip behaviour', () => {
   test('shows clipped recipe card after successful clip', async () => {
     mockFetchOk(CLIP_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/soup');
     pressEnter();
 
@@ -310,7 +316,7 @@ describe('Clip behaviour', () => {
   test('clears input after a successful clip', async () => {
     mockFetchOk(CLIP_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/soup');
     pressEnter();
 
@@ -321,7 +327,7 @@ describe('Clip behaviour', () => {
   test('shows error when clip fetch fails', async () => {
     mockFetchFail(422);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/bad');
     pressEnter();
 
@@ -337,7 +343,7 @@ describe('Generate behaviour', () => {
   test('Generate button calls the generation endpoint', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -352,7 +358,7 @@ describe('Generate behaviour', () => {
   test('sends recipeName, generateImage and elevate:false in body', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -368,7 +374,7 @@ describe('Generate behaviour', () => {
   test('shows AI Generated recipe card after generation', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -381,7 +387,7 @@ describe('Generate behaviour', () => {
   test('clears input after successful generation', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -392,7 +398,7 @@ describe('Generate behaviour', () => {
   test('shows error when generation fetch fails', async () => {
     mockFetchFail(503);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -404,7 +410,7 @@ describe('Generate behaviour', () => {
   test('shows error when generation response has success:false', async () => {
     mockFetchOk({ success: false, error: 'AI unavailable' });
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -422,7 +428,7 @@ describe('Elevate behaviour', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -507,7 +513,7 @@ describe('Recipe card lifecycle', () => {
   test('close button removes the recipe card', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -521,7 +527,7 @@ describe('Recipe card lifecycle', () => {
   test('closing a card clears any displayed error', async () => {
     mockFetchFail(503);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -554,7 +560,7 @@ describe('Recently viewed recipes', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -571,7 +577,7 @@ describe('Recently viewed recipes', () => {
   test('stores a recipe in localStorage after a successful clip', async () => {
     mockFetchOk(CLIP_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('https://example.com/soup');
     pressEnter();
 
@@ -585,7 +591,7 @@ describe('Recently viewed recipes', () => {
   test('stores a recipe in localStorage after a successful generate', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('omelette');
     fireEvent.click(screen.getByText('Generate'));
 
@@ -599,7 +605,7 @@ describe('Recently viewed recipes', () => {
   test('shows Recently Viewed section on input focus when history exists', async () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
-    render(<App />);
+    renderApp();
     fireEvent.focus(screen.getByRole('textbox'));
 
     expect(screen.getByText('Recently Viewed')).toBeInTheDocument();
@@ -612,7 +618,7 @@ describe('Recently viewed recipes', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
     await waitFor(() => screen.getByText('Chocolate Cake'));
@@ -633,7 +639,7 @@ describe('Recently viewed recipes', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
     await waitFor(() => screen.getByText('Chocolate Cake'));
@@ -645,7 +651,7 @@ describe('Recently viewed recipes', () => {
   test('does not show Recently Viewed section when input has 2+ characters', async () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
-    render(<App />);
+    renderApp();
     setInputValue('ca');
 
     expect(screen.queryByText('Recently Viewed')).not.toBeInTheDocument();
@@ -655,7 +661,7 @@ describe('Recently viewed recipes', () => {
     const recentRecipe = { id: 'abc123', name: 'Chocolate Cake', description: 'A rich cake.', image: '', prep_time: '20 minutes', cook_time: '40 minutes', recipe_yield: '8', ingredients: [], instructions: [], source_url: '' };
     seedLocalStorage([recentRecipe]);
 
-    render(<App />);
+    renderApp();
     fireEvent.focus(screen.getByRole('textbox'));
 
     await waitFor(() => screen.getByText('Chocolate Cake'));
@@ -668,7 +674,7 @@ describe('Recently viewed recipes', () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
 
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
 
@@ -711,7 +717,7 @@ describe('Recently viewed recipes', () => {
     // Select first recipe
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
-    render(<App />);
+    renderApp();
     setInputValue('cake');
     pressEnter();
     await waitFor(() => screen.getByText('Chocolate Cake'));
@@ -739,7 +745,7 @@ describe('Recently viewed recipes', () => {
     const recipe2 = { id: 'r2', name: 'Recipe Two', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [], source_url: '' };
     seedLocalStorage([recipe2, recipe1]); // recipe2 is more recent
 
-    render(<App />);
+    renderApp();
     fireEvent.focus(screen.getByRole('textbox'));
 
     // Re-open the older recipe from recent
@@ -757,7 +763,7 @@ describe('Recently viewed recipes', () => {
   test('Clear button removes all recent entries and hides the section', async () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
-    render(<App />);
+    renderApp();
     fireEvent.focus(screen.getByRole('textbox'));
 
     await waitFor(() => screen.getByText('Recently Viewed'));

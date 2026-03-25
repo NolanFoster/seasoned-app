@@ -2,6 +2,7 @@ import React from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
 import EmptyDropZone from './EmptyDropZone.jsx'
 import DragPortal from './DragPortal.jsx'
+import { useMealPlan } from './MealPlanContext.jsx'
 
 function checkIsToday(dateStr) {
   const today = new Date()
@@ -10,6 +11,7 @@ function checkIsToday(dateStr) {
 }
 
 export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) {
+  const { setActiveRecipe } = useMealPlan()
   const todayCard = checkIsToday(date)
   const wideCard = day === 'Sunday'
 
@@ -54,6 +56,7 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         className={`meal-item${snapshot.isDragging ? ' meal-item--dragging' : ''}`}
+                        data-testid={`meal-item-${meal.id}`}
                       >
                         {/* Drag handle — only this element initiates a drag */}
                         <span
@@ -64,7 +67,16 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                         >
                           ⠿
                         </span>
-                        <span className="meal-item-name">{meal.name}</span>
+                        {/* Clicking the name opens the full RecipeCard via context;
+                            App.jsx watches activeRecipe and closes the drawer. */}
+                        <button
+                          type="button"
+                          className="meal-item-name"
+                          onClick={() => setActiveRecipe(meal)}
+                          aria-label={`View ${meal.name}`}
+                        >
+                          {meal.name}
+                        </button>
                         <button
                           type="button"
                           className="meal-item-remove"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { DragDropContext } from '@hello-pangea/dnd'
 import MealPlannerDrawer from './MealPlannerDrawer.jsx'
 import DayCard from './DayCard.jsx'
@@ -89,24 +89,23 @@ function buildWeekDays() {
 /**
  * MealPlanner
  *
- * Thin shell component. Owns drawer open/close state and provides the
- * DragProvider context to the entire subtree. Delegates all drag-aware
- * logic to MealPlannerContent so that useDragContext() can be called
- * inside the provider boundary.
+ * Thin shell component. Receives drawer open/close state from App.jsx
+ * as props and provides the DragProvider context to the entire subtree.
+ * Delegates all drag-aware logic to MealPlannerContent so that
+ * useDragContext() can be called inside the provider boundary.
  *
  * @component
- * @example
- * return <MealPlanner />
+ * @param {boolean} isOpen - Whether the drawer is currently open
+ * @param {() => void} onToggle - Toggle drawer open/closed
+ * @param {() => void} onClose - Close the drawer
  */
-export default function MealPlanner() {
-  const [isOpen, setIsOpen] = useState(false)
-
+export default function MealPlanner({ isOpen, onToggle, onClose }) {
   return (
     <DragProvider>
       <MealPlannerContent
         isOpen={isOpen}
-        onToggle={() => setIsOpen((prev) => !prev)}
-        onClose={() => setIsOpen(false)}
+        onToggle={onToggle}
+        onClose={onClose}
       />
     </DragProvider>
   )
@@ -150,6 +149,7 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
         onClick={onToggle}
         aria-label={isOpen ? 'Close meal planner' : 'Open meal planner'}
         aria-expanded={isOpen}
+        data-testid="open-meal-planner-btn"
       >
         <CalendarIcon size={20} />
       </button>

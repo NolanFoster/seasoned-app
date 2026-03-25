@@ -6,7 +6,7 @@ import PWAInstallPrompt from './PWAInstallPrompt.jsx'
 import MealPlanner from './MealPlanner.jsx'
 import { useRecentRecipes } from './useRecentRecipes.js'
 import { useAuth } from './useAuth.js'
-import { MealPlanProvider } from './MealPlanContext.jsx'
+import { useMealPlan } from './MealPlanContext.jsx'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -99,13 +99,14 @@ function UserMenu({ user, onSignOut }) {
 
 export default function App() {
   const auth = useAuth()
+  const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [lastSearchQuery, setLastSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
-  const [recipe, setRecipe] = useState(null) // currently displayed recipe
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
   const [savedRecipeId, setSavedRecipeId] = useState(null) // persisted KV id for share URL
   const [generatingName, setGeneratingName] = useState('')
@@ -192,11 +193,20 @@ export default function App() {
   // Restore focus after a blocking async action completes, but don't steal focus
   // from elements the user has intentionally focused.
   useEffect(() => {
-    if (!inputBusy && !recipe) {
+    if (!inputBusy && !activeRecipe) {
       const active = document.activeElement
       if (!active || active === document.body) inputRef.current?.focus()
     }
-  }, [inputBusy, recipe])
+  }, [inputBusy, activeRecipe])
+
+  // When a recipe is selected from the MealPlannerDrawer (via DayCard calling
+  // setActiveRecipe), automatically close the drawer so the RecipeCard is visible.
+  // Only fires on non-null values — clearing activeRecipe does not re-open the drawer.
+  useEffect(() => {
+    if (activeRecipe) {
+      setIsDrawerOpen(false)
+    }
+  }, [activeRecipe])
 
   // --- Auth gates (after all hooks) ---
 
@@ -243,7 +253,7 @@ export default function App() {
   async function doClip(url) {
     setStatus('clipping')
     setShowDropdown(false)
-    setRecipe(null)
+    clearActiveRecipe()
     setSaveState('idle')
     try {
       const res = await fetch(`${CLIPPER_API_URL}/clip`, {
@@ -267,7 +277,7 @@ export default function App() {
         instructions: d.instructions || d.recipeInstructions || [],
         source_url: url,
       }
-      setRecipe(clippedRecipe)
+      setActiveRecipe(clippedRecipe)
       addRecentRecipe(clippedRecipe)
       setInput('')
     } catch (e) {
@@ -318,7 +328,7 @@ export default function App() {
         ingredients: r.ingredients || [],
         instructions: r.instructions || [],
       }
-      setRecipe(generatedRecipe)
+      setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
       setGeneratingName('')
     } catch (e) {
@@ -347,7 +357,7 @@ export default function App() {
   }
 
   function handleResultSelect(result) {
-    setRecipe(result)
+    setActiveRecipe(result)
     addRecentRecipe(result)
     setSaveState('saved')
     setSavedRecipeId(result.id)
@@ -356,7 +366,7 @@ export default function App() {
   }
 
   function handleRecentSelect(r) {
-    setRecipe(r)
+    setActiveRecipe(r)
     setShowDropdown(false)
     setInput('')
     // Only mark as saved for real DB recipes (not temporary clip-* / ai-* ids)
@@ -414,7 +424,7 @@ export default function App() {
   }
 
   function handleClose() {
-    setRecipe(null)
+    clearActiveRecipe()
     setGeneratingName('')
     setErrorMsg('')
     setStatus('idle')
@@ -427,10 +437,13 @@ export default function App() {
     : null
 
   return (
-    <MealPlanProvider>
     <div className="app">
       <PWAInstallPrompt />
-      <MealPlanner />
+      <MealPlanner
+        isOpen={isDrawerOpen}
+        onToggle={() => setIsDrawerOpen((prev) => !prev)}
+        onClose={() => setIsDrawerOpen(false)}
+      />
       <UserMenu user={auth.user} onSignOut={auth.signOut} />
       <div className="omnibox-wrapper">
         <div className="brand">
@@ -591,19 +604,18 @@ export default function App() {
         )}
 
         {/* Recipe card */}
-        {recipe && !(status === 'generating') && (
+        {activeRecipe && !(status === 'generating') && (
           <RecipeCard
-            recipe={recipe}
+            recipe={activeRecipe}
             onClose={handleClose}
-            onElevate={() => doGenerate(recipe.name, { elevate: true, baseRecipe: recipe })}
+            onElevate={() => doGenerate(activeRecipe.name, { elevate: true, baseRecipe: activeRecipe })}
             isElevating={status === 'elevating'}
-            onSave={() => doSave(recipe)}
+            onSave={() => doSave(activeRecipe)}
             saveState={saveState}
             shareUrl={shareUrl}
           />
         )}
       </div>
     </div>
-    </MealPlanProvider>
   )
 }
