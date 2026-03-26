@@ -2,7 +2,7 @@
  * Grocery List Handler
  *
  * Accepts a POST request with { ingredients: string[] }, sends them to the
- * Llama 4 Scout LLM, and returns a deduplicated, categorized grocery list.
+ * Llama 3.2 3B Instruct LLM, and returns a deduplicated, categorized grocery list.
  *
  * Response shape:
  *   {
@@ -217,7 +217,7 @@ export async function handleGroceryList(request, env, corsHeaders) {
   let rawText;
 
   try {
-    const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+    const response = await env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
       messages: [{ role: 'user', content: prompt }],
       // Workers AI defaults max_tokens to ~256 for many LLMs; grocery JSON needs more headroom.
       max_tokens: 4096,
