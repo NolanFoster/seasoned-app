@@ -13,6 +13,38 @@
  *   }
  */
 
+import { OpikClient } from '../opik-client.js';
+
+/** Workers AI model id for grocery aggregation (keep in sync with env.AI.run below). */
+const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
+
+/** @param {unknown} raw */
+function serializeLlmOutputForOpik(raw) {
+  if (raw == null) {
+    return '';
+  }
+  if (typeof raw === 'string') {
+    return raw;
+  }
+  try {
+    return JSON.stringify(raw);
+  } catch {
+    return String(raw);
+  }
+}
+
+/**
+ * @param {unknown} text
+ * @param {number} [maxLen]
+ */
+function truncateForOpik(text, maxLen = 32000) {
+  const s = typeof text === 'string' ? text : serializeLlmOutputForOpik(text);
+  if (s.length <= maxLen) {
+    return s;
+  }
+  return `${s.slice(0, maxLen)}…[truncated]`;
+}
+
 /**
  * Builds the system + user prompt for the grocery-list LLM call.
  * Keeping the prompt in one place makes it easy to iterate on.
@@ -237,23 +269,57 @@ export async function handleGroceryList(request, env, corsHeaders) {
     });
   }
 
-  // ── LLM call ───────────────────────────────────────────────────────────────
+  // ── LLM call + Opik tracing ─────────────────────────────────────────────────
+
+  const traceWallStart = Date.now();
+  const traceStartIso = new Date().toISOString();
+  const opikClient = new OpikClient(env.OPIK_API_KEY, 'recipe-generation');
+  const tracingEnabled = Boolean(env.OPIK_API_KEY) && opikClient.isHealthy();
+
+  const flushOpikSafe = async () => {
+    if (!tracingEnabled) {
+      return;
+    }
+    try {
+      await opikClient.flush();
+    } catch (flushErr) {
+      console.warn('[grocery-list] Opik flush failed:', flushErr?.message ?? flushErr);
+    }
+  };
 
   const prompt = buildPrompt(ingredientStrings);
-  const llmStart = Date.now();
   let rawText;
+  let llmStartIso;
+  let llmEndIso;
 
   try {
-    const response = await env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
+    llmStartIso = new Date().toISOString();
+    const llmWallStart = Date.now();
+    const response = await env.AI.run(GROCERY_LLM_MODEL, {
       messages: [{ role: 'user', content: prompt }],
       // Workers AI defaults max_tokens to ~256 for many LLMs; grocery JSON needs more headroom.
       max_tokens: 4096,
       temperature: 0.3
     });
+    llmEndIso = new Date().toISOString();
     rawText = response?.response ?? '';
-    console.log(`[grocery-list] LLM responded in ${Date.now() - llmStart}ms`);
+    console.log(`[grocery-list] LLM responded in ${Date.now() - llmWallStart}ms`);
   } catch (err) {
     console.error('[grocery-list] LLM call failed:', err?.message ?? err);
+    if (tracingEnabled) {
+      const errTrace = opikClient.createTrace(
+        'Grocery List Error',
+        { ingredientCount: ingredientStrings.length, ingredients: ingredientStrings },
+        { error: err?.message ?? String(err), code: 'LLM_ERROR' },
+        { phase: 'llm', model: GROCERY_LLM_MODEL },
+        traceStartIso,
+        new Date().toISOString()
+      );
+      if (errTrace) {
+        opikClient.endTrace(errTrace, err instanceof Error ? err : new Error(String(err)));
+        await flushOpikSafe();
+      }
+    }
     return json(
       { success: false, error: 'AI inference failed', code: 'LLM_ERROR' },
       502
@@ -269,10 +335,101 @@ export async function handleGroceryList(request, env, corsHeaders) {
   } catch (err) {
     console.error('[grocery-list] Failed to parse LLM output:', err?.message);
     console.error('[grocery-list] Raw LLM output:', rawText);
+    if (tracingEnabled) {
+      const rawStr = serializeLlmOutputForOpik(rawText);
+      const errTrace = opikClient.createTrace(
+        'Grocery List Error',
+        { ingredientCount: ingredientStrings.length, ingredients: ingredientStrings },
+        {
+          error: err?.message ?? String(err),
+          code: 'PARSE_ERROR',
+          rawPreview: truncateForOpik(rawStr, 16000)
+        },
+        { phase: 'parse', model: GROCERY_LLM_MODEL, rawLength: rawStr.length },
+        traceStartIso,
+        new Date().toISOString()
+      );
+      if (errTrace) {
+        opikClient.endTrace(errTrace, err instanceof Error ? err : new Error(String(err)));
+        await flushOpikSafe();
+      }
+    }
     return json(
       { success: false, error: 'Failed to parse AI response', code: 'PARSE_ERROR' },
       500
     );
+  }
+
+  const durationMs = Date.now() - traceWallStart;
+  if (tracingEnabled) {
+    const traceEndIso = new Date().toISOString();
+    const totalItems = categories.reduce((n, c) => n + c.items.length, 0);
+    const trace = opikClient.createTrace(
+      'Grocery List Generation',
+      { ingredientCount: ingredientStrings.length, ingredients: ingredientStrings },
+      {
+        success: true,
+        categoryCount: categories.length,
+        totalItems,
+        categories
+      },
+      {
+        model: GROCERY_LLM_MODEL,
+        provider: 'cloudflare',
+        durationMs
+      },
+      traceStartIso,
+      traceEndIso
+    );
+
+    if (trace) {
+      const respStr = serializeLlmOutputForOpik(rawText);
+      const llmDurationMs = new Date(llmEndIso) - new Date(llmStartIso);
+      const llmSpan = opikClient.createSpan(
+        trace,
+        'Grocery List LLM',
+        'llm',
+        { prompt: truncateForOpik(prompt) },
+        { response: truncateForOpik(respStr) },
+        {
+          model: GROCERY_LLM_MODEL,
+          provider: 'cloudflare',
+          metadata: {
+            promptLength: prompt.length,
+            responseLength: respStr.length,
+            durationMs: llmDurationMs
+          }
+        },
+        llmStartIso,
+        llmEndIso
+      );
+      if (llmSpan) {
+        opikClient.endSpan(llmSpan);
+      }
+
+      const parseStartIso = llmEndIso;
+      const parseEndIso = new Date().toISOString();
+      const parseSpan = opikClient.createSpan(
+        trace,
+        'Parse & validate grocery JSON',
+        'tool',
+        {},
+        { categoryCount: categories.length, totalItems },
+        {
+          metadata: {
+            durationMs: new Date(parseEndIso) - new Date(parseStartIso)
+          }
+        },
+        parseStartIso,
+        parseEndIso
+      );
+      if (parseSpan) {
+        opikClient.endSpan(parseSpan);
+      }
+
+      opikClient.endTrace(trace);
+      await flushOpikSafe();
+    }
   }
 
   console.log(`[grocery-list] Returning ${categories.length} categorie(s)`);
