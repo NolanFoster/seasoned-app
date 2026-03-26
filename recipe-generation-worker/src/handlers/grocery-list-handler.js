@@ -45,26 +45,67 @@ Output ONLY this JSON structure:
 }
 
 /**
- * Attempts to extract and parse a JSON array from raw LLM text.
- * Handles cases where the model wraps its output in markdown fences or
- * adds preamble/postamble text.
+ * @param {unknown} v
+ * @returns {boolean}
+ */
+function isCategoryBlock(v) {
+  return v != null && typeof v === 'object' && v.category != null && Array.isArray(v.items);
+}
+
+/**
+ * Workers AI sometimes returns already-parsed JSON (object or array-like object).
  *
- * @param {string} raw - Raw text returned by the LLM
- * @returns {Array} Parsed JSON array
+ * @param {unknown} parsed
+ * @returns {Array|null} Category array, or null if shape is not recognized
+ */
+function arrayFromParsedCategories(parsed) {
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (isCategoryBlock(parsed)) {
+    return [parsed];
+  }
+  if (parsed && typeof parsed === 'object') {
+    const vals = Object.values(parsed).filter(isCategoryBlock);
+    if (vals.length > 0) {
+      return vals;
+    }
+  }
+  return null;
+}
+
+/**
+ * Attempts to extract and parse a JSON array from raw LLM output.
+ * Handles markdown fences, preamble text, and non-string bindings (parsed object).
+ *
+ * @param {unknown} raw - String or parsed object from env.AI.run().response
+ * @returns {Array} Parsed category array
  * @throws {Error} If no valid JSON array can be found
  */
 function extractJsonArray(raw) {
-  // Happy path: the whole string is already valid JSON
-  try {
-    return JSON.parse(raw);
-  } catch {
-    // Fall through to extraction attempt
+  if (typeof raw === 'object' && raw !== null) {
+    const direct = arrayFromParsedCategories(raw);
+    if (direct) {
+      return direct;
+    }
+    raw = JSON.stringify(raw);
+  }
+  if (typeof raw !== 'string') {
+    raw = String(raw ?? '');
   }
 
-  // Strip markdown code fences if present
+  try {
+    const parsed = JSON.parse(raw);
+    const fromJson = arrayFromParsedCategories(parsed);
+    if (fromJson) {
+      return fromJson;
+    }
+  } catch {
+    // Fall through to bracket extraction
+  }
+
   const fenceStripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '');
 
-  // Find the first '[' and last ']' to isolate the array
   const start = fenceStripped.indexOf('[');
   const end = fenceStripped.lastIndexOf(']');
   if (start === -1 || end === -1 || end < start) {
@@ -77,7 +118,12 @@ function extractJsonArray(raw) {
   }
 
   const candidate = fenceStripped.slice(start, end + 1);
-  return JSON.parse(candidate); // will throw if still invalid
+  const parsed = JSON.parse(candidate);
+  const fromBracket = arrayFromParsedCategories(parsed);
+  if (fromBracket) {
+    return fromBracket;
+  }
+  throw new Error('No JSON array found in LLM response');
 }
 
 /**
