@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useMealPlan } from './MealPlanContext.jsx'
+
+const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 
 /**
  * Aggregates ingredients from all recipes across mealPlan and upNext into a
@@ -41,11 +43,44 @@ export function aggregateIngredients(mealPlan, upNext) {
 }
 
 /**
+ * Flattens all ingredients from mealPlan and upNext into a raw string array
+ * (no deduplication) for the API call.
+ *
+ * @param {Object} mealPlan - date-keyed meal plan from MealPlanContext
+ * @param {Array}  upNext   - staged recipes from MealPlanContext
+ * @returns {string[]}
+ */
+export function flattenIngredients(mealPlan, upNext) {
+  const allRecipes = []
+
+  Object.values(mealPlan || {}).forEach((day) => {
+    Object.values(day || {}).forEach((slotRecipes) => {
+      if (Array.isArray(slotRecipes)) allRecipes.push(...slotRecipes)
+    })
+  })
+
+  if (Array.isArray(upNext)) allRecipes.push(...upNext)
+
+  const result = []
+  allRecipes.forEach((recipe) => {
+    if (!recipe || !Array.isArray(recipe.ingredients)) return
+    recipe.ingredients.forEach((ing) => {
+      if (typeof ing === 'string' && ing.trim() !== '') {
+        result.push(ing)
+      }
+    })
+  })
+
+  return result
+}
+
+/**
  * GroceryListModal
  *
- * Slide-up modal that shows a single checklist of all ingredients across the
- * entire meal plan (all days + upNext staging area).  Checked state is
- * session-local — it resets every time the modal is opened.
+ * Slide-up modal that fetches a categorized grocery list from the API using all
+ * ingredients across the entire meal plan (all days + upNext staging area).
+ * Supports shimmer loading, error state with retry, category expand/collapse,
+ * and item-level / category-level checkboxes.
  *
  * The component reads `mealPlan` and `upNext` directly from MealPlanContext so
  * the parent only needs to manage visibility.
@@ -56,19 +91,55 @@ export function aggregateIngredients(mealPlan, upNext) {
 export default function GroceryListModal({ isOpen, onClose }) {
   const { mealPlan, upNext } = useMealPlan()
 
-  // Aggregate once per render; recomputes only when the plan changes
-  const ingredients = useMemo(
-    () => aggregateIngredients(mealPlan, upNext),
-    [mealPlan, upNext]
-  )
-
-  // checked: { [ingredientId]: true }  — keys present only when checked
+  // 'loading' | 'success' | 'error'
+  const [status, setStatus] = useState('loading')
+  const [categories, setCategories] = useState([])
+  const [errorMsg, setErrorMsg] = useState('')
   const [checkedItems, setCheckedItems] = useState({})
+  const [expandedCategories, setExpandedCategories] = useState({})
 
-  // Reset checked state every time the modal opens (fresh session)
+  const fetchGroceryList = useCallback(async () => {
+    setStatus('loading')
+    setCheckedItems({})
+    setExpandedCategories({})
+    const ingredients = flattenIngredients(mealPlan, upNext)
+    if (ingredients.length === 0) {
+      setStatus('success')
+      setCategories([])
+      return
+    }
+    try {
+      const controller = new AbortController()
+      const tid = setTimeout(() => controller.abort(), 15000)
+      const res = await fetch(`${RECIPE_GENERATION_URL}/grocery-list`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients }),
+        signal: controller.signal,
+      })
+      clearTimeout(tid)
+      if (!res.ok) throw new Error(`Server error: ${res.status}`)
+      const data = await res.json()
+      if (!data.success || !Array.isArray(data.categories))
+        throw new Error('Invalid response from server. Please try again.')
+      setCategories(data.categories)
+      setExpandedCategories(
+        Object.fromEntries(data.categories.map((c) => [c.category, true]))
+      )
+      setStatus('success')
+    } catch (err) {
+      setErrorMsg(
+        err.name === 'AbortError'
+          ? 'Request timed out. Please try again.'
+          : err.message || 'Unable to generate grocery list. Please try again.'
+      )
+      setStatus('error')
+    }
+  }, [mealPlan, upNext])
+
   useEffect(() => {
-    if (isOpen) setCheckedItems({})
-  }, [isOpen])
+    if (isOpen) fetchGroceryList()
+  }, [isOpen, fetchGroceryList])
 
   // Escape key closes modal
   useEffect(() => {
@@ -80,74 +151,130 @@ export default function GroceryListModal({ isOpen, onClose }) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
-  const handleCheckToggle = useCallback((id) => {
-    setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }))
-  }, [])
-
   function handleBackdropClick(e) {
     if (e.target === e.currentTarget) onClose()
   }
 
-  // Don't render anything while closed — fresh state is guaranteed by the
-  // useEffect above that resets checkedItems when isOpen flips to true.
+  function toggleItemChecked(itemId) {
+    setCheckedItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
+  function toggleCategoryExpanded(category) {
+    setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }))
+  }
+
+  function handleCategoryCheckbox(category, items) {
+    const allChecked = items.every((item) => checkedItems[`${category}::${item.name}`])
+    setCheckedItems((prev) => {
+      const next = { ...prev }
+      items.forEach((item) => {
+        next[`${category}::${item.name}`] = !allChecked
+      })
+      return next
+    })
+  }
+
+  function isCategoryAllChecked(category, items) {
+    return items.length > 0 && items.every((item) => checkedItems[`${category}::${item.name}`])
+  }
+
   if (!isOpen) return null
 
   return (
     <div
       className="grocery-modal-overlay"
       onClick={handleBackdropClick}
-      aria-hidden="false"
     >
       <div
-        className="grocery-modal-container"
         role="dialog"
         aria-modal="true"
-        aria-label="Grocery list"
+        aria-labelledby="grocery-modal-title"
       >
         <div className="grocery-modal-header">
-          <h2 className="grocery-modal-title">Grocery List</h2>
+          <h2 id="grocery-modal-title">Grocery List</h2>
           <button
             type="button"
-            className="grocery-modal-close"
-            onClick={onClose}
             aria-label="Close grocery list"
+            onClick={onClose}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" aria-hidden="true">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
+            X
           </button>
         </div>
 
         <div className="grocery-modal-content">
-          {ingredients.length === 0 ? (
-            <p className="grocery-modal-empty">
-              No recipes planned yet — add recipes to your meal plan to generate a grocery list.
-            </p>
-          ) : (
-            <ul className="grocery-list" role="list">
-              {ingredients.map(({ id, ingredient, count }) => {
-                const isChecked = !!checkedItems[id]
+          {status === 'loading' && (
+            <div
+              data-testid="grocery-shimmer"
+              aria-busy="true"
+              className="grocery-shimmer"
+            >
+              <div className="grocery-shimmer__line" />
+              <div className="grocery-shimmer__line" />
+              <div className="grocery-shimmer__line" />
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div role="alert">
+              <p>{errorMsg}</p>
+              <button type="button" onClick={fetchGroceryList}>
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {status === 'success' && categories.length === 0 && (
+            <p>No recipes planned yet — add recipes to your meal plan to generate a grocery list.</p>
+          )}
+
+          {status === 'success' && categories.length > 0 && (
+            <ul role="list">
+              {categories.map(({ category, items }) => {
+                const isExpanded = !!expandedCategories[category]
+                const allChecked = isCategoryAllChecked(category, items)
                 return (
-                  <li
-                    key={id}
-                    className={`grocery-item${isChecked ? ' grocery-item--checked' : ''}`}
-                  >
-                    <label className="grocery-item__label" htmlFor={id}>
+                  <li key={category}>
+                    <div>
                       <input
                         type="checkbox"
-                        id={id}
-                        className="grocery-item__checkbox"
-                        checked={isChecked}
-                        onChange={() => handleCheckToggle(id)}
-                        aria-label={ingredient}
+                        aria-label={`Select all items in ${category}`}
+                        checked={allChecked}
+                        onChange={() => handleCategoryCheckbox(category, items)}
                       />
-                      <span className="grocery-item__text">{ingredient}</span>
-                      {count > 1 && (
-                        <span className="grocery-item__count" aria-label={`needed ${count} times`}>
-                          ×{count}
-                        </span>
-                      )}
-                    </label>
+                      <button
+                        type="button"
+                        aria-expanded={isExpanded}
+                        onClick={() => toggleCategoryExpanded(category)}
+                      >
+                        {category}
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <ul role="list">
+                        {items.map((item) => {
+                          const itemId = `${category}::${item.name}`
+                          const isChecked = !!checkedItems[itemId]
+                          return (
+                            <li
+                              key={itemId}
+                              className={`grocery-item${isChecked ? ' grocery-item--checked' : ''}`}
+                            >
+                              <label htmlFor={itemId}>
+                                <input
+                                  type="checkbox"
+                                  id={itemId}
+                                  aria-label={item.name}
+                                  checked={isChecked}
+                                  onChange={() => toggleItemChecked(itemId)}
+                                />
+                                <span>{item.name}</span>
+                                {item.quantity && <span>{item.quantity}</span>}
+                              </label>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
                   </li>
                 )
               })}

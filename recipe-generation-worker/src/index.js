@@ -1,6 +1,7 @@
 import { handleRoot } from './handlers/root-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
 import { handleGenerate } from './handlers/generate-handler.js';
+import { handleGroceryList } from './handlers/grocery-list-handler.js';
 
 export default {
   async fetch(request, env) {
@@ -31,6 +32,11 @@ export default {
     // Recipe generation endpoint
     if (url.pathname === '/generate' && request.method === 'POST') {
       return handleGenerate(request, env, corsHeaders);
+    }
+
+    // Grocery list aggregation endpoint
+    if (url.pathname === '/grocery-list' && request.method === 'POST') {
+      return handleGroceryList(request, env, corsHeaders);
     }
 
     // 404 for unknown routes
