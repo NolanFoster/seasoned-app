@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   isLegacyFormat,
   migrateFromLegacy,
@@ -14,31 +14,62 @@ export function useMealPlan() {
   return useContext(MealPlanContext);
 }
 
+/**
+ * Loads and deserializes persisted state from localStorage.
+ * Handles three storage shapes for backward compatibility:
+ *   1. New envelope:  { mealPlan: {...}, upNext: [...] }
+ *   2. Old direct:    { 'YYYY-MM-DD': { breakfast: [], ... } }  (no upNext)
+ *   3. Legacy flat:   { 'YYYY-MM-DD': [recipe, ...] }           (pre-mealType era)
+ *
+ * @returns {{ mealPlan: Object, upNext: Array }}
+ */
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
+    if (!raw) return { mealPlan: {}, upNext: [] };
     const parsed = JSON.parse(raw);
+
+    // Shape 1 — new envelope format: { mealPlan, upNext }
+    // Detected by the presence of a 'mealPlan' key that is a plain object.
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      !Array.isArray(parsed) &&
+      'mealPlan' in parsed
+    ) {
+      const planPart = parsed.mealPlan ?? {};
+      const upNextPart = Array.isArray(parsed.upNext) ? parsed.upNext : [];
+      if (isLegacyFormat(planPart)) {
+        console.info('🔄 Meal plan (inside envelope) migrated from legacy format');
+        return { mealPlan: migrateFromLegacy(planPart), upNext: upNextPart };
+      }
+      return { mealPlan: planPart, upNext: upNextPart };
+    }
+
+    // Shape 3 — legacy flat format: date keys map to plain arrays
     if (isLegacyFormat(parsed)) {
       console.info('🔄 Meal plan migrated from legacy format');
       const migrated = migrateFromLegacy(parsed);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-      return migrated;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mealPlan: migrated, upNext: [] }));
+      return { mealPlan: migrated, upNext: [] };
     }
-    return parsed;
+
+    // Shape 2 — old direct format: mealPlan stored at top level, no upNext
+    return { mealPlan: parsed ?? {}, upNext: [] };
   } catch {
-    return {};
+    return { mealPlan: {}, upNext: [] };
   }
 }
 
 export function MealPlanProvider({ children }) {
-  const [mealPlan, setMealPlan] = useState(loadFromStorage);
-  const [upNext, setUpNext] = useState([]);
+  const [mealPlan, setMealPlan] = useState(() => loadFromStorage().mealPlan);
+  const [upNext, setUpNext] = useState(() => loadFromStorage().upNext);
   const [activeRecipe, setActiveRecipe] = useState(null);
 
+  // Persist both mealPlan and upNext together under a single key
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(mealPlan));
-  }, [mealPlan]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mealPlan, upNext }));
+  }, [mealPlan, upNext]);
 
   /**
    * Adds a recipe to a specific date and meal type slot.
@@ -46,7 +77,7 @@ export function MealPlanProvider({ children }) {
    * @param {string} mealType - one of 'breakfast' | 'lunch' | 'dinner' | 'snack'
    * @param {Object} recipe - recipe object with at least { id, name }
    */
-  const addMeal = (dateString, mealType, recipe) => {
+  const addMeal = useCallback((dateString, mealType, recipe) => {
     if (!isValidMealType(mealType)) {
       console.warn(`Invalid mealType: "${mealType}". Allowed: breakfast, lunch, dinner, snack`);
       return;
@@ -65,34 +96,34 @@ export function MealPlanProvider({ children }) {
         },
       };
     });
-  };
+  }, []);
 
   /**
    * Appends a recipe to the upNext staging area.
    * Adding the same recipe twice is allowed (e.g. to schedule it multiple times).
    * @param {Object} recipe - recipe object with at least { id, name, ingredients }
    */
-  const addUpNext = (recipe) => {
+  const addUpNext = useCallback((recipe) => {
     if (!recipe?.id || !recipe?.name) {
       console.warn('addUpNext: recipe missing id or name; skipping');
       return;
     }
     setUpNext((prev) => [...prev, recipe]);
-  };
+  }, []);
 
   /**
    * Removes the first recipe matching recipeId from the upNext staging area.
    * If the ID does not exist, the call is a no-op (no error thrown).
    * @param {string} recipeId - the id of the recipe to remove
    */
-  const removeUpNext = (recipeId) => {
+  const removeUpNext = useCallback((recipeId) => {
     if (!recipeId) return;
     setUpNext((prev) => {
       const idx = prev.findIndex((r) => r.id === recipeId);
       if (idx === -1) return prev; // graceful no-op
       return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
     });
-  };
+  }, []);
 
   /**
    * Removes a recipe from a specific date and meal type slot by ID.
@@ -100,7 +131,7 @@ export function MealPlanProvider({ children }) {
    * @param {string} mealType
    * @param {string} recipeId
    */
-  const removeMeal = (dateString, mealType, recipeId) => {
+  const removeMeal = useCallback((dateString, mealType, recipeId) => {
     if (!isValidMealType(mealType)) {
       console.warn(`Invalid mealType: "${mealType}". Allowed: breakfast, lunch, dinner, snack`);
       return;
@@ -116,7 +147,7 @@ export function MealPlanProvider({ children }) {
         },
       };
     });
-  };
+  }, []);
 
   /**
    * Moves a recipe between any combination of droppable zones, including the
@@ -136,7 +167,7 @@ export function MealPlanProvider({ children }) {
    * @param {number} sourceIndex      - source position (mirrors source.index; kept for call-site convenience)
    * @param {number} destinationIndex - destination position (mirrors destination.index)
    */
-  const moveMeal = (source, destination, sourceIndex, destinationIndex) => {
+  const moveMeal = useCallback((source, destination, sourceIndex, destinationIndex) => {
     // No-op if dropped outside any droppable
     if (!destination) return;
 
@@ -300,14 +331,28 @@ export function MealPlanProvider({ children }) {
         [destDate]: { ...destDay, [destMealType]: newDestMeals },
       };
     });
-  };
+  }, [mealPlan, upNext]);
 
-  const clearActiveRecipe = () => setActiveRecipe(null);
+  const clearActiveRecipe = useCallback(() => setActiveRecipe(null), []);
+
+  const contextValue = useMemo(
+    () => ({
+      mealPlan,
+      upNext,
+      addMeal,
+      addUpNext,
+      removeUpNext,
+      removeMeal,
+      moveMeal,
+      activeRecipe,
+      setActiveRecipe,
+      clearActiveRecipe,
+    }),
+    [mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal, activeRecipe, clearActiveRecipe]
+  );
 
   return (
-    <MealPlanContext.Provider
-      value={{ mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal, activeRecipe, setActiveRecipe, clearActiveRecipe }}
-    >
+    <MealPlanContext.Provider value={contextValue}>
       {children}
     </MealPlanContext.Provider>
   );
