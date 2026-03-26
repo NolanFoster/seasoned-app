@@ -24,11 +24,16 @@ function buildPrompt(ingredients) {
   const ingredientList = ingredients.join('\n');
   return `You are a grocery list aggregator. Given the raw ingredient lines below, you must:
 1. Normalize ingredient names (e.g. "all-purpose flour" and "flour" are the same thing).
-2. Deduplicate: merge identical or near-identical ingredients into one entry.
-3. Sum quantities where units match (e.g. "1 cup flour" + "2 cups flour" = "3 cups flour"). When units differ or cannot be summed, list the combined amounts (e.g. "1 can + 2 cups").
-4. Assign each ingredient to exactly one logical grocery category. Use: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
-5. Mark each item isStaple: true if it is a common pantry staple that many households already own (salt, pepper, oils, vinegar, flour, sugar, baking powder/soda, soy sauce, common dried spices/herbs, garlic, onion, eggs, butter).
-6. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
+2. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
+3. Sum quantities where units match: two "1 cup mayonnaise" lines must become one entry with "2 cups mayonnaise" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
+4. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
+5. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
+6. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
+   - Jarred/canned condiments (salsa, mayo, ketchup, pickles, taco seasoning) → Pantry Staples unless the line explicitly says frozen.
+   - Lemon juice, lime juice, vinegar, oils for cooking → Pantry Staples. Beverages is for drink products (juice cartons, soda, wine). Frozen is only for frozen goods or when the recipe clearly means the frozen product.
+   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source does (e.g. "fresh cilantro").
+7. Mark isStaple: true only for common household staples (salt, pepper, basic spices many homes keep, flour, sugar, baking powder/soda, soy sauce, garlic, onion, eggs, butter, common oils/vinegar).
+8. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
 
 Ingredient lines:
 ${ingredientList}
@@ -153,6 +158,28 @@ function validateCategories(parsed) {
 }
 
 /**
+ * Merges duplicate category labels (e.g. two "Pantry Staples" blocks) into one.
+ * Does not merge duplicate item names: identical quantities would need numeric
+ * parsing to combine safely, so the prompt handles per-ingredient deduplication.
+ *
+ * @param {{ category: string, items: Array<{ name: string, quantity: string, isStaple: boolean }> }[]} categories
+ * @returns {typeof categories}
+ */
+function mergeDuplicateCategories(categories) {
+  const byCat = new Map();
+  for (const cat of categories) {
+    const label = String(cat.category);
+    const key = label.trim().toLowerCase();
+    if (!byCat.has(key)) {
+      byCat.set(key, { category: label, items: [...cat.items] });
+    } else {
+      byCat.get(key).items.push(...cat.items);
+    }
+  }
+  return [...byCat.values()].filter((c) => c.items.length > 0);
+}
+
+/**
  * POST /grocery-list handler
  *
  * @param {Request} request
@@ -238,7 +265,7 @@ export async function handleGroceryList(request, env, corsHeaders) {
   let categories;
   try {
     const parsed = extractJsonArray(rawText);
-    categories = validateCategories(parsed);
+    categories = mergeDuplicateCategories(validateCategories(parsed));
   } catch (err) {
     console.error('[grocery-list] Failed to parse LLM output:', err?.message);
     console.error('[grocery-list] Raw LLM output:', rawText);
