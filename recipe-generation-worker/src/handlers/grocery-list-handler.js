@@ -95,8 +95,8 @@ function validateCategories(parsed) {
         .map((item) => ({
           name: String(item.name),
           quantity: item.quantity != null ? String(item.quantity) : '',
-          isStaple: Boolean(item.isStaple),
-        })),
+          isStaple: Boolean(item.isStaple)
+        }))
     }))
     .filter((cat) => cat.items.length > 0);
 }
@@ -113,7 +113,7 @@ export async function handleGroceryList(request, env, corsHeaders) {
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   // ── Input validation ────────────────────────────────────────────────────────
@@ -153,9 +153,9 @@ export async function handleGroceryList(request, env, corsHeaders) {
       categories: [
         {
           category: 'Pantry Staples',
-          items: ingredientStrings.map((i) => ({ name: i, quantity: '', isStaple: false })),
-        },
-      ],
+          items: ingredientStrings.map((i) => ({ name: i, quantity: '', isStaple: false }))
+        }
+      ]
     });
   }
 
@@ -167,7 +167,7 @@ export async function handleGroceryList(request, env, corsHeaders) {
 
   try {
     const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: prompt }]
     });
     rawText = response?.response ?? '';
     console.log(`[grocery-list] LLM responded in ${Date.now() - llmStart}ms`);
