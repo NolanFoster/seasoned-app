@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMealPlan } from './MealPlanContext.jsx'
 
-const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
+// ── Utility exports (preserved for backward-compatibility and tests) ──────────
 
 /**
  * Aggregates ingredients from all recipes across mealPlan and upNext into a
@@ -14,17 +14,14 @@ const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 export function aggregateIngredients(mealPlan, upNext) {
   const allRecipes = []
 
-  // Gather every recipe from every day / meal slot
   Object.values(mealPlan || {}).forEach((day) => {
     Object.values(day || {}).forEach((slotRecipes) => {
       if (Array.isArray(slotRecipes)) allRecipes.push(...slotRecipes)
     })
   })
 
-  // Include staged (upNext) recipes
   if (Array.isArray(upNext)) allRecipes.push(...upNext)
 
-  // Flatten, filter empty strings, deduplicate with count
   const countMap = new Map()
   allRecipes.forEach((recipe) => {
     if (!recipe || !Array.isArray(recipe.ingredients)) return
@@ -74,74 +71,104 @@ export function flattenIngredients(mealPlan, upNext) {
   return result
 }
 
+// ── Category ordering ─────────────────────────────────────────────────────────
+
+const DEFAULT_CUSTOM_CATEGORY = 'Other'
+
+// Predefined display order for common AI-generated categories. Categories not
+// in this list are sorted alphabetically and appended after.
+const CATEGORY_ORDER = [
+  'Produce', 'Vegetables', 'Fruits',
+  'Proteins', 'Meat', 'Seafood',
+  'Dairy',
+  'Grains & Bread', 'Grains', 'Bread',
+  'Pantry Staples', 'Pantry',
+  'Frozen',
+  'Beverages', 'Snacks',
+  'Other',
+]
+
+/**
+ * Groups a flat GroceryListItem array into sorted [category, items[]] pairs.
+ * @param {Array} items
+ * @returns {Array<[string, Array]>}
+ */
+function groupByCategory(items) {
+  const groups = {}
+  items.forEach((item) => {
+    const cat = item.category || DEFAULT_CUSTOM_CATEGORY
+    if (!groups[cat]) groups[cat] = []
+    groups[cat].push(item)
+  })
+  return Object.entries(groups).sort(([a], [b]) => {
+    const ia = CATEGORY_ORDER.indexOf(a)
+    const ib = CATEGORY_ORDER.indexOf(b)
+    if (ia === -1 && ib === -1) return a.localeCompare(b)
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  })
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
+const ChevronIcon = ({ expanded }) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s ease' }}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+)
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 /**
  * GroceryListModal
  *
- * Slide-up modal that fetches a categorized grocery list from the API using all
- * ingredients across the entire meal plan (all days + upNext staging area).
- * Supports shimmer loading, error state with retry, category expand/collapse,
- * and item-level / category-level checkboxes.
+ * Slide-up modal for viewing and editing the persistent grocery list stored in
+ * MealPlanContext. Supports:
+ *   - Adding custom items via a sticky input field
+ *   - Toggling item completion (persisted to localStorage via context)
+ *   - Deleting items individually
+ *   - Category grouping with expand/collapse
  *
- * The component reads `mealPlan` and `upNext` directly from MealPlanContext so
- * the parent only needs to manage visibility.
+ * Generation is handled upstream by MealPlannerDrawer; this component is
+ * purely for display and mutation of the already-generated list.
  *
  * @param {boolean}  props.isOpen  - Whether the modal is currently visible
  * @param {function} props.onClose - Callback fired to close the modal
  */
 export default function GroceryListModal({ isOpen, onClose }) {
-  const { mealPlan, upNext } = useMealPlan()
+  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem } = useMealPlan()
 
-  // 'loading' | 'success' | 'error'
-  const [status, setStatus] = useState('loading')
-  const [categories, setCategories] = useState([])
-  const [errorMsg, setErrorMsg] = useState('')
-  const [checkedItems, setCheckedItems] = useState({})
+  const [customInput, setCustomInput] = useState('')
+  const [inputError, setInputError] = useState('')
+  // Track expanded state per category; defaults to true for new categories
   const [expandedCategories, setExpandedCategories] = useState({})
+  const inputRef = useRef(null)
 
-  const fetchGroceryList = useCallback(async () => {
-    setStatus('loading')
-    setCheckedItems({})
-    setExpandedCategories({})
-    const ingredients = flattenIngredients(mealPlan, upNext)
-    if (ingredients.length === 0) {
-      setStatus('success')
-      setCategories([])
-      return
-    }
-    try {
-      const controller = new AbortController()
-      const tid = setTimeout(() => controller.abort(), 15000)
-      const res = await fetch(`${RECIPE_GENERATION_URL}/grocery-list`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients }),
-        signal: controller.signal,
-      })
-      clearTimeout(tid)
-      if (!res.ok) throw new Error(`Server error: ${res.status}`)
-      const data = await res.json()
-      if (!data.success || !Array.isArray(data.categories))
-        throw new Error('Invalid response from server. Please try again.')
-      setCategories(data.categories)
-      setExpandedCategories(
-        Object.fromEntries(data.categories.map((c) => [c.category, true]))
-      )
-      setStatus('success')
-    } catch (err) {
-      setErrorMsg(
-        err.name === 'AbortError'
-          ? 'Request timed out. Please try again.'
-          : err.message || 'Unable to generate grocery list. Please try again.'
-      )
-      setStatus('error')
-    }
-  }, [mealPlan, upNext])
+  // Group and sort items by category
+  const categoryGroups = useMemo(() => groupByCategory(groceryList), [groceryList])
 
+  // Auto-expand any newly appearing categories
   useEffect(() => {
-    if (isOpen) fetchGroceryList()
-  }, [isOpen, fetchGroceryList])
+    if (groceryList.length === 0) return
+    setExpandedCategories((prev) => {
+      const next = { ...prev }
+      groceryList.forEach((item) => {
+        const cat = item.category || DEFAULT_CUSTOM_CATEGORY
+        if (!(cat in next)) next[cat] = true
+      })
+      return next
+    })
+  }, [groceryList])
 
-  // Escape key closes modal
+  // Escape key closes the modal
   useEffect(() => {
     if (!isOpen) return
     function handleKeyDown(e) {
@@ -155,124 +182,145 @@ export default function GroceryListModal({ isOpen, onClose }) {
     if (e.target === e.currentTarget) onClose()
   }
 
-  function toggleItemChecked(itemId) {
-    setCheckedItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }))
-  }
-
   function toggleCategoryExpanded(category) {
     setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }))
   }
 
-  function handleCategoryCheckbox(category, items) {
-    const allChecked = items.every((item) => checkedItems[`${category}::${item.name}`])
-    setCheckedItems((prev) => {
-      const next = { ...prev }
-      items.forEach((item) => {
-        next[`${category}::${item.name}`] = !allChecked
-      })
-      return next
+  function handleAddItem(e) {
+    e.preventDefault()
+    const trimmed = customInput.trim()
+    if (!trimmed) {
+      setInputError('Please enter an item name.')
+      return
+    }
+    if (trimmed.length > 50) {
+      setInputError('Item name must be 50 characters or fewer.')
+      return
+    }
+    addCustomItem({
+      name: trimmed,
+      quantity: '',
+      unit: '',
+      category: DEFAULT_CUSTOM_CATEGORY,
+      completed: false,
+      notes: '',
     })
-  }
-
-  function isCategoryAllChecked(category, items) {
-    return items.length > 0 && items.every((item) => checkedItems[`${category}::${item.name}`])
+    setCustomInput('')
+    setInputError('')
+    inputRef.current?.focus()
   }
 
   if (!isOpen) return null
 
   return (
-    <div
-      className="grocery-modal-overlay"
-      onClick={handleBackdropClick}
-    >
+    <div className="grocery-modal-overlay" onClick={handleBackdropClick}>
       <div
+        className="grocery-modal-container"
         role="dialog"
         aria-modal="true"
         aria-labelledby="grocery-modal-title"
       >
+        {/* ── Header ── */}
         <div className="grocery-modal-header">
-          <h2 id="grocery-modal-title">Grocery List</h2>
+          <h2 id="grocery-modal-title" className="grocery-modal-title">Grocery List</h2>
           <button
             type="button"
+            className="grocery-modal-close"
             aria-label="Close grocery list"
             onClick={onClose}
           >
-            X
+            <CloseIcon />
           </button>
         </div>
 
+        {/* ── Sticky add-item input ── */}
+        <form className="grocery-modal-add" onSubmit={handleAddItem}>
+          <div className="grocery-modal-add__row">
+            <input
+              ref={inputRef}
+              type="text"
+              className="grocery-modal-add__input"
+              placeholder="Add an item…"
+              value={customInput}
+              maxLength={50}
+              aria-label="Custom item name"
+              onChange={(e) => {
+                setCustomInput(e.target.value)
+                setInputError('')
+              }}
+            />
+            <button type="submit" className="grocery-modal-add__btn" aria-label="Add item to grocery list">
+              Add
+            </button>
+          </div>
+          {inputError && (
+            <p className="grocery-modal-add__error" role="alert">{inputError}</p>
+          )}
+        </form>
+
+        {/* ── Scrollable list ── */}
         <div className="grocery-modal-content">
-          {status === 'loading' && (
-            <div
-              data-testid="grocery-shimmer"
-              aria-busy="true"
-              className="grocery-shimmer"
-            >
-              <div className="grocery-shimmer__line" />
-              <div className="grocery-shimmer__line" />
-              <div className="grocery-shimmer__line" />
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div role="alert">
-              <p>{errorMsg}</p>
-              <button type="button" onClick={fetchGroceryList}>
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {status === 'success' && categories.length === 0 && (
-            <p>No recipes planned yet — add recipes to your meal plan to generate a grocery list.</p>
-          )}
-
-          {status === 'success' && categories.length > 0 && (
-            <ul role="list">
-              {categories.map(({ category, items }) => {
+          {groceryList.length === 0 ? (
+            <p className="grocery-modal-empty">
+              No items yet — generate a list from the meal planner, or add items above.
+            </p>
+          ) : (
+            <ul className="grocery-list" role="list">
+              {categoryGroups.map(([category, items]) => {
                 const isExpanded = !!expandedCategories[category]
-                const allChecked = isCategoryAllChecked(category, items)
                 return (
                   <li key={category}>
-                    <div>
-                      <input
-                        type="checkbox"
-                        aria-label={`Select all items in ${category}`}
-                        checked={allChecked}
-                        onChange={() => handleCategoryCheckbox(category, items)}
-                      />
+                    <div className="grocery-category-header">
                       <button
                         type="button"
+                        className="grocery-category-toggle"
                         aria-expanded={isExpanded}
                         onClick={() => toggleCategoryExpanded(category)}
                       >
+                        <ChevronIcon expanded={isExpanded} />
                         {category}
+                        <span className="grocery-category-count">{items.length}</span>
                       </button>
                     </div>
+
                     {isExpanded && (
-                      <ul role="list">
-                        {items.map((item) => {
-                          const itemId = `${category}::${item.name}`
-                          const isChecked = !!checkedItems[itemId]
-                          return (
-                            <li
-                              key={itemId}
-                              className={`grocery-item${isChecked ? ' grocery-item--checked' : ''}`}
+                      <ul className="grocery-list" role="list">
+                        {items.map((item) => (
+                          <li
+                            key={item.id}
+                            className={[
+                              'grocery-item',
+                              item.completed ? 'grocery-item--checked' : '',
+                              item.isCustom ? 'grocery-item--custom' : '',
+                            ].filter(Boolean).join(' ')}
+                          >
+                            <label className="grocery-item__label" htmlFor={`gi-${item.id}`}>
+                              <input
+                                type="checkbox"
+                                id={`gi-${item.id}`}
+                                className="grocery-item__checkbox"
+                                aria-label={item.name}
+                                checked={!!item.completed}
+                                onChange={() => toggleItemCompletion(item.id)}
+                              />
+                              <span className="grocery-item__text">{item.name}</span>
+                              {item.quantity && (
+                                <span className="grocery-item__quantity">{item.quantity}</span>
+                              )}
+                              {item.isCustom && (
+                                <span className="grocery-item__custom-badge">Custom</span>
+                              )}
+                            </label>
+                            <button
+                              type="button"
+                              className="grocery-item__delete-btn"
+                              aria-label={`Delete ${item.name}`}
+                              onClick={() => deleteItem(item.id)}
                             >
-                              <label htmlFor={itemId}>
-                                <input
-                                  type="checkbox"
-                                  id={itemId}
-                                  aria-label={item.name}
-                                  checked={isChecked}
-                                  onChange={() => toggleItemChecked(itemId)}
-                                />
-                                <span>{item.name}</span>
-                                {item.quantity && <span>{item.quantity}</span>}
-                              </label>
-                            </li>
-                          )
-                        })}
+                              <CloseIcon />
+                            </button>
+                          </li>
+                        ))}
                       </ul>
                     )}
                   </li>

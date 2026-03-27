@@ -925,6 +925,91 @@ body > .meal-item {
   outline-offset: 2px;
 }
 
+/* Disabled "Generate" — no meals in plan yet */
+.drawer-grocery-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.drawer-grocery-btn:disabled:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+/* Error text shown below the generate button */
+.drawer-footer-error {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  color: var(--error);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Loaded state: two-button row (View List + Regenerate) ─────────────── */
+.drawer-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* "View List" — primary accent button */
+.drawer-view-list-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--surface2);
+  border: 1px solid rgba(232, 200, 122, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--generate-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  min-height: 40px;
+}
+
+.drawer-view-list-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.drawer-view-list-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* "Regenerate" — secondary muted button */
+.drawer-regenerate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  min-height: 40px;
+}
+
+.drawer-regenerate-btn:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.drawer-regenerate-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* --------------------------------------------------------------------------
    18. UpNextCard — horizontal staging strip
    -------------------------------------------------------------------------- */
@@ -1174,11 +1259,11 @@ body > .meal-item {
 }
 
 .grocery-modal-empty {
-  padding: 24px 20px;
-  font-size: 0.9rem;
+  padding: 40px 24px 32px;
+  font-size: 0.875rem;
   color: var(--text-muted);
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .grocery-list {
@@ -1187,23 +1272,8 @@ body > .meal-item {
   padding: 0;
 }
 
-.grocery-item {
-  border-bottom: 1px solid var(--border);
-}
-
-.grocery-item:last-child {
-  border-bottom: none;
-}
-
-.grocery-item__label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 20px;
-  cursor: pointer;
-  transition: background 0.1s ease;
-  min-height: 44px;
-}
+/* NOTE: .grocery-item and .grocery-item__label are defined in full below
+   (the "Item row" section). These legacy stubs have been removed. */
 
 .grocery-item__label:hover {
   background: var(--surface2);
@@ -1235,15 +1305,222 @@ body > .meal-item {
   flex-shrink: 0;
 }
 
-/* Checked state: strikethrough + reduced prominence */
+/* Checked state: strikethrough + fade entire row */
+.grocery-item--checked {
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
 .grocery-item--checked .grocery-item__text {
   text-decoration: line-through;
   color: var(--text-muted);
-  opacity: 0.55;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
 }
 
 .grocery-item--checked .grocery-item__label {
   background: none;
+}
+
+/* ── Sticky add-item form ────────────────────────────────────────────────── */
+.grocery-modal-add {
+  flex-shrink: 0;
+  padding: 10px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  /* Subtle shadow hints that the list scrolls underneath */
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  /* Ensure it renders above sticky category headers */
+  position: relative;
+  z-index: 2;
+}
+
+.grocery-modal-add__row {
+  display: flex;
+  gap: 8px;
+}
+
+.grocery-modal-add__input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.grocery-modal-add__input::placeholder {
+  color: var(--text-muted);
+}
+
+.grocery-modal-add__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(232, 200, 122, 0.15);
+}
+
+.grocery-modal-add__btn {
+  padding: 8px 14px;
+  background: var(--surface2);
+  border: 1px solid rgba(232, 200, 122, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--generate-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.grocery-modal-add__btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.grocery-modal-add__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.grocery-modal-add__error {
+  margin: 5px 0 0;
+  font-size: 0.75rem;
+  color: var(--error);
+  line-height: 1.3;
+}
+
+/* ── Category header row ─────────────────────────────────────────────────── */
+.grocery-category-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  /* Left accent line gives each category clear visual anchoring */
+  border-left: 3px solid var(--border);
+}
+
+.grocery-category-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.12s ease;
+}
+
+.grocery-category-toggle:hover {
+  color: var(--text);
+}
+
+.grocery-category-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.grocery-category-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
+/* ── Item row: label takes remaining space, delete sits to the right ─────── */
+.grocery-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.2s ease;
+}
+
+.grocery-item:last-child {
+  border-bottom: none;
+}
+
+/* Merged from two previously separate blocks */
+.grocery-item__label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  min-height: 44px;
+  flex: 1;
+  min-width: 0; /* allow text to truncate inside flex child */
+}
+
+/* Quantity string (e.g. "2 lbs", "1 cup") */
+.grocery-item__quantity {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* "Custom" badge on user-added items */
+.grocery-item__custom-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(200, 169, 110, 0.12);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+/* Delete button — hidden by default, revealed on row hover or keyboard focus */
+.grocery-item__delete-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  min-height: 44px;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  color: transparent;
+  cursor: pointer;
+  transition: color 0.12s ease, transform 0.1s ease;
+  will-change: transform;
+}
+
+.grocery-item:hover .grocery-item__delete-btn,
+.grocery-item__delete-btn:focus-visible {
+  color: var(--text-muted);
+}
+
+.grocery-item__delete-btn:hover {
+  color: var(--error) !important;
+  transform: scale(1.2);
+}
+
+.grocery-item__delete-btn:active {
+  transform: scale(0.9);
+}
+
+.grocery-item__delete-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1263,5 +1540,112 @@ body > .meal-item {
     width: 100%;
     margin: 0 auto;
     border-radius: var(--radius) var(--radius) 0 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   GeneratingGroceryCard
+   Animated loading state rendered in the drawer footer area while the AI
+   grocery list is being generated. Mirrors GeneratingCard.jsx visual style.
+   -------------------------------------------------------------------------- */
+
+.generating-grocery-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl) var(--spacing-lg);
+  background: var(--surface);
+  border: 1px solid rgba(232, 200, 122, 0.3);
+  border-radius: var(--radius);
+  text-align: center;
+  animation: ggc-glow 3s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+@keyframes ggc-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%       { box-shadow: 0 0 0 2px rgba(232, 200, 122, 0.4), 0 0 28px rgba(232, 200, 122, 0.12); }
+}
+
+/* Five animated bubbles — identical mechanics to .generating-bubble */
+.generating-grocery-card__visual {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 40px;
+}
+
+.generating-grocery-card__bubble {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--generate-color);
+  opacity: 0.2;
+  animation: ggc-bubble-rise 1.8s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.generating-grocery-card__bubble:nth-child(1) { animation-delay: 0s; }
+.generating-grocery-card__bubble:nth-child(2) { animation-delay: 0.3s; }
+.generating-grocery-card__bubble:nth-child(3) { animation-delay: 0.6s; }
+.generating-grocery-card__bubble:nth-child(4) { animation-delay: 0.9s; }
+.generating-grocery-card__bubble:nth-child(5) { animation-delay: 1.2s; }
+
+@keyframes ggc-bubble-rise {
+  0%   { opacity: 0.2; transform: translateY(0); }
+  60%  { opacity: 1;   transform: translateY(-22px); }
+  100% { opacity: 0.2; transform: translateY(-18px); }
+}
+
+.generating-grocery-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  margin: 0;
+}
+
+/* Rotating tip — fades in each time key prop changes */
+.generating-grocery-card__tip {
+  font-size: 0.875rem;
+  color: var(--generate-color);
+  font-style: italic;
+  margin: 0;
+  animation: ggc-fade-in 0.4s ease-out both;
+  will-change: opacity, transform;
+}
+
+@keyframes ggc-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.generating-grocery-card__subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Respect reduced-motion preference — disable all grocery-related animations */
+@media (prefers-reduced-motion: reduce) {
+  .generating-grocery-card,
+  .generating-grocery-card__bubble,
+  .generating-grocery-card__tip {
+    animation: none;
+  }
+  .generating-grocery-card__bubble {
+    opacity: 0.7;
+  }
+  .grocery-item,
+  .grocery-item--checked,
+  .grocery-item--checked .grocery-item__text,
+  .grocery-item__delete-btn {
+    transition: none;
+  }
+  .grocery-item__delete-btn:hover,
+  .grocery-item__delete-btn:active {
+    transform: none;
   }
 }
