@@ -1259,11 +1259,11 @@ body > .meal-item {
 }
 
 .grocery-modal-empty {
-  padding: 24px 20px;
-  font-size: 0.9rem;
+  padding: 40px 24px 32px;
+  font-size: 0.875rem;
   color: var(--text-muted);
   text-align: center;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .grocery-list {
@@ -1272,23 +1272,8 @@ body > .meal-item {
   padding: 0;
 }
 
-.grocery-item {
-  border-bottom: 1px solid var(--border);
-}
-
-.grocery-item:last-child {
-  border-bottom: none;
-}
-
-.grocery-item__label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 20px;
-  cursor: pointer;
-  transition: background 0.1s ease;
-  min-height: 44px;
-}
+/* NOTE: .grocery-item and .grocery-item__label are defined in full below
+   (the "Item row" section). These legacy stubs have been removed. */
 
 .grocery-item__label:hover {
   background: var(--surface2);
@@ -1320,11 +1305,16 @@ body > .meal-item {
   flex-shrink: 0;
 }
 
-/* Checked state: strikethrough + reduced prominence */
+/* Checked state: strikethrough + fade entire row */
+.grocery-item--checked {
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
 .grocery-item--checked .grocery-item__text {
   text-decoration: line-through;
   color: var(--text-muted);
-  opacity: 0.55;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
 }
 
 .grocery-item--checked .grocery-item__label {
@@ -1337,6 +1327,11 @@ body > .meal-item {
   padding: 10px 16px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+  /* Subtle shadow hints that the list scrolls underneath */
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  /* Ensure it renders above sticky category headers */
+  position: relative;
+  z-index: 2;
 }
 
 .grocery-modal-add__row {
@@ -1363,6 +1358,7 @@ body > .meal-item {
 
 .grocery-modal-add__input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(232, 200, 122, 0.15);
 }
 
 .grocery-modal-add__btn {
@@ -1403,6 +1399,8 @@ body > .meal-item {
   z-index: 1;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  /* Left accent line gives each category clear visual anchoring */
+  border-left: 3px solid var(--border);
 }
 
 .grocery-category-toggle {
@@ -1447,15 +1445,24 @@ body > .meal-item {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--border);
+  transition: opacity 0.2s ease;
 }
 
 .grocery-item:last-child {
   border-bottom: none;
 }
 
+/* Merged from two previously separate blocks */
 .grocery-item__label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  min-height: 44px;
   flex: 1;
-  min-width: 0; /* allow text truncation inside flex child */
+  min-width: 0; /* allow text to truncate inside flex child */
 }
 
 /* Quantity string (e.g. "2 lbs", "1 cup") */
@@ -1479,7 +1486,7 @@ body > .meal-item {
   letter-spacing: 0.03em;
 }
 
-/* Delete button — only visible on hover/focus of the row */
+/* Delete button — hidden by default, revealed on row hover or keyboard focus */
 .grocery-item__delete-btn {
   flex-shrink: 0;
   display: flex;
@@ -1493,7 +1500,8 @@ body > .meal-item {
   border: none;
   color: transparent;
   cursor: pointer;
-  transition: color 0.12s ease;
+  transition: color 0.12s ease, transform 0.1s ease;
+  will-change: transform;
 }
 
 .grocery-item:hover .grocery-item__delete-btn,
@@ -1503,6 +1511,11 @@ body > .meal-item {
 
 .grocery-item__delete-btn:hover {
   color: var(--error) !important;
+  transform: scale(1.2);
+}
+
+.grocery-item__delete-btn:active {
+  transform: scale(0.9);
 }
 
 .grocery-item__delete-btn:focus-visible {
@@ -1615,7 +1628,7 @@ body > .meal-item {
   margin: 0;
 }
 
-/* Respect reduced-motion preference */
+/* Respect reduced-motion preference — disable all grocery-related animations */
 @media (prefers-reduced-motion: reduce) {
   .generating-grocery-card,
   .generating-grocery-card__bubble,
@@ -1624,5 +1637,15 @@ body > .meal-item {
   }
   .generating-grocery-card__bubble {
     opacity: 0.7;
+  }
+  .grocery-item,
+  .grocery-item--checked,
+  .grocery-item--checked .grocery-item__text,
+  .grocery-item__delete-btn {
+    transition: none;
+  }
+  .grocery-item__delete-btn:hover,
+  .grocery-item__delete-btn:active {
+    transform: none;
   }
 }
