@@ -1265,3 +1265,100 @@ body > .meal-item {
     border-radius: var(--radius) var(--radius) 0 0;
   }
 }
+
+/* --------------------------------------------------------------------------
+   GeneratingGroceryCard
+   Animated loading state rendered in the drawer footer area while the AI
+   grocery list is being generated. Mirrors GeneratingCard.jsx visual style.
+   -------------------------------------------------------------------------- */
+
+.generating-grocery-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl) var(--spacing-lg);
+  background: var(--surface);
+  border: 1px solid rgba(232, 200, 122, 0.3);
+  border-radius: var(--radius);
+  text-align: center;
+  animation: ggc-glow 3s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+@keyframes ggc-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%       { box-shadow: 0 0 0 2px rgba(232, 200, 122, 0.4), 0 0 28px rgba(232, 200, 122, 0.12); }
+}
+
+/* Five animated bubbles — identical mechanics to .generating-bubble */
+.generating-grocery-card__visual {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 40px;
+}
+
+.generating-grocery-card__bubble {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--generate-color);
+  opacity: 0.2;
+  animation: ggc-bubble-rise 1.8s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.generating-grocery-card__bubble:nth-child(1) { animation-delay: 0s; }
+.generating-grocery-card__bubble:nth-child(2) { animation-delay: 0.3s; }
+.generating-grocery-card__bubble:nth-child(3) { animation-delay: 0.6s; }
+.generating-grocery-card__bubble:nth-child(4) { animation-delay: 0.9s; }
+.generating-grocery-card__bubble:nth-child(5) { animation-delay: 1.2s; }
+
+@keyframes ggc-bubble-rise {
+  0%   { opacity: 0.2; transform: translateY(0); }
+  60%  { opacity: 1;   transform: translateY(-22px); }
+  100% { opacity: 0.2; transform: translateY(-18px); }
+}
+
+.generating-grocery-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  margin: 0;
+}
+
+/* Rotating tip — fades in each time key prop changes */
+.generating-grocery-card__tip {
+  font-size: 0.875rem;
+  color: var(--generate-color);
+  font-style: italic;
+  margin: 0;
+  animation: ggc-fade-in 0.4s ease-out both;
+  will-change: opacity, transform;
+}
+
+@keyframes ggc-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.generating-grocery-card__subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .generating-grocery-card,
+  .generating-grocery-card__bubble,
+  .generating-grocery-card__tip {
+    animation: none;
+  }
+  .generating-grocery-card__bubble {
+    opacity: 0.7;
+  }
+}
