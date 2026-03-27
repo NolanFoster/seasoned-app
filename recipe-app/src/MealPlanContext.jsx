@@ -7,6 +7,53 @@ import {
 } from './utils/mealPlanMigration.js';
 
 const STORAGE_KEY = 'seasoned_meal_plan';
+const GROCERY_STORAGE_KEY = 'mealPlan_groceryList';
+const GROCERY_METADATA_KEY = 'mealPlan_groceryList_metadata';
+
+/**
+ * Generates a unique ID for grocery list items.
+ * Uses timestamp + random suffix to avoid collisions at user scale.
+ * @returns {string}
+ */
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+/**
+ * Loads grocery list items from localStorage.
+ * Returns empty array if key doesn't exist or data is malformed.
+ * @returns {Array}
+ */
+function loadGroceryListFromStorage() {
+  try {
+    const raw = localStorage.getItem(GROCERY_STORAGE_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.items)) {
+      console.warn('mealPlan_groceryList: unexpected shape, resetting to []');
+      return [];
+    }
+    return data.items;
+  } catch (e) {
+    console.warn('Failed to load grocery list from localStorage:', e);
+    return [];
+  }
+}
+
+/**
+ * Loads grocery list metadata from localStorage.
+ * @returns {{ lastGeneratedAt: number|null }}
+ */
+function loadGroceryMetadataFromStorage() {
+  try {
+    const raw = localStorage.getItem(GROCERY_METADATA_KEY);
+    if (!raw) return { lastGeneratedAt: null };
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to load grocery list metadata from localStorage:', e);
+    return { lastGeneratedAt: null };
+  }
+}
 
 const MealPlanContext = createContext();
 
@@ -66,10 +113,39 @@ export function MealPlanProvider({ children }) {
   const [upNext, setUpNext] = useState(() => loadFromStorage().upNext);
   const [activeRecipe, setActiveRecipe] = useState(null);
 
+  // ── Grocery list state ───────────────────────────────────────────────────
+  const [groceryList, setGroceryListState] = useState(() => loadGroceryListFromStorage());
+  const [isGeneratingList, setIsGeneratingList] = useState(false);
+  const [listGenerationError, setListGenerationError] = useState(null);
+  const [lastListGeneratedAt, setLastListGeneratedAt] = useState(
+    () => loadGroceryMetadataFromStorage().lastGeneratedAt
+  );
+
   // Persist both mealPlan and upNext together under a single key
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mealPlan, upNext }));
   }, [mealPlan, upNext]);
+
+  // Persist grocery list items to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(GROCERY_STORAGE_KEY, JSON.stringify({ items: groceryList }));
+    } catch (e) {
+      console.error('Failed to save grocery list to localStorage:', e);
+    }
+  }, [groceryList]);
+
+  // Persist grocery list metadata to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        GROCERY_METADATA_KEY,
+        JSON.stringify({ lastGeneratedAt: lastListGeneratedAt, version: '1.0' })
+      );
+    } catch (e) {
+      console.error('Failed to save grocery list metadata to localStorage:', e);
+    }
+  }, [lastListGeneratedAt]);
 
   /**
    * Adds a recipe to a specific date and meal type slot.
@@ -335,6 +411,104 @@ export function MealPlanProvider({ children }) {
 
   const clearActiveRecipe = useCallback(() => setActiveRecipe(null), []);
 
+  // ── Grocery list methods ─────────────────────────────────────────────────
+
+  /**
+   * Replaces the entire grocery list with a new array of items.
+   * Called after AI generation completes successfully.
+   * Clears any previous generation error and sets isGeneratingList to false.
+   * @param {Array} items - Array of GroceryListItem objects from the AI response
+   */
+  const setGroceryList = useCallback((items) => {
+    setGroceryListState(items);
+    setLastListGeneratedAt(Date.now());
+    setIsGeneratingList(false);
+    setListGenerationError(null);
+  }, []);
+
+  /**
+   * Adds a user-created item to the grocery list.
+   * Automatically sets id, createdAt, isCustom, and source fields.
+   * @param {Object} itemData - Item fields (name, quantity, unit, category, completed, notes)
+   */
+  const addCustomItem = useCallback((itemData) => {
+    const newItem = {
+      ...itemData,
+      id: generateId(),
+      createdAt: Date.now(),
+      isCustom: true,
+      source: 'user-added',
+    };
+    setGroceryListState((prev) => [...prev, newItem]);
+  }, []);
+
+  /**
+   * Flips the completed boolean for a grocery list item.
+   * No-op if itemId is not found.
+   * @param {string} itemId - The id of the item to toggle
+   */
+  const toggleItemCompletion = useCallback((itemId) => {
+    setGroceryListState((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, completed: !item.completed } : item
+      )
+    );
+  }, []);
+
+  /**
+   * Merges updates into an existing grocery list item.
+   * Preserves id and createdAt regardless of what updates contains.
+   * No-op if itemId is not found.
+   * @param {string} itemId  - The id of the item to edit
+   * @param {Object} updates - Partial item fields to merge (e.g. { name, quantity, unit })
+   */
+  const editItem = useCallback((itemId, updates) => {
+    setGroceryListState((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? { ...item, ...updates, id: item.id, createdAt: item.createdAt }
+          : item
+      )
+    );
+  }, []);
+
+  /**
+   * Removes an item from the grocery list by id.
+   * No-op if itemId is not found.
+   * @param {string} itemId - The id of the item to remove
+   */
+  const deleteItem = useCallback((itemId) => {
+    setGroceryListState((prev) => prev.filter((item) => item.id !== itemId));
+  }, []);
+
+  /**
+   * Clears the entire grocery list and resets lastListGeneratedAt.
+   * Used when the user starts over.
+   */
+  const clearGroceryList = useCallback(() => {
+    setGroceryListState([]);
+    setLastListGeneratedAt(null);
+  }, []);
+
+  /**
+   * Signals that AI grocery list generation has started.
+   * Sets isGeneratingList to true and clears any previous error.
+   */
+  const generateGroceryListStart = useCallback(() => {
+    setIsGeneratingList(true);
+    setListGenerationError(null);
+  }, []);
+
+  /**
+   * Signals that AI grocery list generation has failed.
+   * Sets isGeneratingList to false and stores the error message.
+   * @param {string} error - Human-readable error message to display
+   */
+  const generateGroceryListError = useCallback((error) => {
+    setIsGeneratingList(false);
+    setListGenerationError(error);
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       mealPlan,
@@ -347,8 +521,28 @@ export function MealPlanProvider({ children }) {
       activeRecipe,
       setActiveRecipe,
       clearActiveRecipe,
+      // Grocery list state
+      groceryList,
+      isGeneratingList,
+      listGenerationError,
+      lastListGeneratedAt,
+      // Grocery list methods
+      setGroceryList,
+      addCustomItem,
+      toggleItemCompletion,
+      editItem,
+      deleteItem,
+      clearGroceryList,
+      generateGroceryListStart,
+      generateGroceryListError,
     }),
-    [mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal, activeRecipe, clearActiveRecipe]
+    [
+      mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal,
+      activeRecipe, clearActiveRecipe,
+      groceryList, isGeneratingList, listGenerationError, lastListGeneratedAt,
+      setGroceryList, addCustomItem, toggleItemCompletion, editItem, deleteItem,
+      clearGroceryList, generateGroceryListStart, generateGroceryListError,
+    ]
   );
 
   return (
