@@ -166,10 +166,11 @@ describe('Recipe deep-linking: state isolation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /View Spaghetti Carbonara/i }));
 
-    // Meal plan in localStorage should be unchanged (legacy data migrated to lunch slot)
+    // Meal plan in localStorage should be unchanged (legacy data migrated to lunch slot).
+    // Context persists as { mealPlan: { [date]: { ... } }, upNext: [] }.
     const stored = JSON.parse(localStorage.getItem('seasoned_meal_plan'));
-    expect(stored[getToday()].lunch).toHaveLength(1);
-    expect(stored[getToday()].lunch[0].name).toBe('Spaghetti Carbonara');
+    expect(stored.mealPlan[getToday()].lunch).toHaveLength(1);
+    expect(stored.mealPlan[getToday()].lunch[0].name).toBe('Spaghetti Carbonara');
   });
 });
 
