@@ -1331,6 +1331,185 @@ body > .meal-item {
   background: none;
 }
 
+/* ── Sticky add-item form ────────────────────────────────────────────────── */
+.grocery-modal-add {
+  flex-shrink: 0;
+  padding: 10px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.grocery-modal-add__row {
+  display: flex;
+  gap: 8px;
+}
+
+.grocery-modal-add__input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.grocery-modal-add__input::placeholder {
+  color: var(--text-muted);
+}
+
+.grocery-modal-add__input:focus {
+  border-color: var(--accent);
+}
+
+.grocery-modal-add__btn {
+  padding: 8px 14px;
+  background: var(--surface2);
+  border: 1px solid rgba(232, 200, 122, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--generate-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.grocery-modal-add__btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.grocery-modal-add__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.grocery-modal-add__error {
+  margin: 5px 0 0;
+  font-size: 0.75rem;
+  color: var(--error);
+  line-height: 1.3;
+}
+
+/* ── Category header row ─────────────────────────────────────────────────── */
+.grocery-category-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.grocery-category-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.12s ease;
+}
+
+.grocery-category-toggle:hover {
+  color: var(--text);
+}
+
+.grocery-category-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.grocery-category-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
+/* ── Item row: label takes remaining space, delete sits to the right ─────── */
+.grocery-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.grocery-item:last-child {
+  border-bottom: none;
+}
+
+.grocery-item__label {
+  flex: 1;
+  min-width: 0; /* allow text truncation inside flex child */
+}
+
+/* Quantity string (e.g. "2 lbs", "1 cup") */
+.grocery-item__quantity {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* "Custom" badge on user-added items */
+.grocery-item__custom-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(200, 169, 110, 0.12);
+  border-radius: 8px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+/* Delete button — only visible on hover/focus of the row */
+.grocery-item__delete-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  min-height: 44px;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  color: transparent;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.grocery-item:hover .grocery-item__delete-btn,
+.grocery-item__delete-btn:focus-visible {
+  color: var(--text-muted);
+}
+
+.grocery-item__delete-btn:hover {
+  color: var(--error) !important;
+}
+
+.grocery-item__delete-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 /* --------------------------------------------------------------------------
    Responsive — Grocery modal (≥ 480px)
    On wider viewports the modal gains a max-width and rounded corners on all

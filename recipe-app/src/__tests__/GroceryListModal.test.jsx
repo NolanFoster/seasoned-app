@@ -3,11 +3,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GroceryListModal, { aggregateIngredients, flattenIngredients } from '../GroceryListModal';
 
 // ── Mock MealPlanContext ──────────────────────────────────────────────────────
+// The overhauled modal reads groceryList and CRUD methods from context;
+// mealPlan / upNext are still used by the exported utility functions.
 let mockMealPlan = {};
 let mockUpNext = [];
+let mockGroceryList = [];
+let mockToggleItemCompletion = jest.fn();
+let mockDeleteItem = jest.fn();
+let mockAddCustomItem = jest.fn();
 
 jest.mock('../MealPlanContext.jsx', () => ({
-  useMealPlan: () => ({ mealPlan: mockMealPlan, upNext: mockUpNext }),
+  useMealPlan: () => ({
+    mealPlan: mockMealPlan,
+    upNext: mockUpNext,
+    groceryList: mockGroceryList,
+    toggleItemCompletion: mockToggleItemCompletion,
+    deleteItem: mockDeleteItem,
+    addCustomItem: mockAddCustomItem,
+  }),
 }));
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -24,32 +37,11 @@ const UP_NEXT_RECIPES = [
   { id: 'r3', name: 'Eggs', ingredients: ['4 eggs', '1 tbsp honey'] },
 ];
 
-const MOCK_CATEGORIES = [
-  {
-    category: 'Pantry Staples',
-    items: [
-      { name: 'All-purpose flour', quantity: '3 cups', isStaple: true },
-      { name: 'Salt', quantity: '1 tsp', isStaple: true },
-    ],
-  },
-  {
-    category: 'Dairy',
-    items: [
-      { name: 'Whole milk', quantity: '2 cups', isStaple: false },
-    ],
-  },
+const MOCK_GROCERY_LIST = [
+  { id: 'item-1', name: 'All-purpose flour', quantity: '3 cups', category: 'Pantry Staples', completed: false, isCustom: false, source: 'ai-generated', createdAt: 1 },
+  { id: 'item-2', name: 'Salt', quantity: '1 tsp', category: 'Pantry Staples', completed: false, isCustom: false, source: 'ai-generated', createdAt: 2 },
+  { id: 'item-3', name: 'Whole milk', quantity: '2 cups', category: 'Dairy', completed: false, isCustom: false, source: 'ai-generated', createdAt: 3 },
 ];
-
-function mockFetchSuccess(cats = MOCK_CATEGORIES) {
-  global.fetch.mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve({ success: true, categories: cats }),
-  });
-}
-
-function mockFetchError() {
-  global.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
-}
 
 function renderModal(isOpen = true, onClose = jest.fn()) {
   return render(<GroceryListModal isOpen={isOpen} onClose={onClose} />);
@@ -197,10 +189,10 @@ describe('flattenIngredients', () => {
 
 describe('GroceryListModal — rendering', () => {
   beforeEach(() => {
-    mockMealPlan = PLAN_WITH_RECIPES;
-    mockUpNext = UP_NEXT_RECIPES;
-    global.fetch.mockReset();
-    mockFetchSuccess();
+    mockGroceryList = MOCK_GROCERY_LIST;
+    mockToggleItemCompletion = jest.fn();
+    mockDeleteItem = jest.fn();
+    mockAddCustomItem = jest.fn();
   });
 
   test('renders nothing when isOpen is false', () => {
@@ -208,36 +200,47 @@ describe('GroceryListModal — rendering', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  test('renders the modal when isOpen is true', async () => {
+  test('renders the modal when isOpen is true', () => {
     renderModal();
-    await screen.findByRole('dialog', { name: /grocery list/i });
+    expect(screen.getByRole('dialog', { name: /grocery list/i })).toBeInTheDocument();
   });
 
-  test('renders the "Grocery List" heading', async () => {
+  test('renders the "Grocery List" heading', () => {
     renderModal();
-    await screen.findByText('Grocery List');
+    expect(screen.getByText('Grocery List')).toBeInTheDocument();
   });
 
-  test('renders a close button', async () => {
+  test('renders a close button', () => {
     renderModal();
-    await screen.findByRole('button', { name: /close grocery list/i });
+    expect(screen.getByRole('button', { name: /close grocery list/i })).toBeInTheDocument();
   });
 
-  test('shows shimmer skeleton while loading', () => {
-    global.fetch.mockImplementation(() => new Promise(() => {}));
+  test('renders an add-item input', () => {
     renderModal();
-    expect(screen.getByTestId('grocery-shimmer')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /custom item name/i })).toBeInTheDocument();
   });
 
-  test('renders category items after successful fetch', async () => {
+  test('renders category headers from groceryList', () => {
     renderModal();
-    await screen.findByText('Pantry Staples');
-    await screen.findByText('Dairy');
+    expect(screen.getByRole('button', { name: /pantry staples/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dairy/i })).toBeInTheDocument();
   });
 
-  test('renders item quantity text', async () => {
+  test('renders item names from groceryList', () => {
     renderModal();
-    await screen.findByText('3 cups');
+    expect(screen.getByText('All-purpose flour')).toBeInTheDocument();
+    expect(screen.getByText('Whole milk')).toBeInTheDocument();
+  });
+
+  test('renders item quantity text', () => {
+    renderModal();
+    expect(screen.getByText('3 cups')).toBeInTheDocument();
+  });
+
+  test('renders a delete button for each item', () => {
+    renderModal();
+    const deleteBtns = screen.getAllByRole('button', { name: /^delete /i });
+    expect(deleteBtns).toHaveLength(MOCK_GROCERY_LIST.length);
   });
 });
 
@@ -245,55 +248,65 @@ describe('GroceryListModal — rendering', () => {
 
 describe('GroceryListModal — empty state', () => {
   beforeEach(() => {
-    mockMealPlan = {};
-    mockUpNext = [];
+    mockGroceryList = [];
   });
 
-  test('shows empty-state message when no ingredients', async () => {
+  test('shows empty-state message when groceryList is empty', () => {
     renderModal();
-    await screen.findByText(/no recipes planned yet/i);
+    expect(screen.getByText(/no items yet/i)).toBeInTheDocument();
   });
 
-  test('does not render checkboxes when empty', async () => {
+  test('still renders the add-item input when list is empty', () => {
     renderModal();
-    await screen.findByText(/no recipes planned yet/i);
+    expect(screen.getByRole('textbox', { name: /custom item name/i })).toBeInTheDocument();
+  });
+
+  test('does not render item checkboxes when list is empty', () => {
+    renderModal();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-  });
-
-  test('does not call fetch when ingredients list is empty', async () => {
-    renderModal();
-    await screen.findByText(/no recipes planned yet/i);
-    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
 
-// ── Error state ───────────────────────────────────────────────────────────────
+// ── Add custom item ───────────────────────────────────────────────────────────
 
-describe('GroceryListModal — error state', () => {
+describe('GroceryListModal — add custom item', () => {
   beforeEach(() => {
-    mockMealPlan = PLAN_WITH_RECIPES;
-    mockUpNext = UP_NEXT_RECIPES;
+    mockGroceryList = [];
+    mockAddCustomItem = jest.fn();
   });
 
-  test('shows error message when fetch fails', async () => {
-    mockFetchError();
+  test('calls addCustomItem with trimmed name on form submit', () => {
     renderModal();
-    await screen.findByRole('alert');
+    const input = screen.getByRole('textbox', { name: /custom item name/i });
+    fireEvent.change(input, { target: { value: '  Olive oil  ' } });
+    fireEvent.click(screen.getByRole('button', { name: /add item to grocery list/i }));
+    expect(mockAddCustomItem).toHaveBeenCalledTimes(1);
+    expect(mockAddCustomItem).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Olive oil' })
+    );
   });
 
-  test('shows "Try Again" button on error', async () => {
-    mockFetchError();
+  test('clears the input after successful add', () => {
     renderModal();
-    await screen.findByRole('button', { name: /try again/i });
+    const input = screen.getByRole('textbox', { name: /custom item name/i });
+    fireEvent.change(input, { target: { value: 'Olive oil' } });
+    fireEvent.click(screen.getByRole('button', { name: /add item to grocery list/i }));
+    expect(input.value).toBe('');
   });
 
-  test('clicking Try Again retries the fetch', async () => {
-    mockFetchError();
-    mockFetchSuccess();
+  test('shows error when submitting an empty input', () => {
     renderModal();
-    const retryBtn = await screen.findByRole('button', { name: /try again/i });
-    fireEvent.click(retryBtn);
-    await screen.findByText('Pantry Staples');
+    fireEvent.click(screen.getByRole('button', { name: /add item to grocery list/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(mockAddCustomItem).not.toHaveBeenCalled();
+  });
+
+  test('pressing Enter in the input submits the form', () => {
+    renderModal();
+    const input = screen.getByRole('textbox', { name: /custom item name/i });
+    fireEvent.change(input, { target: { value: 'Butter' } });
+    fireEvent.submit(input.closest('form'));
+    expect(mockAddCustomItem).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -301,42 +314,60 @@ describe('GroceryListModal — error state', () => {
 
 describe('GroceryListModal — checklist', () => {
   beforeEach(() => {
-    mockMealPlan = PLAN_WITH_RECIPES;
-    mockUpNext = UP_NEXT_RECIPES;
-    mockFetchSuccess();
+    mockGroceryList = MOCK_GROCERY_LIST;
+    mockToggleItemCompletion = jest.fn();
   });
 
-  test('item checkboxes are unchecked by default', async () => {
+  test('item checkboxes reflect completed state from context', () => {
     renderModal();
-    await screen.findByText('All-purpose flour');
-    const itemCheckboxes = screen.getAllByRole('checkbox').filter(
-      (cb) => !cb.getAttribute('aria-label')?.startsWith('Select all items in')
-    );
-    itemCheckboxes.forEach((cb) => expect(cb).not.toBeChecked());
+    const checkboxes = screen.getAllByRole('checkbox');
+    checkboxes.forEach((cb) => expect(cb).not.toBeChecked());
   });
 
-  test('clicking an item checkbox checks it', async () => {
+  test('clicking a checkbox calls toggleItemCompletion with the item id', () => {
     renderModal();
-    const checkbox = await screen.findByRole('checkbox', { name: 'All-purpose flour' });
+    const checkbox = screen.getByRole('checkbox', { name: 'All-purpose flour' });
     fireEvent.click(checkbox);
+    expect(mockToggleItemCompletion).toHaveBeenCalledWith('item-1');
+  });
+
+  test('clicking a second checkbox calls toggleItemCompletion with its id', () => {
+    renderModal();
+    const checkbox = screen.getByRole('checkbox', { name: 'Salt' });
+    fireEvent.click(checkbox);
+    expect(mockToggleItemCompletion).toHaveBeenCalledWith('item-2');
+  });
+
+  test('a completed item renders with checked checkbox', () => {
+    mockGroceryList = [
+      { ...MOCK_GROCERY_LIST[0], completed: true },
+    ];
+    renderModal();
+    const checkbox = screen.getByRole('checkbox', { name: 'All-purpose flour' });
     expect(checkbox).toBeChecked();
   });
+});
 
-  test('clicking a checked checkbox unchecks it', async () => {
-    renderModal();
-    const checkbox = await screen.findByRole('checkbox', { name: 'All-purpose flour' });
-    fireEvent.click(checkbox);
-    fireEvent.click(checkbox);
-    expect(checkbox).not.toBeChecked();
+// ── Delete item ───────────────────────────────────────────────────────────────
+
+describe('GroceryListModal — delete item', () => {
+  beforeEach(() => {
+    mockGroceryList = MOCK_GROCERY_LIST;
+    mockDeleteItem = jest.fn();
   });
 
-  test('checking one item does not affect others', async () => {
+  test('clicking delete calls deleteItem with the item id', () => {
     renderModal();
-    const first = await screen.findByRole('checkbox', { name: 'All-purpose flour' });
-    const second = await screen.findByRole('checkbox', { name: 'Salt' });
-    fireEvent.click(first);
-    expect(first).toBeChecked();
-    expect(second).not.toBeChecked();
+    const deleteBtn = screen.getByRole('button', { name: 'Delete All-purpose flour' });
+    fireEvent.click(deleteBtn);
+    expect(mockDeleteItem).toHaveBeenCalledWith('item-1');
+  });
+
+  test('each item has its own delete button with correct aria-label', () => {
+    renderModal();
+    expect(screen.getByRole('button', { name: 'Delete All-purpose flour' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Salt' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Whole milk' })).toBeInTheDocument();
   });
 });
 
@@ -344,48 +375,49 @@ describe('GroceryListModal — checklist', () => {
 
 describe('GroceryListModal — category controls', () => {
   beforeEach(() => {
-    mockMealPlan = PLAN_WITH_RECIPES;
-    mockUpNext = UP_NEXT_RECIPES;
-    mockFetchSuccess();
+    mockGroceryList = MOCK_GROCERY_LIST;
   });
 
-  test('category toggle button collapses items', async () => {
+  test('category toggle button collapses items', () => {
     renderModal();
-    const toggleBtn = await screen.findByRole('button', { name: /pantry staples/i });
+    const toggleBtn = screen.getByRole('button', { name: /pantry staples/i });
     expect(screen.getByText('All-purpose flour')).toBeInTheDocument();
     fireEvent.click(toggleBtn);
     expect(screen.queryByText('All-purpose flour')).not.toBeInTheDocument();
   });
 
-  test('category toggle button expands items again', async () => {
+  test('category toggle button expands items again', () => {
     renderModal();
-    const toggleBtn = await screen.findByRole('button', { name: /pantry staples/i });
+    const toggleBtn = screen.getByRole('button', { name: /pantry staples/i });
     fireEvent.click(toggleBtn);
     expect(screen.queryByText('All-purpose flour')).not.toBeInTheDocument();
     fireEvent.click(toggleBtn);
     expect(screen.getByText('All-purpose flour')).toBeInTheDocument();
   });
 
-  test('category checkbox checks all items in category', async () => {
+  test('category count badge shows correct item count', () => {
     renderModal();
-    await screen.findByText('Pantry Staples');
-    const catCheckbox = screen.getByRole('checkbox', { name: /select all items in pantry staples/i });
-    fireEvent.click(catCheckbox);
-    expect(screen.getByRole('checkbox', { name: 'All-purpose flour' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Salt' })).toBeChecked();
+    // Pantry Staples has 2 items
+    const toggleBtn = screen.getByRole('button', { name: /pantry staples/i });
+    expect(toggleBtn).toHaveTextContent('2');
+  });
+});
+
+// ── Custom item badge ─────────────────────────────────────────────────────────
+
+describe('GroceryListModal — custom item badge', () => {
+  test('custom items show a "Custom" badge', () => {
+    mockGroceryList = [
+      { id: 'c1', name: 'Extra milk', quantity: '', category: 'Other', completed: false, isCustom: true, source: 'user-added', createdAt: 1 },
+    ];
+    renderModal();
+    expect(screen.getByText('Custom')).toBeInTheDocument();
   });
 
-  test('unchecking category checkbox when all checked unchecks all items', async () => {
+  test('AI-generated items do not show a "Custom" badge', () => {
+    mockGroceryList = MOCK_GROCERY_LIST;
     renderModal();
-    await screen.findByText('Pantry Staples');
-    const catCheckbox = screen.getByRole('checkbox', { name: /select all items in pantry staples/i });
-    // Check all first
-    fireEvent.click(catCheckbox);
-    expect(screen.getByRole('checkbox', { name: 'All-purpose flour' })).toBeChecked();
-    // Uncheck all
-    fireEvent.click(catCheckbox);
-    expect(screen.getByRole('checkbox', { name: 'All-purpose flour' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Salt' })).not.toBeChecked();
+    expect(screen.queryByText('Custom')).not.toBeInTheDocument();
   });
 });
 
@@ -393,8 +425,7 @@ describe('GroceryListModal — category controls', () => {
 
 describe('GroceryListModal — close behaviour', () => {
   beforeEach(() => {
-    mockMealPlan = {};
-    mockUpNext = [];
+    mockGroceryList = [];
   });
 
   test('close button calls onClose', () => {
@@ -417,27 +448,5 @@ describe('GroceryListModal — close behaviour', () => {
     render(<GroceryListModal isOpen={true} onClose={onClose} />);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  test('checked state resets when modal is reopened', async () => {
-    mockMealPlan = PLAN_WITH_RECIPES;
-    mockUpNext = UP_NEXT_RECIPES;
-    mockFetchSuccess();
-    mockFetchSuccess();
-
-    const { rerender } = render(<GroceryListModal isOpen={true} onClose={jest.fn()} />);
-    // Wait for item to appear and check it
-    const checkbox = await screen.findByRole('checkbox', { name: 'All-purpose flour' });
-    fireEvent.click(checkbox);
-    expect(checkbox).toBeChecked();
-
-    // Close modal
-    rerender(<GroceryListModal isOpen={false} onClose={jest.fn()} />);
-    // Reopen modal
-    rerender(<GroceryListModal isOpen={true} onClose={jest.fn()} />);
-
-    // Should be unchecked after reopen
-    const resetCheckbox = await screen.findByRole('checkbox', { name: 'All-purpose flour' });
-    expect(resetCheckbox).not.toBeChecked();
   });
 });
