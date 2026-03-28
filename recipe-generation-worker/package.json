@@ -7,6 +7,12 @@
   "scripts": {
     "dev": "wrangler dev --env preview",
     "deploy": "wrangler publish",
+    "opik:grocery:seed": "OPIK_WORKSPACE=${OPIK_WORKSPACE:-recipe-generation} python3 ../optimize.py --seed-dataset",
+    "opik:grocery:eval": "OPIK_WORKSPACE=${OPIK_WORKSPACE:-recipe-generation} python3 ../optimize.py",
+    "opik:grocery:compare": "OPIK_WORKSPACE=${OPIK_WORKSPACE:-recipe-generation} python3 ../optimize.py --candidate-prompt-file scripts/grocery_candidate_prompt.txt",
+    "opik:grocery:compare:fast": "OPIK_WORKSPACE=${OPIK_WORKSPACE:-recipe-generation} python3 ../optimize.py --fast --candidate-prompt-file scripts/grocery_candidate_prompt.txt",
+    "opik:grocery:meta": "OPIK_WORKSPACE=${OPIK_WORKSPACE:-recipe-generation} python3 ../optimize.py --meta-optimize",
+    "test:py-scripts": "python3 -m unittest discover -s scripts -p 'test_*.py'",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

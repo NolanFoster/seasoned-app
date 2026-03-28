@@ -18,6 +18,36 @@ import { OpikClient } from '../opik-client.js';
 /** Workers AI model id for grocery aggregation (keep in sync with env.AI.run below). */
 const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
 
+/**
+ * User message body for grocery aggregation. Must match `scripts/grocery_opik_helpers.py` BASELINE_PROMPT;
+ * `{{ingredient_lines}}` is substituted with joined request ingredients at runtime.
+ */
+const GROCERY_AGGREGATOR_USER_PROMPT = `You are a grocery list aggregator. Given the raw ingredient lines below, you must:
+1. Normalize ingredient names (e.g. "all-purpose flour" and "flour" are the same thing).
+2. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
+3. Sum quantities where units match: two "1 cup mayonnaise" lines must become one entry with "2 cups mayonnaise" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
+4. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
+5. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
+6. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
+   - Jarred/canned condiments (salsa, mayo, ketchup, pickles, taco seasoning) → Pantry Staples unless the line explicitly says frozen.
+   - Lemon juice, lime juice, vinegar, oils for cooking → Pantry Staples. Beverages is for drink products (juice cartons, soda, wine). Frozen is only for frozen goods or when the recipe clearly means the frozen product.
+   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source does (e.g. "fresh cilantro").
+7. Mark isStaple: true only for common household staples (salt, pepper, basic spices many homes keep, flour, sugar, baking powder/soda, soy sauce, garlic, onion, eggs, butter, common oils/vinegar).
+8. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
+
+Ingredient lines:
+{{ingredient_lines}}
+
+Output ONLY this JSON structure:
+[
+  {
+    "category": "string",
+    "items": [
+      { "name": "string", "quantity": "string", "isStaple": false }
+    ]
+  }
+]`;
+
 /** @param {unknown} raw */
 function serializeLlmOutputForOpik(raw) {
   if (raw == null) {
@@ -46,39 +76,14 @@ function truncateForOpik(text, maxLen = 32000) {
 }
 
 /**
- * Builds the system + user prompt for the grocery-list LLM call.
- * Keeping the prompt in one place makes it easy to iterate on.
+ * Builds the user prompt for the grocery-list LLM call (template from GROCERY_AGGREGATOR_USER_PROMPT).
  *
  * @param {string[]} ingredients - Raw ingredient strings from all recipes
  * @returns {string} Full user-role message text
  */
 function buildPrompt(ingredients) {
   const ingredientList = ingredients.join('\n');
-  return `You are a grocery list aggregator. Given the raw ingredient lines below, you must:
-1. Normalize ingredient names (e.g. "all-purpose flour" and "flour" are the same thing).
-2. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
-3. Sum quantities where units match: two "1 cup mayonnaise" lines must become one entry with "2 cups mayonnaise" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
-4. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
-5. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
-6. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
-   - Jarred/canned condiments (salsa, mayo, ketchup, pickles, taco seasoning) → Pantry Staples unless the line explicitly says frozen.
-   - Lemon juice, lime juice, vinegar, oils for cooking → Pantry Staples. Beverages is for drink products (juice cartons, soda, wine). Frozen is only for frozen goods or when the recipe clearly means the frozen product.
-   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source does (e.g. "fresh cilantro").
-7. Mark isStaple: true only for common household staples (salt, pepper, basic spices many homes keep, flour, sugar, baking powder/soda, soy sauce, garlic, onion, eggs, butter, common oils/vinegar).
-8. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
-
-Ingredient lines:
-${ingredientList}
-
-Output ONLY this JSON structure:
-[
-  {
-    "category": "string",
-    "items": [
-      { "name": "string", "quantity": "string", "isStaple": false }
-    ]
-  }
-]`;
+  return GROCERY_AGGREGATOR_USER_PROMPT.replace('{{ingredient_lines}}', ingredientList);
 }
 
 /**

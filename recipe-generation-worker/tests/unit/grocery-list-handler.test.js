@@ -84,4 +84,37 @@ describe('Grocery List Handler', () => {
     const data = await res.json();
     expect(data.categories).toHaveLength(1);
   });
+
+  it('merges duplicate category labels into one block with combined items', async () => {
+    const dupJson = JSON.stringify([
+      { category: 'Produce', items: [{ name: 'lime', quantity: '1', isStaple: false }] },
+      { category: 'Produce', items: [{ name: 'cilantro', quantity: '1 bunch', isStaple: false }] }
+    ]);
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: dupJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['1 lime', '1 bunch cilantro'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.categories).toHaveLength(1);
+    expect(data.categories[0].category).toBe('Produce');
+    const names = data.categories[0].items.map((i) => i.name).sort();
+    expect(names).toEqual(['cilantro', 'lime']);
+  });
+
+  it('merges duplicate categories that differ only by letter case', async () => {
+    const dupJson = JSON.stringify([
+      { category: 'produce', items: [{ name: 'lime', quantity: '1', isStaple: false }] },
+      { category: 'Produce', items: [{ name: 'cilantro', quantity: '1', isStaple: false }] }
+    ]);
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: dupJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['a', 'b'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.categories).toHaveLength(1);
+    expect(data.categories[0].items).toHaveLength(2);
+  });
 });
