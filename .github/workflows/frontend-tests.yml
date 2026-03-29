@@ -4,17 +4,17 @@ on:
   push:
     branches: [ main, staging ]
     paths:
-      - 'frontend/**'
+      - 'recipe-app/**'
       - '.github/workflows/frontend-tests.yml'
-      - 'package.json'
-      - 'package-lock.json'
+      - 'recipe-app/package.json'
+      - 'recipe-app/package-lock.json'
   pull_request:
     branches: [ main, staging ]
     paths:
-      - 'frontend/**'
+      - 'recipe-app/**'
       - '.github/workflows/frontend-tests.yml'
-      - 'package.json'
-      - 'package-lock.json'
+      - 'recipe-app/package.json'
+      - 'recipe-app/package-lock.json'
 
 permissions:
   contents: read
@@ -47,14 +47,14 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        cache-dependency-path: recipe-app/package-lock.json
     
     - name: Install Frontend Dependencies
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: npm ci
     
     - name: Run Frontend Tests with Coverage
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         echo "Running tests with coverage..."
         # Run tests with coverage, but don't fail the workflow if tests fail
@@ -64,7 +64,7 @@ jobs:
         }
     
     - name: Check Coverage Thresholds
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
         # The coverage threshold check is handled by Jest config
@@ -110,13 +110,13 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: frontend-coverage
-        path: frontend/coverage/
+        path: recipe-app/coverage/
       if: always()  # Always upload coverage even if tests fail
     
     - name: Generate Diff Coverage Report (PR only)
       if: github.event_name == 'pull_request'
       id: diff-coverage
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         # Install diff-cover for differential coverage
         pip install diff-cover
@@ -203,7 +203,7 @@ jobs:
         node-version: '18'
     
     - name: Lint Frontend
-      working-directory: ./frontend
+      working-directory: ./recipe-app
       run: |
         npm ci
         npm run lint || echo "Linting completed with warnings"

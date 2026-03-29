@@ -1,0 +1,8 @@
+{
+  "name": "seasoned-frontend-compat",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "npm --prefix ../recipe-app ci && npm --prefix ../recipe-app run build && rm -rf dist && cp -r ../recipe-app/dist ./dist"
+  }
+}
