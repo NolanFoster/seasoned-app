@@ -1,8 +1,12 @@
 // Recipe Clipper Worker using Cloudflare Workers AI with GPT-4o-mini model
-import { 
-  generateRecipeId, 
+import {
+  generateRecipeId,
   getRecipeFromKV
 } from '../../shared/kv-storage.js';
+import {
+  isYouTubeUrl,
+  extractRecipeFromYouTube
+} from './youtube-extractor.js';
 
 export default {
   async fetch(request, env) {
@@ -97,9 +101,13 @@ export default {
           }
           
           console.log('Recipe not found in KV store, proceeding with clipping');
-          
-          // Proceed with recipe extraction
-          const recipe = await extractRecipeWithGPT(pageUrl, env);
+
+          // Proceed with recipe extraction. YouTube URLs go through a
+          // video-aware path that pulls captions + metadata; everything
+          // else uses the existing HTML/JSON-LD/AI pipeline.
+          const recipe = isYouTubeUrl(pageUrl)
+            ? await extractRecipeFromYouTube(pageUrl, env)
+            : await extractRecipeWithGPT(pageUrl, env);
           if (!recipe) {
             return new Response('No recipe could be extracted', { 
               status: 404,
@@ -179,7 +187,7 @@ export default {
         return new Response(JSON.stringify({ 
           status: 'healthy', 
           service: 'recipe-clipper',
-          features: ['ai-extraction', 'kv-storage', 'caching', 'service-binding'],
+          features: ['ai-extraction', 'kv-storage', 'caching', 'service-binding', 'youtube-extraction'],
           endpoints: {
             'POST /clip': 'Extract recipe from URL (checks cache first)',
             'POST /clip with clearCache:true': 'Clear recipe from cache',

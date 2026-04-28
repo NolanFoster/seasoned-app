@@ -336,6 +336,68 @@ describe('Clip behaviour', () => {
       expect(screen.getByText(/Clip failed: 422/i)).toBeInTheDocument()
     );
   });
+
+  test('shows Clip button for YouTube URLs', () => {
+    renderApp();
+    setInputValue('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    expect(screen.getByText('Clip')).toBeInTheDocument();
+  });
+
+  test('shows YouTube-specific status text while clipping a YouTube URL', async () => {
+    // Hold the fetch open so we can observe the in-flight status label.
+    let resolveFetch;
+    global.fetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = () =>
+            resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({
+                  recipe: { ...CLIP_RESPONSE.recipe, sourceType: 'youtube' },
+                }),
+            });
+        })
+    );
+
+    renderApp();
+    setInputValue('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    pressEnter();
+
+    await waitFor(() =>
+      expect(screen.getByText(/Clipping recipe from YouTube…/i)).toBeInTheDocument()
+    );
+    resolveFetch();
+  });
+
+  test('renders YouTube source badge when sourceType=youtube', async () => {
+    mockFetchOk({ recipe: { ...CLIP_RESPONSE.recipe, sourceType: 'youtube' } });
+
+    renderApp();
+    setInputValue('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    pressEnter();
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Clipped Soup/i })).toBeInTheDocument()
+    );
+    expect(screen.getByText('YouTube')).toBeInTheDocument();
+    expect(screen.queryByText('Clipped')).not.toBeInTheDocument();
+  });
+
+  test('renders YouTube badge for youtu.be URLs even without sourceType in response', async () => {
+    // Older clipper builds may not return sourceType — frontend should sniff the URL.
+    mockFetchOk(CLIP_RESPONSE);
+
+    renderApp();
+    setInputValue('https://youtu.be/dQw4w9WgXcQ');
+    pressEnter();
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Clipped Soup/i })).toBeInTheDocument()
+    );
+    expect(screen.getByText('YouTube')).toBeInTheDocument();
+  });
 });
 
 // ── Generate ───────────────────────────────────────────────────────────────

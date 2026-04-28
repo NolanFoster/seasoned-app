@@ -17,6 +17,7 @@ const sourceBadgeMap = {
   clipped: { label: 'Clipped', color: '#5bb87a' },
   ai_generated: { label: 'AI Generated', color: '#c8a96e' },
   elevated: { label: 'Elevated', color: '#e8c87a' },
+  youtube: { label: 'YouTube', color: '#ff0000' },
 }
 
 // Pure display component — no state, no browser APIs.
