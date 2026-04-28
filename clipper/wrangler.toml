@@ -21,7 +21,6 @@ name = "preview-clipper"
 [env.preview.ai]
 binding = "AI"
 
-[env.preview.services]
 [[env.preview.services]]
 binding = "RECIPE_SAVE_WORKER"
 service = "preview-recipe-save-worker"
@@ -35,7 +34,6 @@ IMAGE_DOMAIN = "https://staging-images.seasonedapp.com"
 [env.staging.ai]
 binding = "AI"
 
-[env.staging.services]
 [[env.staging.services]]
 binding = "RECIPE_SAVE_WORKER"
 service = "staging-recipe-save-worker"
@@ -55,7 +53,6 @@ IMAGE_DOMAIN = "https://images.seasonedapp.com"
 [env.production.ai]
 binding = "AI"
 
-[env.production.services]
 [[env.production.services]]
 binding = "RECIPE_SAVE_WORKER"
 service = "recipe-save-worker"

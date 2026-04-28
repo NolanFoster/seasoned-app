@@ -31,6 +31,21 @@ function isValidUrl(str) {
   }
 }
 
+function isYouTubeUrl(str) {
+  try {
+    const host = new URL(str).hostname.toLowerCase()
+    return (
+      host === 'youtube.com' ||
+      host === 'www.youtube.com' ||
+      host === 'm.youtube.com' ||
+      host === 'music.youtube.com' ||
+      host === 'youtu.be'
+    )
+  } catch {
+    return false
+  }
+}
+
 // Debounce helper — cancels pending timer on unmount to prevent leaks
 function useDebounce(fn, delay) {
   const timer = useRef(null)
@@ -117,6 +132,7 @@ export default function App() {
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
   const [savedRecipeId, setSavedRecipeId] = useState(null) // persisted KV id for share URL
   const [generatingName, setGeneratingName] = useState('')
+  const [clippingFromYouTube, setClippingFromYouTube] = useState(false)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
   const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
@@ -263,6 +279,7 @@ export default function App() {
   // --- Clip ---
   async function doClip(url) {
     setStatus('clipping')
+    setClippingFromYouTube(isYouTubeUrl(url))
     setShowDropdown(false)
     clearActiveRecipe()
     setSaveState('idle')
@@ -275,9 +292,10 @@ export default function App() {
       if (!res.ok) throw new Error(`Clip failed: ${res.status}`)
       const data = await res.json()
       const d = data.recipe || data
+      const isYouTube = d.sourceType === 'youtube' || isYouTubeUrl(url)
       const clippedRecipe = {
         id: `clip-${Date.now()}`,
-        source: 'clipped',
+        source: isYouTube ? 'youtube' : 'clipped',
         name: d.name || d.title || 'Clipped Recipe',
         description: d.description || '',
         image: d.image || d.imageUrl || d.image_url || '',
@@ -294,9 +312,11 @@ export default function App() {
     } catch (e) {
       setErrorMsg(e.message)
       setStatus('error')
+      setClippingFromYouTube(false)
       return
     }
     setStatus('idle')
+    setClippingFromYouTube(false)
   }
 
   // --- Generate ---
@@ -534,7 +554,7 @@ export default function App() {
           {busy && (status === 'searching' || status === 'clipping') && (
             <div className="status-label">
               {status === 'searching' && 'Searching…'}
-              {status === 'clipping' && 'Clipping recipe…'}
+              {status === 'clipping' && (clippingFromYouTube ? 'Clipping recipe from YouTube…' : 'Clipping recipe…')}
             </div>
           )}
 
