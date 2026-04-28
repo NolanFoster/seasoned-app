@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="generated" content="2026-03-24T05:59:20.437Z">
+    <meta name="generated" content="2026-04-28T01:23:03.280Z">
 </head>
 <body>
     <div class="container">
@@ -16,7 +16,7 @@
             <div class="header-content">
                 <h1 class="title">🍳 Seasoned Recipe App</h1>
                 <p class="subtitle">Developer Documentation & API Reference</p>
-                <p class="auto-generated">🔄 Auto-generated from source code - 2026-03-24T05:59:20.437Z</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2026-04-28T01:23:03.280Z</p>
             </div>
         </header>
 
@@ -65,7 +65,7 @@
                     <h3>🔄 Auto-Update Information</h3>
                     <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
                     <pre><code>npm run docs:generate</code></pre>
-                    <p><strong>Last Generated:</strong> 2026-03-24T05:59:20.437Z</p>
+                    <p><strong>Last Generated:</strong> 2026-04-28T01:23:03.280Z</p>
                 </div>
                 
                 <div class="feature-grid">
@@ -551,10 +551,14 @@ export default {
                 <div class="source-code-preview">
                     <h3>Source Code Preview</h3>
                     <pre><code>// Recipe Clipper Worker using Cloudflare Workers AI with GPT-4o-mini model
-import { 
-  generateRecipeId, 
+import {
+  generateRecipeId,
   getRecipeFromKV
 } from '../../shared/kv-storage.js';
+import {
+  isYouTubeUrl,
+  extractRecipeFromYouTube
+} from './youtube-extractor.js';
 
 export default {
   async fetch(request, env) {
@@ -579,10 +583,7 @@ export default {
         const body = await request.json();
         const pageUrl = body.url;
         const clearCache = body.clearCache === true;
-        
-        if (!pageUrl) {
-          return new Response('URL is required', { 
-   ...</code></pre>
+     ...</code></pre>
                 </div>
             </section>
             <section id="recipe-crawler" class="section">
