@@ -3,6 +3,7 @@
 
 -- Drop existing tables if they exist (for migrations)
 DROP TABLE IF EXISTS user_login_history;
+DROP TABLE IF EXISTS passkey_credentials;
 DROP TABLE IF EXISTS users;
 
 -- Users table - core user information
@@ -33,11 +34,25 @@ CREATE TABLE IF NOT EXISTS user_login_history (
     latitude REAL,
     longitude REAL,
     timezone TEXT,
-    login_method TEXT NOT NULL CHECK (login_method IN ('OTP', 'MAGIC_LINK')) DEFAULT 'OTP',
+    login_method TEXT NOT NULL CHECK (login_method IN ('OTP', 'MAGIC_LINK', 'PASSKEY')) DEFAULT 'OTP',
     success BOOLEAN NOT NULL,
     failure_reason TEXT, -- NULL if successful
     device_fingerprint TEXT, -- For device recognition
     risk_score INTEGER DEFAULT 0, -- 0-100 risk assessment
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Passkey credentials table
+CREATE TABLE IF NOT EXISTS passkey_credentials (
+    credential_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    counter INTEGER NOT NULL DEFAULT 0,
+    device_type TEXT NOT NULL CHECK (device_type IN ('singleDevice', 'multiDevice')),
+    backed_up INTEGER NOT NULL DEFAULT 0,
+    transports TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
@@ -49,6 +64,10 @@ CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_users_account_type ON users(account_type);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
 CREATE INDEX IF NOT EXISTS idx_users_last_activity ON users(last_activity_at);
+
+-- Passkey credential indexes
+CREATE INDEX IF NOT EXISTS idx_passkeys_user_id ON passkey_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_passkeys_created_at ON passkey_credentials(created_at);
 
 -- User login history indexes
 CREATE INDEX IF NOT EXISTS idx_login_history_user_id ON user_login_history(user_id);

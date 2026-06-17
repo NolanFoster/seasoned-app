@@ -18,4 +18,9 @@ export interface Env {
   
   // JWT configuration
   JWT_SECRET: string;
+
+  // WebAuthn / Passkey configuration (required in production; set via wrangler.toml [vars])
+  WEBAUTHN_RP_ID?: string;
+  WEBAUTHN_RP_NAME?: string;
+  WEBAUTHN_ORIGIN?: string;
 }

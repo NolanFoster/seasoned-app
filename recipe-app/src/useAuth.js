@@ -119,6 +119,79 @@ export function useAuth() {
     setUser(null)
   }, [])
 
+  async function signInWithPasskey(email) {
+    const { startAuthentication } = await import('@simplewebauthn/browser')
+    const beginRes = await fetch(`${AUTH_WORKER_URL}/passkeys/authenticate/begin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(email ? { email } : {}),
+    })
+    const beginData = await beginRes.json()
+    if (!beginRes.ok || !beginData.success) {
+      throw new Error(beginData.message || 'Failed to begin passkey authentication')
+    }
+
+    let authResponse
+    try {
+      authResponse = await startAuthentication({ optionsJSON: beginData.options })
+    } catch (err) {
+      throw new Error(err.message || 'Passkey authentication cancelled')
+    }
+
+    const completeRes = await fetch(`${AUTH_WORKER_URL}/passkeys/authenticate/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionToken: beginData.sessionToken, response: authResponse }),
+    })
+    const completeData = await completeRes.json()
+    if (!completeRes.ok || !completeData.success) {
+      throw new Error(completeData.message || 'Passkey authentication failed')
+    }
+
+    if (completeData.token && completeData.user) {
+      storeAuth(completeData.token, completeData.user)
+      setToken(completeData.token)
+      setUser(completeData.user)
+    }
+    return completeData
+  }
+
+  async function registerPasskey() {
+    const { startRegistration } = await import('@simplewebauthn/browser')
+    const beginRes = await fetch(`${AUTH_WORKER_URL}/passkeys/register/begin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+    const beginData = await beginRes.json()
+    if (!beginRes.ok || !beginData.success) {
+      throw new Error(beginData.message || 'Failed to begin passkey registration')
+    }
+
+    let regResponse
+    try {
+      regResponse = await startRegistration({ optionsJSON: beginData.options })
+    } catch (err) {
+      throw new Error(err.message || 'Passkey registration cancelled')
+    }
+
+    const completeRes = await fetch(`${AUTH_WORKER_URL}/passkeys/register/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ response: regResponse }),
+    })
+    const completeData = await completeRes.json()
+    if (!completeRes.ok || !completeData.success) {
+      throw new Error(completeData.message || 'Passkey registration failed')
+    }
+    return completeData
+  }
+
   return {
     user,
     token,
@@ -127,5 +200,7 @@ export function useAuth() {
     requestOTP,
     verifyOTP,
     signOut,
+    signInWithPasskey,
+    registerPasskey,
   }
 }

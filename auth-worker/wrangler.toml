@@ -11,6 +11,9 @@ id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after 
 [vars]
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_RP_ID = "localhost"
+WEBAUTHN_ORIGIN = "http://localhost:5173"
 
 # Cloudflare Email Workers send_email binding
 [[send_email]]
@@ -32,6 +35,9 @@ name = "auth-worker-preview"
 [env.preview.vars]
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_RP_ID = "localhost"
+WEBAUTHN_ORIGIN = "http://localhost:5173"
 
 [[env.preview.send_email]]
 name = "send_email"
@@ -50,6 +56,9 @@ name = "auth-worker-production"
 [env.production.vars]
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_RP_ID = "seasonedapp.com"
+WEBAUTHN_ORIGIN = "https://seasonedapp.com"
 
 [[env.production.send_email]]
 name = "send_email"
@@ -68,6 +77,9 @@ name = "auth-worker-staging"
 [env.staging.vars]
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_RP_ID = "seasonedapp.com"
+WEBAUTHN_ORIGIN = "https://seasonedapp.com"
 
 [[env.staging.send_email]]
 name = "send_email"

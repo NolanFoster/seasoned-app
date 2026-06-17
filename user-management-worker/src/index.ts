@@ -345,7 +345,7 @@ app.post('/login-history', async (c) => {
       }, 400);
     }
 
-    if (!['OTP', 'MAGIC_LINK'].includes(login_method)) {
+    if (!['OTP', 'MAGIC_LINK', 'PASSKEY'].includes(login_method)) {
       return c.json({
         success: false,
         message: 'Invalid login method'
@@ -451,6 +451,104 @@ app.get('/users/:user_id/statistics', async (c) => {
       success: false,
       message: 'Internal server error'
     }, 500);
+  }
+});
+
+// Passkey Credential Endpoints
+
+// Create passkey credential
+app.post('/passkey-credentials', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { credential_id, user_id, public_key, counter, device_type, backed_up, transports } = body;
+
+    if (!credential_id || !user_id || !public_key || counter === undefined || !device_type) {
+      return c.json({
+        success: false,
+        message: 'credential_id, user_id, public_key, counter, and device_type are required'
+      }, 400);
+    }
+
+    const userDB = new UserDatabaseService(c.env.USER_DB);
+    const result = await userDB.createPasskeyCredential({
+      credential_id,
+      user_id,
+      public_key,
+      counter,
+      device_type,
+      backed_up: !!backed_up,
+      transports
+    });
+
+    if (result.success) {
+      return c.json({ success: true, data: result.data }, 201);
+    } else {
+      return c.json({ success: false, message: result.error }, 400);
+    }
+  } catch (error) {
+    console.error('Error creating passkey credential:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Get passkey credentials by user ID
+app.get('/passkey-credentials/user/:user_id', async (c) => {
+  try {
+    const user_id = c.req.param('user_id');
+    const userDB = new UserDatabaseService(c.env.USER_DB);
+    const result = await userDB.getPasskeyCredentialsByUserId(user_id);
+
+    if (result.success) {
+      return c.json({ success: true, data: result.data });
+    } else {
+      return c.json({ success: false, message: result.error }, 404);
+    }
+  } catch (error) {
+    console.error('Error getting passkey credentials:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Get passkey credential by credential ID
+app.get('/passkey-credentials/:credential_id', async (c) => {
+  try {
+    const credential_id = c.req.param('credential_id');
+    const userDB = new UserDatabaseService(c.env.USER_DB);
+    const result = await userDB.getPasskeyCredentialById(credential_id);
+
+    if (result.success) {
+      return c.json({ success: true, data: result.data });
+    } else {
+      return c.json({ success: false, message: result.error }, 404);
+    }
+  } catch (error) {
+    console.error('Error getting passkey credential:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Update passkey counter
+app.patch('/passkey-credentials/:credential_id/counter', async (c) => {
+  try {
+    const credential_id = c.req.param('credential_id');
+    const body = await c.req.json();
+    const { counter } = body;
+
+    if (counter === undefined || typeof counter !== 'number') {
+      return c.json({ success: false, message: 'counter is required and must be a number' }, 400);
+    }
+
+    const userDB = new UserDatabaseService(c.env.USER_DB);
+    const result = await userDB.updatePasskeyCounter({ credential_id, counter });
+
+    if (result.success) {
+      return c.json({ success: true, data: result.data });
+    } else {
+      return c.json({ success: false, message: result.error }, 404);
+    }
+  } catch (error) {
+    console.error('Error updating passkey counter:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });
 

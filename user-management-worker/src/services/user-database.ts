@@ -8,7 +8,10 @@ import {
   DatabaseResult,
   PaginatedResult,
   RecentLoginActivity,
-  UserStatistics
+  UserStatistics,
+  PasskeyCredential,
+  CreatePasskeyCredentialInput,
+  UpdatePasskeyCounterInput,
 } from '../types/database';
 
 export class UserDatabaseService {
@@ -275,6 +278,87 @@ export class UserDatabaseService {
       return { success: true, data: result.results };
     } catch (error) {
       console.error('Error searching users:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  // Passkey Credential Methods
+
+  async createPasskeyCredential(input: CreatePasskeyCredentialInput): Promise<DatabaseResult<PasskeyCredential>> {
+    try {
+      const transports = input.transports ? JSON.stringify(input.transports) : null;
+      const result = await this.db.prepare(`
+        INSERT INTO passkey_credentials (
+          credential_id, user_id, public_key, counter, device_type, backed_up, transports
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        RETURNING *
+      `).bind(
+        input.credential_id,
+        input.user_id,
+        input.public_key,
+        input.counter,
+        input.device_type,
+        input.backed_up ? 1 : 0,
+        transports
+      ).first<PasskeyCredential>();
+
+      if (!result) {
+        return { success: false, error: 'Failed to create passkey credential' };
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Error creating passkey credential:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async getPasskeyCredentialsByUserId(user_id: string): Promise<DatabaseResult<PasskeyCredential[]>> {
+    try {
+      const result = await this.db.prepare(`
+        SELECT * FROM passkey_credentials WHERE user_id = ? ORDER BY created_at DESC
+      `).bind(user_id).all<PasskeyCredential>();
+
+      return { success: true, data: result.results };
+    } catch (error) {
+      console.error('Error getting passkey credentials by user ID:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async getPasskeyCredentialById(credential_id: string): Promise<DatabaseResult<PasskeyCredential>> {
+    try {
+      const result = await this.db.prepare(`
+        SELECT * FROM passkey_credentials WHERE credential_id = ?
+      `).bind(credential_id).first<PasskeyCredential>();
+
+      if (!result) {
+        return { success: false, error: 'Passkey credential not found' };
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Error getting passkey credential by ID:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async updatePasskeyCounter(input: UpdatePasskeyCounterInput): Promise<DatabaseResult<PasskeyCredential>> {
+    try {
+      const result = await this.db.prepare(`
+        UPDATE passkey_credentials
+        SET counter = ?, last_used_at = CURRENT_TIMESTAMP
+        WHERE credential_id = ?
+        RETURNING *
+      `).bind(input.counter, input.credential_id).first<PasskeyCredential>();
+
+      if (!result) {
+        return { success: false, error: 'Passkey credential not found' };
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Error updating passkey counter:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

@@ -2,19 +2,25 @@ import React, { useState, useRef, useEffect } from 'react'
 
 const OTP_LENGTH = 6
 
-export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
+export default function AuthScreen({ onRequestOTP, onVerifyOTP, onSignInWithPasskey }) {
   const [step, setStep] = useState('email') // 'email' | 'otp'
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''))
   const [status, setStatus] = useState('idle') // idle | loading | error | success
   const [errorMsg, setErrorMsg] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [passkeySupported, setPasskeySupported] = useState(false)
 
   const emailInputRef = useRef(null)
   const otpRefs = useRef([])
 
   useEffect(() => {
     emailInputRef.current?.focus()
+    if (window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable) {
+      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+        .then(setPasskeySupported)
+        .catch(() => {/* not supported */})
+    }
   }, [])
 
   useEffect(() => {
@@ -120,6 +126,17 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
     setTimeout(() => emailInputRef.current?.focus(), 50)
   }
 
+  async function handlePasskeySignIn() {
+    setStatus('loading')
+    setErrorMsg('')
+    try {
+      await onSignInWithPasskey(email || undefined)
+    } catch (err) {
+      setErrorMsg(err.message || 'Passkey sign-in failed')
+      setStatus('error')
+    }
+  }
+
   const isLoading = status === 'loading'
 
   return (
@@ -178,6 +195,25 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
                   </span>
                 ) : 'Continue'}
               </button>
+
+              {passkeySupported && onSignInWithPasskey && (
+                <>
+                  <div className="auth-divider"><span>or</span></div>
+                  <button
+                    className="auth-passkey-btn"
+                    type="button"
+                    onClick={handlePasskeySignIn}
+                    disabled={isLoading}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="18" height="18">
+                      <circle cx="12" cy="8" r="3"/>
+                      <path d="M6 21v-1a6 6 0 0112 0v1"/>
+                      <path d="M18 15l2 2 4-4"/>
+                    </svg>
+                    Sign in with passkey
+                  </button>
+                </>
+              )}
             </form>
           </>
         ) : (

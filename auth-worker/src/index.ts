@@ -505,6 +505,135 @@ app.post('/email/send-verification', async (c) => {
   }
 });
 
+// Passkey Endpoints
+
+// Extract and verify Bearer JWT — returns payload or null
+async function getAuthPayload(authHeader: string | undefined, env: Env) {
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  const { JWTService } = await import('./services/jwt-service');
+  const result = await new JWTService(env).verifyToken(token);
+  return result.success && result.payload ? result.payload : null;
+}
+
+// Hash an email the same way OTP manager does (SHA-256 hex)
+async function hashEmailLocal(email: string): Promise<string> {
+  const { hashEmail } = await import('./utils/crypto');
+  return hashEmail(email);
+}
+
+// Begin passkey registration (requires valid JWT)
+app.post('/passkeys/register/begin', async (c) => {
+  try {
+    const payload = await getAuthPayload(c.req.header('Authorization'), c.env);
+    if (!payload) {
+      return c.json({ success: false, message: 'Authentication required' }, 401);
+    }
+
+    const { PasskeyService } = await import('./services/passkey-service');
+    const svc = new PasskeyService(c.env);
+    const result = await svc.beginRegistration(payload.sub, payload.email);
+
+    if (result.success) {
+      return c.json({ success: true, options: result.options });
+    } else {
+      return c.json({ success: false, message: result.error }, 400);
+    }
+  } catch (error) {
+    console.error('Error beginning passkey registration:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Complete passkey registration (requires valid JWT)
+app.post('/passkeys/register/complete', async (c) => {
+  try {
+    const payload = await getAuthPayload(c.req.header('Authorization'), c.env);
+    if (!payload) {
+      return c.json({ success: false, message: 'Authentication required' }, 401);
+    }
+
+    const body = await c.req.json();
+    const { response } = body;
+    if (!response) {
+      return c.json({ success: false, message: 'response is required' }, 400);
+    }
+
+    const { PasskeyService } = await import('./services/passkey-service');
+    const svc = new PasskeyService(c.env);
+    const result = await svc.completeRegistration(payload.sub, payload.email, response);
+
+    if (result.success) {
+      return c.json({ success: true, credential: result.credential });
+    } else {
+      return c.json({ success: false, message: result.error }, 400);
+    }
+  } catch (error) {
+    console.error('Error completing passkey registration:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Begin passkey authentication (no auth required)
+app.post('/passkeys/authenticate/begin', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({})) as { email?: string };
+    const { email } = body;
+
+    let userId: string | null = null;
+    if (email && typeof email === 'string') {
+      userId = await hashEmailLocal(email);
+    }
+
+    const { PasskeyService } = await import('./services/passkey-service');
+    const svc = new PasskeyService(c.env);
+    const result = await svc.beginAuthentication(userId);
+
+    if (result.success) {
+      return c.json({ success: true, options: result.options, sessionToken: result.sessionToken });
+    } else {
+      const status = result.error === 'no_passkeys' ? 404 : 400;
+      return c.json({ success: false, message: result.error }, status);
+    }
+  } catch (error) {
+    console.error('Error beginning passkey authentication:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Complete passkey authentication (no auth required)
+app.post('/passkeys/authenticate/complete', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { sessionToken, response } = body;
+
+    if (!sessionToken || typeof sessionToken !== 'string') {
+      return c.json({ success: false, message: 'sessionToken is required' }, 400);
+    }
+    if (!response) {
+      return c.json({ success: false, message: 'response is required' }, 400);
+    }
+
+    const { PasskeyService } = await import('./services/passkey-service');
+    const svc = new PasskeyService(c.env);
+    const result = await svc.completeAuthentication(sessionToken, response);
+
+    if (result.success) {
+      return c.json({
+        success: true,
+        token: result.jwtToken,
+        expiresIn: 604800,
+        user: result.user,
+      });
+    } else {
+      return c.json({ success: false, message: result.error }, 400);
+    }
+  } catch (error) {
+    console.error('Error completing passkey authentication:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
 // Root endpoint
 app.get('/', (c) => {
   return c.json({

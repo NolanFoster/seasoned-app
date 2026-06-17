@@ -27,7 +27,7 @@ export interface UserLoginHistory {
   latitude?: number;
   longitude?: number;
   timezone?: string;
-  login_method: 'OTP' | 'MAGIC_LINK';
+  login_method: 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
   success: boolean;
   failure_reason?: string;
   device_fingerprint?: string;
@@ -54,7 +54,7 @@ export interface RecentLoginActivity {
   ip_address?: string;
   country?: string;
   city?: string;
-  login_method: 'OTP' | 'MAGIC_LINK';
+  login_method: 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
   success: boolean;
   risk_score: number;
 }
@@ -95,11 +95,38 @@ export interface CreateLoginHistoryInput {
   latitude?: number;
   longitude?: number;
   timezone?: string;
-  login_method: 'OTP' | 'MAGIC_LINK';
+  login_method: 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
   success: boolean;
   failure_reason?: string;
   device_fingerprint?: string;
   risk_score?: number;
+}
+
+export interface PasskeyCredential {
+  credential_id: string;
+  user_id: string;
+  public_key: string;
+  counter: number;
+  device_type: 'singleDevice' | 'multiDevice';
+  backed_up: number;
+  transports: string | null;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface CreatePasskeyCredentialInput {
+  credential_id: string;
+  user_id: string;
+  public_key: string;
+  counter: number;
+  device_type: 'singleDevice' | 'multiDevice';
+  backed_up: boolean;
+  transports?: string[];
+}
+
+export interface UpdatePasskeyCounterInput {
+  credential_id: string;
+  counter: number;
 }
 
 // Update types

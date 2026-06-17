@@ -56,9 +56,10 @@ function useDebounce(fn, delay) {
   }, [fn, delay])
 }
 
-function UserMenu({ user, onSignOut }) {
+function UserMenu({ user, onSignOut, onRegisterPasskey }) {
   const [open, setOpen] = useState(false)
   const [opacity, setOpacity] = useState(1)
+  const [passkeyStatus, setPasskeyStatus] = useState('idle') // idle | loading | done | error
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -101,6 +102,33 @@ function UserMenu({ user, onSignOut }) {
           <div className="user-menu-info">
             <div className="user-menu-email">{user?.email}</div>
           </div>
+          {onRegisterPasskey && (
+            <button
+              className="user-menu-item"
+              onClick={async () => {
+                setPasskeyStatus('loading')
+                try {
+                  await onRegisterPasskey()
+                  setPasskeyStatus('done')
+                  setTimeout(() => setPasskeyStatus('idle'), 2000)
+                } catch {
+                  setPasskeyStatus('error')
+                  setTimeout(() => setPasskeyStatus('idle'), 2500)
+                }
+              }}
+              disabled={passkeyStatus === 'loading'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                <circle cx="12" cy="8" r="3"/>
+                <path d="M6 21v-1a6 6 0 0112 0v1"/>
+                <path d="M18 15l2 2 4-4"/>
+              </svg>
+              {passkeyStatus === 'loading' ? 'Registering…'
+                : passkeyStatus === 'done' ? 'Passkey added!'
+                : passkeyStatus === 'error' ? 'Failed — try again'
+                : 'Add passkey'}
+            </button>
+          )}
           <button className="user-menu-item" onClick={() => { setOpen(false); onSignOut() }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -258,7 +286,7 @@ export default function App() {
   }
 
   if (!auth.isAuthenticated) {
-    return <AuthScreen onRequestOTP={auth.requestOTP} onVerifyOTP={auth.verifyOTP} />
+    return <AuthScreen onRequestOTP={auth.requestOTP} onVerifyOTP={auth.verifyOTP} onSignInWithPasskey={auth.signInWithPasskey} />
   }
 
   function handleInputChange(e) {
@@ -477,7 +505,7 @@ export default function App() {
           onClose={() => setIsDrawerOpen(false)}
         />
       )}
-      <UserMenu user={auth.user} onSignOut={auth.signOut} />
+      <UserMenu user={auth.user} onSignOut={auth.signOut} onRegisterPasskey={auth.registerPasskey} />
       <div className="omnibox-wrapper">
         <div className="brand">
           <div className="brand-header">
