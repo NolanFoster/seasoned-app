@@ -11,7 +11,7 @@
 export async function hashEmail(email: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(email.toLowerCase().trim());
-  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -26,13 +26,13 @@ export async function hashOTP(otp: string, salt?: string): Promise<{hash: string
   if (!salt) {
     // Generate a random salt
     const saltArray = new Uint8Array(16);
-    globalThis.crypto.getRandomValues(saltArray);
+    crypto.getRandomValues(saltArray);
     salt = Array.from(saltArray).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   const encoder = new TextEncoder();
   const otpData = encoder.encode(otp + salt);
-  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', otpData);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', otpData);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
@@ -75,7 +75,7 @@ export function generateOTP(length: number = 6): string {
  */
 export function generateSecureToken(length: number = 32): string {
   const tokenArray = new Uint8Array(length);
-  globalThis.crypto.getRandomValues(tokenArray);
+  crypto.getRandomValues(tokenArray);
   return Array.from(tokenArray).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 

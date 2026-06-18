@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node', // Changed from 'miniflare' to fix timeout issues
+    setupFiles: ['./tests/setup.ts'],
     // environmentOptions: {
     //   wranglerConfigPath: './wrangler.toml',
     //   packagePath: true,
