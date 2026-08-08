@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useId } from 'react'
 import RecipeCard, { parseDuration } from './RecipeCard.jsx'
 import GeneratingCard from './GeneratingCard.jsx'
 import AuthScreen from './AuthScreen.jsx'
@@ -49,11 +49,24 @@ function isYouTubeUrl(str) {
 // Debounce helper — cancels pending timer on unmount to prevent leaks
 function useDebounce(fn, delay) {
   const timer = useRef(null)
-  useEffect(() => () => clearTimeout(timer.current), [])
-  return useCallback((...args) => {
+  const fnRef = useRef(fn)
+
+  useEffect(() => {
+    fnRef.current = fn
+  }, [fn])
+
+  const cancel = useCallback(() => {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => fn(...args), delay)
-  }, [fn, delay])
+    timer.current = null
+  }, [])
+
+  const schedule = useCallback((...args) => {
+    cancel()
+    timer.current = setTimeout(() => fnRef.current(...args), delay)
+  }, [cancel, delay])
+
+  useEffect(() => cancel, [cancel])
+  return [schedule, cancel]
 }
 
 function UserMenu({ user, onSignOut }) {
@@ -129,12 +142,16 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([])
   const [lastSearchQuery, setLastSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+  const [activeOptionKey, setActiveOptionKey] = useState(null)
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
   const [savedRecipeId, setSavedRecipeId] = useState(null) // persisted KV id for share URL
   const [generatingName, setGeneratingName] = useState('')
   const [clippingFromYouTube, setClippingFromYouTube] = useState(false)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
+  const listboxId = useId()
+  const latestInputRef = useRef('')
+  const searchRequestIdRef = useRef(0)
   const [recentRecipes, addRecentRecipe, clearRecentRecipes] = useRecentRecipes()
 
   const isUrl = isValidUrl(input.trim())
@@ -149,15 +166,20 @@ export default function App() {
 
   // --- Search ---
   async function doSearch(query) {
-    if (!query || query.trim().length < 2) {
+    const normalizedQuery = query?.trim() || ''
+    const requestId = ++searchRequestIdRef.current
+
+    if (normalizedQuery.length < 2 || isValidUrl(normalizedQuery)) {
       setSearchResults([])
       setShowDropdown(false)
+      setActiveOptionKey(null)
       return
     }
     setStatus('searching')
     setShowDropdown(true)
+    setActiveOptionKey(null)
     try {
-      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(query)}&type=recipe&limit=10`)
+      const res = await fetch(`${SEARCH_DB_URL}/api/search?q=${encodeURIComponent(normalizedQuery)}&type=recipe&limit=10`)
       if (!res.ok) throw new Error(`Search failed: ${res.status}`)
       const data = await res.json()
 
@@ -186,29 +208,46 @@ export default function App() {
           }
         })
       )
+      if (
+        requestId !== searchRequestIdRef.current ||
+        latestInputRef.current.trim() !== normalizedQuery
+      ) return
+
       setSearchResults(results.filter(Boolean))
-      setLastSearchQuery(query)
+      setLastSearchQuery(normalizedQuery)
     } catch (e) {
+      if (requestId !== searchRequestIdRef.current) return
+      setSearchResults([])
+      setShowDropdown(false)
+      setActiveOptionKey(null)
       setErrorMsg(e.message)
       setStatus('error')
       return
     }
-    setStatus('idle')
+    if (requestId === searchRequestIdRef.current) setStatus('idle')
   }
 
-  const debouncedSearch = useDebounce(doSearch, 300)
+  const [debouncedSearch, cancelDebouncedSearch] = useDebounce(doSearch, 300)
+
+  function invalidateSearch() {
+    cancelDebouncedSearch()
+    searchRequestIdRef.current += 1
+    setStatus((current) => current === 'searching' ? 'idle' : current)
+  }
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
           inputRef.current && !inputRef.current.contains(e.target)) {
+        invalidateSearch()
         setShowDropdown(false)
+        setActiveOptionKey(null)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+  }, [cancelDebouncedSearch])
 
   const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
   const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
@@ -234,6 +273,43 @@ export default function App() {
   useEffect(() => {
     if (!mealPlannerEnabled) setIsDrawerOpen(false)
   }, [mealPlannerEnabled])
+
+  const isSearchView = hasText
+  const searchResultsMatchInput = isSearchView && lastSearchQuery === input.trim()
+  const isBrowseView = input.trim().length === 0
+  const visibleOptions = (searchResultsMatchInput
+    ? searchResults.map((recipe, index) => ({
+        key: `search-${recipe.id || index}-${index}`,
+        kind: 'search',
+        recipe,
+      }))
+    : isBrowseView
+      ? [
+        ...recentRecipes.map((recipe, index) => ({
+          key: `recent-${recipe.id || index}-${index}`,
+          kind: 'recent',
+          recipe,
+        })),
+        ...searchResults.map((recipe, index) => ({
+          key: `last-search-${recipe.id || index}-${index}`,
+          kind: 'search',
+          recipe,
+        })),
+      ]
+      : []
+  ).map((option, index) => ({ ...option, domId: `${listboxId}-option-${index}` }))
+
+  const activeOption = visibleOptions.find((option) => option.key === activeOptionKey)
+  const activeOptionDomId = activeOption?.domId
+
+  useEffect(() => {
+    if (!activeOptionDomId) return
+    document.getElementById(activeOptionDomId)?.scrollIntoView?.({ block: 'nearest' })
+  }, [activeOptionDomId])
+
+  useEffect(() => () => {
+    searchRequestIdRef.current += 1
+  }, [])
 
   // --- Auth gates (after all hooks) ---
 
@@ -263,11 +339,17 @@ export default function App() {
 
   function handleInputChange(e) {
     const val = e.target.value
+    latestInputRef.current = val
     setInput(val)
     setErrorMsg('')
+    setActiveOptionKey(null)
+    searchRequestIdRef.current += 1
     if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
+      if (val.trim() !== lastSearchQuery) setShowDropdown(false)
       debouncedSearch(val.trim())
     } else {
+      cancelDebouncedSearch()
+      if (status === 'searching') setStatus('idle')
       // Don't re-open the dropdown if a generation/clip/elevate is in
       // flight — clearing the input during those flows would otherwise
       // cause the dropdown to pop back up over the recipe/generating card
@@ -278,6 +360,8 @@ export default function App() {
 
   // --- Clip ---
   async function doClip(url) {
+    invalidateSearch()
+    latestInputRef.current = ''
     setStatus('clipping')
     setClippingFromYouTube(isYouTubeUrl(url))
     setShowDropdown(false)
@@ -321,6 +405,8 @@ export default function App() {
 
   // --- Generate ---
   async function doGenerate(query, { elevate = false, baseRecipe = null } = {}) {
+    invalidateSearch()
+    latestInputRef.current = ''
     const dishName = elevate && baseRecipe ? baseRecipe.name : query
     setGeneratingName(dishName)
     setInput('')
@@ -375,30 +461,72 @@ export default function App() {
   function handleSubmit() {
     const action = getPrimaryAction()
     if (action === 'clip') doClip(input.trim())
-    else if (action === 'search') doSearch(input.trim())
+    else if (action === 'search') {
+      cancelDebouncedSearch()
+      doSearch(input.trim())
+    }
+  }
+
+  function selectOption(option) {
+    if (option.kind === 'recent') handleRecentSelect(option.recipe)
+    else handleResultSelect(option.recipe)
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter') handleSubmit()
+    if (e.nativeEvent?.isComposing) return
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (status === 'searching' || visibleOptions.length === 0) return
+      e.preventDefault()
+      setShowDropdown(true)
+      setActiveOptionKey((currentKey) => {
+        const currentIndex = visibleOptions.findIndex((option) => option.key === currentKey)
+        if (e.key === 'ArrowDown') {
+          return visibleOptions[(currentIndex + 1) % visibleOptions.length].key
+        }
+        const previousIndex = currentIndex <= 0 ? visibleOptions.length - 1 : currentIndex - 1
+        return visibleOptions[previousIndex].key
+      })
+      return
+    }
+
+    if (e.key === 'Enter') {
+      if (showDropdown && activeOption) {
+        e.preventDefault()
+        selectOption(activeOption)
+      } else {
+        handleSubmit()
+      }
+      return
+    }
+
     if (e.key === 'Escape') {
+      e.preventDefault()
       setShowDropdown(false)
+      setActiveOptionKey(null)
       setSearchResults([])
       setLastSearchQuery('')
     }
   }
 
   function handleResultSelect(result) {
+    invalidateSearch()
+    latestInputRef.current = ''
     setActiveRecipe(result)
     addRecentRecipe(result)
     setSaveState('saved')
     setSavedRecipeId(result.id)
     setShowDropdown(false)
+    setActiveOptionKey(null)
     setInput('')
   }
 
   function handleRecentSelect(r) {
+    invalidateSearch()
+    latestInputRef.current = ''
     setActiveRecipe(r)
     setShowDropdown(false)
+    setActiveOptionKey(null)
     setInput('')
     // Only mark as saved for real DB recipes (not temporary clip-* / ai-* ids)
     if (r.id && !r.id.startsWith('clip-') && !r.id.startsWith('ai-')) {
@@ -410,7 +538,41 @@ export default function App() {
   }
 
   function handleInputFocus() {
+    setActiveOptionKey(null)
     if (!input.trim() && (recentRecipes.length > 0 || searchResults.length > 0)) setShowDropdown(true)
+  }
+
+  function handleClearRecentRecipes() {
+    clearRecentRecipes()
+    setActiveOptionKey(null)
+    if (searchResults.length === 0) setShowDropdown(false)
+    inputRef.current?.focus()
+  }
+
+  function renderOption(option) {
+    const isActive = option.key === activeOptionKey
+    const r = option.recipe
+    return (
+      <button
+        key={option.key}
+        id={option.domId}
+        type="button"
+        role="option"
+        aria-selected={isActive}
+        tabIndex={-1}
+        className="dropdown-item"
+        onMouseDown={(e) => e.preventDefault()}
+        onMouseEnter={() => setActiveOptionKey(option.key)}
+        onClick={() => selectOption(option)}
+      >
+        <span className="dropdown-name">{r.name}</span>
+        <span className="dropdown-meta">
+          {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+          {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+          {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+        </span>
+      </button>
+    )
   }
 
   // --- Save ---
@@ -493,16 +655,31 @@ export default function App() {
 
         <div className="omnibox">
           <div className={`omnibox-inner ${busy ? 'busy' : ''} ${status === 'error' ? 'has-error' : ''}`}>
+            <label className="sr-only" htmlFor="recipe-omnibox-input">
+              Search, clip, or generate a recipe
+            </label>
+            <span id="omnibox-instructions" className="sr-only">
+              Use the up and down arrow keys to review recipe suggestions, then press Enter to open one.
+            </span>
             <input
+              id="recipe-omnibox-input"
               ref={inputRef}
               className="omnibox-input"
               type="text"
+              role="combobox"
               placeholder="Search recipes, paste a URL, or describe a dish…"
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onFocus={handleInputFocus}
               disabled={inputBusy}
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-expanded={showDropdown}
+              aria-controls={showDropdown ? listboxId : undefined}
+              aria-activedescendant={showDropdown && activeOption ? activeOption.domId : undefined}
+              aria-busy={status === 'searching'}
+              aria-describedby={`omnibox-instructions${status === 'error' && errorMsg ? ' omnibox-error' : ''}`}
               autoFocus
               autoComplete="off"
               spellCheck="false"
@@ -552,7 +729,7 @@ export default function App() {
 
           {/* Loading label — for search/clip only; generate/elevate use GeneratingCard */}
           {busy && (status === 'searching' || status === 'clipping') && (
-            <div className="status-label">
+            <div className="status-label" role="status" aria-live="polite">
               {status === 'searching' && 'Searching…'}
               {status === 'clipping' && (clippingFromYouTube ? 'Clipping recipe from YouTube…' : 'Clipping recipe…')}
             </div>
@@ -560,72 +737,85 @@ export default function App() {
 
           {/* Error */}
           {status === 'error' && errorMsg && (
-            <div className="error-label">{errorMsg}</div>
+            <div id="omnibox-error" className="error-label" role="alert">{errorMsg}</div>
           )}
 
           {/* Search dropdown */}
           {showDropdown && (
             <div className="dropdown" ref={dropdownRef}>
-              {status === 'searching' ? (
-                [0, 1, 2].map((i) => (
-                  <div key={i} className="skeleton-item">
-                    <div className="skeleton-line title" />
-                    <div className="skeleton-line meta" />
+              {!isSearchView && recentRecipes.length > 0 && (
+                <div className="dropdown-section-label">
+                  <span id="recent-recipes-label">Recently Viewed</span>
+                  <button
+                    type="button"
+                    className="dropdown-clear-btn"
+                    aria-label="Clear recently viewed recipes"
+                    onClick={handleClearRecentRecipes}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+
+              <div
+                id={listboxId}
+                role="listbox"
+                aria-label="Recipe suggestions"
+                aria-busy={status === 'searching'}
+              >
+                {status !== 'searching' && searchResultsMatchInput && visibleOptions.length > 0 && (
+                  <div role="group" aria-label="Search results">
+                    {visibleOptions.map(renderOption)}
                   </div>
-                ))
-              ) : input.trim().length >= 2 ? (
-                searchResults.length > 0 ? (
-                  searchResults.map((r) => (
-                    <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
-                      <span className="dropdown-name">{r.name}</span>
-                      <span className="dropdown-meta">
-                        {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
-                        {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
-                        {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="dropdown-empty">No recipes found for "{input}"</div>
-                )
-              ) : (
-                <>
-                  {recentRecipes.length > 0 && (
-                    <>
-                      <div className="dropdown-section-label">
-                        <span>Recently Viewed</span>
-                        <button className="dropdown-clear-btn" onClick={clearRecentRecipes}>Clear</button>
+                )}
+                {status !== 'searching' && isBrowseView && (
+                  <>
+                    {recentRecipes.length > 0 && (
+                      <div role="group" aria-labelledby="recent-recipes-label">
+                        {visibleOptions
+                          .filter((option) => option.kind === 'recent')
+                          .map(renderOption)}
                       </div>
-                      {recentRecipes.map((r) => (
-                        <button key={r.id} className="dropdown-item" onClick={() => handleRecentSelect(r)}>
-                          <span className="dropdown-name">{r.name}</span>
-                          <span className="dropdown-meta">
-                            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
-                            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
-                            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
-                          </span>
-                        </button>
-                      ))}
-                    </>
-                  )}
-                  {searchResults.length > 0 && (
-                    <>
-                      <div className="dropdown-section-label">
-                        <span>Last Search{lastSearchQuery ? `: "${lastSearchQuery}"` : ''}</span>
+                    )}
+                    {searchResults.length > 0 && (
+                      <div
+                        role="group"
+                        aria-label={lastSearchQuery ? `Last search: ${lastSearchQuery}` : 'Last search'}
+                        className="dropdown-option-group dropdown-option-group--labeled"
+                        data-label={lastSearchQuery ? `Last Search: “${lastSearchQuery}”` : 'Last Search'}
+                      >
+                        {visibleOptions
+                          .filter((option) => option.kind === 'search')
+                          .map(renderOption)}
                       </div>
-                      {searchResults.map((r) => (
-                        <button key={r.id} className="dropdown-item" onClick={() => handleResultSelect(r)}>
-                          <span className="dropdown-name">{r.name}</span>
-                          <span className="dropdown-meta">
-                            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
-                            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
-                            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
-                          </span>
-                        </button>
-                      ))}
-                    </>
-                  )}
-                </>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {status === 'searching' && (
+                <div aria-hidden="true">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="skeleton-item">
+                      <div className="skeleton-line title" />
+                      <div className="skeleton-line meta" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {status !== 'searching' && searchResultsMatchInput && visibleOptions.length === 0 && (
+                <div className="dropdown-empty" role="status">
+                  No recipes found for "{input}"
+                </div>
+              )}
+
+              {status !== 'searching' && visibleOptions.length > 0 && (
+                <div className="dropdown-shortcuts" aria-hidden="true">
+                  <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+                  <span><kbd>Enter</kbd> Open</span>
+                  <span><kbd>Esc</kbd> Close</span>
+                </div>
               )}
             </div>
           )}

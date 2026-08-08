@@ -35,6 +35,18 @@ html, body {
   height: 100%;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .app {
   min-height: 100vh;
   display: flex;
@@ -178,10 +190,10 @@ html, body {
 
 .primary-btn {
   background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  color: #fff;
+  color: var(--bg);
 }
 .primary-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--accent-hover), #9a7838);
+  background: linear-gradient(135deg, var(--accent-hover), #9f7d3d);
 }
 .primary-btn.clip {
   background: var(--clip-color);
@@ -265,9 +277,14 @@ html, body {
   border-left: 2px solid transparent;
 }
 .dropdown-item:last-child { border-bottom: none; }
-.dropdown-item:hover {
+.dropdown-item:hover,
+.dropdown-item[aria-selected="true"] {
   background: var(--surface2);
   border-left-color: var(--accent);
+}
+
+.dropdown-item[aria-selected="true"] {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .dropdown-name {
@@ -316,9 +333,70 @@ html, body {
   cursor: pointer;
   font-size: 0.7rem;
   color: var(--text-muted);
-  padding: 0;
+  min-width: 40px;
+  min-height: 24px;
+  padding: 2px 6px;
 }
 .dropdown-clear-btn:hover { color: var(--accent); }
+.dropdown-clear-btn:focus-visible {
+  color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.dropdown-option-group--labeled::before {
+  content: attr(data-label);
+  display: block;
+  padding: 0.5rem 1rem 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dropdown-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.dropdown-shortcuts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdown-shortcuts kbd {
+  min-width: 20px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-bottom-color: var(--text-muted);
+  border-radius: 4px;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.35;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .dropdown-shortcuts {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .dropdown-item[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
 
 /* ── Skeleton loading items ── */
 .skeleton-item {
@@ -2078,4 +2156,13 @@ html, body {
 }
 .planner-feedback-dismiss:hover {
   opacity: 1;
+}
+
+/* Respect motion preferences after all component animation declarations. */
+@media (prefers-reduced-motion: reduce) {
+  .dropdown,
+  .omnibox-inner.busy,
+  .skeleton-line {
+    animation: none;
+  }
 }
