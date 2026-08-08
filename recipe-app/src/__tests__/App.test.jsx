@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { MealPlanProvider } from '../MealPlanContext.jsx';
@@ -48,11 +48,11 @@ function mockFetchFail(status = 500) {
 // Sets the input to a value via a single change event (avoids per-character
 // debounce fires that would consume mockOnce responses prematurely).
 function setInputValue(value) {
-  fireEvent.change(screen.getByRole('textbox'), { target: { value } });
+  fireEvent.change(screen.getByRole('combobox'), { target: { value } });
 }
 
 function pressEnter() {
-  fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
 }
 
 const SEARCH_RESPONSE = {
@@ -210,7 +210,7 @@ describe('Search behaviour', () => {
     await waitFor(() => screen.getByText('Chocolate Cake'));
     fireEvent.click(screen.getByText('Chocolate Cake'));
 
-    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
   test('Escape key closes the dropdown', async () => {
@@ -222,7 +222,7 @@ describe('Search behaviour', () => {
     pressEnter();
 
     await waitFor(() => screen.getByText('Chocolate Cake'));
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' });
 
     expect(screen.queryByText('Chocolate Cake')).not.toBeInTheDocument();
   });
@@ -252,6 +252,205 @@ describe('Search behaviour', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/recipes/abc123')
     );
+  });
+});
+
+describe('Omnibox accessibility and keyboard navigation', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('exposes an accessible combobox linked to its listbox', async () => {
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    renderApp();
+    const input = screen.getByRole('combobox', {
+      name: /search, clip, or generate a recipe/i,
+    });
+
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    setInputValue('cake');
+    pressEnter();
+
+    await waitFor(() => expect(screen.getByRole('option', { name: /Chocolate Cake/i })).toBeInTheDocument());
+
+    const listbox = screen.getByRole('listbox', { name: /recipe suggestions/i });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
+  });
+
+  test('navigates suggestions with arrow keys and opens the active recipe with Enter', async () => {
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    renderApp();
+    setInputValue('cake');
+    pressEnter();
+
+    const option = await screen.findByRole('option', { name: /Chocolate Cake/i });
+    const input = screen.getByRole('combobox');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+    expect(input).toHaveFocus();
+    expect(option).toHaveAttribute('aria-selected', 'true');
+    expect(input).toHaveAttribute('aria-activedescendant', option.id);
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(screen.getByRole('heading', { name: /Chocolate Cake/i })).toBeInTheDocument();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  test('ArrowUp wraps to the last recently viewed recipe', () => {
+    seedLocalStorage([
+      { id: 'r1', name: 'Recipe One', ingredients: [], instructions: [] },
+      { id: 'r2', name: 'Recipe Two', ingredients: [], instructions: [] },
+    ]);
+
+    renderApp();
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+
+    const lastOption = screen.getByRole('option', { name: /Recipe Two/i });
+    expect(lastOption).toHaveAttribute('aria-selected', 'true');
+    expect(input).toHaveAttribute('aria-activedescendant', lastOption.id);
+  });
+
+  test('Escape closes suggestions and clears the active descendant', async () => {
+    seedLocalStorage([{ id: 'r1', name: 'Recipe One', ingredients: [], instructions: [] }]);
+
+    renderApp();
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  test('Enter cancels the pending debounced duplicate search', async () => {
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    renderApp();
+    setInputValue('cake');
+    pressEnter();
+
+    await screen.findByRole('option', { name: /Chocolate Cake/i });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    const searchCalls = global.fetch.mock.calls.filter(([url]) =>
+      url.includes('/api/search?q=cake')
+    );
+    expect(searchCalls).toHaveLength(1);
+  });
+
+  test('hides previous results immediately when the text query changes', async () => {
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    renderApp();
+    setInputValue('cake');
+    pressEnter();
+    await screen.findByRole('option', { name: /Chocolate Cake/i });
+
+    setInputValue('soup');
+    const input = screen.getByRole('combobox');
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+    expect(screen.queryByRole('option', { name: /Chocolate Cake/i })).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    mockFetchOk({ results: [] });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/search?q=soup')
+      )
+    );
+  });
+
+  test('does not expose stale search options after switching to a URL', async () => {
+    mockFetchOk(SEARCH_RESPONSE);
+    mockFetchOk(FULL_RECIPE_RESPONSE);
+
+    renderApp();
+    setInputValue('cake');
+    pressEnter();
+    await screen.findByRole('option', { name: /Chocolate Cake/i });
+
+    setInputValue('https://example.com/soup');
+    const input = screen.getByRole('combobox');
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    mockFetchOk(CLIP_RESPONSE);
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(await screen.findByRole('heading', { name: /Clipped Soup/i })).toBeInTheDocument();
+  });
+
+  test('ignores a slower response from an outdated query', async () => {
+    let resolveFirstSearch;
+    let resolveSecondSearch;
+    const response = (body) => ({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(body),
+    });
+
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/api/search?q=first')) {
+        return new Promise((resolve) => { resolveFirstSearch = resolve; });
+      }
+      if (url.includes('/api/search?q=second')) {
+        return new Promise((resolve) => { resolveSecondSearch = resolve; });
+      }
+      if (url.includes('/api/recipes/second-id')) {
+        return Promise.resolve(response({
+          data: { ...FULL_RECIPE_RESPONSE.data, name: 'Second Recipe' },
+        }));
+      }
+      if (url.includes('/api/recipes/first-id')) {
+        return Promise.resolve(response({
+          data: { ...FULL_RECIPE_RESPONSE.data, name: 'First Recipe' },
+        }));
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    renderApp();
+    setInputValue('first');
+    pressEnter();
+    await waitFor(() => expect(resolveFirstSearch).toBeDefined());
+
+    setInputValue('second');
+    pressEnter();
+    await waitFor(() => expect(resolveSecondSearch).toBeDefined());
+
+    await act(async () => {
+      resolveSecondSearch(response({ results: [{ id: 'second-id' }] }));
+    });
+    expect(await screen.findByRole('option', { name: /Second Recipe/i })).toBeInTheDocument();
+
+    await act(async () => {
+      resolveFirstSearch(response({ results: [{ id: 'first-id' }] }));
+    });
+
+    expect(screen.queryByRole('option', { name: /First Recipe/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Second Recipe/i })).toBeInTheDocument();
   });
 });
 
@@ -322,7 +521,7 @@ describe('Clip behaviour', () => {
     pressEnter();
 
     await waitFor(() => screen.getByRole('heading', { name: /Clipped Soup/i }));
-    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
   test('shows error when clip fetch fails', async () => {
@@ -455,7 +654,7 @@ describe('Generate behaviour', () => {
     fireEvent.click(screen.getByText('Generate'));
 
     await waitFor(() => screen.getByRole('heading', { name: /AI Omelette/i }));
-    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
   test('shows error when generation fetch fails', async () => {
@@ -669,7 +868,7 @@ describe('Recently viewed recipes', () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
     renderApp();
-    fireEvent.focus(screen.getByRole('textbox'));
+    fireEvent.focus(screen.getByRole('combobox'));
 
     expect(screen.getByText('Recently Viewed')).toBeInTheDocument();
     expect(screen.getByText('Chocolate Cake')).toBeInTheDocument();
@@ -688,11 +887,11 @@ describe('Recently viewed recipes', () => {
 
     // Clear the input — dropdown should now show both sections
     setInputValue('');
-    fireEvent.focus(screen.getByRole('textbox'));
+    fireEvent.focus(screen.getByRole('combobox'));
 
     expect(screen.getByText('Recently Viewed')).toBeInTheDocument();
     expect(screen.getByText('Saved Pasta')).toBeInTheDocument();
-    expect(screen.getByText(/Last Search/i)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Last search: cake/i })).toBeInTheDocument();
     expect(screen.getAllByText('Chocolate Cake').length).toBeGreaterThan(0);
   });
 
@@ -725,7 +924,7 @@ describe('Recently viewed recipes', () => {
     seedLocalStorage([recentRecipe]);
 
     renderApp();
-    fireEvent.focus(screen.getByRole('textbox'));
+    fireEvent.focus(screen.getByRole('combobox'));
 
     await waitFor(() => screen.getByText('Chocolate Cake'));
     fireEvent.click(screen.getByText('Chocolate Cake'));
@@ -809,7 +1008,7 @@ describe('Recently viewed recipes', () => {
     seedLocalStorage([recipe2, recipe1]); // recipe2 is more recent
 
     renderApp();
-    fireEvent.focus(screen.getByRole('textbox'));
+    fireEvent.focus(screen.getByRole('combobox'));
 
     // Re-open the older recipe from recent
     await waitFor(() => screen.getByText('Recipe One'));
@@ -827,7 +1026,7 @@ describe('Recently viewed recipes', () => {
     seedLocalStorage([{ id: 'abc123', name: 'Chocolate Cake', description: '', image: '', prep_time: null, cook_time: null, recipe_yield: null, ingredients: [], instructions: [] }]);
 
     renderApp();
-    fireEvent.focus(screen.getByRole('textbox'));
+    fireEvent.focus(screen.getByRole('combobox'));
 
     await waitFor(() => screen.getByText('Recently Viewed'));
     fireEvent.click(screen.getByText('Clear'));
