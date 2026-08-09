@@ -95,6 +95,16 @@ describe('Passkey endpoints', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
 
+  it('returns unauthorized when the registration user is no longer active', async () => {
+    const token = await new JWTService(mockEnv).createToken(userId, email);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'SUSPENDED' } }));
+    const response = await app.fetch(new Request('http://localhost/passkeys/register/begin', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.token}` },
+    }), mockEnv);
+    expect(response.status).toBe(401);
+  });
+
   it('requires a JWT to begin registration', async () => {
     const response = await app.fetch(new Request('http://localhost/passkeys/register/begin', { method: 'POST' }), mockEnv);
     expect(response.status).toBe(401);
@@ -119,6 +129,16 @@ describe('Passkey endpoints', () => {
     }));
   });
 
+  it('returns an internal error for malformed registration JSON', async () => {
+    const token = await new JWTService(mockEnv).createToken(userId, email);
+    const response = await app.fetch(new Request('http://localhost/passkeys/register/complete', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
+      body: '{',
+    }), mockEnv);
+    expect(response.status).toBe(500);
+  });
+
   it('rejects malformed registration responses before consuming a challenge', async () => {
     const token = await new JWTService(mockEnv).createToken(userId, email);
     const response = await app.fetch(new Request('http://localhost/passkeys/register/complete', {
@@ -128,6 +148,17 @@ describe('Passkey endpoints', () => {
     }), mockEnv);
     expect(response.status).toBe(400);
     expect(kv.size).toBe(0);
+  });
+
+  it('returns unauthorized when completing registration for a suspended user', async () => {
+    const token = await new JWTService(mockEnv).createToken(userId, email);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, data: { status: 'DELETED' } }));
+    const response = await app.fetch(new Request('http://localhost/passkeys/register/complete', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: 'a'.repeat(64), response: passkeyResponse('create') }),
+    }), mockEnv);
+    expect(response.status).toBe(401);
   });
 
   it('verifies and stores a valid registration response', async () => {
@@ -159,6 +190,13 @@ describe('Passkey endpoints', () => {
     expect(body.credentialId).toBe('AQI');
     expect(kv.size).toBe(0);
     expect(fetchMock).toHaveBeenCalledWith('https://users.example.com/passkey-credentials', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('returns an internal error for malformed authentication JSON', async () => {
+    const response = await app.fetch(new Request('http://localhost/passkeys/authenticate/begin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{',
+    }), mockEnv);
+    expect(response.status).toBe(500);
   });
 
   it('requires a valid email for authentication options', async () => {
