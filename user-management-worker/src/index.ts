@@ -6,9 +6,26 @@ import { UserDatabaseService } from './services/user-database';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string): string | undefined } }): boolean {
+  const configuredToken = c.env.PASSKEY_SERVICE_TOKEN;
+  if (c.env.ENVIRONMENT === 'development') return true;
+  return typeof configuredToken === 'string' && configuredToken.length > 0 && c.req.header('X-Internal-Auth') === configuredToken;
+}
+
 // Middleware
 app.use('*', logger());
 app.use('*', cors());
+
+// User data and audit routes are worker-internal. Development keeps the
+// existing local workflow convenient; deployed environments require the shared
+// PASSKEY_SERVICE_TOKEN secret configured on both workers.
+app.use('*', async (c, next) => {
+  if (c.req.path === '/' || c.req.path === '/health' || hasPasskeyServiceAccess(c)) {
+    await next();
+    return;
+  }
+  return c.json({ success: false, message: 'Unauthorized' }, 401);
+});
 
 // Health check endpoint
 app.get('/health', async (c) => {
@@ -345,7 +362,7 @@ app.post('/login-history', async (c) => {
       }, 400);
     }
 
-    if (!['OTP', 'MAGIC_LINK'].includes(login_method)) {
+    if (!['OTP', 'MAGIC_LINK', 'PASSKEY'].includes(login_method)) {
       return c.json({
         success: false,
         message: 'Invalid login method'
@@ -389,6 +406,123 @@ app.post('/login-history', async (c) => {
       success: false,
       message: 'Internal server error'
     }, 500);
+  }
+});
+
+// Passkey credential endpoints. These are intended for the Auth Worker and
+// can be protected with PASSKEY_SERVICE_TOKEN in deployed environments.
+app.get('/passkey-credentials/user/:user_id', async (c) => {
+  if (!hasPasskeyServiceAccess(c)) {
+    return c.json({ success: false, message: 'Unauthorized' }, 401);
+  }
+
+  try {
+    const userId = c.req.param('user_id');
+    const result = await new UserDatabaseService(c.env.USER_DB).getPasskeyCredentialsByUserId(userId);
+    return result.success
+      ? c.json({ success: true, data: result.data })
+      : c.json({ success: false, message: result.error }, 500);
+  } catch (error) {
+    console.error('Error getting passkey credentials:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.get('/passkey-credentials/:credential_id', async (c) => {
+  if (!hasPasskeyServiceAccess(c)) {
+    return c.json({ success: false, message: 'Unauthorized' }, 401);
+  }
+
+  try {
+    const credentialId = c.req.param('credential_id');
+    const result = await new UserDatabaseService(c.env.USER_DB).getPasskeyCredential(credentialId);
+    return result.success
+      ? c.json({ success: true, data: result.data })
+      : c.json({ success: false, message: result.error }, 404);
+  } catch (error) {
+    console.error('Error getting passkey credential:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/passkey-credentials', async (c) => {
+  if (!hasPasskeyServiceAccess(c)) {
+    return c.json({ success: false, message: 'Unauthorized' }, 401);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { credential_id, user_id, public_key, counter, device_type, backed_up, transports } = body;
+
+    if (typeof credential_id !== 'string' || !credential_id ||
+        typeof user_id !== 'string' || !user_id ||
+        typeof public_key !== 'string' || !public_key ||
+        !Number.isInteger(counter) || counter < 0 ||
+        !['singleDevice', 'multiDevice'].includes(device_type)) {
+      return c.json({ success: false, message: 'Invalid passkey credential' }, 400);
+    }
+
+    if (transports !== undefined && (!Array.isArray(transports) || transports.some((item) => typeof item !== 'string'))) {
+      return c.json({ success: false, message: 'Invalid passkey transports' }, 400);
+    }
+
+    const result = await new UserDatabaseService(c.env.USER_DB).createPasskeyCredential({
+      credential_id,
+      user_id,
+      public_key,
+      counter,
+      device_type,
+      backed_up: backed_up === true || backed_up === 1,
+      transports
+    });
+    return result.success
+      ? c.json({ success: true, data: result.data }, 201)
+      : c.json({ success: false, message: result.error }, 409);
+  } catch (error) {
+    console.error('Error creating passkey credential:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.patch('/passkey-credentials/:credential_id/counter', async (c) => {
+  if (!hasPasskeyServiceAccess(c)) {
+    return c.json({ success: false, message: 'Unauthorized' }, 401);
+  }
+
+  try {
+    const credentialId = c.req.param('credential_id');
+    const body = await c.req.json();
+    const { previous_counter, counter } = body;
+    if (!Number.isInteger(previous_counter) || previous_counter < 0 ||
+        !Number.isInteger(counter) || counter < 0 || counter < previous_counter) {
+      return c.json({ success: false, message: 'Invalid passkey counter' }, 400);
+    }
+
+    const result = await new UserDatabaseService(c.env.USER_DB).updatePasskeyCounter(credentialId, previous_counter, counter);
+    return result.success
+      ? c.json({ success: true, data: result.data })
+      : c.json({ success: false, message: result.error }, 409);
+  } catch (error) {
+    console.error('Error updating passkey counter:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.delete('/passkey-credentials/:credential_id', async (c) => {
+  if (!hasPasskeyServiceAccess(c)) {
+    return c.json({ success: false, message: 'Unauthorized' }, 401);
+  }
+
+  try {
+    const credentialId = c.req.param('credential_id');
+    const userId = c.req.query('user_id');
+    const result = await new UserDatabaseService(c.env.USER_DB).deletePasskeyCredential(credentialId, userId);
+    return result.success
+      ? c.json({ success: true, affectedRows: result.affectedRows })
+      : c.json({ success: false, message: result.error }, 500);
+  } catch (error) {
+    console.error('Error deleting passkey credential:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });
 
@@ -519,13 +653,18 @@ app.get('/', (c) => {
         path: '/login-history',
         method: 'POST',
         description: 'Create login history record',
-        body: { user_id: 'string', login_method: 'OTP|MAGIC_LINK', success: 'boolean' }
+        body: { user_id: 'string', login_method: 'OTP|MAGIC_LINK|PASSKEY', success: 'boolean' }
       },
       {
         path: '/login-history/recent',
         method: 'GET',
         description: 'Get recent login activity',
         query: { limit: 'number?' }
+      },
+      {
+        path: '/passkey-credentials/*',
+        method: 'GET|POST|PATCH|DELETE',
+        description: 'Internal passkey credential storage routes'
       }
     ]
   });

@@ -8,7 +8,9 @@ import {
   DatabaseResult,
   PaginatedResult,
   RecentLoginActivity,
-  UserStatistics
+  UserStatistics,
+  PasskeyCredential,
+  CreatePasskeyCredentialInput
 } from '../types/database';
 
 export class UserDatabaseService {
@@ -127,8 +129,11 @@ export class UserDatabaseService {
 
   async deleteUser(user_id: string): Promise<DatabaseResult<{ affectedRows: number }>> {
     try {
+      // Preserve a DELETED tombstone so authentication cannot recreate an
+      // identity from a still-valid JWT or a later OTP request.
       const result = await this.db.prepare(`
-        DELETE FROM users WHERE user_id = ?
+        UPDATE users SET status = 'DELETED', updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND status != 'DELETED'
       `).bind(user_id).run();
 
       return { success: true, affectedRows: result.meta?.changes || 0 };
@@ -141,8 +146,14 @@ export class UserDatabaseService {
   // Login History Management
   async createLoginHistory(input: CreateLoginHistoryInput): Promise<DatabaseResult<UserLoginHistory>> {
     try {
+      // Existing databases keep the original login_method CHECK constraint. Keep
+      // passkey audit events in the additive table so the migration never has to
+      // rewrite or drop existing login history.
+      const historyTable = input.login_method === 'PASSKEY'
+        ? 'passkey_login_history'
+        : 'user_login_history';
       const result = await this.db.prepare(`
-        INSERT INTO user_login_history (
+        INSERT INTO ${historyTable} (
           user_id, ip_address, user_agent, location_data,
           country, region, city, latitude, longitude, timezone,
           login_method, success, failure_reason, device_fingerprint, risk_score
@@ -173,6 +184,104 @@ export class UserDatabaseService {
       return { success: true, data: result };
     } catch (error) {
       console.error('Error creating login history:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  // Passkey credential management
+  async getPasskeyCredentialsByUserId(userId: string): Promise<DatabaseResult<PasskeyCredential[]>> {
+    try {
+      const result = await this.db.prepare(`
+        SELECT * FROM passkey_credentials
+        WHERE user_id = ?
+        ORDER BY created_at ASC
+      `).bind(userId).all<PasskeyCredential>();
+
+      return { success: true, data: result.results };
+    } catch (error) {
+      console.error('Error getting passkey credentials:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async getPasskeyCredential(credentialId: string): Promise<DatabaseResult<PasskeyCredential>> {
+    try {
+      const result = await this.db.prepare(`
+        SELECT * FROM passkey_credentials WHERE credential_id = ?
+      `).bind(credentialId).first<PasskeyCredential>();
+
+      return result
+        ? { success: true, data: result }
+        : { success: false, error: 'Passkey credential not found' };
+    } catch (error) {
+      console.error('Error getting passkey credential:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async createPasskeyCredential(input: CreatePasskeyCredentialInput): Promise<DatabaseResult<PasskeyCredential>> {
+    try {
+      const result = await this.db.prepare(`
+        INSERT INTO passkey_credentials (
+          credential_id, user_id, public_key, counter, device_type, backed_up, transports
+        )
+        SELECT ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM users WHERE user_id = ? AND status = 'ACTIVE'
+        )
+        RETURNING *
+      `).bind(
+        input.credential_id,
+        input.user_id,
+        input.public_key,
+        input.counter,
+        input.device_type,
+        input.backed_up ? 1 : 0,
+        input.transports ? JSON.stringify(input.transports) : null,
+        input.user_id
+      ).first<PasskeyCredential>();
+
+      return result
+        ? { success: true, data: result }
+        : { success: false, error: 'Failed to create passkey credential' };
+    } catch (error) {
+      console.error('Error creating passkey credential:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async updatePasskeyCounter(credentialId: string, previousCounter: number, newCounter: number): Promise<DatabaseResult<PasskeyCredential>> {
+    try {
+      const result = await this.db.prepare(`
+        UPDATE passkey_credentials
+        SET counter = ?, last_used_at = CURRENT_TIMESTAMP
+        WHERE credential_id = ? AND counter = ?
+          AND EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = passkey_credentials.user_id
+              AND users.status = 'ACTIVE'
+          )
+        RETURNING *
+      `).bind(newCounter, credentialId, previousCounter).first<PasskeyCredential>();
+
+      return result
+        ? { success: true, data: result }
+        : { success: false, error: 'Passkey counter changed or credential not found' };
+    } catch (error) {
+      console.error('Error updating passkey counter:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async deletePasskeyCredential(credentialId: string, userId?: string): Promise<DatabaseResult<{ affectedRows: number }>> {
+    try {
+      const statement = userId
+        ? this.db.prepare('DELETE FROM passkey_credentials WHERE credential_id = ? AND user_id = ?').bind(credentialId, userId)
+        : this.db.prepare('DELETE FROM passkey_credentials WHERE credential_id = ?').bind(credentialId);
+      const result = await statement.run();
+      return { success: true, affectedRows: result.meta?.changes || 0 };
+    } catch (error) {
+      console.error('Error deleting passkey credential:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

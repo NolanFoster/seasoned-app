@@ -28,6 +28,10 @@ export interface OTPVerificationResult {
 const MAX_ATTEMPTS = 3;
 const OTP_EXPIRY_MINUTES = 5;
 
+function otpKey(emailHash: string, prefix = ''): string {
+  return prefix ? `${prefix}:${emailHash}` : emailHash;
+}
+
 /**
  * Store an OTP for an email address
  * @param otpKV - The OTP KV namespace
@@ -40,7 +44,8 @@ export async function storeOTP(
   otpKV: KVNamespace,
   email: string,
   otp?: string,
-  expiryMinutes: number = OTP_EXPIRY_MINUTES
+  expiryMinutes: number = OTP_EXPIRY_MINUTES,
+  keyPrefix = ''
 ): Promise<OTPResult> {
   try {
     if (!otp) {
@@ -61,7 +66,7 @@ export async function storeOTP(
 
     // Store with TTL slightly longer than expiry to handle clock skew
     const ttlSeconds = Math.ceil(expiryMinutes * 60 * 1.1);
-    await otpKV.put(emailHash, JSON.stringify(otpRecord), {
+    await otpKV.put(otpKey(emailHash, keyPrefix), JSON.stringify(otpRecord), {
       expirationTtl: ttlSeconds
     });
 
@@ -89,11 +94,13 @@ export async function storeOTP(
 export async function verifyOTPForEmail(
   otpKV: KVNamespace,
   email: string,
-  otp: string
+  otp: string,
+  keyPrefix = ''
 ): Promise<OTPVerificationResult> {
   try {
     const emailHash = await hashEmail(email);
-    const recordData = await otpKV.get(emailHash);
+    const key = otpKey(emailHash, keyPrefix);
+    const recordData = await otpKV.get(key);
 
     if (!recordData) {
       return {
@@ -106,7 +113,7 @@ export async function verifyOTPForEmail(
 
     // Check if expired
     if (isExpired(record.expiresAt)) {
-      await otpKV.delete(emailHash);
+      await otpKV.delete(key);
       return {
         success: false,
         message: 'OTP has expired'
@@ -115,7 +122,7 @@ export async function verifyOTPForEmail(
 
     // Check attempts
     if (record.attempts >= MAX_ATTEMPTS) {
-      await otpKV.delete(emailHash);
+      await otpKV.delete(key);
       return {
         success: false,
         message: 'Maximum verification attempts exceeded'
@@ -127,7 +134,7 @@ export async function verifyOTPForEmail(
 
     if (isValid) {
       // OTP is valid, delete it
-      await otpKV.delete(emailHash);
+      await otpKV.delete(key);
       return {
         success: true,
         message: 'OTP verified successfully',
@@ -142,7 +149,7 @@ export async function verifyOTPForEmail(
         // Update record with incremented attempts
         const ttlSeconds = Math.ceil((record.expiresAt - Date.now()) / 1000);
         if (ttlSeconds > 0) {
-          await otpKV.put(emailHash, JSON.stringify(record), {
+          await otpKV.put(key, JSON.stringify(record), {
             expirationTtl: ttlSeconds
           });
         }
@@ -154,7 +161,7 @@ export async function verifyOTPForEmail(
         };
       } else {
         // Max attempts reached, delete record
-        await otpKV.delete(emailHash);
+        await otpKV.delete(otpKey(emailHash, keyPrefix));
         return {
           success: false,
           message: 'Invalid OTP. Maximum attempts exceeded.'
@@ -176,10 +183,10 @@ export async function verifyOTPForEmail(
  * @param email - The email address
  * @returns Promise<boolean>
  */
-export async function hasOTP(otpKV: KVNamespace, email: string): Promise<boolean> {
+export async function hasOTP(otpKV: KVNamespace, email: string, keyPrefix = ''): Promise<boolean> {
   try {
     const emailHash = await hashEmail(email);
-    const recordData = await otpKV.get(emailHash);
+    const recordData = await otpKV.get(otpKey(emailHash, keyPrefix));
     
     if (!recordData) {
       return false;
@@ -199,10 +206,10 @@ export async function hasOTP(otpKV: KVNamespace, email: string): Promise<boolean
  * @param email - The email address
  * @returns Promise<boolean> - True if deleted successfully
  */
-export async function deleteOTP(otpKV: KVNamespace, email: string): Promise<boolean> {
+export async function deleteOTP(otpKV: KVNamespace, email: string, keyPrefix = ''): Promise<boolean> {
   try {
     const emailHash = await hashEmail(email);
-    await otpKV.delete(emailHash);
+    await otpKV.delete(otpKey(emailHash, keyPrefix));
     return true;
   } catch (error) {
     console.error('Error deleting OTP:', error);
@@ -218,11 +225,12 @@ export async function deleteOTP(otpKV: KVNamespace, email: string): Promise<bool
  */
 export async function getOTPStats(
   otpKV: KVNamespace,
-  email: string
+  email: string,
+  keyPrefix = ''
 ): Promise<{exists: boolean, attempts?: number, expiresAt?: number}> {
   try {
     const emailHash = await hashEmail(email);
-    const recordData = await otpKV.get(emailHash);
+    const recordData = await otpKV.get(otpKey(emailHash, keyPrefix));
     
     if (!recordData) {
       return { exists: false };

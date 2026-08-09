@@ -4,6 +4,8 @@ export interface Env {
   
   // Environment variables
   ENVIRONMENT: 'development' | 'preview' | 'staging' | 'production';
+  // Optional service-to-service secret for passkey credential routes.
+  PASSKEY_SERVICE_TOKEN?: string;
 }
 
 // Extend the interface to include index signature for Hono compatibility

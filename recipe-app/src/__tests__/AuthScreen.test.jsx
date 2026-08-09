@@ -9,6 +9,7 @@ function setup(overrides = {}) {
     <AuthScreen
       onRequestOTP={overrides.onRequestOTP || onRequestOTP}
       onVerifyOTP={overrides.onVerifyOTP || onVerifyOTP}
+      onSignInWithPasskey={overrides.onSignInWithPasskey}
     />
   );
   return { onRequestOTP, onVerifyOTP, ...utils };
@@ -61,6 +62,36 @@ describe('AuthScreen — email step', () => {
     expect(await screen.findByText(/rate limited/i)).toBeInTheDocument();
   });
 });
+
+
+describe('AuthScreen — passkey sign-in', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'PublicKeyCredential', { value: function PublicKeyCredential() {}, configurable: true })
+    Object.defineProperty(navigator, 'credentials', { value: {}, configurable: true })
+  })
+
+  test('shows passkey action when the browser supports WebAuthn', () => {
+    setup({ onSignInWithPasskey: jest.fn(() => Promise.resolve({ success: true })) })
+    expect(screen.getByRole('button', { name: /use a passkey/i })).toBeDisabled()
+  })
+
+  test('calls passkey sign-in with the entered email', async () => {
+    const onSignInWithPasskey = jest.fn(() => Promise.resolve({ success: true }))
+    setup({ onSignInWithPasskey })
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'User@Example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: /use a passkey/i }))
+    await waitFor(() => expect(onSignInWithPasskey).toHaveBeenCalledWith('User@Example.com'))
+  })
+
+  test('shows a cancellation error without losing the email fallback', async () => {
+    const onSignInWithPasskey = jest.fn(() => Promise.reject(new Error('Passkey sign-in was cancelled')))
+    setup({ onSignInWithPasskey })
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'user@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: /use a passkey/i }))
+    expect(await screen.findByText(/cancelled/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /continue with email/i })).toBeInTheDocument()
+  })
+})
 
 describe('AuthScreen — OTP step', () => {
   async function goToOtpStep(overrides = {}) {

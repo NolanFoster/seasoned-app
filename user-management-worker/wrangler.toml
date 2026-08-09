@@ -50,3 +50,8 @@ database_id = "171ffc3f-40bd-4738-b879-4ccd8d79db39"
 
 [env.staging.observability]
 enabled = true
+
+# Set the same secret on each environment before enabling passkey routes:
+#   wrangler secret put PASSKEY_SERVICE_TOKEN --env preview
+#   wrangler secret put PASSKEY_SERVICE_TOKEN --env staging
+#   wrangler secret put PASSKEY_SERVICE_TOKEN --env production

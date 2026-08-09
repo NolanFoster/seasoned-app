@@ -14,6 +14,8 @@ export interface User {
   two_factor_enabled: boolean;
 }
 
+export type LoginMethod = 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
+
 export interface UserLoginHistory {
   id?: number;
   user_id: string;
@@ -27,11 +29,23 @@ export interface UserLoginHistory {
   latitude?: number;
   longitude?: number;
   timezone?: string;
-  login_method: 'OTP' | 'MAGIC_LINK';
+  login_method: LoginMethod;
   success: boolean;
   failure_reason?: string;
   device_fingerprint?: string;
   risk_score: number;
+}
+
+export interface PasskeyCredential {
+  credential_id: string;
+  user_id: string;
+  public_key: string;
+  counter: number;
+  device_type: 'singleDevice' | 'multiDevice';
+  backed_up: number;
+  transports?: string;
+  created_at: string;
+  last_used_at?: string;
 }
 
 // Parsed types for JSON fields
@@ -54,7 +68,7 @@ export interface RecentLoginActivity {
   ip_address?: string;
   country?: string;
   city?: string;
-  login_method: 'OTP' | 'MAGIC_LINK';
+  login_method: LoginMethod;
   success: boolean;
   risk_score: number;
 }
@@ -95,11 +109,21 @@ export interface CreateLoginHistoryInput {
   latitude?: number;
   longitude?: number;
   timezone?: string;
-  login_method: 'OTP' | 'MAGIC_LINK';
+  login_method: LoginMethod;
   success: boolean;
   failure_reason?: string;
   device_fingerprint?: string;
   risk_score?: number;
+}
+
+export interface CreatePasskeyCredentialInput {
+  credential_id: string;
+  user_id: string;
+  public_key: string;
+  counter: number;
+  device_type: 'singleDevice' | 'multiDevice';
+  backed_up: boolean;
+  transports?: string[];
 }
 
 // Update types

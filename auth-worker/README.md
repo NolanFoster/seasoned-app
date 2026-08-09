@@ -278,3 +278,14 @@ wrangler tail --env=preview
 ## License
 
 This project follows the same license as the main recipe-app repository.
+### Passkeys (WebAuthn)
+
+In addition to OTP recovery, the worker supports native browser passkeys:
+
+- `POST /passkeys/register/begin` and `/passkeys/register/complete` (Bearer JWT required)
+- `POST /passkeys/authenticate/begin` and `/passkeys/authenticate/complete` (email-first sign-in)
+
+Registration challenges are claimed atomically by the `PasskeyChallengeObject` Durable Object.
+Set `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, and the exact HTTPS `WEBAUTHN_ORIGIN` for each
+non-development environment. Set the same `PASSKEY_SERVICE_TOKEN` secret on this worker and
+`user-management-worker` before enabling passkeys.

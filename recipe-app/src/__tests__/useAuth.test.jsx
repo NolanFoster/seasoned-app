@@ -13,6 +13,8 @@ function TestHarness() {
       <span data-testid="email">{auth.user?.email || ''}</span>
       <button data-testid="request" onClick={() => auth.requestOTP('u@e.com')}>req</button>
       <button data-testid="verify" onClick={() => auth.verifyOTP('u@e.com', '123456')}>ver</button>
+      <button data-testid="passkey" onClick={() => auth.signInWithPasskey('U@E.COM')}>passkey</button>
+      <button data-testid="register-passkey" onClick={() => auth.registerPasskey()}>register</button>
       <button data-testid="signout" onClick={auth.signOut}>out</button>
     </div>
   );
@@ -102,6 +104,94 @@ describe('useAuth', () => {
     expect(screen.getByTestId('authenticated').textContent).toBe('true');
     expect(localStorage.getItem('seasoned_auth_token')).toBe('new-jwt');
   });
+
+  test('signInWithPasskey converts options and stores the returned session', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', { value: function PublicKeyCredential() {}, configurable: true })
+    const get = jest.fn(() => Promise.resolve({
+      id: 'credential-id',
+      rawId: Uint8Array.from([1, 2, 3]).buffer,
+      type: 'public-key',
+      response: {
+        clientDataJSON: Uint8Array.from([4]).buffer,
+        authenticatorData: Uint8Array.from([5]).buffer,
+        signature: Uint8Array.from([6]).buffer,
+        userHandle: null,
+      },
+      getClientExtensionResults: () => ({}),
+    }))
+    Object.defineProperty(navigator, 'credentials', { value: { get }, configurable: true })
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          success: true,
+          state: 'state',
+          options: {
+            challenge: 'Y2hhbGxlbmdl',
+            rpId: 'localhost',
+            allowCredentials: [{ id: 'AQID', type: 'public-key' }],
+            userVerification: 'required',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, token: 'passkey-jwt', user: { id: 'hash', email: 'u@e.com' } }),
+      })
+
+    render(<TestHarness />)
+    await waitFor(() => expect(screen.getByTestId('loading').textContent).toBe('false'))
+    await act(async () => screen.getByTestId('passkey').click())
+
+    expect(get).toHaveBeenCalledWith(expect.objectContaining({ publicKey: expect.objectContaining({ challenge: expect.any(ArrayBuffer) }) }))
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      `${AUTH_URL}/passkeys/authenticate/complete`,
+      expect.objectContaining({ method: 'POST', body: expect.stringContaining('credential-id') })
+    )
+    expect(screen.getByTestId('authenticated').textContent).toBe('true')
+    expect(localStorage.getItem('seasoned_auth_token')).toBe('passkey-jwt')
+  })
+
+  test('registerPasskey sends the bearer token and serialized attestation', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', { value: function PublicKeyCredential() {}, configurable: true })
+    const create = jest.fn(() => Promise.resolve({
+      id: 'new-credential',
+      rawId: Uint8Array.from([7, 8]).buffer,
+      type: 'public-key',
+      response: {
+        clientDataJSON: Uint8Array.from([9]).buffer,
+        attestationObject: Uint8Array.from([10]).buffer,
+        getTransports: () => ['internal'],
+      },
+      getClientExtensionResults: () => ({}),
+    }))
+    Object.defineProperty(navigator, 'credentials', { value: { create }, configurable: true })
+    localStorage.setItem('seasoned_auth_token', 'existing-token')
+    localStorage.setItem('seasoned_auth_user', JSON.stringify({ id: 'hash', email: 'u@e.com' }))
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ success: true, valid: true }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ success: true, token: 'refreshed-token', user: { id: 'hash', email: 'u@e.com' } }) })
+      .mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: () => Promise.resolve({ success: true, state: 'register-state', options: { challenge: 'Y2hhbGxlbmdl', user: { id: 'dXNlcg', name: 'u@e.com', displayName: 'u@e.com' }, excludeCredentials: [] } }),
+      })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ success: true }) })
+
+    render(<TestHarness />)
+    await waitFor(() => expect(screen.getByTestId('authenticated').textContent).toBe('true'))
+    await act(async () => screen.getByTestId('register-passkey').click())
+
+    expect(create).toHaveBeenCalled()
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      `${AUTH_URL}/passkeys/register/complete`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer refreshed-token' }),
+      })
+    )
+  })
 
   test('signOut clears token and user', async () => {
     localStorage.setItem('seasoned_auth_token', 'tok');

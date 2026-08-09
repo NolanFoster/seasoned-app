@@ -2,79 +2,117 @@ name = "auth-worker"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# KV Namespace for OTP storage
+# KV Namespace for OTP/challenge fallback storage. OTP_KV_PREFIX isolates environments.
 [[kv_namespaces]]
 binding = "OTP_KV"
-id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID after creation
+id = "1fdebf1b59e249a691746f85a9eb5e62"
 
-# Environment variables
+[[durable_objects.bindings]]
+name = "PASSKEY_CHALLENGE_DO"
+class_name = "PasskeyChallengeObject"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["PasskeyChallengeObject"]
+
 [vars]
+ENVIRONMENT = "production"
+OTP_KV_PREFIX = "production"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+WEBAUTHN_RP_ID = "seasoned-frontend.pages.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_ORIGIN = "https://seasoned-frontend.pages.dev"
 
-# Cloudflare Email Workers send_email binding
 [[send_email]]
 name = "send_email"
 
-# JWT configuration
-# JWT_SECRET must be set as a Cloudflare secret using:
-# wrangler secret put JWT_SECRET
-# This should be a strong, random string of at least 32 characters
+# JWT_SECRET and PASSKEY_SERVICE_TOKEN are secrets, not vars. Configure both
+# on auth-worker and user-management-worker for each deployed environment:
+#   wrangler secret put JWT_SECRET --env preview
+#   wrangler secret put PASSKEY_SERVICE_TOKEN --env preview
+#   wrangler secret put JWT_SECRET --env staging
+#   wrangler secret put PASSKEY_SERVICE_TOKEN --env staging
+#   wrangler secret put JWT_SECRET --env production
+#   wrangler secret put PASSKEY_SERVICE_TOKEN --env production
 
-# Observability settings
 [observability]
 enabled = true
 
-# Preview environment (development)
 [env.preview]
 name = "auth-worker-preview"
 
 [env.preview.vars]
+ENVIRONMENT = "preview"
+OTP_KV_PREFIX = "preview"
 FROM_EMAIL = "verify@seasonedapp.com"
-USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker-preview.nolanfoster.workers.dev"
+WEBAUTHN_RP_ID = "seasoned-frontend.pages.dev"
+WEBAUTHN_RP_NAME = "Seasoned (Preview)"
+WEBAUTHN_ORIGIN = "https://seasoned-frontend.pages.dev"
 
 [[env.preview.send_email]]
 name = "send_email"
 
 [[env.preview.kv_namespaces]]
 binding = "OTP_KV"
-id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
+id = "1fdebf1b59e249a691746f85a9eb5e62"
+
+[[env.preview.durable_objects.bindings]]
+name = "PASSKEY_CHALLENGE_DO"
+class_name = "PasskeyChallengeObject"
 
 [env.preview.observability]
 enabled = true
 
-# Production environment
 [env.production]
 name = "auth-worker-production"
 
 [env.production.vars]
+ENVIRONMENT = "production"
+OTP_KV_PREFIX = "production"
 FROM_EMAIL = "verify@seasonedapp.com"
-USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker-production.nolanfoster.workers.dev"
+WEBAUTHN_RP_ID = "seasoned-frontend.pages.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_ORIGIN = "https://seasoned-frontend.pages.dev"
 
 [[env.production.send_email]]
 name = "send_email"
 
 [[env.production.kv_namespaces]]
 binding = "OTP_KV"
-id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
+id = "1fdebf1b59e249a691746f85a9eb5e62"
+
+[[env.production.durable_objects.bindings]]
+name = "PASSKEY_CHALLENGE_DO"
+class_name = "PasskeyChallengeObject"
 
 [env.production.observability]
 enabled = true
 
-# Staging environment
 [env.staging]
 name = "auth-worker-staging"
 
 [env.staging.vars]
+ENVIRONMENT = "staging"
+OTP_KV_PREFIX = "staging"
 FROM_EMAIL = "verify@seasonedapp.com"
-USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker-staging.nolanfoster.workers.dev"
+WEBAUTHN_RP_ID = "seasoned-frontend.pages.dev"
+WEBAUTHN_RP_NAME = "Seasoned"
+WEBAUTHN_ORIGIN = "https://seasoned-frontend.pages.dev"
 
 [[env.staging.send_email]]
 name = "send_email"
 
 [[env.staging.kv_namespaces]]
 binding = "OTP_KV"
-id = "1fdebf1b59e249a691746f85a9eb5e62" # Will be replaced with actual ID
+id = "1fdebf1b59e249a691746f85a9eb5e62"
+
+[[env.staging.durable_objects.bindings]]
+name = "PASSKEY_CHALLENGE_DO"
+class_name = "PasskeyChallengeObject"
 
 [env.staging.observability]
 enabled = true

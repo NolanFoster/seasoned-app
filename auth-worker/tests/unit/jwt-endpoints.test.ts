@@ -20,6 +20,11 @@ const mockEnv = {
 describe('JWT Endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { status: 'ACTIVE' } }),
+    }));
   });
 
   describe('POST /auth/validate', () => {

@@ -18,12 +18,11 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '18'
-        cache: 'npm'
-    
+
     - name: Test Frontend
       if: contains(github.event.head_commit.message, 'frontend') || github.event_name == 'pull_request'
       run: |
-        cd frontend
+        cd recipe-app
         if [ -f "package.json" ]; then
           npm ci
           npm test
@@ -32,6 +31,16 @@ jobs:
     - name: Test Workers
       if: contains(github.event.head_commit.message, 'worker') || github.event_name == 'pull_request'
       run: |
+        # Test authentication and user-management workers for passkey support
+        for worker_dir in auth-worker user-management-worker; do
+          if [ -d "$worker_dir" ] && [ -f "$worker_dir/package.json" ]; then
+            cd "$worker_dir"
+            npm ci
+            npm test -- --run
+            cd ..
+          fi
+        done
+
         # Test recipe-save-worker
         if [ -d "recipe-save-worker" ] && [ -f "recipe-save-worker/package.json" ]; then
           cd recipe-save-worker
@@ -48,9 +57,9 @@ jobs:
           cd ..
         fi
         
-        # Test recipe-clipper
-        if [ -d "recipe-clipper" ] && [ -f "recipe-clipper/package.json" ]; then
-          cd recipe-clipper
+        # Test clipper
+        if [ -d "clipper" ] && [ -f "clipper/package.json" ]; then
+          cd clipper
           npm ci
           npm test
           cd ..
@@ -60,14 +69,14 @@ jobs:
     - name: Run Linting
       run: |
         # Run linting for frontend
-        if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
-          cd frontend
+        if [ -d "recipe-app" ] && [ -f "recipe-app/package.json" ]; then
+          cd recipe-app
           npm run lint || echo "No lint script found"
           cd ..
         fi
         
         # Run linting for workers
-        for worker_dir in recipe-save-worker recipe-search-db recipe-clipper; do
+        for worker_dir in auth-worker user-management-worker recipe-save-worker recipe-search-db clipper; do
           if [ -d "$worker_dir" ] && [ -f "$worker_dir/package.json" ]; then
             cd "$worker_dir"
             npm run lint || echo "No lint script found in $worker_dir"

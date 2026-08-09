@@ -2166,3 +2166,62 @@ html, body {
     animation: none;
   }
 }
+
+/* Passkey authentication */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-passkey-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.auth-passkey-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.auth-passkey-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.auth-passkey-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+.auth-passkey-hint {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  text-align: center;
+}
