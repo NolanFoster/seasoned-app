@@ -42,6 +42,10 @@ enabled = true
 [env.preview]
 name = "auth-worker-preview"
 
+[[env.preview.migrations]]
+tag = "v1"
+new_classes = ["PasskeyChallengeObject"]
+
 [env.preview.vars]
 ENVIRONMENT = "preview"
 OTP_KV_PREFIX = "preview"
@@ -68,6 +72,10 @@ enabled = true
 [env.production]
 name = "auth-worker-production"
 
+[[env.production.migrations]]
+tag = "v1"
+new_classes = ["PasskeyChallengeObject"]
+
 [env.production.vars]
 ENVIRONMENT = "production"
 OTP_KV_PREFIX = "production"
@@ -93,6 +101,10 @@ enabled = true
 
 [env.staging]
 name = "auth-worker-staging"
+
+[[env.staging.migrations]]
+tag = "v1"
+new_classes = ["PasskeyChallengeObject"]
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
