@@ -1816,7 +1816,7 @@ describe('Generate Handler - Unit Tests', () => {
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.success).toBe(true);
-      expect(Array.isArray(data.recipe.dietary)).toBe(true);
+      expect(data.recipe.dietary).toEqual(['vegan', 'gluten-free']);
     });
 
     it('should handle dietaryConsiderations as string', async () => {
@@ -1851,7 +1851,7 @@ describe('Generate Handler - Unit Tests', () => {
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.success).toBe(true);
-      expect(Array.isArray(data.recipe.dietary)).toBe(true);
+      expect(data.recipe.dietary).toEqual(['vegan']);
     });
 
     it('should handle object-type ingredients (convert to array)', async () => {

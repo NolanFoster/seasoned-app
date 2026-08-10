@@ -667,6 +667,16 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   structuredRecipe.generatedAt = new Date().toISOString();
   structuredRecipe.sourceIngredients = requestData.ingredients || [];
 
+  // Handle dietary considerations before applying request/profile fallbacks.
+  // The profile adapter supplies an empty dietary array by default, so applying
+  // the fallback first would discard dietaryConsiderations returned by the AI.
+  if (structuredRecipe.dietaryConsiderations && !structuredRecipe.dietary) {
+    structuredRecipe.dietary = Array.isArray(structuredRecipe.dietaryConsiderations)
+      ? structuredRecipe.dietaryConsiderations
+      : [structuredRecipe.dietaryConsiderations];
+    delete structuredRecipe.dietaryConsiderations;
+  }
+
   // Ensure required fields have fallback values
   if (!structuredRecipe.name) {
     structuredRecipe.name = requestData.recipeName || 'Generated Recipe';
@@ -680,7 +690,6 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   if (!structuredRecipe.dietary) {
     structuredRecipe.dietary = requestData.dietary || [];
   }
-
 
   // Normalize time formats (PT30M -> "30 minutes")
   if (structuredRecipe.prepTime && structuredRecipe.prepTime.startsWith('PT')) {
@@ -696,14 +705,6 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   // Ensure servings is a string
   if (typeof structuredRecipe.servings === 'number') {
     structuredRecipe.servings = `${structuredRecipe.servings} servings`;
-  }
-
-  // Handle dietary considerations field name variations
-  if (structuredRecipe.dietaryConsiderations && !structuredRecipe.dietary) {
-    structuredRecipe.dietary = Array.isArray(structuredRecipe.dietaryConsiderations)
-      ? structuredRecipe.dietaryConsiderations
-      : [structuredRecipe.dietaryConsiderations];
-    delete structuredRecipe.dietaryConsiderations;
   }
 
   // Ensure ingredients and instructions are arrays (handle object responses)
