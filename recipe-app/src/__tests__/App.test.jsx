@@ -255,6 +255,23 @@ describe('Search behaviour', () => {
   });
 });
 
+describe('Core chrome accessibility', () => {
+  test('user menu exposes menu semantics and restores focus on Escape', () => {
+    renderApp()
+    const trigger = screen.getByRole('button', { name: 'Account menu' })
+    fireEvent.click(trigger)
+
+    const menu = screen.getByRole('menu', { name: 'Account options' })
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument()
+
+    fireEvent.keyDown(menu, { key: 'Escape' })
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
 describe('Omnibox accessibility and keyboard navigation', () => {
   beforeEach(() => {
     localStorage.clear();

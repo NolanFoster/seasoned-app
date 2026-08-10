@@ -74,6 +74,7 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
             className="cook-btn"
             onClick={onCookClick}
             title="Step-by-step cooking mode"
+            aria-label="Start step-by-step cooking mode"
             style={{ marginLeft: 'auto' }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

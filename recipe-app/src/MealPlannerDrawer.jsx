@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDragContext } from './useDragContext.js'
 import { useMealPlan } from './MealPlanContext.jsx'
 import GroceryListModal from './GroceryListModal.jsx'
@@ -95,6 +95,50 @@ function normalizeApiResponse(categories) {
 export default function MealPlannerDrawer({ isOpen, onClose, children }) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
+  const drawerRef = useRef(null)
+  const closeButtonRef = useRef(null)
+  const previousFocusRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+
+  // Keep keyboard focus inside the drawer while it is modal, then restore the
+  // calendar toggle (or whichever control opened it) when it closes.
+  useEffect(() => {
+    if (!isOpen) {
+      const previous = previousFocusRef.current
+      if (previous && document.contains(previous) && !drawerRef.current?.contains(previous)) previous.focus()
+      return undefined
+    }
+
+    previousFocusRef.current = document.activeElement
+    closeButtonRef.current?.focus()
+    function getFocusable() {
+      return [...(drawerRef.current?.querySelectorAll(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ) || [])]
+    }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const focusable = getFocusable()
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
 
   const {
     mealPlan,
@@ -249,15 +293,20 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
         aria-hidden="true"
       />
       <aside
+        ref={drawerRef}
         className={drawerClassName}
-        aria-label="Meal planner"
+        role="dialog"
+        aria-modal={isOpen ? 'true' : undefined}
+        aria-labelledby="meal-planner-title"
         aria-hidden={!isOpen}
+        inert={!isOpen ? '' : undefined}
         data-testid="meal-planner-drawer"
       >
         <div className="drawer-header">
-          <span className="drawer-title">Meal Planner</span>
+          <span id="meal-planner-title" className="drawer-title">Meal Planner</span>
           <button
             type="button"
+            ref={closeButtonRef}
             className="drawer-close-btn"
             onClick={onClose}
             aria-label="Close meal planner"
