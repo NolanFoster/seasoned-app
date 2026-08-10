@@ -21,15 +21,16 @@ Comprehensive CI/CD pipeline for the Recipe Generation Worker service.
 - Coverage: Uploads to Codecov
 
 ##### 2. Security Scan
-- Runs npm audit for vulnerabilities
-- Uses audit-ci for strict security checking
-- Fails build on moderate+ vulnerabilities
+- Audits production dependencies with npm audit and audit-ci
+- Keeps the non-deployed Miniflare v2 test harness out of the runtime audit
+- Fails build on moderate+ production vulnerabilities
 
 ##### 3. Deploy Preview
 - Triggers: Pull requests only
 - Environment: `preview`
-- Deploys to preview environment for testing
-- Runs health checks after deployment
+- Deploys to preview environment for testing when `CLOUDFLARE_API_TOKEN` is configured
+- Skips deployment with a warning when the token is unavailable (for example, forked PRs)
+- Runs health checks after a successful deployment
 
 ##### 4. Deploy Staging
 - Triggers: Push to `staging` branch
@@ -56,7 +57,7 @@ Comprehensive CI/CD pipeline for the Recipe Generation Worker service.
 The workflow expects these secrets to be configured in GitHub repository settings:
 
 ##### Required Secrets
-- `CLOUDFLARE_API_TOKEN`: Cloudflare API token for deployments
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API token for staging/production deployments and optional PR previews
 
 ##### Optional Secrets
 - `CODECOV_TOKEN`: For enhanced Codecov integration
@@ -103,15 +104,15 @@ All deployments must pass:
 3. ✅ Code coverage meets thresholds (85%+ lines, functions)
 4. ✅ No linting errors
 5. ✅ No type checking errors
-6. ✅ No moderate+ security vulnerabilities
-7. ✅ Health checks pass after deployment
+6. ✅ No moderate+ production security vulnerabilities
+7. ✅ Health checks pass after deployments that have credentials
 
 #### Troubleshooting
 
 ##### Common Issues
 
 1. **Deployment Failures**
-   - Check `CLOUDFLARE_API_TOKEN` secret
+   - Check `CLOUDFLARE_API_TOKEN` secret (PR previews are intentionally skipped when it is unavailable)
    - Verify wrangler.toml configuration
    - Check Cloudflare Workers limits
 

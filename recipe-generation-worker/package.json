@@ -24,7 +24,7 @@
     "audit": "audit-ci --config audit-ci.json"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20231218.0",
+    "@cloudflare/workers-types": "^5.20260801.1",
     "@eslint/js": "^9.0.0",
     "@miniflare/core": "^2.14.4",
     "@miniflare/shared": "^2.14.4",
@@ -35,14 +35,9 @@
     "typescript": "^5.0.0",
     "vitest": "^3.2.4",
     "vitest-environment-miniflare": "^2.14.4",
-    "wrangler": "^4.33.1"
+    "wrangler": "^4.120.0"
   },
   "dependencies": {
     "opik": "^1.8.34"
-  },
-  "overrides": {
-    "miniflare": {
-      "undici": "7.24.3"
-    }
   }
 }
