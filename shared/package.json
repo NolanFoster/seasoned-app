@@ -12,7 +12,8 @@
     "./nutrition-calculator": "./nutrition-calculator.js",
     "./nutrition": "./nutrition-calculator.js",
     "./metrics-collector": "./metrics-collector.js",
-    "./metrics": "./metrics-collector.js"
+    "./metrics": "./metrics-collector.js",
+    "./culinary-profile": "./culinary-profile.js"
   },
   "scripts": {
     "test": "node test-simple.js",

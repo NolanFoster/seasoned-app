@@ -172,8 +172,18 @@ jobs:
     - name: Comment PR with Results
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
+      env:
+        COVERAGE_STATEMENTS: ${{ steps.coverage-check.outputs.statements }}
+        COVERAGE_BRANCHES: ${{ steps.coverage-check.outputs.branches }}
+        COVERAGE_FUNCTIONS: ${{ steps.coverage-check.outputs.functions }}
       with:
         script: |
+          const coverage = {
+            statements: process.env.COVERAGE_STATEMENTS || 'unavailable',
+            branches: process.env.COVERAGE_BRANCHES || 'unavailable',
+            functions: process.env.COVERAGE_FUNCTIONS || 'unavailable'
+          };
+
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -196,9 +206,9 @@ jobs:
           ✅ **All tests passed successfully!**
           
           **Coverage Results:**
-          - Statements: ${steps.coverage-check.outputs.statements}%
-          - Branches: ${steps.coverage-check.outputs.branches}%
-          - Functions: ${steps.coverage-check.outputs.functions}%
+          - Statements: ${coverage.statements}%
+          - Branches: ${coverage.branches}%
+          - Functions: ${coverage.functions}%
           
           **Commit:** ${context.sha.substring(0, 7)}
           **Branch:** ${context.ref.replace('refs/heads/', '')}
@@ -217,9 +227,9 @@ jobs:
           ✅ **All tests passed successfully!**
           
           **Coverage Results:**
-          - Statements: ${steps.coverage-check.outputs.statements}%
-          - Branches: ${steps.coverage-check.outputs.branches}%
-          - Functions: ${steps.coverage-check.outputs.functions}%
+          - Statements: ${coverage.statements}%
+          - Branches: ${coverage.branches}%
+          - Functions: ${coverage.functions}%
           
           **Commit:** ${context.sha.substring(0, 7)}
           **Branch:** ${context.ref.replace('refs/heads/', '')}

@@ -194,6 +194,55 @@ describe('Generate Handler - Unit Tests', () => {
       expect(mockVectors.query).toHaveBeenCalled();
     });
 
+    it('should apply culinary profile defaults without overriding explicit request fields', async () => {
+      const requestBody = {
+        ingredients: ['chicken', 'rice'],
+        cuisine: 'italian',
+        servings: 6,
+        culinaryProfile: {
+          diet_tags: ['vegan'],
+          cuisine_likes: ['thai'],
+          default_servings: 2,
+          max_cook_time_min: 25
+        }
+      };
+
+      const request = createPostRequest('/generate', requestBody);
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      expect(mockAI.run).toHaveBeenCalledWith(
+        '@cf/meta/llama-4-scout-17b-16e-instruct',
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'user',
+              content: expect.stringContaining('must be vegan')
+            })
+          ])
+        })
+      );
+
+      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === '@cf/meta/llama-4-scout-17b-16e-instruct');
+      const prompt = llamaCall[1].messages.find(({ role }) => role === 'user').content;
+      expect(prompt).toContain('serves 6 people');
+      expect(prompt).toContain('italian cuisine');
+      expect(prompt).toContain('total cooking time under 25 minutes');
+    });
+
+    it('should accept the profile alias for backwards-compatible clients', async () => {
+      const request = createPostRequest('/generate', {
+        ingredients: ['pasta'],
+        profile: { diet_tags: ['vegetarian'], default_servings: 3 }
+      });
+      const response = await handleGenerate(request, mockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.recipe.servings).toBe(3);
+      expect(data.recipe.dietary).toEqual(['vegetarian']);
+    });
+
     it('should handle complex request with all optional fields', async () => {
       const requestBody = {
         ingredients: ['chicken', 'rice', 'vegetables'],

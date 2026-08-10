@@ -20,6 +20,7 @@ try {
       'dictation': true,
       'elevate-recipe': true,
       'meal-planner': true,
+      'culinary-profile': true,
     },
   })
 } catch (err) {
@@ -62,7 +63,7 @@ export async function syncFlagglyUser(user) {
     const keys = state ? Object.keys(state) : []
     if (keys.length === 0) {
       console.warn(
-        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
+        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
       )
     } else if (import.meta.env.DEV) {
       console.info(`[flaggly] Eval OK — ${keys.length} flag(s):`, keys.join(', '))

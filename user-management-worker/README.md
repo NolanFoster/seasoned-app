@@ -69,6 +69,31 @@ This worker is designed to work alongside the Auth Worker, providing a clean sep
 | `GET` | `/users/search/:query` | Search users |
 | `GET` | `/users/status/:status` | Get users by status |
 
+### Culinary profile
+
+These routes are user-owned and require the same Bearer JWT issued by the Auth Worker. The JWT subject is used as `user_id`; a caller cannot select another user's profile. The profile is optional and an empty profile is returned before the first save.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/me/culinary-profile` | Read the authenticated user's profile (or safe defaults) |
+| `PUT` | `/me/culinary-profile` | Validate, normalize, and upsert the authenticated user's profile |
+
+Profile fields include `diet_tags`, `hard_allergens`, `soft_avoids`, `cuisine_likes`, `cuisine_dislikes`, `spice_level` (0–5), `skill_level`, `default_servings`, `max_cook_time_min`, `equipment`, `nutrition_goals`, `units_pref`, `exclude_ingredients`, `notes_freeform`, and `consent_flags`. Lists are normalized to lower-case tags and duplicate values are removed.
+
+Example update:
+
+```json
+{
+  "diet_tags": ["vegetarian"],
+  "hard_allergens": ["tree nuts", "sesame"],
+  "max_cook_time_min": 30,
+  "default_servings": 2,
+  "units_pref": "metric"
+}
+```
+
+The API is controlled by the `CULINARY_PROFILE_ENABLED` Worker variable. Set it to `false` to return 404 while retaining the additive schema. Configure `JWT_SECRET` as a Worker secret with the same value as Auth Worker (never commit it).
+
 ### Login History
 
 | Method | Endpoint | Description |
@@ -120,6 +145,9 @@ wrangler d1 create user-db
 
 # Apply the schema
 wrangler d1 execute user-db --file=./schema.sql
+
+# Existing environments: apply additive migrations in order
+npm run migrate:profile:preview
 ```
 
 ### 3. Update Configuration
@@ -238,6 +266,10 @@ const loginResponse = await fetch('https://user-management-worker.your-domain.wo
 ```
 
 ## Security Considerations
+
+### Culinary profile privacy
+
+Culinary profiles can contain sensitive dietary and allergy information. They are stored per user in D1, are only addressable through the authenticated `/me/culinary-profile` routes, and are not included in admin list or login-history responses. The generation constraint helper treats declared hard allergens as authoritative input; it does not infer or weaken them.
 
 ### Data Protection
 - All emails are hashed (SHA-256) for user IDs

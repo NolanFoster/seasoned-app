@@ -1,10 +1,39 @@
 import { Hono } from 'hono';
+import { jwtVerify } from 'jose';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { Env, Bindings } from './types/env';
+import { Bindings } from './types/env';
 import { UserDatabaseService } from './services/user-database';
+import { DEFAULT_PROFILE, validateCulinaryProfileInput } from './services/culinary-profile';
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
+
+const JWT_ISSUER = 'auth-worker.nolanfoster.workers.dev';
+const JWT_AUDIENCE = 'seasoned-app';
+
+async function getAuthenticatedUserId(c: { env: Bindings; req: { header(name: string): string | undefined } }): Promise<string | null> {
+  const authorization = c.req.header('Authorization');
+  const secret = c.env.JWT_SECRET;
+  if (!authorization?.startsWith('Bearer ') || !secret) return null;
+  const token = authorization.slice('Bearer '.length).trim();
+  if (!token || token.length > 4096) return null;
+
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+      algorithms: ['HS256'],
+    });
+    return typeof payload.sub === 'string' && payload.sub.length > 0 ? payload.sub : null;
+  } catch {
+    // Invalid tokens are intentionally indistinguishable from missing tokens.
+    return null;
+  }
+}
+
+function culinaryProfileEnabled(env: Bindings): boolean {
+  return env.CULINARY_PROFILE_ENABLED !== 'false';
+}
 
 function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string): string | undefined } }): boolean {
   const configuredToken = c.env.PASSKEY_SERVICE_TOKEN;
@@ -14,12 +43,23 @@ function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string)
 
 // Middleware
 app.use('*', logger());
-app.use('*', cors());
+app.use('*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization'], allowMethods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] }));
 
 // User data and audit routes are worker-internal. Development keeps the
 // existing local workflow convenient; deployed environments require the shared
 // PASSKEY_SERVICE_TOKEN secret configured on both workers.
 app.use('*', async (c, next) => {
+  if (c.req.path === '/me/culinary-profile') {
+    if (!culinaryProfileEnabled(c.env)) {
+      return c.json({ success: false, message: 'Not Found' }, 404);
+    }
+    const userId = await getAuthenticatedUserId(c);
+    if (!userId) return c.json({ success: false, message: 'Authentication required' }, 401);
+    c.set('userId', userId);
+    await next();
+    return;
+  }
+
   if (c.req.path === '/' || c.req.path === '/health' || hasPasskeyServiceAccess(c)) {
     await next();
     return;
@@ -67,6 +107,44 @@ app.get('/health', async (c) => {
                      health.status === 'degraded' ? 503 : 500;
 
   return c.json(health, statusCode);
+});
+
+// Authenticated culinary profile endpoints. The user id always comes from a
+// verified JWT subject; clients cannot choose another user's profile id.
+app.get('/me/culinary-profile', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const result = await new UserDatabaseService(c.env.USER_DB).getCulinaryProfile(userId);
+    if (!result.success) return c.json({ success: false, message: result.error }, 500);
+
+    return c.json({
+      success: true,
+      exists: Boolean(result.data),
+      data: result.data || { user_id: userId, ...DEFAULT_PROFILE, created_at: null, updated_at: null },
+    });
+  } catch (error) {
+    console.error('Error getting culinary profile:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.put('/me/culinary-profile', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.profile && typeof body.profile === 'object'
+      ? body.profile
+      : body;
+    const errors = validateCulinaryProfileInput(input);
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid culinary profile', errors }, 400);
+
+    const userId = c.get('userId');
+    const result = await new UserDatabaseService(c.env.USER_DB).upsertCulinaryProfile(userId, input);
+    if (!result.success) return c.json({ success: false, message: result.error }, 400);
+    return c.json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('Error saving culinary profile:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
 });
 
 // User Management Endpoints
@@ -660,6 +738,11 @@ app.get('/', (c) => {
         method: 'GET',
         description: 'Get recent login activity',
         query: { limit: 'number?' }
+      },
+      {
+        path: '/me/culinary-profile',
+        method: 'GET|PUT',
+        description: 'Read or update the authenticated user culinary profile (Bearer JWT required)'
       },
       {
         path: '/passkey-credentials/*',

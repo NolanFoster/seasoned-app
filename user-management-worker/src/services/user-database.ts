@@ -10,8 +10,11 @@ import {
   RecentLoginActivity,
   UserStatistics,
   PasskeyCredential,
-  CreatePasskeyCredentialInput
+  CreatePasskeyCredentialInput,
+  CulinaryProfile,
+  CulinaryProfileInput
 } from '../types/database';
+import { DEFAULT_PROFILE, normalizeCulinaryProfile, profileFromRow, profileValues } from './culinary-profile';
 
 export class UserDatabaseService {
   constructor(private db: D1Database) {}
@@ -139,6 +142,62 @@ export class UserDatabaseService {
       return { success: true, affectedRows: result.meta?.changes || 0 };
     } catch (error) {
       console.error('Error deleting user:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  // Culinary profile management
+  async getCulinaryProfile(userId: string): Promise<DatabaseResult<CulinaryProfile | null>> {
+    try {
+      const row = await this.db.prepare(`
+        SELECT * FROM user_culinary_profiles WHERE user_id = ?
+      `).bind(userId).first<Record<string, unknown>>();
+
+      return row
+        ? { success: true, data: profileFromRow(row) }
+        : { success: true, data: null };
+    } catch (error) {
+      console.error('Error getting culinary profile:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async upsertCulinaryProfile(userId: string, input: CulinaryProfileInput): Promise<DatabaseResult<CulinaryProfile>> {
+    try {
+      const existing = await this.getCulinaryProfile(userId);
+      if (!existing.success) return { success: false, error: existing.error };
+
+      const profile = normalizeCulinaryProfile(input, existing.data || DEFAULT_PROFILE);
+      const result = await this.db.prepare(`
+        INSERT INTO user_culinary_profiles (
+          user_id, diet_tags, hard_allergens, soft_avoids, cuisine_likes, cuisine_dislikes,
+          spice_level, skill_level, default_servings, max_cook_time_min, equipment,
+          nutrition_goals, units_pref, exclude_ingredients, notes_freeform, consent_flags
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          diet_tags = excluded.diet_tags,
+          hard_allergens = excluded.hard_allergens,
+          soft_avoids = excluded.soft_avoids,
+          cuisine_likes = excluded.cuisine_likes,
+          cuisine_dislikes = excluded.cuisine_dislikes,
+          spice_level = excluded.spice_level,
+          skill_level = excluded.skill_level,
+          default_servings = excluded.default_servings,
+          max_cook_time_min = excluded.max_cook_time_min,
+          equipment = excluded.equipment,
+          nutrition_goals = excluded.nutrition_goals,
+          units_pref = excluded.units_pref,
+          exclude_ingredients = excluded.exclude_ingredients,
+          notes_freeform = excluded.notes_freeform,
+          consent_flags = excluded.consent_flags,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+      `).bind(userId, ...profileValues(profile)).first<Record<string, unknown>>();
+
+      if (!result) return { success: false, error: 'Failed to save culinary profile' };
+      return { success: true, data: profileFromRow(result) };
+    } catch (error) {
+      console.error('Error saving culinary profile:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

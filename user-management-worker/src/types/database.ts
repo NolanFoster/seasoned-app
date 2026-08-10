@@ -14,6 +14,55 @@ export interface User {
   two_factor_enabled: boolean;
 }
 
+export interface NutritionGoals {
+  focus: string | null;
+  targets: Record<string, number>;
+}
+
+export interface ConsentFlags {
+  learn_from_activity: boolean;
+  share_anon_evals: boolean;
+}
+
+export interface CulinaryProfile {
+  user_id: string;
+  diet_tags: string[];
+  hard_allergens: string[];
+  soft_avoids: string[];
+  cuisine_likes: string[];
+  cuisine_dislikes: string[];
+  spice_level: number;
+  skill_level: 'beginner' | 'intermediate' | 'advanced';
+  default_servings: number;
+  max_cook_time_min: number;
+  equipment: string[];
+  nutrition_goals: NutritionGoals;
+  units_pref: 'us' | 'metric';
+  exclude_ingredients: string[];
+  notes_freeform: string;
+  consent_flags: ConsentFlags;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CulinaryProfileInput {
+  diet_tags?: string[];
+  hard_allergens?: string[];
+  soft_avoids?: string[];
+  cuisine_likes?: string[];
+  cuisine_dislikes?: string[];
+  spice_level?: number;
+  skill_level?: 'beginner' | 'intermediate' | 'advanced';
+  default_servings?: number;
+  max_cook_time_min?: number;
+  equipment?: string[];
+  nutrition_goals?: NutritionGoals;
+  units_pref?: 'us' | 'metric';
+  exclude_ingredients?: string[];
+  notes_freeform?: string;
+  consent_flags?: ConsentFlags;
+}
+
 export type LoginMethod = 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
 
 export interface UserLoginHistory {
