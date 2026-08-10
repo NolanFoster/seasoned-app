@@ -70,7 +70,7 @@ textarea:focus-visible {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: calc(80px + var(--safe-top)) max(16px, var(--safe-right)) calc(40px + var(--safe-bottom)) max(16px, var(--safe-left));
+  padding: calc(80px + var(--safe-top)) calc(16px + var(--safe-right)) calc(40px + var(--safe-bottom)) calc(16px + var(--safe-left));
   background:
     radial-gradient(ellipse 60% 40% at 50% -10%, rgba(91,184,122,0.08) 0%, transparent 70%),
     var(--bg);
@@ -186,6 +186,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 9px 16px;
+  min-height: 44px;
   border: none;
   border-radius: calc(var(--radius) - 4px);
   font-size: 0.875rem;
@@ -516,6 +517,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
+  min-height: 44px;
   background: rgba(196,99,74,0.12);
   border: 1px solid rgba(196,99,74,0.3);
   border-radius: var(--radius-sm);
@@ -566,8 +568,8 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -604,6 +606,7 @@ textarea:focus-visible {
   gap: 8px;
   width: 100%;
   padding: 9px 14px;
+  min-height: 44px;
   background: none;
   border: none;
   border-bottom: 1px solid var(--border);
@@ -836,6 +839,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
+  min-height: 44px;
   background: rgba(91,184,122,0.12);
   border: 1px solid rgba(91,184,122,0.3);
   border-radius: var(--radius-sm);
@@ -861,6 +865,7 @@ textarea:focus-visible {
 .cn-overlay {
   position: fixed;
   inset: 0;
+  padding-top: var(--safe-top);
   background: var(--surface);
   z-index: 200;
   display: flex;
@@ -880,7 +885,7 @@ textarea:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 12px calc(16px + var(--safe-right)) 12px calc(16px + var(--safe-left));
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
 }
@@ -932,7 +937,14 @@ textarea:focus-visible {
   cursor: pointer;
   color: inherit;
   font-size: 0.75rem;
-  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
   line-height: 1;
   opacity: 0.8;
   transition: opacity 0.15s;
@@ -959,7 +971,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 8px;
+  padding: 16px calc(20px + var(--safe-right)) 8px calc(20px + var(--safe-left));
 }
 
 .cn-step-counter {
@@ -1130,7 +1142,7 @@ textarea:focus-visible {
 .cn-nav {
   display: flex;
   gap: 12px;
-  padding: 16px 24px;
+  padding: 16px calc(24px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(24px + var(--safe-left));
   border-top: 1px solid var(--border);
 }
 
@@ -1176,8 +1188,8 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1905,6 +1917,7 @@ textarea:focus-visible {
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1965,8 +1978,8 @@ textarea:focus-visible {
   }
 
   .offline-indicator {
-    bottom: 16px;
-    right: 16px;
+    bottom: calc(16px + var(--safe-bottom));
+    right: calc(16px + var(--safe-right));
   }
 
   .offline-text {
@@ -2021,6 +2034,9 @@ textarea:focus-visible {
 }
 
 .day-selector-close {
+  width: 44px;
+  height: 44px;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -2086,8 +2102,8 @@ textarea:focus-visible {
   flex-shrink: 0;
   transition: color 0.1s;
   /* Adequate touch target */
-  min-width: 32px;
-  min-height: 32px;
+  min-width: 44px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2327,8 +2343,8 @@ textarea:focus-visible {
   font-size: 0.85rem;
 }
 .culinary-profile-close {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--border);
   border-radius: 50%;
   background: var(--surface2);
@@ -2422,7 +2438,7 @@ textarea:focus-visible {
   margin-top: 18px;
 }
 .culinary-profile-actions button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   font: inherit;
