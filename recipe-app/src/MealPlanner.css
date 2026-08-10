@@ -17,7 +17,7 @@
                                (incl. UserMenu at z-index:150) but below drawer.
 
    Sizing / spacing:
-     --mp-btn-size   matches UserMenu .user-avatar-btn (34×34px) for a
+     --mp-btn-size   matches UserMenu .user-avatar-btn (44×44px) for a
                      cohesive top-right control group.
      --mp-icon-size  SVG icon rendered inside the button.
      --mp-btn-right  right-edge offset for the toggle button, calculated as:
@@ -177,7 +177,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px 16px max(20px, var(--safe-left));
+  padding: 18px max(20px, calc(20px + var(--safe-right))) 16px max(20px, calc(20px + var(--safe-left)));
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -789,8 +789,8 @@ body > .meal-item {
     border-top: 1px solid var(--border);
     border-radius: var(--radius) var(--radius) 0 0;
     top: auto;
-    bottom: 0;
-    height: 100dvh;
+    bottom: var(--safe-bottom);
+    height: calc(100dvh - var(--safe-bottom));
     /* Override right-to-left slide with bottom-to-top slide */
     transform: translateY(100%);
     transition: transform var(--mp-transition-drawer);
@@ -911,7 +911,7 @@ body > .meal-item {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .drawer-grocery-btn:hover {
@@ -967,7 +967,7 @@ body > .meal-item {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .drawer-view-list-btn:hover {
@@ -996,7 +996,7 @@ body > .meal-item {
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .drawer-regenerate-btn:hover {
@@ -1132,8 +1132,8 @@ body > .meal-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 44px;
+  height: 44px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 50%;
@@ -1159,6 +1159,12 @@ body > .meal-item {
   outline-offset: 2px;
 }
 
+@media (hover: none) {
+  .up-next__card-remove {
+    opacity: 1;
+  }
+}
+
 /* --------------------------------------------------------------------------
    19. GroceryListModal — slide-up ingredient checklist
    -------------------------------------------------------------------------- */
@@ -1171,7 +1177,7 @@ body > .meal-item {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 0 0 0;
+  padding: 0 0 var(--safe-bottom);
   animation: grocery-backdrop-in 0.25s ease forwards;
 }
 
@@ -1183,7 +1189,7 @@ body > .meal-item {
 .grocery-modal-container {
   width: 100%;
   max-width: 480px;
-  max-height: 80vh;
+  max-height: calc(80vh - var(--safe-bottom));
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius) var(--radius) 0 0;
@@ -1219,8 +1225,8 @@ body > .meal-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid transparent;
@@ -1363,6 +1369,7 @@ body > .meal-item {
 
 .grocery-modal-add__btn {
   padding: 8px 14px;
+  min-height: 44px;
   background: var(--surface2);
   border: 1px solid rgba(232, 200, 122, 0.3);
   border-radius: var(--radius-sm);
@@ -1409,6 +1416,7 @@ body > .meal-item {
   gap: 7px;
   width: 100%;
   padding: 9px 20px;
+  min-height: 44px;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -1492,7 +1500,7 @@ body > .meal-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  width: 44px;
   height: 100%;
   min-height: 44px;
   padding: 0 6px;
@@ -1532,7 +1540,7 @@ body > .meal-item {
 @media (min-width: 480px) {
   .grocery-modal-overlay {
     align-items: flex-end;
-    padding: 0 12px;
+    padding: 0 12px var(--safe-bottom);
   }
 
   .grocery-modal-container {
