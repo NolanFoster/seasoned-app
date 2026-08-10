@@ -53,10 +53,12 @@ export async function handleGenerate(request, env, corsHeaders) {
         prepTime: '15 minutes',
         cookTime: '20 minutes',
         totalTime: '35 minutes',
-        servings: requestBody.servings || '4',
+        // buildGenerationConstraints normalizes this field before mock generation.
+        servings: requestBody.servings,
         difficulty: 'Easy',
         cuisine: requestBody.cuisine || 'Mock Cuisine',
-        dietary: requestBody.dietary || [],
+        // Keep the normalized dietary list, including an intentional empty list.
+        dietary: requestBody.dietary,
         generatedAt: new Date().toISOString(),
         sourceIngredients: requestBody.ingredients || [],
         generationTime: 0,
