@@ -350,3 +350,14 @@ console.log('Generated ID:', id);
 const result = await calculateNutritionalFacts(ingredients, apiKey, 2);
 console.log('Nutrition result:', result);
 ```
+
+## Culinary profile constraints
+
+`culinary-profile.js` is the shared, dependency-free contract for persisted kitchen preferences. It exports:
+
+- `normalizeCulinaryProfile(profile)` for lower-case, de-duplicated structured tags and bounded numeric values
+- `mergeCulinaryProfile(current, update)` for partial profile updates
+- `buildGenerationConstraints(profile, overrides)` for generation-facing constraints with precedence **explicit request > profile > safe defaults**
+- `validateCulinaryProfileInput(input)` for API boundary validation
+
+The profile schema uses snake_case storage/API fields (`diet_tags`, `hard_allergens`, `max_cook_time_min`, etc.), while the generation contract retains the existing worker names (`dietary`, `maxCookTime`, `servings`).

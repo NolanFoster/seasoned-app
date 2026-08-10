@@ -4,6 +4,10 @@ export interface Env {
   
   // Environment variables
   ENVIRONMENT: 'development' | 'preview' | 'staging' | 'production';
+  // Shared JWT secret used to validate auth-worker Bearer tokens for user-owned routes.
+  JWT_SECRET?: string;
+  // Explicit kill switch; omitted keeps the additive profile API enabled.
+  CULINARY_PROFILE_ENABLED?: string;
   // Optional service-to-service secret for passkey credential routes.
   PASSKEY_SERVICE_TOKEN?: string;
 }

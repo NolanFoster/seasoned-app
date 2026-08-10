@@ -18,10 +18,14 @@
     "test:run": "node tests/run-tests.js",
     "migrate:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/001_add_passkey_credentials.sql",
     "migrate:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/001_add_passkey_credentials.sql",
-    "migrate:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/001_add_passkey_credentials.sql"
+    "migrate:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/001_add_passkey_credentials.sql",
+    "migrate:profile:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/002_add_culinary_profiles.sql",
+    "migrate:profile:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/002_add_culinary_profiles.sql",
+    "migrate:profile:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/002_add_culinary_profiles.sql"
   },
   "dependencies": {
-    "hono": "^3.12.0"
+    "hono": "^3.12.0",
+    "jose": "^5.10.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",

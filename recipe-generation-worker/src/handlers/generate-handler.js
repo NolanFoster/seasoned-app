@@ -1,5 +1,6 @@
 import { OpikClient } from '../opik-client.js';
 import { getRecipeFromKV } from '../../../shared/kv-storage.js';
+import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
 
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
@@ -21,6 +22,11 @@ export async function handleGenerate(request, env, corsHeaders) {
     }
 
     const requestBody = await request.json();
+    const profile = requestBody?.culinaryProfile || requestBody?.profile || {};
+    // Keep the generation worker compatible with the existing flat request
+    // contract while allowing an authenticated client to provide profile
+    // defaults. Explicit request fields remain authoritative.
+    Object.assign(requestBody, buildGenerationConstraints(profile, requestBody));
 
     // Validate required fields - either recipeName or ingredients must be provided
     if (!requestBody.recipeName &&

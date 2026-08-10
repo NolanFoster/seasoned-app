@@ -8,6 +8,8 @@ import { useRecentRecipes } from './useRecentRecipes.js'
 import { useAuth } from './useAuth.js'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { syncFlagglyUser, useFlag } from './flaggly.js'
+import CulinaryProfile from './CulinaryProfile.jsx'
+import { useCulinaryProfile } from './useCulinaryProfile.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -69,7 +71,7 @@ function useDebounce(fn, delay) {
   return [schedule, cancel]
 }
 
-function UserMenu({ user, onSignOut, onRegisterPasskey }) {
+function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
   const [open, setOpen] = useState(false)
   const [opacity, setOpacity] = useState(1)
   const [passkeyStatus, setPasskeyStatus] = useState('idle')
@@ -115,6 +117,15 @@ function UserMenu({ user, onSignOut, onRegisterPasskey }) {
           <div className="user-menu-info">
             <div className="user-menu-email">{user?.email}</div>
           </div>
+          {onOpenProfile && (
+            <button className="user-menu-item" onClick={() => { setOpen(false); onOpenProfile() }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 3a9 9 0 100 18 9 9 0 000-18Z"/>
+                <path d="M8 12h8M12 8v8"/>
+              </svg>
+              Kitchen profile
+            </button>
+          )}
           {onRegisterPasskey && (
             <button
               className="user-menu-item"
@@ -157,6 +168,9 @@ export default function App() {
   const auth = useAuth()
   const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
   const mealPlannerEnabled = useFlag('meal-planner')
+  const culinaryProfileEnabled = useFlag('culinary-profile')
+  const [profileOpen, setProfileOpen] = useState(false)
+  const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
 
   useEffect(() => {
     if (auth.loading) return
@@ -666,7 +680,12 @@ export default function App() {
           onClose={() => setIsDrawerOpen(false)}
         />
       )}
-      <UserMenu user={auth.user} onSignOut={auth.signOut} onRegisterPasskey={auth.registerPasskey} />
+      <UserMenu
+        user={auth.user}
+        onSignOut={auth.signOut}
+        onRegisterPasskey={auth.registerPasskey}
+        onOpenProfile={culinaryProfileEnabled && culinaryProfile.available ? () => setProfileOpen(true) : undefined}
+      />
       <div className="omnibox-wrapper">
         <div className="brand">
           <div className="brand-header">
@@ -679,6 +698,19 @@ export default function App() {
           </div>
           <span className="brand-tagline">Clip, Organize, Season Every Recipe to Your Taste</span>
         </div>
+
+        {culinaryProfileEnabled && culinaryProfile.available && culinaryProfile.profile && (
+          <button type="button" className="culinary-profile-summary" onClick={() => setProfileOpen(true)}>
+            <span className="culinary-profile-summary-label">Kitchen profile</span>
+            {culinaryProfile.profile.diet_tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="culinary-profile-chip">{tag.replace(/_/g, ' ')}</span>
+            ))}
+            {culinaryProfile.profile.hard_allergens.length > 0 && (
+              <span className="culinary-profile-chip culinary-profile-chip--safety">{culinaryProfile.profile.hard_allergens.length} allergen{culinaryProfile.profile.hard_allergens.length === 1 ? '' : 's'} saved</span>
+            )}
+            <span className="culinary-profile-summary-edit">Edit</span>
+          </button>
+        )}
 
         <div className="omnibox">
           <div className={`omnibox-inner ${busy ? 'busy' : ''} ${status === 'error' ? 'has-error' : ''}`}>
@@ -865,6 +897,16 @@ export default function App() {
             shareUrl={shareUrl}
           />
         )}
+
+        <CulinaryProfile
+          open={profileOpen && culinaryProfileEnabled && culinaryProfile.available}
+          profile={culinaryProfile.profile}
+          loading={culinaryProfile.loading}
+          saving={culinaryProfile.saving}
+          error={culinaryProfile.error}
+          onSave={culinaryProfile.saveProfile}
+          onClose={() => setProfileOpen(false)}
+        />
       </div>
     </div>
   )
