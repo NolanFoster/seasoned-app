@@ -20,9 +20,9 @@ ENVIRONMENT = "production"
 OTP_KV_PREFIX = "production"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
-WEBAUTHN_RP_ID = "seasoned-frontend.pages.dev"
+WEBAUTHN_RP_ID = "seasonedapp.com"
 WEBAUTHN_RP_NAME = "Seasoned"
-WEBAUTHN_ORIGIN = "https://seasoned-frontend.pages.dev"
+WEBAUTHN_ORIGIN = "https://seasonedapp.com"
 
 [[send_email]]
 name = "send_email"
@@ -71,6 +71,9 @@ enabled = true
 
 [env.production]
 name = "auth-worker-production"
+routes = [
+  { pattern = "auth.seasonedapp.com", custom_domain = true }
+]
 [[env.production.migrations]]
 tag = "v1"
 new_classes = ["PasskeyChallengeObject"]
@@ -81,9 +84,9 @@ ENVIRONMENT = "production"
 OTP_KV_PREFIX = "production"
 FROM_EMAIL = "verify@seasonedapp.com"
 USER_MANAGEMENT_WORKER_URL = "https://user-management-worker-production.nolanfoster.workers.dev"
-WEBAUTHN_RP_ID = "seasoned-frontend.pages.dev"
+WEBAUTHN_RP_ID = "seasonedapp.com"
 WEBAUTHN_RP_NAME = "Seasoned"
-WEBAUTHN_ORIGIN = "https://seasoned-frontend.pages.dev"
+WEBAUTHN_ORIGIN = "https://seasonedapp.com"
 
 [[env.production.send_email]]
 name = "send_email"
