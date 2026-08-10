@@ -21,7 +21,7 @@
                      cohesive top-right control group.
      --mp-icon-size  SVG icon rendered inside the button.
      --mp-btn-right  right-edge offset for the toggle button, calculated as:
-                     UserMenu right(16px) + avatar width(34px) + gap(12px) = 62px
+                     UserMenu right(16px) + avatar width(44px) + gap(12px) = 72px
    -------------------------------------------------------------------------- */
 
 :root {
@@ -30,10 +30,10 @@
   --mp-z-button:       162;
   --mp-z-drag-portal: 9999; /* portaled drag ghost; clears all drawer layers  */
 
-  --mp-btn-size:      34px;   /* matches .user-avatar-btn in index.css  */
+  --mp-btn-size:      44px;   /* matches .user-avatar-btn in index.css  */
   --mp-icon-size:     20px;   /* SVG icon inside the button             */
-  --mp-btn-top:       16px;   /* matches UserMenu top offset            */
-  --mp-btn-right:     62px;   /* 16 (UserMenu right) + 34 (avatar) + 12 (gap) */
+  --mp-btn-top:       calc(16px + var(--safe-top));   /* matches UserMenu top offset            */
+  --mp-btn-right:     calc(72px + var(--safe-right));   /* 16 (UserMenu right) + 44 (avatar) + 12 (gap) */
 
   --mp-drawer-width-desktop: 420px;
   --mp-drawer-width-tablet:  320px;
@@ -126,9 +126,9 @@
 
 .meal-planner-drawer {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: var(--safe-top);
+  right: var(--safe-right);
+  bottom: var(--safe-bottom);
   z-index: var(--mp-z-drawer);
   width: var(--mp-drawer-width-desktop);
   max-width: 100vw;
@@ -177,7 +177,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px 16px;
+  padding: 18px 20px 16px max(20px, var(--safe-left));
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -193,8 +193,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid transparent;

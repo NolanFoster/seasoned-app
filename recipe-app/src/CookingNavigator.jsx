@@ -82,8 +82,9 @@ function renderStepWithTimers(stepText, stepIndex, activeTimers, onTimerStart) {
         disabled={isActive}
         onClick={() => !isActive && onTimerStart(id, t.label, t.seconds)}
         title={isActive ? 'Timer running' : `Start ${t.label} timer`}
+        aria-label={isActive ? `${t.label} timer running` : `Start ${t.label} timer`}
       >
-        ⏱ {t.label}
+        <span aria-hidden="true">⏱</span> {t.label}
       </button>
     )
     cursor = t.endIndex
@@ -337,7 +338,60 @@ export default function CookingNavigator({ recipe, onClose }) {
 
   const [cookMenuOpen, setCookMenuOpen] = useState(false)
   const cookMenuRef = useRef(null)
+  const cookMenuTriggerRef = useRef(null)
   const [showRecipe, setShowRecipe] = useState(false)
+  const overlayRef = useRef(null)
+  const previousFocusRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  const cookMenuOpenRef = useRef(cookMenuOpen)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+  useEffect(() => { cookMenuOpenRef.current = cookMenuOpen }, [cookMenuOpen])
+
+  // Treat cooking mode as a modal: move focus inside on entry, keep Tab
+  // inside the overlay, and return focus to the control that opened it.
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement
+    const overlay = overlayRef.current
+    const getFocusable = () => [...(overlay?.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ) || [])]
+    const firstFocusable = getFocusable()[0]
+    if (firstFocusable) firstFocusable.focus()
+    else overlay?.focus()
+
+    function handleDialogKeyDown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (cookMenuOpenRef.current) {
+          closeCookMenu()
+        }
+        else onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const focusable = getFocusable()
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleDialogKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown)
+      const previous = previousFocusRef.current
+      if (previous && document.contains(previous) && !overlay?.contains(previous)) previous.focus()
+    }
+    // This effect intentionally installs one modal-level listener per mount.
+    // The ref keeps the latest close callback without resetting focus on renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const TEXT_SIZES = ['normal', 'large', 'xl']
   const [textSize, setTextSize] = useState(() => {
@@ -390,6 +444,11 @@ export default function CookingNavigator({ recipe, onClose }) {
         return next
       })
     }
+  }
+
+  function closeCookMenu() {
+    setCookMenuOpen(false)
+    cookMenuTriggerRef.current?.focus()
   }
 
   function toggleGestureMode() {
@@ -629,7 +688,7 @@ export default function CookingNavigator({ recipe, onClose }) {
   const equipment = extractEquipment(instructions)
 
   return (
-    <div className="cn-overlay" role="dialog" aria-label="Cooking navigator">
+    <div ref={overlayRef} className="cn-overlay" role="dialog" aria-modal="true" aria-label="Cooking navigator" tabIndex={-1}>
       <div className={`cn-card${textSize !== 'normal' ? ` cn-card--text-${textSize}` : ''}`}>
 
         {/* Hidden video element for gesture-mode camera capture */}
@@ -646,13 +705,13 @@ export default function CookingNavigator({ recipe, onClose }) {
                 <span className="cn-timer-pill-label">{timer.label}</span>
                 <span className="cn-timer-pill-time">{formatTime(timer.remainingSeconds)}</span>
                 {timer.isDone ? (
-                  <button className="cn-timer-pill-action" onClick={() => handleTimerStop(id)} title="Dismiss">✓</button>
+                  <button className="cn-timer-pill-action" onClick={() => handleTimerStop(id)} title="Dismiss" aria-label={`Dismiss ${timer.label} timer`}>✓</button>
                 ) : timer.isPaused ? (
-                  <button className="cn-timer-pill-action" onClick={() => handleTimerResume(id)} title="Resume">{'▶\uFE0E'}</button>
+                  <button className="cn-timer-pill-action" onClick={() => handleTimerResume(id)} title="Resume" aria-label={`Resume ${timer.label} timer`}>{'▶\uFE0E'}</button>
                 ) : (
-                  <button className="cn-timer-pill-action" onClick={() => handleTimerPause(id)} title="Pause">{'⏸\uFE0E'}</button>
+                  <button className="cn-timer-pill-action" onClick={() => handleTimerPause(id)} title="Pause" aria-label={`Pause ${timer.label} timer`}>{'⏸\uFE0E'}</button>
                 )}
-                <button className="cn-timer-pill-stop" onClick={() => handleTimerStop(id)} title="Stop timer">✕</button>
+                <button className="cn-timer-pill-stop" onClick={() => handleTimerStop(id)} title="Stop timer" aria-label={`Stop ${timer.label} timer`}>✕</button>
               </div>
             ))}
           </div>
@@ -689,20 +748,27 @@ export default function CookingNavigator({ recipe, onClose }) {
             </button>
             <div className="action-menu" ref={cookMenuRef}>
               <button
+                ref={cookMenuTriggerRef}
                 className="cn-hands-free-btn"
-                onClick={() => setCookMenuOpen(o => !o)}
+                onClick={() => {
+                  if (cookMenuOpen) closeCookMenu()
+                  else setCookMenuOpen(true)
+                }}
                 title="Options"
                 aria-label="Open options menu"
+                aria-haspopup="menu"
                 aria-expanded={cookMenuOpen}
+                aria-controls={cookMenuOpen ? "cooking-options-menu" : undefined}
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
                 </svg>
               </button>
               {cookMenuOpen && (
-                <div className="action-menu-dropdown">
+                <div id="cooking-options-menu" className="action-menu-dropdown" role="menu" aria-label="Cooking options">
                   <button
                     className="action-menu-item"
+                    role="menuitem"
                     onClick={() => { setCookMenuOpen(false); onClose(); }}
                     title="Exit cooking mode"
                   >
@@ -713,8 +779,10 @@ export default function CookingNavigator({ recipe, onClose }) {
                   </button>
                   <button
                     className={`action-menu-item${isSpeaking ? ' active' : ''}`}
-                    onClick={() => { setCookMenuOpen(false); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
+                    role="menuitem"
+                    onClick={() => { closeCookMenu(); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
                     title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
+                    aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
                     aria-pressed={isSpeaking}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -726,7 +794,8 @@ export default function CookingNavigator({ recipe, onClose }) {
                   </button>
                   <button
                     className={`action-menu-item${textSize !== 'normal' ? ' active' : ''}`}
-                    onClick={() => { cycleTextSize(); setCookMenuOpen(false); }}
+                    role="menuitem"
+                    onClick={() => { cycleTextSize(); closeCookMenu(); }}
                     title={`Text size: ${textSize}. Click to increase.`}
                     aria-label={`Text size ${textSize}, click to cycle`}
                   >
@@ -738,8 +807,10 @@ export default function CookingNavigator({ recipe, onClose }) {
                   {voiceControlEnabled && dictationEnabled && (
                     <button
                       className={`action-menu-item${handsFreeModeActive ? ' active' : ''}`}
-                      onClick={() => { setCookMenuOpen(false); toggleHandsFreeMode(); }}
+                      role="menuitem"
+                      onClick={() => { closeCookMenu(); toggleHandsFreeMode(); }}
                       title={handsFreeModeActive ? 'Stop hands-free mode' : 'Start hands-free voice navigation'}
+                      aria-label={handsFreeModeActive ? 'Stop hands-free voice navigation' : 'Start hands-free voice navigation'}
                       aria-pressed={handsFreeModeActive}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -754,8 +825,10 @@ export default function CookingNavigator({ recipe, onClose }) {
                   {gestureSupportEnabled && gestureSupported && (
                     <button
                       className={`action-menu-item${gestureModeActive ? ' active' : ''}`}
-                      onClick={() => { setCookMenuOpen(false); toggleGestureMode(); }}
+                      role="menuitem"
+                      onClick={() => { closeCookMenu(); toggleGestureMode(); }}
                       title={gestureModeActive ? 'Stop gesture mode' : 'Wave to navigate steps'}
+                      aria-label={gestureModeActive ? 'Stop gesture mode' : 'Start gesture navigation'}
                       aria-pressed={gestureModeActive}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -940,6 +1013,8 @@ export default function CookingNavigator({ recipe, onClose }) {
           <div className="cn-nav">
             <button
               className="cn-nav-btn cn-nav-btn--prev"
+              type="button"
+              aria-label="Go to previous cooking step"
               disabled={currentStep === -1}
               onClick={() => setCurrentStep((s) => s - 1)}
             >
@@ -947,6 +1022,8 @@ export default function CookingNavigator({ recipe, onClose }) {
             </button>
             <button
               className="cn-nav-btn cn-nav-btn--next"
+              type="button"
+              aria-label={currentStep === -1 ? 'Start cooking' : 'Go to next cooking step'}
               disabled={currentStep === total - 1}
               onClick={() => {
                 if (currentStep === -1) {

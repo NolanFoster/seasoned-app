@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useId } from 'react'
 import CookingNavigator from './CookingNavigator.jsx'
 import { useFlag } from './flaggly.js'
 import RecipeCardDisplay, { parseDuration } from './RecipeCardDisplay.jsx'
@@ -33,6 +33,8 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
   const menusRef = useRef(null)
+  const menuTriggerRefs = useRef({})
+  const menuIdPrefix = useId()
 
   const mealPlanContext = useMealPlan()
   const canAddToPlanner = Boolean(
@@ -113,15 +115,44 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     plannerFeedbackTimerRef.current = setTimeout(() => setPlannerFeedback(null), 2500)
   }
 
-  // Close menus on outside click
+  function closeMenu({ restoreFocus = false } = {}) {
+    const trigger = menuTriggerRefs.current[openMenu]
+    setOpenMenu(null)
+    if (restoreFocus) trigger?.focus()
+  }
+
+  function handleMenuKeyDown(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeMenu({ restoreFocus: true })
+      return
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+    const items = [...(e.currentTarget.querySelectorAll('[role="menuitem"]') || [])]
+    if (!items.length) return
+    e.preventDefault()
+    const currentIndex = items.indexOf(document.activeElement)
+    const nextIndex = e.key === 'Home'
+      ? 0
+      : e.key === 'End'
+        ? items.length - 1
+        : e.key === 'ArrowDown'
+          ? (currentIndex + 1) % items.length
+          : (currentIndex <= 0 ? items.length - 1 : currentIndex - 1)
+    items[nextIndex].focus()
+  }
+
+  // Close menus on outside click and move focus into an opened menu.
   useEffect(() => {
     if (!openMenu) return
     function handleClick(e) {
       if (menusRef.current && !menusRef.current.contains(e.target)) {
-        setOpenMenu(null)
+        closeMenu()
       }
     }
     document.addEventListener('mousedown', handleClick)
+    const firstItem = menusRef.current?.querySelector('[role="menuitem"]')
+    firstItem?.focus()
     return () => document.removeEventListener('mousedown', handleClick)
   }, [openMenu])
 
@@ -132,19 +163,25 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
         {elevateRecipeEnabled && (
         <div className="action-menu">
           <button
+            ref={(node) => { menuTriggerRefs.current.remix = node }}
             className="action-menu-btn"
             onClick={() => setOpenMenu(o => o === 'remix' ? null : 'remix')}
             title="Remix with AI"
+            aria-label="Remix with AI"
+            aria-haspopup="menu"
+            aria-expanded={openMenu === 'remix'}
+            aria-controls={openMenu === 'remix' ? `${menuIdPrefix}-remix-menu` : undefined}
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z"/>
             </svg>
           </button>
           {openMenu === 'remix' && (
-            <div className="action-menu-dropdown">
+            <div id={`${menuIdPrefix}-remix-menu`} className="action-menu-dropdown" role="menu" aria-label="Remix actions" onKeyDown={handleMenuKeyDown}>
               <button
                 className="action-menu-item elevate-item"
-                onClick={() => { if (!isElevating) { onElevate(); setOpenMenu(null); } }}
+                role="menuitem"
+                onClick={() => { if (!isElevating) { onElevate(); closeMenu({ restoreFocus: true }); } }}
                 disabled={isElevating}
                 title="Elevate this recipe with AI — improve instructions, suggest variations, add tips"
               >
@@ -167,19 +204,25 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
         {/* More options menu */}
         <div className="action-menu">
           <button
+            ref={(node) => { menuTriggerRefs.current.options = node }}
             className="action-menu-btn"
             onClick={() => setOpenMenu(o => o === 'options' ? null : 'options')}
             title="More options"
+            aria-label="More recipe options"
+            aria-haspopup="menu"
+            aria-expanded={openMenu === 'options'}
+            aria-controls={openMenu === 'options' ? `${menuIdPrefix}-options-menu` : undefined}
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
               <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
             </svg>
           </button>
           {openMenu === 'options' && (
-            <div className="action-menu-dropdown">
+            <div id={`${menuIdPrefix}-options-menu`} className="action-menu-dropdown" role="menu" aria-label="Recipe actions" onKeyDown={handleMenuKeyDown}>
               <button
                 className="action-menu-item"
-                onClick={() => { setOpenMenu(null); onClose(); }}
+                role="menuitem"
+                onClick={() => { closeMenu({ restoreFocus: true }); onClose(); }}
                 title="Close"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -189,7 +232,8 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               </button>
               <button
                 className="action-menu-item"
-                onClick={() => { setOpenMenu(null); setShowDaySelector(true) }}
+                role="menuitem"
+                onClick={() => { closeMenu({ restoreFocus: true }); setShowDaySelector(true) }}
                 disabled={!canAddToPlanner}
                 title={
                   canAddToPlanner
@@ -211,7 +255,8 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               </button>
               <button
                 className={`action-menu-item${saveState === 'saved' ? ' saved' : saveState === 'error' ? ' error' : ''}`}
-                onClick={() => { if (saveState !== 'saving' && saveState !== 'saved') { onSave(); setOpenMenu(null); } }}
+                role="menuitem"
+                onClick={() => { if (saveState !== 'saving' && saveState !== 'saved') { onSave(); closeMenu({ restoreFocus: true }); } }}
                 disabled={saveState === 'saving' || saveState === 'saved'}
                 title={saveState === 'saved' ? 'Recipe saved' : 'Save recipe'}
               >
@@ -233,6 +278,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               {shareUrl && (
                 <button
                   className={`action-menu-item${shareCopied ? ' copied' : ''}`}
+                  role="menuitem"
                   onClick={() => {
                     const copyToClipboard = () => {
                       navigator.clipboard.writeText(shareUrl).then(() => {
@@ -263,6 +309,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
               {'wakeLock' in navigator && (
                 <button
                   className={`action-menu-item${wakeLockActive ? ' active' : ''}`}
+                  role="menuitem"
                   onClick={handleWakeLockToggle}
                   title={wakeLockActive ? 'Screen is staying on – tap to disable' : 'Keep screen on while cooking'}
                 >
@@ -317,7 +364,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
             type="button"
             className="planner-feedback-dismiss"
             onClick={() => setPlannerFeedback(null)}
-            aria-label="Dismiss"
+            aria-label="Dismiss notification"
           >×</button>
         </div>
       )}

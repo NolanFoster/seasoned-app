@@ -76,14 +76,46 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
   const [opacity, setOpacity] = useState(1)
   const [passkeyStatus, setPasskeyStatus] = useState('idle')
   const menuRef = useRef(null)
+  const triggerRef = useRef(null)
+
+  function closeMenu({ restoreFocus = false } = {}) {
+    setOpen(false)
+    if (restoreFocus) triggerRef.current?.focus()
+  }
 
   useEffect(() => {
     function handleClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false)
+      if (menuRef.current && !menuRef.current.contains(e.target)) closeMenu()
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const firstItem = menuRef.current?.querySelector('[role="menuitem"]')
+    firstItem?.focus()
+  }, [open])
+
+  function handleMenuKeyDown(e) {
+    const items = [...(menuRef.current?.querySelectorAll('[role="menuitem"]') || [])]
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeMenu({ restoreFocus: true })
+      return
+    }
+    if (!items.length || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+    e.preventDefault()
+    const currentIndex = items.indexOf(document.activeElement)
+    const nextIndex = e.key === 'Home'
+      ? 0
+      : e.key === 'End'
+        ? items.length - 1
+        : e.key === 'ArrowDown'
+          ? (currentIndex + 1) % items.length
+          : (currentIndex <= 0 ? items.length - 1 : currentIndex - 1)
+    items[nextIndex].focus()
+  }
 
   useEffect(() => {
     function handleScroll() {
@@ -105,20 +137,29 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
       style={{ opacity: resolvedOpacity, pointerEvents: hidden ? 'none' : undefined }}
     >
       <button
+        ref={triggerRef}
         className="user-avatar-btn"
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            setOpen(true)
+          }
+        }}
         title={user?.email || 'Account'}
         aria-label="Account menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
         {initial}
       </button>
       {open && (
-        <div className="user-menu-dropdown">
+        <div className="user-menu-dropdown" role="menu" aria-label="Account options" onKeyDown={handleMenuKeyDown}>
           <div className="user-menu-info">
             <div className="user-menu-email">{user?.email}</div>
           </div>
           {onOpenProfile && (
-            <button className="user-menu-item" onClick={() => { setOpen(false); onOpenProfile() }}>
+            <button className="user-menu-item" role="menuitem" onClick={() => { closeMenu({ restoreFocus: true }); onOpenProfile() }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 3a9 9 0 100 18 9 9 0 000-18Z"/>
                 <path d="M8 12h8M12 8v8"/>
@@ -129,6 +170,7 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
           {onRegisterPasskey && (
             <button
               className="user-menu-item"
+              role="menuitem"
               disabled={passkeyStatus === 'loading'}
               onClick={async () => {
                 setPasskeyStatus('loading')
@@ -152,7 +194,7 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
                     : 'Add a passkey'}
             </button>
           )}
-          <button className="user-menu-item" onClick={() => { setOpen(false); onSignOut() }}>
+          <button className="user-menu-item" role="menuitem" onClick={() => { closeMenu({ restoreFocus: true }); onSignOut() }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
             </svg>

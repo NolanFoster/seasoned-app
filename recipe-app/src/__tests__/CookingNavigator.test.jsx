@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import CookingNavigator from '../CookingNavigator'
 import useGestureMode from '../useGestureMode.js'
 
@@ -684,5 +684,23 @@ describe('CookingNavigator — mise en place', () => {
     }
     render(<CookingNavigator recipe={recipe} onClose={jest.fn()} />)
     expect(screen.getByText('Other')).toBeInTheDocument()
+  })
+})
+
+describe('CookingNavigator — accessibility baseline', () => {
+  test('marks the cooking overlay as a modal dialog', () => {
+    renderNavigator()
+    expect(screen.getByRole('dialog', { name: 'Cooking navigator' })).toHaveAttribute('aria-modal', 'true')
+  })
+
+  test('Escape closes the cooking modal and timer controls have accessible names', () => {
+    const { onClose } = renderNavigator()
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Cooking navigator' }), { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    cleanup()
+
+    renderNavigator({ instructions: ['Cook for 5 minutes.'] })
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByRole('button', { name: 'Start 5 minutes timer' })).toBeInTheDocument()
   })
 })

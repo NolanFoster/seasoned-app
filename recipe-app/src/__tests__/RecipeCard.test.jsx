@@ -234,3 +234,22 @@ describe('RecipeCard — elevate-recipe feature flag', () => {
     expect(screen.getByTitle('Remix with AI')).toBeInTheDocument();
   });
 });
+
+describe('RecipeCard — accessibility baseline', () => {
+  test('exposes action menus as labelled menu buttons and restores focus on Escape', () => {
+    renderCard()
+    const trigger = screen.getByRole('button', { name: 'More recipe options' })
+
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu')
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(trigger)
+
+    const menu = screen.getByRole('menu', { name: 'Recipe actions' })
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('menuitem', { name: 'Close' })).toHaveFocus()
+
+    fireEvent.keyDown(menu, { key: 'Escape' })
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+})
