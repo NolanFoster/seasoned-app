@@ -15,7 +15,10 @@
     "test:performance": "vitest tests/performance/",
     "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch",
-    "test:run": "node tests/run-tests.js"
+    "test:run": "node tests/run-tests.js",
+    "migrate:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/001_add_passkey_credentials.sql",
+    "migrate:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/001_add_passkey_credentials.sql",
+    "migrate:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/001_add_passkey_credentials.sql"
   },
   "dependencies": {
     "hono": "^3.12.0"

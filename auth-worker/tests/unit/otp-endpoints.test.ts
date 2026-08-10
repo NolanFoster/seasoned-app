@@ -31,7 +31,7 @@ describe('OTP Endpoints', () => {
         getWithMetadata: vi.fn()
       } as unknown as KVNamespace,
       USER_MANAGEMENT_WORKER_URL: 'https://user-management-worker-preview.your-domain.workers.dev',
-      ENVIRONMENT: 'preview',
+      ENVIRONMENT: 'development',
       JWT_SECRET: 'test-jwt-secret',
       FROM_EMAIL: 'verify@seasonedapp.com',
       send_email: {
@@ -43,7 +43,7 @@ describe('OTP Endpoints', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ success: true })
+      json: () => Promise.resolve({ success: true, data: { status: 'ACTIVE' } })
     } as Response));
 
     // Mock OTP_KV operations to simulate actual KV behavior

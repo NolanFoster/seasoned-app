@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { canUsePasskeys } from './useAuth.js'
 
 const OTP_LENGTH = 6
 
-export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
+export default function AuthScreen({ onRequestOTP, onVerifyOTP, onSignInWithPasskey }) {
   const [step, setStep] = useState('email') // 'email' | 'otp'
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''))
@@ -51,6 +52,23 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
     }
   }
 
+  async function handlePasskeySignIn() {
+    if (!isValidEmail(email)) {
+      setErrorMsg('Enter your email address to use a passkey')
+      setStatus('error')
+      return
+    }
+    setStatus('loading')
+    setErrorMsg('')
+    try {
+      await onSignInWithPasskey(email)
+      setStatus('success')
+    } catch (err) {
+      setErrorMsg(err.message)
+      setStatus('error')
+    }
+  }
+
   function handleOtpChange(index, value) {
     if (value.length > 1) {
       const pasted = value.replace(/\D/g, '').slice(0, OTP_LENGTH).split('')
@@ -75,9 +93,7 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
   }
 
   function handleOtpKeyDown(index, e) {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus()
-    }
+    if (e.key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus()
   }
 
   async function submitOtp(digits) {
@@ -121,6 +137,7 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
   }
 
   const isLoading = status === 'loading'
+  const passkeysAvailable = canUsePasskeys() && typeof onSignInWithPasskey === 'function'
 
   return (
     <div className="auth-screen">
@@ -155,14 +172,12 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setErrorMsg(''); setStatus('idle') }}
                   disabled={isLoading}
-                  autoComplete="email"
+                  autoComplete="email webauthn"
                   autoFocus
                 />
               </div>
 
-              {status === 'error' && errorMsg && (
-                <p className="auth-error">{errorMsg}</p>
-              )}
+              {status === 'error' && errorMsg && <p className="auth-error">{errorMsg}</p>}
 
               <button
                 className="auth-submit"
@@ -176,9 +191,28 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
                     </svg>
                     Sending code…
                   </span>
-                ) : 'Continue'}
+                ) : 'Continue with email'}
               </button>
             </form>
+
+            {passkeysAvailable && (
+              <>
+                <div className="auth-divider"><span>or</span></div>
+                <button
+                  className="auth-passkey-btn"
+                  type="button"
+                  onClick={handlePasskeySignIn}
+                  disabled={isLoading || !email.trim()}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3"/>
+                    <path d="M6 21v-1a6 6 0 0112 0v1"/>
+                  </svg>
+                  {isLoading ? 'Waiting for passkey…' : 'Use a passkey'}
+                </button>
+                <p className="auth-passkey-hint">Passkeys use your device's screen lock or biometrics.</p>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -221,14 +255,8 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP }) {
                 Verifying…
               </p>
             )}
-
-            {status === 'success' && (
-              <p className="auth-success">Verified! Signing you in…</p>
-            )}
-
-            {status === 'error' && errorMsg && (
-              <p className="auth-error">{errorMsg}</p>
-            )}
+            {status === 'success' && <p className="auth-success">Verified! Signing you in…</p>}
+            {status === 'error' && errorMsg && <p className="auth-error">{errorMsg}</p>}
 
             <div className="auth-resend">
               <span className="auth-resend-text">Didn't get the code?</span>

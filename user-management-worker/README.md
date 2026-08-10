@@ -356,3 +356,25 @@ SELECT * FROM user_login_history ORDER BY login_timestamp DESC LIMIT 10;
 ## License
 
 This project follows the same license as the main recipe-app repository.
+
+### Passkey database migration
+
+Passkey credential and audit storage is added by `migrations/001_add_passkey_credentials.sql`.
+Apply it once to each existing D1 environment **before** deploying the updated workers:
+
+```sh
+cd user-management-worker
+npm run migrate:preview   # or migrate:staging / migrate:production
+```
+
+The migration is additive. Do not run `schema.sql` against a populated database because the
+legacy setup script contains destructive `DROP TABLE` statements. Configure the same
+`PASSKEY_SERVICE_TOKEN` secret on the auth and user-management workers for each deployed
+environment.
+
+### Passkey storage and internal access
+
+Passkey credential routes (`/passkey-credentials/*`) and user-management data routes are
+worker-internal. In deployed environments they require the `PASSKEY_SERVICE_TOKEN` secret
+shared with `auth-worker`; local development bypasses this check. Apply the additive
+`migrations/001_add_passkey_credentials.sql` migration before deploying passkey support.

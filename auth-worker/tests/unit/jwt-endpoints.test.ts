@@ -20,6 +20,11 @@ const mockEnv = {
 describe('JWT Endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { status: 'ACTIVE' } }),
+    }));
   });
 
   describe('POST /auth/validate', () => {
@@ -95,6 +100,27 @@ describe('JWT Endpoints', () => {
       expect(result.success).toBe(false);
       expect(result.valid).toBe(false);
       expect(result.message).toBeDefined();
+    });
+
+    it('should reject valid tokens for suspended users', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, data: { status: 'SUSPENDED' } }),
+      }));
+      const { JWTService } = await import('../../src/services/jwt-service');
+      const tokenResult = await new JWTService(mockEnv).createToken('test-user-id', 'test@example.com');
+
+      const response = await app.fetch(new Request('http://localhost/auth/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenResult.token }),
+      }), mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(200);
+      expect(result.success).toBe(false);
+      expect(result.valid).toBe(false);
     });
 
     it('should reject expired JWT tokens', async () => {
@@ -225,6 +251,26 @@ describe('JWT Endpoints', () => {
       expect(result.token).toBeDefined();
       expect(result.token).not.toBe(token);
       expect(result.expiresIn).toBe(604800);
+    });
+
+    it('should not refresh tokens for suspended users', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, data: { status: 'SUSPENDED' } }),
+      }));
+      const { JWTService } = await import('../../src/services/jwt-service');
+      const tokenResult = await new JWTService(mockEnv).createToken('test-user-id', 'test@example.com');
+
+      const response = await app.fetch(new Request('http://localhost/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenResult.token }),
+      }), mockEnv);
+      const result = await response.json() as any;
+
+      expect(response.status).toBe(401);
+      expect(result.success).toBe(false);
     });
 
     it('should reject expired tokens', async () => {
