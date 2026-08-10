@@ -57,6 +57,9 @@ app.use('*', logger());
 app.use('*', cors({
   origin: (origin, c) => {
     if (!origin) return '';
+    if (c.env.ENVIRONMENT !== 'production' && origin.startsWith('http://localhost:')) {
+      return origin;
+    }
     return c.env.WEBAUTHN_ORIGIN === origin ? origin : '';
   },
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -164,6 +167,9 @@ app.post('/otp/generate', async (c) => {
       // Always send verification email (security best practice)
       let emailSent = false;
       if (result.otp) {
+        if (c.env.ENVIRONMENT !== 'production') {
+          console.log(`[DEV/PREVIEW ONLY] Generated OTP for ${email}: ${result.otp}`);
+        }
         try {
           const emailService = new EmailService(c.env);
           const emailResult = await emailService.sendVerificationEmail(email, result.otp, 10);
