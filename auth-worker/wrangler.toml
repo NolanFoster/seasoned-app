@@ -11,9 +11,8 @@ id = "1fdebf1b59e249a691746f85a9eb5e62"
 name = "PASSKEY_CHALLENGE_DO"
 class_name = "PasskeyChallengeObject"
 
-[[migrations]]
-tag = "v1"
-new_classes = ["PasskeyChallengeObject"]
+[exports]
+"PasskeyChallengeObject" = { type = "durable-object" }
 
 [vars]
 ENVIRONMENT = "production"
@@ -42,9 +41,7 @@ enabled = true
 [env.preview]
 name = "auth-worker-preview"
 
-[[env.preview.migrations]]
-tag = "v1"
-new_classes = ["PasskeyChallengeObject"]
+
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
@@ -72,9 +69,7 @@ enabled = true
 [env.production]
 name = "auth-worker-production"
 
-[[env.production.migrations]]
-tag = "v1"
-new_classes = ["PasskeyChallengeObject"]
+
 
 [env.production.vars]
 ENVIRONMENT = "production"
@@ -102,9 +97,7 @@ enabled = true
 [env.staging]
 name = "auth-worker-staging"
 
-[[env.staging.migrations]]
-tag = "v1"
-new_classes = ["PasskeyChallengeObject"]
+
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
