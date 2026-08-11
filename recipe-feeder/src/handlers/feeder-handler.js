@@ -37,7 +37,7 @@ export async function processRecipesUntilTarget(env, targetQueueCount = 100, cur
   
   let currentCursor = cursor;
   let hasMore = true;
-  let recipesToQueue = [];
+  const recipesToQueue = [];
   
   try {
     // Continue scanning until we have enough recipes to queue or run out of KV values
