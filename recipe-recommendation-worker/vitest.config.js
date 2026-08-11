@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { thresholdsFor } from '../scripts/coverage-thresholds.mjs';
 
 export default defineConfig({
   test: {
@@ -15,7 +16,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
       exclude: [
         'node_modules/**',
         'dist/**',
@@ -25,15 +26,10 @@ export default defineConfig({
         'tests/**',
         'example.js'
       ],
-      thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80
-      },
-      // Don't fail tests if coverage thresholds are not met
-      // This allows coverage reports to be generated and posted even when below threshold
-      thresholdAutoUpdate: false
+      // Minimums come from .github/coverage-thresholds.json so local runs and
+      // the pull request coverage gate enforce the same numbers. Falling below
+      // any of them fails the run — that is the point of the gate.
+      thresholds: thresholdsFor('recipe-recommendation-worker')
     },
     include: ['tests/**/*.test.js', 'src/**/*.test.js'],
     setupFiles: ['./tests/setup.js']

@@ -43,18 +43,20 @@ jobs:
       working-directory: ./recipe-search-db
       run: npm ci
     
-    - name: Run Worker Tests
+    # Non-blocking, and not part of the Code Coverage gate. test-search-db.js
+    # sends HTTP requests to a *deployed* worker instead of importing modules,
+    # so it measures no in-process coverage and currently reports 13/13 failed
+    # ("fetch failed") from CI, where no such deployment is reachable. It also
+    # exits 0 regardless of results, so the old `|| echo` was hiding a suite
+    # that could not pass in the first place.
+    #
+    # To make this meaningful it needs unit tests against the query builders
+    # with D1 stubbed; then add it to .github/coverage-thresholds.json.
+    # See docs/CODE_COVERAGE.md.
+    - name: Run Worker Tests (non-blocking, needs a deployed worker)
       working-directory: ./recipe-search-db
-      run: |
-        # Run tests if test script exists, otherwise skip
-        if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
-        else
-          echo "No test script found in package.json"
-        fi
-        
-        # Note: Worker tests currently don't generate coverage reports
-        # Consider adding coverage collection for worker tests in the future
+      continue-on-error: true
+      run: npm test
 
   lint-worker:
     name: Recipe Search DB Code Quality Checks

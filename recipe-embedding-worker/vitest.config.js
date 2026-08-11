@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import path from 'path'
+import { thresholdsFor } from '../scripts/coverage-thresholds.mjs'
 
 export default defineConfig({
   test: {
@@ -18,7 +19,7 @@ export default defineConfig({
     setupFiles: ['./tests/setup.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
       // Only include source files in coverage
       include: ['src/**/*.{js,ts}'],
       exclude: [
@@ -29,12 +30,9 @@ export default defineConfig({
         '**/mockData.js',
         'src/index.test.js' // Exclude old test file
       ],
-      thresholds: {
-        lines: 85,
-        functions: 85,
-        branches: 80,
-        statements: 85
-      }
+      // Minimums come from .github/coverage-thresholds.json so local runs and
+      // the pull request coverage gate enforce the same numbers.
+      thresholds: thresholdsFor('recipe-embedding-worker')
     },
     // Test environment configuration
     testTimeout: 10000,

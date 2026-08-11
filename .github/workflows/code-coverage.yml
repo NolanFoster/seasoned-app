@@ -1,0 +1,232 @@
+name: Code Coverage
+
+# The blocking coverage gate for pull requests.
+#
+# Unlike the per-package workflows, this one deliberately has NO `paths:`
+# filter. A workflow that is skipped by a path filter never reports a status,
+# so a branch protection rule that requires it would block every unrelated pull
+# request forever. Running always — and choosing the matrix at runtime from the
+# diff — means "Coverage Gate" reports on every pull request and can safely be
+# marked as a required status check.
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: code-coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect affected packages
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+      any: ${{ steps.detect.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "${{ github.base_ref }}"
+
+      - name: Guard against lowered coverage minimums
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-threshold-ratchet.mjs --base "origin/${{ github.base_ref }}"
+
+      - name: Detect affected packages
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            node scripts/affected-packages.mjs --base "origin/${{ github.base_ref }}"
+          else
+            node scripts/affected-packages.mjs --all
+          fi
+
+  coverage:
+    name: Coverage (${{ matrix.package }})
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.detect.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read package config
+        id: cfg
+        run: |
+          node - <<'EOF' >> "$GITHUB_OUTPUT"
+          const fs = require('fs');
+          const policy = JSON.parse(
+            fs.readFileSync('.github/coverage-thresholds.json', 'utf8')
+          );
+          const entry = policy.packages[process.env.PACKAGE];
+          const dir = entry.path ?? process.env.PACKAGE;
+          console.log(`path=${dir}`);
+          console.log(`node-version=${entry.nodeVersion ?? '20'}`);
+          console.log(`needs-shared=${(entry.dependsOn ?? []).includes('shared')}`);
+          EOF
+        env:
+          PACKAGE: ${{ matrix.package }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.cfg.outputs.node-version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ steps.cfg.outputs.path }}/package-lock.json
+
+      # Several workers import straight out of ../shared, so its dependencies
+      # have to exist before their suites can resolve those modules.
+      - name: Install shared dependencies
+        if: steps.cfg.outputs.needs-shared == 'true' && matrix.package != 'shared'
+        working-directory: shared
+        run: npm ci
+
+      - name: Install dependencies
+        working-directory: ${{ steps.cfg.outputs.path }}
+        run: npm ci
+
+      # Every gated package exposes the same entry point. Keeping the command
+      # uniform means the gate never has to run a command string read out of a
+      # data file, and it keeps CI identical to what developers run locally.
+      - name: Run tests with coverage
+        working-directory: ${{ steps.cfg.outputs.path }}
+        run: npm run test:coverage
+
+      - name: Enforce coverage minimums
+        if: always()
+        run: |
+          mkdir -p coverage-fragments
+          node scripts/check-coverage.mjs \
+            --package "${{ matrix.package }}" \
+            --summary-out "coverage-fragments/${{ matrix.package }}.md"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.package }}
+          path: ${{ steps.cfg.outputs.path }}/coverage/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload summary fragment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-fragment-${{ matrix.package }}
+          path: coverage-fragments/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  gate:
+    # This is the job to mark as a required status check. It runs even when the
+    # matrix was empty or a coverage job failed, so it always reports a status.
+    name: Coverage Gate
+    needs: [detect, coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download summary fragments
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-fragment-*
+          path: fragments
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Build report
+        id: report
+        run: |
+          {
+            echo 'body<<COVERAGE_EOF'
+            echo '## 📊 Code Coverage'
+            echo ''
+            if [ "${{ needs.detect.outputs.any }}" != 'true' ]; then
+              echo '_No gated package was touched by this pull request._'
+            elif [ -z "$(ls -A fragments 2>/dev/null)" ]; then
+              echo '⚠️ Coverage jobs produced no report. Check the workflow logs.'
+            else
+              for fragment in fragments/*.md; do
+                cat "$fragment"
+                echo ''
+              done
+              echo ''
+              echo '<sub>Minimums live in `.github/coverage-thresholds.json`. See `docs/CODE_COVERAGE.md`.</sub>'
+            fi
+            echo 'COVERAGE_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # Passed through the environment rather than interpolated into the script:
+      # the body is generated markdown containing quotes and backticks.
+      - name: Write job summary
+        env:
+          BODY: ${{ steps.report.outputs.body }}
+        run: echo "$BODY" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const marker = '<!-- coverage-gate -->';
+            // toJSON emits a complete quoted JS string literal, so it is
+            // assigned directly rather than interpolated into a template.
+            const report = ${{ toJSON(steps.report.outputs.body) }};
+            const body = `${marker}\n${report}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100
+            });
+
+            const existing = comments.find((comment) => comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+      - name: Fail if any package missed its minimum
+        if: needs.coverage.result != 'success' && needs.detect.outputs.any == 'true'
+        run: |
+          echo "::error title=Coverage gate failed::One or more packages are below their coverage minimum, or their tests failed."
+          exit 1
+
+      - name: Fail if package detection failed
+        if: needs.detect.result != 'success'
+        run: |
+          echo "::error title=Coverage gate failed::Could not determine which packages to check."
+          exit 1

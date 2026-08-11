@@ -1,0 +1,116 @@
+{
+  "$comment": [
+    "Single source of truth for code coverage minimums. Read by scripts/check-coverage.mjs",
+    "in CI and by each package's vitest/jest config so a local `npm run test:coverage`",
+    "enforces exactly what the pull request gate enforces.",
+    "",
+    "Minimums are a RATCHET: scripts/check-threshold-ratchet.mjs fails any pull request",
+    "that lowers one. Raise them as coverage improves; see docs/CODE_COVERAGE.md.",
+    "",
+    "Per-package values were set by measuring current coverage and rounding down, so the",
+    "gate is green on the current tree while still catching regressions. Packages listed",
+    "below the `defaults` are carrying known test debt and should climb toward it."
+  ],
+
+  "defaults": {
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 70
+  },
+
+  "newCode": {
+    "$comment": [
+      "Minimum coverage for lines a pull request adds or changes, measured by diff-cover.",
+      "Held higher than the whole-package minimums: new code has no excuse for being",
+      "untested, and this is what pulls packages carrying test debt back up over time."
+    ],
+    "threshold": 85
+  },
+
+  "allowThresholdDecrease": [],
+
+  "packages": {
+    "ai-image-generation-worker": {
+      "path": "ai-image-generation-worker",
+      "nodeVersion": "20",
+      "thresholds": { "lines": 85, "statements": 85, "functions": 80, "branches": 80 }
+    },
+
+    "auth-worker": {
+      "path": "auth-worker",
+      "nodeVersion": "20",
+      "thresholds": { "lines": 80, "statements": 80, "functions": 95, "branches": 75 }
+    },
+
+    "clipper": {
+      "path": "clipper",
+      "nodeVersion": "20",
+      "dependsOn": ["shared"],
+      "note": "Below defaults: branch coverage in the extraction fallbacks needs work.",
+      "thresholds": { "lines": 65, "statements": 65, "functions": 90, "branches": 60 }
+    },
+
+    "recipe-app": {
+      "path": "recipe-app",
+      "nodeVersion": "20",
+      "note": "Below defaults: large React surface with partial component coverage.",
+      "thresholds": { "lines": 60, "statements": 60, "functions": 60, "branches": 50 }
+    },
+
+    "recipe-embedding-worker": {
+      "path": "recipe-embedding-worker",
+      "nodeVersion": "20",
+      "thresholds": { "lines": 95, "statements": 95, "functions": 95, "branches": 90 }
+    },
+
+    "recipe-feeder": {
+      "path": "recipe-feeder",
+      "nodeVersion": "20",
+      "dependsOn": ["shared"],
+      "thresholds": { "lines": 85, "statements": 85, "functions": 90, "branches": 85 }
+    },
+
+    "recipe-generation-worker": {
+      "path": "recipe-generation-worker",
+      "nodeVersion": "20",
+      "dependsOn": ["shared"],
+      "thresholds": { "lines": 85, "statements": 85, "functions": 90, "branches": 70 }
+    },
+
+    "recipe-recommendation-worker": {
+      "path": "recipe-recommendation-worker",
+      "nodeVersion": "20",
+      "dependsOn": ["shared"],
+      "thresholds": { "lines": 80, "statements": 80, "functions": 90, "branches": 75 }
+    },
+
+    "recipe-save-worker": {
+      "path": "recipe-save-worker",
+      "nodeVersion": "20",
+      "dependsOn": ["shared"],
+      "thresholds": { "lines": 80, "statements": 80, "functions": 95, "branches": 75 }
+    },
+
+    "recipe-view-worker": {
+      "path": "recipe-view-worker",
+      "nodeVersion": "20",
+      "dependsOn": ["shared"],
+      "thresholds": { "lines": 95, "statements": 95, "functions": 95, "branches": 85 }
+    },
+
+    "shared": {
+      "path": "shared",
+      "nodeVersion": "20",
+      "note": "Below defaults: kv-storage and nutrition-calculator are exercised by standalone node scripts that do not report coverage.",
+      "thresholds": { "lines": 40, "statements": 40, "functions": 85, "branches": 75 }
+    },
+
+    "user-management-worker": {
+      "path": "user-management-worker",
+      "nodeVersion": "20",
+      "note": "Below defaults: the existing suites are thin smoke tests. Highest-priority package to improve.",
+      "thresholds": { "lines": 25, "statements": 25, "functions": 45, "branches": 40 }
+    }
+  }
+}

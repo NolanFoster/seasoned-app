@@ -61,6 +61,12 @@ This project follows a strict testing and staging deployment workflow to ensure 
 2. **Feature Branches**: Work on feature branches, never directly on main
 3. **Staging Validation**: Changes must be validated in staging before production
 4. **Automated Testing**: Pre-commit hooks and GitHub Actions enforce testing
+5. **Coverage Minimums**: Every pull request must keep each affected package at
+   or above its minimum, and new code must be 85% covered. Minimums live in
+   `.github/coverage-thresholds.json` — see [docs/CODE_COVERAGE.md](docs/CODE_COVERAGE.md).
+
+   Run `npm run test:coverage` inside a package to check it locally; that is the
+   same command, and the same thresholds, that CI enforces.
 
 #### Quick Start
 

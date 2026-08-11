@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+// @ts-expect-error -- plain ESM helper shared across the monorepo, no types needed
+import { thresholdsFor } from '../scripts/coverage-thresholds.mjs';
 
 export default defineConfig({
   test: {
@@ -12,7 +14,7 @@ export default defineConfig({
     // },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'tests/',
@@ -23,12 +25,9 @@ export default defineConfig({
         '**/*.js',
         'run-test.js'
       ],
-      thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80
-      }
+      // Minimums come from .github/coverage-thresholds.json so local runs and
+      // the pull request coverage gate enforce the same numbers.
+      thresholds: thresholdsFor('auth-worker')
     }
   },
   resolve: {
