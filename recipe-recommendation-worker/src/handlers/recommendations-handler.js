@@ -5,6 +5,7 @@
 import { log, generateRequestId } from '../../../shared/utility-functions.js';
 import { metrics, categorizeError, sendAnalytics } from '../shared-utilities.js';
 import { getRecipeRecommendations } from '../recommendation-service.js';
+import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
 
 export async function handleRecommendations(request, env, corsHeaders, requestId) {
   const startTime = Date.now();
@@ -15,6 +16,8 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
     // Parse request body
     const body = await request.json();
     const { location, date, limit = 3, aiGenerated = 0 } = body; // Default limit is 3 recipes per category, 0 AI-generated
+    const constraints = buildGenerationConstraints(body.culinaryProfile || body.profile || {}, body);
+    const hardAllergens = constraints.hardAllergens;
 
     // Validate and log input parameters
     const hasLocation = location && location.trim() !== '';
@@ -40,7 +43,16 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
     });
 
     // Get recommendations from the recommendation service
-    const recommendations = await getRecipeRecommendations(location, recommendationDate, recipesPerCategory, aiGeneratedCount, env, requestId);
+    const recommendationArgs = [
+      location,
+      recommendationDate,
+      recipesPerCategory,
+      aiGeneratedCount,
+      env,
+      requestId,
+    ];
+    if (hardAllergens.length > 0) recommendationArgs.push({ hardAllergens });
+    const recommendations = await getRecipeRecommendations(...recommendationArgs);
 
     const duration = Date.now() - startTime;
     metrics.timing('recommendations_duration', duration);
@@ -74,7 +86,8 @@ export async function handleRecommendations(request, env, corsHeaders, requestId
       requestId,
       processingTime: `${duration}ms`,
       recipesPerCategory,
-      aiGeneratedCount
+      aiGeneratedCount,
+      hardAllergens
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

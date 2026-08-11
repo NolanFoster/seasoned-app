@@ -1,6 +1,11 @@
 import { OpikClient } from '../opik-client.js';
 import { getRecipeFromKV } from '../../../shared/kv-storage.js';
 import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
+import {
+  AllergenSafetyError,
+  enforceAllergenSafety,
+  isRecipeSafe
+} from '../../../shared/allergen-graph.js';
 
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
@@ -69,15 +74,17 @@ export async function handleGenerate(request, env, corsHeaders) {
       };
 
       // Check if elevation is requested in mock mode
-      let finalRecipe = mockRecipe;
+      let finalRecipe = enforceAllergenSafety(mockRecipe, appliedConstraints.hardAllergens);
       if (requestBody.elevate === true) {
         try {
           finalRecipe = await elevateRecipe(mockRecipe, env);
         } catch (elevationError) {
+          // Safety failures must never fall back to an unchecked recipe.
+          if (elevationError instanceof AllergenSafetyError) throw elevationError;
           // If elevation fails, return the original recipe with a warning
           console.warn('Recipe elevation failed in mock mode:', elevationError.message);
           finalRecipe = {
-            ...mockRecipe,
+            ...finalRecipe,
             elevationError: 'Recipe elevation failed, returning original recipe',
             elevationFailed: true
           };
@@ -114,18 +121,24 @@ export async function handleGenerate(request, env, corsHeaders) {
 
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
-    generatedRecipe.appliedConstraints = appliedConstraints;
+    let finalRecipe = enforceAllergenSafety(generatedRecipe, appliedConstraints.hardAllergens);
+    finalRecipe.appliedConstraints = appliedConstraints;
 
     // Check if elevation is requested
-    let finalRecipe = generatedRecipe;
     if (requestBody.elevate === true) {
       try {
-        finalRecipe = await elevateRecipe(generatedRecipe, env);
+        finalRecipe = enforceAllergenSafety(
+          await elevateRecipe(finalRecipe, env),
+          appliedConstraints.hardAllergens
+        );
+        finalRecipe.appliedConstraints = appliedConstraints;
       } catch (elevationError) {
+        // Safety failures must never fall back to an unchecked recipe.
+        if (elevationError instanceof AllergenSafetyError) throw elevationError;
         // If elevation fails, return the original recipe with a warning
         console.warn('Recipe elevation failed:', elevationError.message);
         finalRecipe = {
-          ...generatedRecipe,
+          ...finalRecipe,
           elevationError: 'Recipe elevation failed, returning original recipe',
           elevationFailed: true
         };
@@ -159,6 +172,21 @@ export async function handleGenerate(request, env, corsHeaders) {
       }
     });
   } catch (error) {
+    // Allergen failures are client-actionable and must not expose the unsafe recipe.
+    if (error instanceof AllergenSafetyError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe failed allergen safety validation',
+        code: error.code,
+        allergenSummary: error.summary
+      }), {
+        status: error.status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
     // Error processing recipe generation request
     return new Response(JSON.stringify({
       error: 'Failed to process recipe generation request',
@@ -224,8 +252,15 @@ async function generateRecipeWithAI(requestData, env) {
 
     // Step 3: Search for similar recipes using vectorize and fetch full data
     operationData.searchStartTime = new Date().toISOString();
-    const similarRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env);
-    // Found ${similarRecipes.length} similar recipes
+    const candidateRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env);
+    const hardAllergens = requestData.hardAllergens || [];
+    const similarRecipes = hardAllergens.length > 0
+      ? candidateRecipes.filter((candidate) => isRecipeSafe(
+        candidate.fullRecipe || { ingredients: [candidate.metadata?.title || ''] },
+        hardAllergens
+      ))
+      : candidateRecipes;
+    // Found allergen-safe similar recipes
     operationData.similarRecipes = similarRecipes;
     operationData.searchEndTime = new Date().toISOString();
 
@@ -397,6 +432,10 @@ function buildQueryText(requestData) {
   // Add dietary restrictions
   if (requestData.dietary && requestData.dietary.length > 0) {
     parts.push(`Dietary restrictions: ${requestData.dietary.join(', ')}`);
+  }
+
+  if (requestData.hardAllergens && requestData.hardAllergens.length > 0) {
+    parts.push(`Exclude allergens: ${requestData.hardAllergens.join(', ')}`);
   }
 
   // Add meal type
@@ -910,6 +949,11 @@ Make the recipe practical for home cooks with commonly available ingredients. In
  * better ingredient specificity, and educational cooking insights.
  */
 export async function elevateRecipe(recipe, env) {
+  const hardAllergens = recipe?.appliedConstraints?.hardAllergens || recipe?.hardAllergens || [];
+  const annotateElevated = (value) => hardAllergens.length > 0
+    ? enforceAllergenSafety(value, hardAllergens)
+    : value;
+
   // Check if we're in a local development environment without AI access
   if (!env.AI) {
     // Ensure ingredients and instructions are arrays before mapping
@@ -924,7 +968,7 @@ export async function elevateRecipe(recipe, env) {
       : [];
 
     // Return mock elevated recipe for local testing
-    return {
+    return annotateElevated({
       ...recipe,
       name: `Elevated ${recipe.name}`,
       description: `${recipe.description} (Enhanced with professional culinary techniques)`,
@@ -943,7 +987,7 @@ export async function elevateRecipe(recipe, env) {
       elevatedAt: new Date().toISOString(),
       elevationMethod: 'mock-ai',
       mockMode: true
-    };
+    });
   }
 
   // Create the culinary expert system prompt
@@ -1019,6 +1063,10 @@ Remember: Your goal is to transform a good recipe into an exceptional one while 
     : (recipe.tips || 'None provided');
 
   // Create the user prompt with the recipe to elevate
+  const safetyInstruction = hardAllergens.length > 0
+    ? `\n\nHARD SAFETY REQUIREMENT: do not add or retain these allergens: ${hardAllergens.join(', ')}. If a substitution is needed, choose an ingredient that is verifiably free of them.`
+    : '';
+
   const userPrompt = `Please elevate this recipe with your professional culinary expertise:
 
 **Original Recipe:**
@@ -1041,7 +1089,7 @@ additionalDetails:
 - dietary: ${safeDietary}
 - tips: ${safeTips}
 
-Please provide the elevated version following the same JSON structure, with enhanced ingredients, improved instructions, and additional professional tips.`;
+Please provide the elevated version following the same JSON structure, with enhanced ingredients, improved instructions, and additional professional tips.${safetyInstruction}`;
 
   // Validate prompt length and content
   if (userPrompt.length > 8000) {
@@ -1243,7 +1291,7 @@ Please provide the elevated version following the same JSON structure, with enha
     delete elevatedRecipe.dietaryConsiderations;
   }
 
-  return elevatedRecipe;
+  return annotateElevated(elevatedRecipe);
 }
 
 /**

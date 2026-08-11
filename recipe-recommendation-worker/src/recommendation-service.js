@@ -6,6 +6,7 @@ import { log } from '../../shared/utility-functions.js';
 import { metrics, sendAnalytics } from './shared-utilities.js';
 import { getRecipeFromKV as getRecipeFromKVShared } from '../../shared/kv-storage.js';
 import { generateRecipeImages } from './utils/image-generator.js';
+import { isRecipeSafe, withAllergenSummary } from '../../shared/allergen-graph.js';
 
 // Generate relevant ingredients from dish name for better image generation
 function generateIngredientsFromName(dishName) {
@@ -142,7 +143,8 @@ function getContextualCategory(season, date, hasLocation) {
 }
 
 // Main recommendation function
-export async function getRecipeRecommendations(location, date, recipesPerCategory, aiGeneratedCount, env, requestId) {
+export async function getRecipeRecommendations(location, date, recipesPerCategory, aiGeneratedCount, env, requestId, options = {}) {
+  const hardAllergens = Array.isArray(options.hardAllergens) ? options.hardAllergens : [];
   const startTime = Date.now();
   
   // Check if we have AI binding
@@ -169,6 +171,9 @@ export async function getRecipeRecommendations(location, date, recipesPerCategor
   
   // Build dynamic prompt based on context
   let basePrompt = `Generate ${recipesPerCategory} recipe recommendations for each category. ${promptContext}`;
+  if (hardAllergens.length > 0) {
+    basePrompt += ` Do not recommend dishes containing these hard allergens: ${hardAllergens.join(', ')}.`;
+  }
   
   if (upcomingHoliday) {
     basePrompt += ` It's near ${upcomingHoliday}, so include holiday-appropriate recipes.`;
@@ -303,7 +308,8 @@ Make the categories relevant to the season, location, and context. Be specific w
       categoryRecommendations, 
       recipesPerCategory, 
       env, 
-      requestId
+      requestId,
+      hardAllergens
     );
 
     // Generate additional AI recipes per category if requested
@@ -321,7 +327,10 @@ Make the categories relevant to the season, location, and context. Be specific w
       Object.keys(enhancedRecommendations).forEach(category => {
         if (aiGeneratedPerCategory[category]) {
           // Add AI-generated recipe names as simple strings
-          enhancedRecommendations[category].push(...aiGeneratedPerCategory[category]);
+          const generatedRecipes = hardAllergens.length > 0
+            ? [] // Names without ingredient lists cannot be verified for hard allergens.
+            : aiGeneratedPerCategory[category];
+          enhancedRecommendations[category].push(...generatedRecipes);
         }
       });
     }
@@ -893,7 +902,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
 }
 
 // Enhanced recommendations with actual recipes and cross-category duplicate prevention
-export async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipesPerCategory, env, requestId) {
+export async function enhanceRecommendationsWithRecipes(categoryRecommendations, recipesPerCategory, env, requestId, hardAllergens = []) {
   const startTime = Date.now();
   
   try {
@@ -907,18 +916,44 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
     const globalSeenRecipeIds = new Set();
     const globalSeenRecipeNames = new Set();
     const enhancedRecommendations = {};
+
+    const filterUnsafeRecipes = (recipes) => {
+      if (!hardAllergens.length) return recipes;
+      return recipes
+        .filter((recipe) => {
+          // A recommendation without ingredient data cannot be verified safely.
+          if (!Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
+            log('debug', 'Excluded unverified recipe from allergen-filtered recommendations', {
+              requestId,
+              recipeId: recipe.id,
+              recipeName: recipe.name,
+            });
+            return false;
+          }
+          const safe = isRecipeSafe(recipe, hardAllergens);
+          if (!safe) {
+            log('info', 'Excluded recipe containing a hard allergen', {
+              requestId,
+              recipeId: recipe.id,
+              recipeName: recipe.name,
+            });
+          }
+          return safe;
+        })
+        .map((recipe) => withAllergenSummary(recipe, hardAllergens));
+    };
     
     // Process categories sequentially to maintain cross-category duplicate prevention
     for (const [categoryName, dishNames] of Object.entries(categoryRecommendations)) {
       try {
         // Search for recipes based on the category and dish names
-        const recipes = await searchRecipeByCategory(
+        const recipes = filterUnsafeRecipes(await searchRecipeByCategory(
           categoryName, 
           dishNames, 
           recipesPerCategory, 
           env, 
           requestId
-        );
+        ));
         
         // Filter out duplicates across categories
         const uniqueRecipes = [];
@@ -969,13 +1004,13 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           });
           
           // Try to get more recipes with different search terms
-          const additionalRecipes = await searchRecipeByCategory(
+          const additionalRecipes = filterUnsafeRecipes(await searchRecipeByCategory(
             categoryName, 
             dishNames.slice(0, Math.ceil(dishNames.length / 2)), // Use fewer terms
             recipesPerCategory - uniqueRecipes.length, 
             env, 
             requestId
-          );
+          ));
           
           // Filter additional recipes for cross-category duplicates
           for (const recipe of additionalRecipes) {
@@ -1011,8 +1046,9 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
           error: error.message
         });
         
-        // Fall back to original dish names
-        enhancedRecommendations[categoryName] = dishNames.map((dish, index) => ({
+        // Fall back to original dish names only when there is no hard-allergen
+        // policy. A name-only suggestion cannot be safely verified.
+        enhancedRecommendations[categoryName] = hardAllergens.length > 0 ? [] : dishNames.map((dish, index) => ({
           id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: dish,
           description: `A delicious ${dish.toLowerCase()} perfect for ${categoryName.toLowerCase()}`,

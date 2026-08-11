@@ -663,6 +663,17 @@ textarea:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
 }
 
+.recipe-allergen-notice {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgba(232, 200, 122, 0.45);
+  border-radius: 10px;
+  color: var(--text, #e8f0e4);
+  background: rgba(232, 200, 122, 0.1);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
 .recipe-description {
   padding: 16px 20px 0;
   font-size: 0.9375rem;

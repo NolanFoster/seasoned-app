@@ -2121,3 +2121,93 @@ describe('Generate Handler - Unit Tests', () => {
     });
   });
 });
+
+describe('Allergen safety enforcement', () => {
+  const allergenCorsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
+  const allergenMockAI = { run: vi.fn() };
+  const allergenEnv = {
+    ...mockEnv,
+    AI: allergenMockAI,
+    RECIPE_VECTORS: { query: vi.fn().mockResolvedValue({ matches: [] }) }
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    allergenMockAI.run.mockImplementation((model) => {
+      if (model === '@cf/baai/bge-small-en-v1.5') {
+        return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+      }
+      return Promise.resolve({
+        response: {
+          name: 'Rice bowl',
+          description: 'Safe test recipe',
+          ingredients: ['2 cups rice', '1 cup carrots'],
+          instructions: ['Mix and serve'],
+          prepTime: '5 minutes',
+          cookTime: '5 minutes',
+          totalTime: '10 minutes',
+          servings: '2 servings',
+          difficulty: 'Easy',
+          dietary: []
+        }
+      });
+    });
+  });
+
+  it('fails closed without returning a generated recipe containing a hard allergen', async () => {
+    allergenMockAI.run.mockImplementation((model) => {
+      if (model === '@cf/baai/bge-small-en-v1.5') {
+        return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+      }
+      return Promise.resolve({
+        response: {
+          name: 'Peanut satay',
+          description: 'Unsafe test recipe',
+          ingredients: ['1 cup peanuts', '2 cups rice'],
+          instructions: ['Mix and serve'],
+          prepTime: '5 minutes',
+          cookTime: '5 minutes',
+          totalTime: '10 minutes',
+          servings: '2 servings',
+          difficulty: 'Easy',
+          dietary: []
+        }
+      });
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Satay',
+      hardAllergens: ['peanut']
+    }), allergenEnv, allergenCorsHeaders);
+
+    expect(response.status).toBe(422);
+    const data = await response.json();
+    expect(data).toMatchObject({
+      error: 'Recipe failed allergen safety validation',
+      code: 'ALLERGEN_SAFETY_BLOCK',
+      allergenSummary: {
+        checked: true,
+        blocked: ['peanuts']
+      }
+    });
+    expect(data.recipe).toBeUndefined();
+  });
+
+  it('echoes a passed allergen validation summary for safe generated recipes', async () => {
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Rice bowl',
+      hardAllergens: ['peanuts']
+    }), allergenEnv, allergenCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.recipe).toMatchObject({
+      allergenValidation: 'PASSED',
+      allergenSummary: { checked: true, blocked: [] }
+    });
+  });
+});
