@@ -203,7 +203,9 @@ describe('Generate Handler - Unit Tests', () => {
           diet_tags: ['vegan'],
           cuisine_likes: ['thai'],
           default_servings: 2,
-          max_cook_time_min: 25
+          max_cook_time_min: 25,
+          equipment: ['oven'],
+          hard_allergens: ['peanuts']
         }
       };
 
@@ -228,6 +230,18 @@ describe('Generate Handler - Unit Tests', () => {
       expect(prompt).toContain('serves 6 people');
       expect(prompt).toContain('italian cuisine');
       expect(prompt).toContain('total cooking time under 25 minutes');
+      expect(prompt).toContain('using only available equipment: oven');
+      expect(prompt).toContain('must not contain these hard allergens: peanuts');
+
+      const data = await response.json();
+      expect(data.appliedConstraints).toMatchObject({
+        dietary: ['vegan'],
+        equipment: ['oven'],
+        hardAllergens: ['peanuts'],
+        servings: 6,
+        maxCookTime: 25
+      });
+      expect(data.recipe.appliedConstraints).toEqual(data.appliedConstraints);
     });
 
     it('should accept the profile alias for backwards-compatible clients', async () => {
