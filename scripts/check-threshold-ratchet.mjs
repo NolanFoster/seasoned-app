@@ -77,6 +77,30 @@ function main() {
   const exemptions = new Set(headPolicy.allowThresholdDecrease ?? []);
   const violations = [];
 
+  // The new-code minimum is repository-wide rather than per-package, so it is
+  // not covered by the loop below. It still gets enforced for real — by
+  // diff-cover in frontend-tests.yml — so leaving it out would let the 85%
+  // differential minimum be weakened while the ratchet reported success.
+  // Use the reserved name "newCode" in allowThresholdDecrease to lower it.
+  if (!exemptions.has('newCode')) {
+    const beforeNewCode = basePolicy.newCode?.threshold;
+    const afterNewCode = headPolicy.newCode?.threshold;
+
+    if (typeof beforeNewCode === 'number') {
+      if (typeof afterNewCode !== 'number') {
+        violations.push(
+          'The repository-wide newCode.threshold was removed, which would stop new code being gated.'
+        );
+      } else if (afterNewCode < beforeNewCode) {
+        violations.push(
+          `The repository-wide newCode.threshold was lowered from ${beforeNewCode}% to ${afterNewCode}%.`
+        );
+      }
+    }
+  } else {
+    console.log('Skipping newCode.threshold: listed in allowThresholdDecrease.');
+  }
+
   for (const packageName of Object.keys(basePolicy.packages ?? {})) {
     if (exemptions.has(packageName)) {
       console.log(`Skipping ${packageName}: listed in allowThresholdDecrease.`);

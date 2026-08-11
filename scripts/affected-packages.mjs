@@ -30,7 +30,11 @@ const GLOBAL_PATHS = [
   '.github/workflows/code-coverage.yml',
   'scripts/check-coverage.mjs',
   'scripts/affected-packages.mjs',
-  'scripts/check-threshold-ratchet.mjs'
+  'scripts/check-threshold-ratchet.mjs',
+  // Every package's vitest/jest config imports this helper, so a break in it
+  // breaks all of them. Without it here, a change touching only the helper
+  // would select no packages and sail through a green gate.
+  'scripts/coverage-thresholds.mjs'
 ];
 
 function parseArgs(argv) {

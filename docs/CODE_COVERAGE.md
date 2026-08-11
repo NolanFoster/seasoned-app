@@ -64,11 +64,13 @@ Improve the tests, then raise the number in
 ## Lowering a minimum
 
 Minimums are a ratchet — `scripts/check-threshold-ratchet.mjs` fails any pull
-request that lowers one, or that removes a package from the policy.
+request that lowers one, removes a package from the policy, or weakens the
+repository-wide `newCode.threshold`.
 
 If lowering one is genuinely correct (a package shed a well-tested module, say),
 add the package name to `allowThresholdDecrease` in a standalone pull request
-that explains why, and remove it again afterwards.
+that explains why, and remove it again afterwards. To lower the new-code
+minimum, use the reserved name `newCode` in that same list.
 
 ## Adding a package to the gate
 
