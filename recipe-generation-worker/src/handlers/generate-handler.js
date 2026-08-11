@@ -26,7 +26,8 @@ export async function handleGenerate(request, env, corsHeaders) {
     // Keep the generation worker compatible with the existing flat request
     // contract while allowing an authenticated client to provide profile
     // defaults. Explicit request fields remain authoritative.
-    Object.assign(requestBody, buildGenerationConstraints(profile, requestBody));
+    const appliedConstraints = buildGenerationConstraints(profile, requestBody);
+    Object.assign(requestBody, appliedConstraints);
 
     // Validate required fields - either recipeName or ingredients must be provided
     if (!requestBody.recipeName &&
@@ -63,7 +64,8 @@ export async function handleGenerate(request, env, corsHeaders) {
         sourceIngredients: requestBody.ingredients || [],
         generationTime: 0,
         similarRecipesFound: 0,
-        mockMode: true
+        mockMode: true,
+        appliedConstraints
       };
 
       // Check if elevation is requested in mock mode
@@ -99,6 +101,7 @@ export async function handleGenerate(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         success: true,
         recipe: finalRecipe,
+        appliedConstraints,
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -111,6 +114,7 @@ export async function handleGenerate(request, env, corsHeaders) {
 
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
+    generatedRecipe.appliedConstraints = appliedConstraints;
 
     // Check if elevation is requested
     let finalRecipe = generatedRecipe;
@@ -145,6 +149,7 @@ export async function handleGenerate(request, env, corsHeaders) {
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
+      appliedConstraints,
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -372,13 +377,12 @@ async function generateRecipeWithAI(requestData, env) {
  * Build query text from request data for embedding generation
  */
 function buildQueryText(requestData) {
-  // If recipe name is provided, use it as the primary query
-  if (requestData.recipeName) {
-    return requestData.recipeName;
-  }
-
-  // Otherwise, build from ingredients and preferences (legacy support)
+  // Use the recipe name as the primary query while retaining structured
+  // constraints so retrieval is shaped by the user's requested outcome.
   const parts = [];
+  if (requestData.recipeName) parts.push(requestData.recipeName);
+
+  // Build the remainder from ingredients and preferences (legacy support)
 
   // Add ingredients
   if (requestData.ingredients && requestData.ingredients.length > 0) {
@@ -852,6 +856,30 @@ function buildLLaMAPrompt(requestData, contexts) {
   }
   if (requestData.cookingMethod) {
     requirements.push(`using ${requestData.cookingMethod} cooking method`);
+  }
+  if (requestData.equipment && requestData.equipment.length > 0) {
+    requirements.push(`using only available equipment: ${requestData.equipment.join(', ')}`);
+  }
+  if (requestData.hardAllergens && requestData.hardAllergens.length > 0) {
+    requirements.push(`must not contain these hard allergens: ${requestData.hardAllergens.join(', ')}`);
+  }
+  if (requestData.softAvoids && requestData.softAvoids.length > 0) {
+    requirements.push(`avoid these ingredients or flavors when possible: ${requestData.softAvoids.join(', ')}`);
+  }
+  if (requestData.excludeIngredients && requestData.excludeIngredients.length > 0) {
+    requirements.push(`do not use: ${requestData.excludeIngredients.join(', ')}`);
+  }
+  if (requestData.ingredients && requestData.ingredients.length > 0) {
+    requirements.push(`must use these ingredients: ${requestData.ingredients.join(', ')}`);
+  }
+  if (requestData.skillLevel) {
+    requirements.push(`write for a ${requestData.skillLevel} home cook`);
+  }
+  if (requestData.spiceLevel !== undefined && requestData.spiceLevel !== null) {
+    requirements.push(`target spice level ${requestData.spiceLevel} out of 5`);
+  }
+  if (requestData.cuisineDislikes && requestData.cuisineDislikes.length > 0) {
+    requirements.push(`avoid these cuisines: ${requestData.cuisineDislikes.join(', ')}`);
   }
 
   if (requirements.length > 0) {

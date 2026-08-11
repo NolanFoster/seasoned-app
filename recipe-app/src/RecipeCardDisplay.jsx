@@ -20,6 +20,16 @@ const sourceBadgeMap = {
   youtube: { label: 'YouTube', color: '#ff0000' },
 }
 
+function appliedConstraintLabels(constraints) {
+  if (!constraints) return []
+  const labels = []
+  if (constraints.dietary?.length) labels.push(constraints.dietary.join(', '))
+  if (constraints.cuisine) labels.push(constraints.cuisine)
+  if (constraints.maxCookTime) labels.push(`${constraints.maxCookTime} min max`)
+  if (constraints.servings) labels.push(`${constraints.servings} servings`)
+  return labels
+}
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -84,6 +94,15 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
           </button>
         )}
       </div>
+
+      {appliedConstraintLabels(recipe.appliedConstraints).length > 0 && (
+        <div className="applied-constraints" aria-label="Applied generation constraints">
+          <span className="applied-constraints-label">Personalized</span>
+          {appliedConstraintLabels(recipe.appliedConstraints).map((label) => (
+            <span key={label} className="applied-constraint-chip">{label}</span>
+          ))}
+        </div>
+      )}
 
       <div className="recipe-body">
         {recipe.ingredients?.length > 0 && (

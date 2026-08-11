@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App from '../App';
+import App, { buildGenerationRequest } from '../App';
 import { MealPlanProvider } from '../MealPlanContext.jsx';
 
 // Wrap App in the providers it requires (MealPlanProvider lives in main.jsx in production)
@@ -99,6 +99,27 @@ const GENERATE_RESPONSE = {
     instructions: ['Beat eggs.', 'Cook in butter.'],
   },
 };
+
+describe('Generation request builder', () => {
+  test('merges profile defaults, explicit overrides, and elevate ingredients', () => {
+    expect(buildGenerationRequest({
+      dishName: 'Weeknight pasta',
+      elevate: true,
+      profile: { diet_tags: ['vegetarian'], default_servings: 2 },
+      overrides: { dietary: ['vegan'], servings: 4, maxCookTime: 20, ingredients: [] },
+      baseIngredients: ['pasta', 'tomatoes'],
+    })).toEqual({
+      recipeName: 'Weeknight pasta',
+      generateImage: true,
+      elevate: true,
+      culinaryProfile: { diet_tags: ['vegetarian'], default_servings: 2 },
+      dietary: ['vegan'],
+      servings: 4,
+      maxCookTime: 20,
+      ingredients: ['pasta', 'tomatoes'],
+    })
+  })
+})
 
 // ── isValidUrl (tested via omnibox UI behaviour) ───────────────────────────
 
@@ -650,6 +671,35 @@ describe('Generate behaviour', () => {
     });
   });
 
+  test('Tune composer sends structured overrides before generation', async () => {
+    mockFetchOk({
+      ...GENERATE_RESPONSE,
+      appliedConstraints: { dietary: ['vegan'], maxCookTime: 20, servings: 2 },
+    });
+
+    renderApp();
+    setInputValue('weeknight curry');
+    fireEvent.click(screen.getByRole('button', { name: /Tune generation constraints/i }));
+
+    expect(screen.getByRole('dialog', { name: /Make weeknight curry work for you/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Vegan'));
+    fireEvent.change(screen.getByLabelText('Max time (minutes)'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('Servings'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate recipe' }));
+
+    await waitFor(() => {
+      const call = global.fetch.mock.calls.find(([url]) => url === 'https://test-gen.example.com/generate');
+      expect(call).toBeDefined();
+      const body = JSON.parse(call[1].body);
+      expect(body.dietary).toEqual(['vegan']);
+      expect(body.maxCookTime).toBe(20);
+      expect(body.servings).toBe(2);
+    });
+
+    expect(await screen.findByText('Personalized')).toBeInTheDocument();
+    expect(screen.getByText('20 min max')).toBeInTheDocument();
+  });
+
   test('shows AI Generated recipe card after generation', async () => {
     mockFetchOk(GENERATE_RESPONSE);
 
@@ -684,6 +734,21 @@ describe('Generate behaviour', () => {
     await waitFor(() =>
       expect(screen.getByText(/Generation failed: 503/i)).toBeInTheDocument()
     );
+  });
+
+  test('offers retry when generation fails', async () => {
+    mockFetchFail(503);
+
+    renderApp();
+    setInputValue('omelette');
+    fireEvent.click(screen.getByText('Generate'));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retry generation' })).toBeInTheDocument());
+
+    mockFetchOk(GENERATE_RESPONSE);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }));
+
+    expect(await screen.findByRole('heading', { name: /AI Omelette/i })).toBeInTheDocument();
   });
 
   test('shows error when generation response has success:false', async () => {

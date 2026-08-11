@@ -1,0 +1,311 @@
+import React, { useEffect, useRef, useState } from "react";
+
+const DIET_OPTIONS = [
+  ["vegetarian", "Vegetarian"],
+  ["vegan", "Vegan"],
+  ["pescatarian", "Pescatarian"],
+  ["halal", "Halal"],
+  ["kosher", "Kosher"],
+  ["gluten_free", "Gluten-free"],
+  ["dairy_free", "Dairy-free"],
+  ["keto", "Keto"],
+];
+
+const EQUIPMENT_OPTIONS = [
+  ["oven", "Oven"],
+  ["stovetop", "Stovetop"],
+  ["air_fryer", "Air fryer"],
+  ["instant_pot", "Instant Pot"],
+  ["slow_cooker", "Slow cooker"],
+  ["grill", "Grill"],
+  ["microwave", "Microwave"],
+];
+
+const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack", "dessert"];
+const COOKING_METHODS = ["stovetop", "oven", "air fryer", "grill", "no-cook"];
+
+function listValue(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function commaSeparated(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function initialForm(profile) {
+  return {
+    dietary: listValue(profile?.diet_tags),
+    equipment: listValue(profile?.equipment),
+    servings: profile?.default_servings ?? 4,
+    maxCookTime: profile?.max_cook_time_min ?? 60,
+    cuisine: profile?.cuisine_likes?.[0] || "",
+    mealType: "",
+    cookingMethod: "",
+    ingredients: "",
+    excludeIngredients: listValue(profile?.exclude_ingredients).join(", "),
+  };
+}
+
+function toggleValue(values, value) {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+export default function GenerationComposer({
+  open,
+  profile,
+  query,
+  busy,
+  onClose,
+  onGenerate,
+}) {
+  const [form, setForm] = useState(() => initialForm(profile));
+  const firstFieldRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      setForm(initialForm(profile));
+      const focusFirstField = () => firstFieldRef.current?.focus();
+      if (typeof window !== "undefined" && window.requestAnimationFrame)
+        window.requestAnimationFrame(focusFirstField);
+      else focusFirstField();
+    }
+  }, [open, profile]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  function setField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    onGenerate({
+      dietary: form.dietary,
+      equipment: form.equipment,
+      servings: Number(form.servings),
+      maxCookTime: Number(form.maxCookTime),
+      cuisine: form.cuisine.trim(),
+      mealType: form.mealType,
+      cookingMethod: form.cookingMethod,
+      ingredients: commaSeparated(form.ingredients),
+      excludeIngredients: commaSeparated(form.excludeIngredients),
+    });
+  }
+
+  return (
+    <div
+      className="generation-composer-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="generation-composer-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="generation-composer-title"
+      >
+        <div className="generation-composer-header">
+          <div>
+            <p className="generation-composer-eyebrow">Tune your generation</p>
+            <h2 id="generation-composer-title">
+              Make {query || "this recipe"} work for you
+            </h2>
+            <p>These constraints are applied before the recipe is generated.</p>
+          </div>
+          <button
+            type="button"
+            className="generation-composer-close"
+            aria-label="Close generation tuning"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+
+        {profile && (
+          <div className="generation-composer-profile" role="status">
+            <strong>Kitchen profile defaults</strong>
+            <span>
+              {profile.diet_tags?.length
+                ? profile.diet_tags.join(", ")
+                : "No diet set"}
+              {" · "}
+              {profile.default_servings} servings
+              {" · up to "}
+              {profile.max_cook_time_min} min
+            </span>
+            {profile.hard_allergens?.length > 0 && (
+              <span className="generation-composer-safety">
+                Hard allergens protected: {profile.hard_allergens.join(", ")}
+              </span>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={submit}>
+          <fieldset>
+            <legend>Diet and style</legend>
+            <div className="generation-composer-options">
+              {DIET_OPTIONS.map(([value, label]) => (
+                <label key={value} className="generation-composer-check">
+                  <input
+                    type="checkbox"
+                    checked={form.dietary.includes(value)}
+                    onChange={() =>
+                      setField("dietary", toggleValue(form.dietary, value))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="generation-composer-grid">
+            <label>
+              Cuisine
+              <input
+                ref={firstFieldRef}
+                type="text"
+                value={form.cuisine}
+                onChange={(event) => setField("cuisine", event.target.value)}
+                placeholder="Thai, Mexican…"
+              />
+            </label>
+            <label>
+              Meal type
+              <select
+                value={form.mealType}
+                onChange={(event) => setField("mealType", event.target.value)}
+              >
+                <option value="">Any meal</option>
+                {MEAL_TYPES.map((value) => (
+                  <option key={value} value={value}>
+                    {value[0].toUpperCase() + value.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Servings
+              <input
+                type="number"
+                min="1"
+                max="24"
+                value={form.servings}
+                onChange={(event) => setField("servings", event.target.value)}
+              />
+            </label>
+            <label>
+              Max time (minutes)
+              <input
+                type="number"
+                min="5"
+                max="720"
+                value={form.maxCookTime}
+                onChange={(event) =>
+                  setField("maxCookTime", event.target.value)
+                }
+              />
+            </label>
+            <label>
+              Cooking method
+              <select
+                value={form.cookingMethod}
+                onChange={(event) =>
+                  setField("cookingMethod", event.target.value)
+                }
+              >
+                <option value="">Any method</option>
+                {COOKING_METHODS.map((value) => (
+                  <option key={value} value={value}>
+                    {value[0].toUpperCase() + value.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <fieldset>
+            <legend>Available equipment</legend>
+            <div className="generation-composer-options">
+              {EQUIPMENT_OPTIONS.map(([value, label]) => (
+                <label key={value} className="generation-composer-check">
+                  <input
+                    type="checkbox"
+                    checked={form.equipment.includes(value)}
+                    onChange={() =>
+                      setField("equipment", toggleValue(form.equipment, value))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="generation-composer-field">
+            Must-use ingredients
+            <input
+              type="text"
+              value={form.ingredients}
+              onChange={(event) => setField("ingredients", event.target.value)}
+              placeholder="chickpeas, spinach (comma separated)"
+            />
+          </label>
+          <label className="generation-composer-field">
+            Exclude for this recipe
+            <input
+              type="text"
+              value={form.excludeIngredients}
+              onChange={(event) =>
+                setField("excludeIngredients", event.target.value)
+              }
+              placeholder="cilantro, mushrooms (comma separated)"
+            />
+          </label>
+
+          <p className="generation-composer-disclaimer">
+            Hard allergens from your kitchen profile stay protected. AI can make
+            mistakes; always verify ingredients and labels.
+          </p>
+          <div className="generation-composer-actions">
+            <button
+              type="button"
+              className="generation-composer-secondary"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="generation-composer-primary"
+              disabled={busy}
+            >
+              {busy ? "Generating…" : "Generate recipe"}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}

@@ -9,6 +9,7 @@ import { useAuth } from './useAuth.js'
 import { useMealPlan } from './MealPlanContext.jsx'
 import { syncFlagglyUser, useFlag } from './flaggly.js'
 import CulinaryProfile from './CulinaryProfile.jsx'
+import GenerationComposer from './GenerationComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
@@ -206,12 +207,35 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
   )
 }
 
+export function buildGenerationRequest({
+  dishName,
+  elevate = false,
+  profile = null,
+  overrides = null,
+  baseIngredients = null,
+}) {
+  const body = {
+    recipeName: dishName,
+    generateImage: true,
+    elevate,
+  }
+  if (profile) body.culinaryProfile = profile
+  if (overrides) {
+    Object.assign(body, overrides)
+    if (!overrides.ingredients?.length) delete body.ingredients
+  }
+  if (elevate && baseIngredients) body.ingredients = baseIngredients
+  return body
+}
+
 export default function App() {
   const auth = useAuth()
   const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
   const mealPlannerEnabled = useFlag('meal-planner')
   const culinaryProfileEnabled = useFlag('culinary-profile')
+  const constraintGenerateEnabled = useFlag('constraint-generate')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
 
   useEffect(() => {
@@ -222,6 +246,7 @@ export default function App() {
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
   const [errorMsg, setErrorMsg] = useState('')
+  const [generationRetry, setGenerationRetry] = useState(null)
   const [searchResults, setSearchResults] = useState([])
   const [lastSearchQuery, setLastSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -425,6 +450,7 @@ export default function App() {
     latestInputRef.current = val
     setInput(val)
     setErrorMsg('')
+    setGenerationRetry(null)
     setActiveOptionKey(null)
     searchRequestIdRef.current += 1
     if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
@@ -443,6 +469,7 @@ export default function App() {
 
   // --- Clip ---
   async function doClip(url) {
+    setGenerationRetry(null)
     invalidateSearch()
     latestInputRef.current = ''
     setStatus('clipping')
@@ -487,8 +514,9 @@ export default function App() {
   }
 
   // --- Generate ---
-  async function doGenerate(query, { elevate = false, baseRecipe = null } = {}) {
+  async function doGenerate(query, { elevate = false, baseRecipe = null, overrides = null } = {}) {
     invalidateSearch()
+    setGenerationRetry({ query, options: { elevate, baseRecipe, overrides } })
     latestInputRef.current = ''
     const dishName = elevate && baseRecipe ? baseRecipe.name : query
     setGeneratingName(dishName)
@@ -497,14 +525,13 @@ export default function App() {
     setShowDropdown(false)
     setSaveState('idle')
     try {
-      const body = {
-        recipeName: dishName,
-        generateImage: true,
-        elevate: elevate,
-      }
-      if (elevate && baseRecipe) {
-        body.ingredients = baseRecipe.ingredients
-      }
+      const body = buildGenerationRequest({
+        dishName,
+        elevate,
+        profile: constraintGenerateEnabled ? culinaryProfile.profile : null,
+        overrides,
+        baseIngredients: baseRecipe?.ingredients || null,
+      })
 
       const res = await fetch(`${RECIPE_GENERATION_URL}/generate`, {
         method: 'POST',
@@ -527,9 +554,11 @@ export default function App() {
         recipe_yield: r.servings || null,
         ingredients: r.ingredients || [],
         instructions: r.instructions || [],
+        appliedConstraints: data.appliedConstraints || r.appliedConstraints || null,
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
+      setGenerationRetry(null)
       setGeneratingName('')
     } catch (e) {
       setGeneratingName('')
@@ -538,6 +567,11 @@ export default function App() {
       return
     }
     setStatus('idle')
+  }
+
+  function handleTunedGenerate(overrides) {
+    setGenerationComposerOpen(false)
+    doGenerate(input.trim(), { overrides })
   }
 
   // --- Primary action on Enter / button click ---
@@ -703,6 +737,7 @@ export default function App() {
     clearActiveRecipe()
     setGeneratingName('')
     setErrorMsg('')
+    setGenerationRetry(null)
     setStatus('idle')
     setSaveState('idle')
     setSavedRecipeId(null)
@@ -789,17 +824,30 @@ export default function App() {
             <div className="omnibox-actions">
               {/* Generate button — always visible when there's text and it's not a URL */}
               {hasText && (
-                <button
-                  className="action-btn generate-btn"
-                  title="Generate AI recipe"
-                  onClick={() => doGenerate(input.trim())}
-                  disabled={inputBusy}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                  </svg>
-                  <span>Generate</span>
-                </button>
+                <>
+                  {constraintGenerateEnabled && (
+                    <button
+                      className="action-btn tune-btn"
+                      title="Tune generation constraints"
+                      onClick={() => setGenerationComposerOpen(true)}
+                      disabled={inputBusy}
+                    >
+                      <span>Tune</span>
+                      <span className="sr-only">generation constraints</span>
+                    </button>
+                  )}
+                  <button
+                    className="action-btn generate-btn"
+                    title="Generate AI recipe"
+                    onClick={() => doGenerate(input.trim())}
+                    disabled={inputBusy}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 107.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <span>Generate</span>
+                  </button>
+                </>
               )}
 
               {/* Primary action button — only shown for URL clipping */}
@@ -838,7 +886,18 @@ export default function App() {
 
           {/* Error */}
           {status === 'error' && errorMsg && (
-            <div id="omnibox-error" className="error-label" role="alert">{errorMsg}</div>
+            <div id="omnibox-error" className="error-label" role="alert">
+              <span>{errorMsg}</span>
+              {generationRetry && (
+                <button
+                  type="button"
+                  className="error-retry"
+                  onClick={() => doGenerate(generationRetry.query, generationRetry.options)}
+                >
+                  Retry generation
+                </button>
+              )}
+            </div>
           )}
 
           {/* Search dropdown */}
@@ -923,6 +982,15 @@ export default function App() {
         </div>
 
         {/* GeneratingCard — shown while generate/elevate is in-flight */}
+        <GenerationComposer
+          open={generationComposerOpen && constraintGenerateEnabled && hasText}
+          profile={culinaryProfile.profile}
+          query={input.trim()}
+          busy={inputBusy}
+          onClose={() => setGenerationComposerOpen(false)}
+          onGenerate={handleTunedGenerate}
+        />
+
         {(status === 'generating' || status === 'elevating') && generatingName && (
           <GeneratingCard dishName={generatingName} />
         )}
