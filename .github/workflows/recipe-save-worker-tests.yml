@@ -47,9 +47,13 @@ jobs:
         cd recipe-save-worker
         npm test
     
+    # Minimums live in .github/coverage-thresholds.json and are enforced by
+    # vitest. This step used to be `continue-on-error: true`, with the failure
+    # re-raised later only on the 20.x matrix leg — so a shortfall on 18.x
+    # passed silently. Reporting steps below use `if: always()` and still run
+    # when this fails.
     - name: Run tests with coverage
       id: test-coverage
-      continue-on-error: true
       run: |
         cd recipe-save-worker
         npm run test:coverage
@@ -189,14 +193,9 @@ jobs:
             console.log('This may be due to permissions. The coverage report is still available in the workflow summary.');
           }
     
-    - name: Check Test Results
-      if: matrix.node-version == '20.x'
-      run: |
-        # Fail the job if tests failed (not just coverage threshold)
-        if [ "${{ steps.test-coverage.outcome }}" = "failure" ]; then
-          echo "Tests failed"
-          exit 1
-        fi
+    - name: Verify coverage minimums
+      if: always()
+      run: node scripts/check-coverage.mjs --package recipe-save-worker
 
   lint:
     runs-on: ubuntu-latest

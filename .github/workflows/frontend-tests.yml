@@ -56,17 +56,18 @@ jobs:
       working-directory: ./recipe-app
       run: |
         echo "Running tests with coverage..."
-        # Run tests with coverage, but don't fail the workflow if tests fail
-        # Coverage will still be generated even with test failures
+        # Overriding --coverageReporters on the command line replaces the list in
+        # jest.config.js, so json-summary must stay here for the steps below.
         npm run test:coverage -- --passWithNoTests --ci --watchAll=false --coverageReporters=json-summary --coverageReporters=lcov
-    
+
     - name: Check Coverage Thresholds
       working-directory: ./recipe-app
       run: |
         echo "### Frontend Coverage Results" >> $GITHUB_STEP_SUMMARY
-        # The coverage threshold check is handled by Jest config
-        # If coverage is below 60%, Jest will fail the test run
-        
+        # Jest enforces the minimums via `coverageThreshold` in jest.config.js,
+        # which reads .github/coverage-thresholds.json. A shortfall fails the
+        # step above; the reporting below is purely informational.
+
         # Wait a moment for coverage files to be fully written
         sleep 2
         
@@ -152,19 +153,34 @@ jobs:
         echo "Coverage report first few lines:"
         head -20 coverage/lcov.info || echo "No coverage report found"
         
+        # The required percentage lives in the central policy file so it cannot
+        # drift away from the rest of the coverage configuration.
+        FAIL_UNDER=$(node -e "console.log(require('../.github/coverage-thresholds.json').newCode.threshold)")
+        echo "New-code coverage minimum: ${FAIL_UNDER}%"
+
         # Run diff-cover with lcov format and capture output
         echo "Running differential coverage analysis..."
         # Note: diff-cover needs to be run from the same directory where tests were run
         # to ensure paths match between git diff and coverage report
+        #
+        # pipefail matters here: without it the exit status of the pipeline is
+        # tee's, which is always 0, so a diff-cover failure would be invisible.
+        set -o pipefail
+        diff_cover_status=0
         diff-cover coverage/lcov.info \
           --compare-branch=origin/${{ github.base_ref }} \
-          --fail-under=85 \
-          --diff-range-notation=... 2>&1 | tee diff-coverage-output.txt || {
-          echo "::warning::New code changes have less than 85% coverage"
-          echo "❌ **New code coverage is below the required 85% threshold**" >> $GITHUB_STEP_SUMMARY
+          --fail-under="$FAIL_UNDER" \
+          --diff-range-notation=... 2>&1 | tee diff-coverage-output.txt || diff_cover_status=$?
+        set +o pipefail
+
+        if [ "$diff_cover_status" -ne 0 ]; then
+          echo "::error title=New code below coverage minimum::Lines changed by this pull request are less than ${FAIL_UNDER}% covered"
+          echo "❌ **New code coverage is below the required ${FAIL_UNDER}% threshold**" >> $GITHUB_STEP_SUMMARY
           echo "diff_coverage_below_threshold=true" >> $GITHUB_OUTPUT
-        }
-        
+        else
+          echo "diff_coverage_below_threshold=false" >> $GITHUB_OUTPUT
+        fi
+
         # Extract diff coverage percentage for PR comment
         if grep -q "Diff coverage" diff-coverage-output.txt; then
           coverage_line=$(grep "Diff coverage" diff-coverage-output.txt)
@@ -185,7 +201,10 @@ jobs:
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Required: 85% coverage for new/modified code**" >> $GITHUB_STEP_SUMMARY
+        echo "**Required: ${FAIL_UNDER}% coverage for new/modified code**" >> $GITHUB_STEP_SUMMARY
+
+        # Reporting is done; now let the shortfall actually block the pull request.
+        exit "$diff_cover_status"
 
   lint-frontend:
     name: Frontend Code Quality Checks

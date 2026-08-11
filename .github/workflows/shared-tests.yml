@@ -41,18 +41,34 @@ jobs:
       working-directory: ./shared
       run: npm ci
     
-    - name: Run Shared Tests
+    # Non-blocking, and this is a known failure rather than a tolerated one:
+    # test-simple.js exercises `compressData(undefined)`, and decompressData
+    # then throws "Unexpected end of JSON input" because JSON.stringify(undefined)
+    # produces no bytes to parse back. The unhandled rejection kills the script
+    # after its own summary reports 10/10 passed.
+    #
+    # The previous `|| echo` hid this entirely. Fix the round-trip in
+    # shared/kv-storage.js, then drop continue-on-error here.
+    - name: Run Shared Tests (non-blocking, see known failure above)
       working-directory: ./shared
-      run: |
-        # Run tests if test script exists, otherwise skip
-        if npm run | grep -q "test"; then
-          npm test || echo "No tests found or test script not configured"
-        else
-          echo "No test script found in package.json"
-        fi
-        
-        # Note: Shared tests currently don't generate coverage reports
-        # Consider adding coverage collection for shared tests in the future
+      continue-on-error: true
+      run: npm test
+
+    # The real gate for `shared`: the vitest suite, with minimums from
+    # .github/coverage-thresholds.json. A shortfall fails this step rather than
+    # being logged and ignored.
+    - name: Run Shared Tests with Coverage
+      working-directory: ./shared
+      run: npm run test:coverage
+
+    - name: Upload Coverage Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: shared-coverage
+        path: shared/coverage/
+        retention-days: 14
+        if-no-files-found: ignore
 
   lint-shared:
     name: Shared Components Code Quality Checks

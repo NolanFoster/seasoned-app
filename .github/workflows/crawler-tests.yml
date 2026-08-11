@@ -38,12 +38,26 @@ jobs:
       run: |
         pip install -r requirements.txt
     
-    - name: Run Crawler Tests
+    # NOT part of the Code Coverage gate, deliberately.
+    #
+    # `test_jsonld_crawler.py` is an integration script that fetches a live
+    # third-party recipe site. It measures no in-process coverage, and making it
+    # blocking would let an unrelated site outage fail every pull request. It
+    # runs here for signal only.
+    #
+    # To bring the crawler under the gate it needs offline unit tests with
+    # recorded fixtures; then add it to .github/coverage-thresholds.json and
+    # enforce with `pytest --cov=. --cov-fail-under=<minimum>`.
+    # See docs/CODE_COVERAGE.md.
+    - name: Run Crawler Tests (non-blocking, hits a live site)
       working-directory: ./crawler
+      continue-on-error: true
       run: |
-        # Run tests if they exist, otherwise skip
-        if [ -f "test_crawler.py" ]; then
-          python -m pytest test_crawler.py -v || echo "Tests failed or not configured"
+        pip install pytest
+        # The previous filter looked for test_crawler.py, which does not exist,
+        # so the crawler's tests never actually ran.
+        if ls test_*.py >/dev/null 2>&1; then
+          python -m pytest test_*.py -v
         else
           echo "No test files found for crawler"
         fi
