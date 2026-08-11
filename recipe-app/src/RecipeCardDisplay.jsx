@@ -43,6 +43,10 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
   })
 
   const sourceBadge = sourceBadgeMap[recipe.source]
+  const allergenSummary = recipe.allergenSummary
+  const hardAllergens = recipe.appliedConstraints?.hardAllergens || []
+  const showAllergenNotice = hardAllergens.length > 0 || allergenSummary
+  const blockedAllergens = allergenSummary?.blocked || []
 
   return (
     <>
@@ -63,6 +67,14 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
 
       {recipe.description && (
         <p className="recipe-description">{recipe.description}</p>
+      )}
+
+      {showAllergenNotice && (
+        <div className="recipe-allergen-notice" role="note">
+          {blockedAllergens.length > 0
+            ? `Allergen safety blocked: ${blockedAllergens.join(', ')}.`
+            : 'Allergen check completed. AI can miss allergens and cross-contact; verify labels and preparation conditions.'}
+        </div>
       )}
 
       <div className="recipe-meta">

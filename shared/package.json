@@ -13,7 +13,8 @@
     "./nutrition": "./nutrition-calculator.js",
     "./metrics-collector": "./metrics-collector.js",
     "./metrics": "./metrics-collector.js",
-    "./culinary-profile": "./culinary-profile.js"
+    "./culinary-profile": "./culinary-profile.js",
+    "./allergen-graph": "./allergen-graph.js"
   },
   "scripts": {
     "test": "node test-simple.js",

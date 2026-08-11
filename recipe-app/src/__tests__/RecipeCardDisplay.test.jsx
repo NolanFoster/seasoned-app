@@ -66,6 +66,16 @@ describe('RecipeCardDisplay', () => {
     expect(screen.getByTitle('Step-by-step cooking mode')).toHaveAttribute('id', 'cook-btn')
   })
 
+  test('shows the allergen safety notice when a recipe has a hard-allergen check', () => {
+    render(<RecipeCardDisplay recipe={{
+      ...baseRecipe,
+      appliedConstraints: { hardAllergens: ['peanuts'] },
+      allergenSummary: { checked: true, blocked: [] },
+    }} />)
+
+    expect(screen.getByText(/AI can miss allergens and cross-contact/i)).toBeInTheDocument()
+  })
+
   test('handles object ingredients', () => {
     render(<RecipeCardDisplay recipe={{ ...baseRecipe, ingredients: [{ name: '2 eggs' }] }} />)
     expect(screen.getByText('2 eggs')).toBeInTheDocument()
