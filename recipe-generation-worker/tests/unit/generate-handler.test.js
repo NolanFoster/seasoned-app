@@ -244,6 +244,49 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.recipe.appliedConstraints).toEqual(data.appliedConstraints);
     });
 
+    it('should include every generation constraint in the prompt and response echo', async () => {
+      const requestBody = {
+        recipeName: 'Tofu stir fry',
+        ingredients: ['tofu'],
+        cuisine: 'thai',
+        dietary: ['vegan'],
+        servings: 2,
+        maxCookTime: 20,
+        cookingMethod: 'stovetop',
+        culinaryProfile: {
+          hard_allergens: ['peanuts'],
+          soft_avoids: ['cilantro'],
+          cuisine_dislikes: ['french'],
+          skill_level: 'beginner',
+          spice_level: 4,
+          exclude_ingredients: ['mushrooms'],
+          equipment: ['stovetop'],
+        },
+      };
+
+      const response = await handleGenerate(createPostRequest('/generate', requestBody), enhancedMockEnv, corsHeaders);
+      const data = await response.json();
+      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === '@cf/meta/llama-4-scout-17b-16e-instruct');
+      const prompt = llamaCall[1].messages.find(({ role }) => role === 'user').content;
+
+      expect(prompt).toContain('using stovetop cooking method');
+      expect(prompt).toContain('using only available equipment: stovetop');
+      expect(prompt).toContain('must not contain these hard allergens: peanuts');
+      expect(prompt).toContain('avoid these ingredients or flavors when possible: cilantro');
+      expect(prompt).toContain('do not use: mushrooms');
+      expect(prompt).toContain('must use these ingredients: tofu');
+      expect(prompt).toContain('write for a beginner home cook');
+      expect(prompt).toContain('target spice level 4 out of 5');
+      expect(prompt).toContain('avoid these cuisines: french');
+      expect(data.appliedConstraints).toMatchObject({
+        softAvoids: ['cilantro'],
+        excludeIngredients: ['mushrooms'],
+        skillLevel: 'beginner',
+        spiceLevel: 4,
+        cuisineDislikes: ['french'],
+      });
+    });
+
     it('should accept the profile alias for backwards-compatible clients', async () => {
       const request = createPostRequest('/generate', {
         ingredients: ['pasta'],
