@@ -260,8 +260,8 @@ describe('Generate Handler - Unit Tests', () => {
           skill_level: 'beginner',
           spice_level: 4,
           exclude_ingredients: ['mushrooms'],
-          equipment: ['stovetop'],
-        },
+          equipment: ['stovetop']
+        }
       };
 
       const response = await handleGenerate(createPostRequest('/generate', requestBody), enhancedMockEnv, corsHeaders);
@@ -283,7 +283,7 @@ describe('Generate Handler - Unit Tests', () => {
         excludeIngredients: ['mushrooms'],
         skillLevel: 'beginner',
         spiceLevel: 4,
-        cuisineDislikes: ['french'],
+        cuisineDislikes: ['french']
       });
     });
 
