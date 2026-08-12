@@ -233,6 +233,14 @@ describe('RecipeCard — elevate-recipe feature flag', () => {
     renderCard();
     expect(screen.getByTitle('Remix with AI')).toBeInTheDocument();
   });
+
+  test('shows and invokes RecipeAdapt when the feature is enabled', () => {
+    const onAdapt = jest.fn();
+    renderCard({}, { onAdapt });
+    fireEvent.click(screen.getByTitle('Remix with AI'));
+    fireEvent.click(screen.getByTitle('Adapt this recipe to your diet, time, or equipment'));
+    expect(onAdapt).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('RecipeCard — accessibility baseline', () => {

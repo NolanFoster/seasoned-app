@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App, { buildGenerationRequest } from '../App';
+import App, { buildGenerationRequest, buildAdaptRequest } from '../App';
 import { MealPlanProvider } from '../MealPlanContext.jsx';
 
 // Wrap App in the providers it requires (MealPlanProvider lives in main.jsx in production)
@@ -99,6 +99,21 @@ const GENERATE_RESPONSE = {
     instructions: ['Beat eggs.', 'Cook in butter.'],
   },
 };
+
+describe('Adaptation request builder', () => {
+  test('keeps the complete base recipe and sends profile plus explicit constraints', () => {
+    const baseRecipe = { id: 'recipe-1', name: 'Pasta', ingredients: ['pasta'], instructions: ['Cook pasta'] }
+    expect(buildAdaptRequest({
+      baseRecipe,
+      profile: { hard_allergens: ['milk'] },
+      overrides: { dietary: ['dairy_free'], maxCookTime: 30 },
+    })).toEqual({
+      baseRecipe,
+      culinaryProfile: { hard_allergens: ['milk'] },
+      constraints: { dietary: ['dairy_free'], maxCookTime: 30 },
+    })
+  })
+})
 
 describe('Generation request builder', () => {
   test('merges profile defaults, explicit overrides, and elevate ingredients', () => {
@@ -850,6 +865,53 @@ describe('Elevate behaviour', () => {
     );
   });
 });
+
+// ── RecipeAdapt ─────────────────────────────────────────────────────────────
+
+describe('RecipeAdapt behaviour', () => {
+  async function loadRecipe() {
+    mockFetchOk(SEARCH_RESPONSE)
+    mockFetchOk(FULL_RECIPE_RESPONSE)
+
+    renderApp()
+    setInputValue('cake')
+    pressEnter()
+    await waitFor(() => screen.getByText('Chocolate Cake'))
+    fireEvent.click(screen.getByText('Chocolate Cake'))
+    await waitFor(() => screen.getByRole('heading', { name: /Chocolate Cake/i }))
+  }
+
+  test('sends the selected recipe and constraints to the adapt endpoint', async () => {
+    await loadRecipe()
+    mockFetchOk({
+      success: true,
+      appliedConstraints: { dietary: ['dairy_free'], maxCookTime: 30 },
+      recipe: {
+        name: 'Dairy-free Chocolate Cake',
+        description: 'A better-fit cake.',
+        ingredients: ['2 cups rice flour'],
+        instructions: ['Mix and bake.'],
+        substitutions: [{ from: 'flour', to: 'rice flour', reason: 'Avoid wheat.' }],
+        adaptationNotes: ['The chocolate profile remains intact.'],
+        adapted_from: 'abc123',
+      },
+    })
+
+    fireEvent.click(screen.getByTitle('Remix with AI'))
+    fireEvent.click(screen.getByTitle(/Adapt this recipe/i))
+    fireEvent.click(screen.getByRole('button', { name: 'Adapt recipe' }))
+
+    await waitFor(() => {
+      const call = global.fetch.mock.calls.find(([url]) => url === 'https://test-gen.example.com/adapt')
+      expect(call).toBeDefined()
+      const body = JSON.parse(call[1].body)
+      expect(body.baseRecipe.name).toBe('Chocolate Cake')
+      expect(body.constraints).toEqual(expect.objectContaining({ dietary: [], servings: 4 }))
+    })
+    expect(await screen.findByRole('heading', { name: /Dairy-free Chocolate Cake/i })).toBeInTheDocument()
+    expect(screen.getByText('What changed')).toBeInTheDocument()
+  })
+})
 
 // ── Recipe card lifecycle ──────────────────────────────────────────────────
 

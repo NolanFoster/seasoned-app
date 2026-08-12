@@ -29,11 +29,24 @@ export async function handleRoot(request, env, corsHeaders) {
         },
         response: 'JSON object with generated recipe (implementation coming soon)',
         status: 'Coming Soon'
+      },
+      'POST /adapt': {
+        description: 'Adapt an existing recipe to dietary, allergen, time, equipment, or nutrition constraints',
+        requestBody: {
+          type: 'application/json',
+          schema: {
+            baseRecipe: 'Recipe object with name, ingredients, and instructions',
+            constraints: 'Optional explicit adaptation constraints',
+            culinaryProfile: 'Optional persisted kitchen profile'
+          }
+        },
+        response: 'JSON object with adapted recipe, substitutions, notes, and lineage metadata'
       }
     },
     usage: {
       healthCheck: 'curl https://recipe-generation-worker.nolanfoster.workers.dev/health',
-      recipeGeneration: 'curl -X POST https://recipe-generation-worker.nolanfoster.workers.dev/generate -H "Content-Type: application/json" -d \'{"ingredients": ["chicken", "rice"], "cuisine": "italian"}\''
+      recipeGeneration: 'curl -X POST https://recipe-generation-worker.nolanfoster.workers.dev/generate -H "Content-Type: application/json" -d \'{"ingredients": ["chicken", "rice"], "cuisine": "italian"}\'',
+      recipeAdaptation: 'curl -X POST https://recipe-generation-worker.nolanfoster.workers.dev/adapt -H "Content-Type: application/json" -d \'{"baseRecipe": {"name": "Pasta", "ingredients": ["1 cup pasta"], "instructions": ["Cook pasta"]}, "constraints": {"dietary": ["gluten_free"]}}\''
     },
     environments: {
       preview: 'For development and testing',

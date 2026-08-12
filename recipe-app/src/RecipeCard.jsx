@@ -18,8 +18,9 @@ function parseDurationToMinutes(val) {
   return mins
 }
 
-export default function RecipeCard({ recipe, onClose, onElevate, isElevating, onSave, saveState, shareUrl }) {
+export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElevating, isAdapting = false, onSave, saveState, shareUrl }) {
   const elevateRecipeEnabled = useFlag('elevate-recipe')
+  const recipeAdaptEnabled = useFlag('recipe-adapt')
   const mealPlannerEnabled = useFlag('meal-planner')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
@@ -160,7 +161,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
     <div className="recipe-card">
       <div className="card-menus" ref={menusRef}>
         {/* Remix menu */}
-        {elevateRecipeEnabled && (
+        {(elevateRecipeEnabled || (recipeAdaptEnabled && onAdapt)) && (
         <div className="action-menu">
           <button
             ref={(node) => { menuTriggerRefs.current.remix = node }}
@@ -196,6 +197,27 @@ export default function RecipeCard({ recipe, onClose, onElevate, isElevating, on
                 )}
                 {isElevating ? 'Elevating…' : 'Elevate'}
               </button>
+              {recipeAdaptEnabled && onAdapt && (
+                <button
+                  className="action-menu-item adapt-item"
+                  role="menuitem"
+                  onClick={() => { if (!isAdapting) { onAdapt(); closeMenu({ restoreFocus: true }); } }}
+                  disabled={isAdapting}
+                  title="Adapt this recipe to your diet, time, or equipment"
+                >
+                  {isAdapting ? (
+                    <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 7h16M4 12h10M4 17h16"/>
+                      <circle cx="17" cy="12" r="2"/>
+                    </svg>
+                  )}
+                  {isAdapting ? 'Adapting…' : 'Adapt'}
+                </button>
+              )}
             </div>
           )}
         </div>

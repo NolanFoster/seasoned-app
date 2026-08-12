@@ -10,6 +10,7 @@ import { useMealPlan } from './MealPlanContext.jsx'
 import { syncFlagglyUser, useFlag } from './flaggly.js'
 import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
+import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
@@ -228,14 +229,23 @@ export function buildGenerationRequest({
   return body
 }
 
+export function buildAdaptRequest({ baseRecipe, profile = null, overrides = null }) {
+  const body = { baseRecipe }
+  if (profile) body.culinaryProfile = profile
+  if (overrides) body.constraints = overrides
+  return body
+}
+
 export default function App() {
   const auth = useAuth()
   const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
   const mealPlannerEnabled = useFlag('meal-planner')
   const culinaryProfileEnabled = useFlag('culinary-profile')
   const constraintGenerateEnabled = useFlag('constraint-generate')
+  const recipeAdaptEnabled = useFlag('recipe-adapt')
   const [profileOpen, setProfileOpen] = useState(false)
   const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
+  const [adaptComposerOpen, setAdaptComposerOpen] = useState(false)
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
 
   useEffect(() => {
@@ -244,7 +254,7 @@ export default function App() {
   }, [auth.loading, auth.user])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [input, setInput] = useState('')
-  const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | error
+  const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | adapting | error
   const [errorMsg, setErrorMsg] = useState('')
   const [generationRetry, setGenerationRetry] = useState(null)
   const [searchResults, setSearchResults] = useState([])
@@ -357,8 +367,8 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [cancelDebouncedSearch])
 
-  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating'
-  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating'
+  const busy = status === 'searching' || status === 'clipping' || status === 'generating' || status === 'elevating' || status === 'adapting'
+  const inputBusy = status === 'clipping' || status === 'generating' || status === 'elevating' || status === 'adapting'
 
   // Restore focus after a blocking async action completes, but don't steal focus
   // from elements the user has intentionally focused.
@@ -569,6 +579,69 @@ export default function App() {
     setStatus('idle')
   }
 
+  async function doAdapt(baseRecipe, overrides = null) {
+    invalidateSearch()
+    setGenerationRetry({ mode: 'adapt', recipe: baseRecipe, overrides })
+    latestInputRef.current = ''
+    setGeneratingName(baseRecipe.name)
+    setInput('')
+    setStatus('adapting')
+    setShowDropdown(false)
+    setSaveState('idle')
+    try {
+      const body = buildAdaptRequest({
+        baseRecipe,
+        profile: culinaryProfileEnabled ? culinaryProfile.profile : null,
+        overrides,
+      })
+      const res = await fetch(`${RECIPE_GENERATION_URL}/adapt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error(`Adaptation failed: ${res.status}`)
+      const data = await res.json()
+      if (!data.success || !data.recipe) throw new Error(data.error || 'Adaptation returned no recipe')
+
+      const r = data.recipe
+      const adaptedRecipe = {
+        id: `adapt-${Date.now()}`,
+        source: 'adapted',
+        name: r.name || baseRecipe.name,
+        description: r.description || baseRecipe.description || '',
+        image: r.image_url || r.image || baseRecipe.image || '',
+        prep_time: r.prepTime || r.prep_time || baseRecipe.prep_time || null,
+        cook_time: r.cookTime || r.cook_time || baseRecipe.cook_time || null,
+        recipe_yield: r.servings || r.recipe_yield || baseRecipe.recipe_yield || null,
+        ingredients: r.ingredients || baseRecipe.ingredients || [],
+        instructions: r.instructions || baseRecipe.instructions || [],
+        source_url: r.source_url || baseRecipe.source_url || '',
+        dietary: r.dietary || baseRecipe.dietary || [],
+        appliedConstraints: data.appliedConstraints || r.appliedConstraints || null,
+        allergenSummary: r.allergenSummary || null,
+        adapted_from: r.adapted_from || baseRecipe.id || baseRecipe.source_url || null,
+        adaptation_constraints: r.adaptation_constraints || data.appliedConstraints || null,
+        substitutions: r.substitutions || [],
+        adaptationNotes: r.adaptationNotes || [],
+      }
+      setActiveRecipe(adaptedRecipe)
+      addRecentRecipe(adaptedRecipe)
+      setGenerationRetry(null)
+      setGeneratingName('')
+    } catch (e) {
+      setGeneratingName('')
+      setErrorMsg(e.message)
+      setStatus('error')
+      return
+    }
+    setStatus('idle')
+  }
+
+  function handleAdapt(overrides) {
+    setAdaptComposerOpen(false)
+    if (activeRecipe) doAdapt(activeRecipe, overrides)
+  }
+
   function handleTunedGenerate(overrides) {
     setGenerationComposerOpen(false)
     doGenerate(input.trim(), { overrides })
@@ -695,7 +768,9 @@ export default function App() {
   // --- Save ---
   async function doSave(r) {
     setSaveState('saving')
-    const recipeUrl = r.source_url || `https://seasoned.app/ai/${r.id}`
+    const recipeUrl = r.source === 'adapted'
+      ? `https://seasoned.app/adapted/${r.id}`
+      : r.source_url || `https://seasoned.app/ai/${r.id}`
     try {
       const res = await fetch(`${API_URL}/recipe/save`, {
         method: 'POST',
@@ -711,6 +786,11 @@ export default function App() {
             servings: r.recipe_yield || null,
             ingredients: r.ingredients || [],
             instructions: r.instructions || [],
+            source: r.source || null,
+            adapted_from: r.adapted_from || null,
+            adaptation_constraints: r.adaptation_constraints || null,
+            substitutions: r.substitutions || [],
+            adaptationNotes: r.adaptationNotes || [],
           },
           options: { overwrite: false },
         }),
@@ -892,7 +972,9 @@ export default function App() {
                 <button
                   type="button"
                   className="error-retry"
-                  onClick={() => doGenerate(generationRetry.query, generationRetry.options)}
+                  onClick={() => generationRetry.mode === 'adapt'
+                    ? doAdapt(generationRetry.recipe, generationRetry.overrides)
+                    : doGenerate(generationRetry.query, generationRetry.options)}
                 >
                   Retry generation
                 </button>
@@ -991,17 +1073,28 @@ export default function App() {
           onGenerate={handleTunedGenerate}
         />
 
-        {(status === 'generating' || status === 'elevating') && generatingName && (
+        <AdaptComposer
+          open={adaptComposerOpen && recipeAdaptEnabled && Boolean(activeRecipe)}
+          recipe={activeRecipe}
+          profile={culinaryProfile.profile}
+          busy={status === 'adapting'}
+          onClose={() => setAdaptComposerOpen(false)}
+          onAdapt={handleAdapt}
+        />
+
+        {(status === 'generating' || status === 'elevating' || status === 'adapting') && generatingName && (
           <GeneratingCard dishName={generatingName} />
         )}
 
         {/* Recipe card */}
-        {activeRecipe && !(status === 'generating') && (
+        {activeRecipe && !['generating', 'adapting'].includes(status) && (
           <RecipeCard
             recipe={activeRecipe}
             onClose={handleClose}
             onElevate={() => doGenerate(activeRecipe.name, { elevate: true, baseRecipe: activeRecipe })}
+            onAdapt={recipeAdaptEnabled ? () => setAdaptComposerOpen(true) : undefined}
             isElevating={status === 'elevating'}
+            isAdapting={status === 'adapting'}
             onSave={() => doSave(activeRecipe)}
             saveState={saveState}
             shareUrl={shareUrl}

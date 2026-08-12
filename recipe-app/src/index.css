@@ -2724,3 +2724,45 @@ textarea:focus-visible {
 .error-retry:hover {
   background: rgba(217, 79, 79, 0.22);
 }
+
+.action-menu-item.adapt-item {
+  color: #7fbf91;
+}
+.action-menu-item.adapt-item:hover:not(:disabled) {
+  background: rgba(127, 191, 145, 0.12);
+  color: #a5d6b2;
+}
+
+.adaptation-summary {
+  margin: 0 18px 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(127, 191, 145, 0.32);
+  border-radius: var(--radius-sm);
+  background: rgba(127, 191, 145, 0.08);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.adaptation-summary h3 {
+  margin-bottom: 7px;
+  color: var(--text);
+  font-size: 0.86rem;
+}
+.adaptation-substitutions,
+.adaptation-notes {
+  padding-left: 18px;
+}
+.adaptation-substitutions li,
+.adaptation-notes li {
+  margin: 4px 0;
+}
+.adaptation-substitutions li span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.adaptation-lineage {
+  margin-top: 8px;
+  color: #a5d6b2;
+  font-size: 0.74rem;
+}
