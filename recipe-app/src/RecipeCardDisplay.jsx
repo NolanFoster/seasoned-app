@@ -17,6 +17,7 @@ const sourceBadgeMap = {
   clipped: { label: 'Clipped', color: '#5bb87a' },
   ai_generated: { label: 'AI Generated', color: '#c8a96e' },
   elevated: { label: 'Elevated', color: '#e8c87a' },
+  adapted: { label: 'Adapted', color: '#7fbf91' },
   youtube: { label: 'YouTube', color: '#ff0000' },
 }
 
@@ -114,6 +115,28 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
             <span key={label} className="applied-constraint-chip">{label}</span>
           ))}
         </div>
+      )}
+
+      {(recipe.substitutions?.length > 0 || recipe.adaptationNotes?.length > 0) && (
+        <section className="adaptation-summary" aria-label="Recipe adaptation details">
+          <h3>What changed</h3>
+          {recipe.substitutions?.length > 0 && (
+            <ul className="adaptation-substitutions">
+              {recipe.substitutions.map((change, index) => (
+                <li key={`${change.from || 'change'}-${index}`}>
+                  <strong>{change.from}</strong> → {change.to}
+                  {change.reason && <span>{change.reason}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {recipe.adaptationNotes?.length > 0 && (
+            <ul className="adaptation-notes">
+              {recipe.adaptationNotes.map((note, index) => <li key={`${note}-${index}`}>{note}</li>)}
+            </ul>
+          )}
+          {recipe.adapted_from && <p className="adaptation-lineage">Adapted from the original recipe.</p>}
+        </section>
       )}
 
       <div className="recipe-body">

@@ -1,6 +1,7 @@
 import { handleRoot } from './handlers/root-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
 import { handleGenerate } from './handlers/generate-handler.js';
+import { handleAdapt } from './handlers/adapt-handler.js';
 import { handleGroceryList } from './handlers/grocery-list-handler.js';
 
 export default {
@@ -32,6 +33,11 @@ export default {
     // Recipe generation endpoint
     if (url.pathname === '/generate' && request.method === 'POST') {
       return handleGenerate(request, env, corsHeaders);
+    }
+
+    // Recipe adaptation endpoint
+    if (url.pathname === '/adapt' && request.method === 'POST') {
+      return handleAdapt(request, env, corsHeaders);
     }
 
     // Grocery list aggregation endpoint
