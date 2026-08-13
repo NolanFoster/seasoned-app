@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
-import RecipeCardDisplay from './RecipeCardDisplay.jsx'
+import RecipeCardDisplay, { AllergenSafetyNotice } from './RecipeCardDisplay.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -315,6 +315,9 @@ function formatTime(secs) {
 export default function CookingNavigator({ recipe, onClose }) {
   const instructions = normalizeInstructions(recipe.instructions)
   const ingredients = normalizeIngredients(recipe.ingredients)
+  const hardAllergens = recipe.appliedConstraints?.hardAllergens
+    || recipe.appliedConstraints?.hard_allergens
+    || []
   const total = instructions.length
 
   const [currentStep, setCurrentStep] = useState(-1)
@@ -902,6 +905,11 @@ export default function CookingNavigator({ recipe, onClose }) {
         )}
 
         <div className="cn-scroll-body">
+        <AllergenSafetyNotice
+          summary={recipe.allergenSummary}
+          hardAllergens={hardAllergens}
+          className="cn-allergen-notice"
+        />
         {showRecipe ? (
           <div className="cn-recipe-panel">
             <RecipeCardDisplay recipe={recipe} />

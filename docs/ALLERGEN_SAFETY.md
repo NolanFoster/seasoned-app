@@ -45,6 +45,20 @@ any hard allergen configured, uncertainty also fails closed so it cannot be
 silently mistaken for an allergen-free result. Custom hard-allergen tags that
 are outside the canonical graph are likewise marked unverified.
 
+The summary also exposes `needs_review` and `review_reasons`. This is distinct
+from a detected conflict: it means the abstract recipe could not be completely
+verified (for example, it contains an opaque packaged-ingredient term or lacks
+an ingredient list). Ingredient objects and recipe instructions are scanned as
+well as plain ingredient strings so an additive mentioned only in a step cannot
+silently bypass the graph. A `needs_review` result is never presented as a
+positive safety clearance.
+
+When a hard-allergen warning is active, the same notice is shown on the recipe
+card and at cooking-mode entry. A recipe with an unresolved failed check cannot
+be added to the meal planner. Clipped recipes are annotated for the current
+profile and remain explicitly subject to label and cross-contact verification;
+clipping does not turn a graph result into a medical or product-level guarantee.
+
 Every summary is an audit aid, not a medical guarantee. The app should continue
 to display a clear reminder that AI can miss allergens and cross-contact and
 that users must verify packaging and preparation conditions with the

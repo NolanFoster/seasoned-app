@@ -1092,11 +1092,11 @@ export async function enhanceRecommendationsWithRecipes(categoryRecommendations,
     
     metrics.increment('recipe_enhancement_errors', 1);
     
-    // Return original dish names as fallback
+    // A name-only fallback cannot be verified against a hard-allergen policy.
     return Object.fromEntries(
       Object.entries(categoryRecommendations).map(([category, dishes]) => [
         category,
-        dishes.map((dish, index) => ({
+        hardAllergens.length > 0 ? [] : dishes.map((dish, index) => ({
           id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: dish,
           description: `A delicious ${dish.toLowerCase()} perfect for ${category.toLowerCase()}`,

@@ -120,22 +120,54 @@ export function normalizeAllergenList(value) {
     .filter((item, index, items) => items.indexOf(item) === index)
 }
 
+function normalizeRecipeLine(value) {
+  if (typeof value === 'string') return value.trim()
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return ''
+  for (const field of ['name', 'text', 'ingredient', 'original']) {
+    if (typeof value[field] === 'string' && value[field].trim()) return value[field].trim()
+  }
+  return ''
+}
+
+function recipeLineValues(recipeOrIngredients, fields) {
+  if (!recipeOrIngredients || typeof recipeOrIngredients !== 'object') return []
+  return fields.flatMap((field) => Array.isArray(recipeOrIngredients[field])
+    ? recipeOrIngredients[field].map(normalizeRecipeLine)
+    : [])
+}
+
+/**
+ * Return recipe text that can introduce an allergen. Instructions are included
+ * deliberately: recipes occasionally hide an additive (for example, butter
+ * used to grease a pan) in a step instead of the ingredient list.
+ */
 function toIngredientLines(recipeOrIngredients) {
   if (Array.isArray(recipeOrIngredients)) {
-    return recipeOrIngredients.filter((item) => typeof item === 'string' && item.trim())
+    return recipeOrIngredients.map(normalizeRecipeLine).filter(Boolean)
   }
   if (!recipeOrIngredients || typeof recipeOrIngredients !== 'object') return []
 
-  const lines = []
-  for (const field of ['ingredients', 'sourceIngredients']) {
-    if (Array.isArray(recipeOrIngredients[field])) {
-      lines.push(...recipeOrIngredients[field])
-    }
-  }
+  const lines = [
+    ...recipeLineValues(recipeOrIngredients, [
+      'ingredients', 'sourceIngredients', 'recipeIngredient',
+    ]),
+    ...recipeLineValues(recipeOrIngredients, [
+      'instructions', 'steps', 'directions', 'recipeInstructions',
+    ]),
+  ]
   if (recipeOrIngredients.data && typeof recipeOrIngredients.data === 'object') {
     lines.push(...toIngredientLines(recipeOrIngredients.data))
   }
-  return lines.filter((item) => typeof item === 'string' && item.trim())
+  return lines.filter(Boolean)
+}
+
+function hasIngredientData(recipeOrIngredients) {
+  if (Array.isArray(recipeOrIngredients)) return recipeOrIngredients.some((item) => normalizeRecipeLine(item))
+  if (!recipeOrIngredients || typeof recipeOrIngredients !== 'object') return false
+  const direct = recipeLineValues(recipeOrIngredients, [
+    'ingredients', 'sourceIngredients', 'recipeIngredient',
+  ])
+  return direct.some(Boolean) || hasIngredientData(recipeOrIngredients.data)
 }
 
 function termPattern(term) {
@@ -225,14 +257,24 @@ export function analyzeRecipeAllergens(recipeOrIngredients, hardAllergens = []) 
   const matches = detectAllergens(recipeOrIngredients)
   const contains = [...new Set(matches.map((match) => match.allergen))]
   const blocked = contains.filter((allergen) => hard.includes(allergen))
-  const ingredientLines = toIngredientLines(recipeOrIngredients)
+  const ingredientDataAvailable = hasIngredientData(recipeOrIngredients)
   const mayContainUncertain = findUncertainIngredients(recipeOrIngredients)
   const unknownHardAllergens = hard.filter((allergen) => !KNOWN_ALLERGENS.has(allergen))
+  const needsReview = mayContainUncertain.length > 0
+    || unknownHardAllergens.length > 0
+    || (hard.length > 0 && !ingredientDataAvailable)
+  const reviewReasons = [
+    ...(mayContainUncertain.length > 0 ? ['opaque_or_precautionary_ingredient_terms'] : []),
+    ...(unknownHardAllergens.length > 0 ? ['custom_allergen_not_in_graph'] : []),
+    ...(hard.length > 0 && !ingredientDataAvailable ? ['ingredient_data_unavailable'] : []),
+  ]
 
   return {
     checked: true,
-    ingredient_data_available: ingredientLines.length > 0,
-    safe: hard.length === 0 || (ingredientLines.length > 0 && blocked.length === 0 && mayContainUncertain.length === 0 && unknownHardAllergens.length === 0),
+    ingredient_data_available: ingredientDataAvailable,
+    needs_review: needsReview,
+    review_reasons: reviewReasons,
+    safe: hard.length === 0 || (ingredientDataAvailable && blocked.length === 0 && mayContainUncertain.length === 0 && unknownHardAllergens.length === 0),
     contains,
     blocked,
     matches,

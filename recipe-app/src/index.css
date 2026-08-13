@@ -674,6 +674,25 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.recipe-allergen-notice strong,
+.recipe-allergen-notice p {
+  display: block;
+  margin: 0;
+}
+
+.recipe-allergen-notice p + p {
+  margin-top: 0.35rem;
+}
+
+.recipe-allergen-notice--blocked {
+  border-color: rgba(235, 126, 126, 0.75);
+  background: rgba(180, 54, 54, 0.18);
+}
+
+.recipe-allergen-notice--review {
+  border-color: rgba(232, 200, 122, 0.75);
+}
+
 .recipe-description {
   padding: 16px 20px 0;
   font-size: 0.9375rem;
@@ -2765,4 +2784,8 @@ textarea:focus-visible {
   margin-top: 8px;
   color: #a5d6b2;
   font-size: 0.74rem;
+}
+
+.cn-allergen-notice {
+  margin: 16px 20px 0;
 }

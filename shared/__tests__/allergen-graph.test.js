@@ -62,6 +62,37 @@ describe('allergen graph', () => {
     expect(summary.may_contain_uncertain).toEqual(['1 cup vegetable broth'])
   })
 
+  it('surfaces needs_review for opaque terms and missing ingredient data', () => {
+    const uncertain = analyzeRecipeAllergens({
+      ingredients: ['1 cup seasoning blend'],
+    }, ['peanuts'])
+    const incomplete = analyzeRecipeAllergens({ name: 'Unverified recipe' }, ['peanuts'])
+
+    expect(uncertain).toMatchObject({
+      safe: false,
+      needs_review: true,
+      review_reasons: ['opaque_or_precautionary_ingredient_terms'],
+    })
+    expect(incomplete).toMatchObject({
+      safe: false,
+      needs_review: true,
+      review_reasons: ['ingredient_data_unavailable'],
+    })
+  })
+
+  it('checks structured ingredients and hidden instruction additives', () => {
+    const summary = analyzeRecipeAllergens({
+      ingredients: [{ name: '2 cups rice' }],
+      instructions: [{ text: 'Grease the pan with butter before adding the rice.' }],
+    }, ['milk'])
+
+    expect(summary.safe).toBe(false)
+    expect(summary.blocked).toEqual(['milk'])
+    expect(summary.matches).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ingredient: 'Grease the pan with butter before adding the rice.' }),
+    ]))
+  })
+
   it('fails closed when hard-allergen checks have no ingredient data', () => {
     const summary = analyzeRecipeAllergens({ name: 'Incomplete recipe' }, ['peanuts'])
     expect(summary.ingredient_data_available).toBe(false)

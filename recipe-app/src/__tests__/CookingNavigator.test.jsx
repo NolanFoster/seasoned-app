@@ -83,6 +83,14 @@ describe('CookingNavigator — rendering', () => {
     expect(screen.getByText(/gather and prepare all/i)).toBeInTheDocument()
   })
 
+  test('keeps the allergen warning visible at cooking entry', () => {
+    renderNavigator({
+      appliedConstraints: { hardAllergens: ['peanuts'] },
+      allergenSummary: { checked: true, safe: true, blocked: [] },
+    })
+    expect(screen.getByText(/AI can miss allergens and cross-contact/i)).toBeInTheDocument()
+  })
+
   test('renders Prev and Start Cooking navigation buttons', () => {
     renderNavigator()
     expect(screen.getByText('← Prev')).toBeInTheDocument()

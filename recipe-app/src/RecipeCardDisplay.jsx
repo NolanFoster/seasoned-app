@@ -31,6 +31,62 @@ function appliedConstraintLabels(constraints) {
   return labels
 }
 
+function allergenLabel(value) {
+  return String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+/**
+ * Explain the graph result without claiming that a recipe is medically safe.
+ * The same notice is rendered in the recipe card and cooking navigator so the
+ * warning remains visible when a user moves from browsing to cooking.
+ */
+export function AllergenSafetyNotice({ summary, hardAllergens = [], className = '' }) {
+  if (!summary && hardAllergens.length === 0) return null
+
+  const blocked = summary?.blocked || []
+  const contains = summary?.contains || []
+  const uncertain = summary?.may_contain_uncertain || []
+  const needsReview = Boolean(
+    summary?.needs_review
+      || (summary && summary.safe === false && blocked.length === 0)
+      || (hardAllergens.length > 0 && summary?.ingredient_data_available === false)
+  )
+  const noticeClass = [
+    'recipe-allergen-notice',
+    blocked.length > 0 ? 'recipe-allergen-notice--blocked' : '',
+    needsReview ? 'recipe-allergen-notice--review' : '',
+    className,
+  ].filter(Boolean).join(' ')
+
+  return (
+    <div className={noticeClass} role={blocked.length > 0 ? 'alert' : 'note'}>
+      <strong>
+        {blocked.length > 0
+          ? 'Allergen conflict detected'
+          : needsReview
+            ? 'Needs verification'
+            : 'Allergen check'}
+      </strong>
+      <p>
+        {blocked.length > 0
+          ? `This recipe includes ${blocked.map(allergenLabel).join(', ')}. Do not use it for those saved hard allergens.`
+          : needsReview
+            ? 'The recipe could not be fully verified from its available ingredient information.'
+            : 'No mapped conflict was found for the saved hard allergens.'}
+      </p>
+      {contains.length > 0 && (
+        <p>Detected allergens: {contains.map(allergenLabel).join(', ')}.</p>
+      )}
+      {uncertain.length > 0 && (
+        <p>Review these ingredients or preparation notes: {uncertain.join('; ')}.</p>
+      )}
+      <p>AI can miss allergens and cross-contact; verify labels and preparation conditions.</p>
+    </div>
+  )
+}
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -45,9 +101,9 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
 
   const sourceBadge = sourceBadgeMap[recipe.source]
   const allergenSummary = recipe.allergenSummary
-  const hardAllergens = recipe.appliedConstraints?.hardAllergens || []
-  const showAllergenNotice = hardAllergens.length > 0 || allergenSummary
-  const blockedAllergens = allergenSummary?.blocked || []
+  const hardAllergens = recipe.appliedConstraints?.hardAllergens
+    || recipe.appliedConstraints?.hard_allergens
+    || []
 
   return (
     <>
@@ -70,13 +126,7 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
         <p className="recipe-description">{recipe.description}</p>
       )}
 
-      {showAllergenNotice && (
-        <div className="recipe-allergen-notice" role="note">
-          {blockedAllergens.length > 0
-            ? `Allergen safety blocked: ${blockedAllergens.join(', ')}.`
-            : 'Allergen check completed. AI can miss allergens and cross-contact; verify labels and preparation conditions.'}
-        </div>
-      )}
+      <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
 
       <div className="recipe-meta">
         {recipe.prep_time && (

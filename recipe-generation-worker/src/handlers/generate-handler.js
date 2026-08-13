@@ -255,10 +255,13 @@ async function generateRecipeWithAI(requestData, env) {
     const candidateRecipes = await findSimilarRecipes(queryEmbedding, env.RECIPE_VECTORS, env);
     const hardAllergens = requestData.hardAllergens || [];
     const similarRecipes = hardAllergens.length > 0
-      ? candidateRecipes.filter((candidate) => isRecipeSafe(
-        candidate.fullRecipe || { ingredients: [candidate.metadata?.title || ''] },
-        hardAllergens
-      ))
+      ? candidateRecipes.filter((candidate) => {
+        // A vector match without its full recipe cannot be checked. Never use
+        // the search title as a proxy for ingredients because that turns an
+        // incomplete safety check into an affirmative result.
+        if (!candidate.fullRecipe) return false;
+        return isRecipeSafe(candidate.fullRecipe, hardAllergens);
+      })
       : candidateRecipes;
     // Found allergen-safe similar recipes
     operationData.similarRecipes = similarRecipes;
