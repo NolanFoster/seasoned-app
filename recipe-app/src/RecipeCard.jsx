@@ -38,8 +38,18 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
   const menuIdPrefix = useId()
 
   const mealPlanContext = useMealPlan()
+  const hardAllergens = recipe?.appliedConstraints?.hardAllergens
+    || recipe?.appliedConstraints?.hard_allergens
+    || []
+  const hasUnresolvedAllergenConflict = hardAllergens.length > 0
+    && recipe?.allergenSummary
+    && recipe.allergenSummary.safe === false
   const canAddToPlanner = Boolean(
-    mealPlannerEnabled && mealPlanContext && recipe?.id && recipe?.name
+    mealPlannerEnabled
+      && mealPlanContext
+      && recipe?.id
+      && recipe?.name
+      && !hasUnresolvedAllergenConflict
   )
 
   const recipeDurationMins =
@@ -106,11 +116,15 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
   function handleDaySelected(dateString, mealType) {
     setShowDaySelector(false)
     setOpenMenu(null)
-    try {
-      mealPlanContext.addMeal(dateString, mealType, recipe)
-      setPlannerFeedback('success')
-    } catch {
-      setPlannerFeedback('error')
+    if (hasUnresolvedAllergenConflict) {
+      setPlannerFeedback('blocked')
+    } else {
+      try {
+        mealPlanContext.addMeal(dateString, mealType, recipe)
+        setPlannerFeedback('success')
+      } catch {
+        setPlannerFeedback('error')
+      }
     }
     clearTimeout(plannerFeedbackTimerRef.current)
     plannerFeedbackTimerRef.current = setTimeout(() => setPlannerFeedback(null), 2500)
@@ -260,9 +274,11 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
                 title={
                   canAddToPlanner
                     ? 'Add to meal planner'
-                    : !mealPlannerEnabled
-                      ? 'Meal planner is off'
-                      : 'Meal planner unavailable'
+                    : hasUnresolvedAllergenConflict
+                      ? 'Resolve the allergen warning before adding to the planner'
+                      : !mealPlannerEnabled
+                        ? 'Meal planner is off'
+                        : 'Meal planner unavailable'
                 }
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -373,6 +389,13 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
               Added to planner
+            </>
+          ) : plannerFeedback === 'blocked' ? (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+              Resolve the allergen warning before planning this recipe
             </>
           ) : (
             <>

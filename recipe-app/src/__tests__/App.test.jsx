@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App, { buildGenerationRequest, buildAdaptRequest } from '../App';
+import App, { buildGenerationRequest, buildAdaptRequest, annotateRecipeForProfile } from '../App';
 import { MealPlanProvider } from '../MealPlanContext.jsx';
 
 // Wrap App in the providers it requires (MealPlanProvider lives in main.jsx in production)
@@ -99,6 +99,25 @@ const GENERATE_RESPONSE = {
     instructions: ['Beat eggs.', 'Cook in butter.'],
   },
 };
+
+describe('Allergen profile annotation', () => {
+  test('annotates a recipe with a graph summary for hard allergens', () => {
+    const recipe = { name: 'Peanut bowl', ingredients: ['1 cup peanuts'] }
+    const annotated = annotateRecipeForProfile(recipe, { hard_allergens: ['peanuts'] })
+
+    expect(annotated).toMatchObject({
+      appliedConstraints: { hardAllergens: ['peanuts'] },
+      allergenSummary: { checked: true, blocked: ['peanuts'], safe: false },
+      allergenValidation: 'FAILED',
+    })
+    expect(recipe.allergenSummary).toBeUndefined()
+  })
+
+  test('leaves recipes unchanged when no hard allergens are configured', () => {
+    const recipe = { name: 'Rice bowl', ingredients: ['rice'] }
+    expect(annotateRecipeForProfile(recipe, { hard_allergens: [] })).toBe(recipe)
+  })
+})
 
 describe('Adaptation request builder', () => {
   test('keeps the complete base recipe and sends profile plus explicit constraints', () => {

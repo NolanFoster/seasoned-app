@@ -76,6 +76,31 @@ describe('RecipeCardDisplay', () => {
     expect(screen.getByText(/AI can miss allergens and cross-contact/i)).toBeInTheDocument()
   })
 
+  test('explains blocked allergens and uncertain ingredients', () => {
+    render(<RecipeCardDisplay recipe={{
+      ...baseRecipe,
+      appliedConstraints: { hardAllergens: ['peanuts'] },
+      allergenSummary: {
+        checked: true,
+        safe: false,
+        blocked: ['peanuts'],
+        contains: ['peanuts'],
+        needs_review: true,
+        may_contain_uncertain: ['1 cup seasoning blend'],
+      },
+    }} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Allergen conflict detected')
+    expect(screen.getByRole('alert')).toHaveTextContent('Peanuts')
+    expect(screen.getByRole('alert')).toHaveTextContent('Review these ingredients')
+    expect(screen.getByRole('alert')).toHaveTextContent('AI can miss allergens and cross-contact')
+  })
+
+  test('does not render an allergen notice without a check or saved allergens', () => {
+    render(<RecipeCardDisplay recipe={baseRecipe} />)
+    expect(screen.queryByText(/AI can miss allergens and cross-contact/i)).not.toBeInTheDocument()
+  })
+
   test('handles object ingredients', () => {
     render(<RecipeCardDisplay recipe={{ ...baseRecipe, ingredients: [{ name: '2 eggs' }] }} />)
     expect(screen.getByText('2 eggs')).toBeInTheDocument()

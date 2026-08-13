@@ -12,6 +12,7 @@ import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
+import { withAllergenSummary } from '../../shared/allergen-graph.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -236,6 +237,18 @@ export function buildAdaptRequest({ baseRecipe, profile = null, overrides = null
   return body
 }
 
+export function annotateRecipeForProfile(recipe, profile) {
+  const hardAllergens = profile?.hard_allergens || profile?.hardAllergens || []
+  if (!Array.isArray(hardAllergens) || hardAllergens.length === 0) return recipe
+  return withAllergenSummary({
+    ...recipe,
+    appliedConstraints: {
+      ...(recipe.appliedConstraints || {}),
+      hardAllergens,
+    },
+  }, hardAllergens)
+}
+
 export default function App() {
   const auth = useAuth()
   const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
@@ -309,7 +322,7 @@ export default function App() {
             if (!r.ok) return null
             const full = await r.json()
             const d = full.data || full
-            return {
+            const searchRecipe = {
               id: node.id,
               name: d.name || d.title || 'Untitled',
               description: d.description || '',
@@ -320,7 +333,9 @@ export default function App() {
               ingredients: d.ingredients || d.recipeIngredient || [],
               instructions: d.instructions || d.recipeInstructions || [],
               source_url: d.url || d.source_url || '',
+              allergenSummary: d.allergenSummary || null,
             }
+            return annotateRecipeForProfile(searchRecipe, culinaryProfile.profile)
           } catch {
             return null
           }
@@ -497,7 +512,7 @@ export default function App() {
       const data = await res.json()
       const d = data.recipe || data
       const isYouTube = d.sourceType === 'youtube' || isYouTubeUrl(url)
-      const clippedRecipe = {
+      const clippedRecipe = annotateRecipeForProfile({
         id: `clip-${Date.now()}`,
         source: isYouTube ? 'youtube' : 'clipped',
         name: d.name || d.title || 'Clipped Recipe',
@@ -509,7 +524,8 @@ export default function App() {
         ingredients: d.ingredients || d.recipeIngredient || [],
         instructions: d.instructions || d.recipeInstructions || [],
         source_url: url,
-      }
+        allergenSummary: d.allergenSummary || null,
+      }, culinaryProfile.profile)
       setActiveRecipe(clippedRecipe)
       addRecentRecipe(clippedRecipe)
       setInput('')
@@ -538,7 +554,9 @@ export default function App() {
       const body = buildGenerationRequest({
         dishName,
         elevate,
-        profile: constraintGenerateEnabled ? culinaryProfile.profile : null,
+        // Hard-allergen enforcement is safety-critical and must not depend on
+        // the optional Tune/composer flag.
+        profile: culinaryProfileEnabled ? culinaryProfile.profile : null,
         overrides,
         baseIngredients: baseRecipe?.ingredients || null,
       })
@@ -565,6 +583,8 @@ export default function App() {
         ingredients: r.ingredients || [],
         instructions: r.instructions || [],
         appliedConstraints: data.appliedConstraints || r.appliedConstraints || null,
+        allergenSummary: r.allergenSummary || data.allergenSummary || null,
+        allergenValidation: r.allergenValidation || data.allergenValidation || null,
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)

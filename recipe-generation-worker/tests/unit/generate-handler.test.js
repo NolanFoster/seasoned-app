@@ -2210,4 +2210,20 @@ describe('Allergen safety enforcement', () => {
       allergenSummary: { checked: true, blocked: [] }
     });
   });
+
+
+  it('does not treat a vector-match title as ingredient evidence', async () => {
+    allergenEnv.RECIPE_VECTORS.query.mockResolvedValueOnce({
+      matches: [{ id: 'missing-recipe', score: 0.9, metadata: { title: 'Peanut bowl' } }]
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Rice bowl',
+      hardAllergens: ['peanuts']
+    }), allergenEnv, allergenCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.recipe.similarRecipesFound).toBe(0);
+  });
 });
