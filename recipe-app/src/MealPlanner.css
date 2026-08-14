@@ -25,10 +25,10 @@
    -------------------------------------------------------------------------- */
 
 :root {
-  --mp-z-backdrop:     160;
-  --mp-z-drawer:       161;
-  --mp-z-button:       162;
-  --mp-z-drag-portal: 9999; /* portaled drag ghost; clears all drawer layers  */
+  --mp-z-backdrop:     var(--z-drawer);
+  --mp-z-drawer:       var(--z-drawer-panel);
+  --mp-z-button:       var(--z-drawer-control);
+  --mp-z-drag-portal: var(--z-drag-portal); /* portaled drag ghost; clears all drawer layers  */
 
   --mp-btn-size:      44px;   /* matches .user-avatar-btn in index.css  */
   --mp-icon-size:     20px;   /* SVG icon inside the button             */
@@ -38,16 +38,8 @@
   --mp-drawer-width-desktop: 420px;
   --mp-drawer-width-tablet:  320px;
 
-  --mp-transition-drawer:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  --mp-transition-backdrop: 0.3s  cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Spacing scale (multiples of 4 px) */
-  --spacing-xs:  4px;
-  --spacing-sm:  8px;
-  --spacing-md:  12px;
-  --spacing-lg:  16px;
-  --spacing-xl:  24px;
-  --spacing-2xl: 32px;
+  --mp-transition-drawer: var(--duration-medium) var(--ease-standard);
+  --mp-transition-backdrop: var(--duration-medium) var(--ease-standard);
 }
 
 /* --------------------------------------------------------------------------
@@ -108,7 +100,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--mp-z-backdrop);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(var(--color-shadow-rgb) / 0.6);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--mp-transition-backdrop);
@@ -223,7 +215,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 20px;
+  padding: var(--spacing-lg) var(--spacing-5);
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
@@ -259,18 +251,18 @@
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-md);
   min-height: 140px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   cursor: default;
 }
 
 .day-card:hover {
-  border-color: rgba(200, 169, 110, 0.3); /* --accent at low opacity */
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  border-color: rgb(var(--color-primary-rgb) / 0.3); /* --accent at low opacity */
+  box-shadow: var(--elev-2);
   transform: translateY(-1px);
 }
 
@@ -295,8 +287,8 @@
 
 /* "Today" highlight */
 .day-card--today {
-  border-color: rgba(200, 169, 110, 0.5);
-  background: linear-gradient(135deg, var(--surface2) 0%, rgba(200, 169, 110, 0.06) 100%);
+  border-color: rgb(var(--color-primary-rgb) / 0.5);
+  background: linear-gradient(135deg, var(--surface2) 0%, rgb(var(--color-primary-rgb) / 0.06) 100%);
 }
 
 .day-card--today .day-name {
@@ -323,7 +315,7 @@
 }
 
 .day-date {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   font-weight: 400;
 }
@@ -342,7 +334,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   min-height: 22px;
 }
@@ -439,7 +431,7 @@
 }
 
 .meal-item-action-btn:hover {
-  background: rgba(200, 169, 110, 0.08);
+  background: rgb(var(--color-primary-rgb) / var(--state-hover));
 }
 
 .meal-item-action-btn:focus-visible {
@@ -457,7 +449,7 @@
 
 .meal-item-remove:hover {
   color: var(--error);
-  background: rgba(217, 79, 79, 0.08);
+  background: rgb(var(--color-error-rgb) / var(--state-hover));
 }
 
 
@@ -532,14 +524,14 @@
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
-  background: rgba(0, 0, 0, 0.02);
+  background: rgb(var(--color-shadow-rgb) / 0.02);
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 /* Highlight when a meal is dragged over an empty day */
 .day-card--drag-over .day-card__empty-state {
-  border-color: rgba(200, 169, 110, 0.5); /* --accent at mid opacity */
-  background: rgba(200, 169, 110, 0.05);
+  border-color: rgb(var(--color-primary-rgb) / 0.5); /* --accent at mid opacity */
+  background: rgb(var(--color-primary-rgb) / 0.05);
 }
 
 .day-card__empty-state__text {
@@ -582,16 +574,16 @@
 /* Dragged meal — lifted appearance while dragging */
 .meal-item--dragging {
   opacity: 0.85;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--elev-2);
   border-color: var(--accent) !important;
   background: var(--surface2);
 }
 
 /* Drop target day card — subtle highlight when a meal hovers over it */
 .day-card--drag-over {
-  border-color: rgba(200, 169, 110, 0.6);
-  background: linear-gradient(135deg, var(--surface2) 0%, rgba(200, 169, 110, 0.08) 100%);
-  box-shadow: 0 0 0 2px rgba(200, 169, 110, 0.2);
+  border-color: rgb(var(--color-primary-rgb) / 0.6);
+  background: linear-gradient(135deg, var(--surface2) 0%, rgb(var(--color-primary-rgb) / var(--state-hover)) 100%);
+  box-shadow: 0 0 0 2px rgb(var(--color-primary-rgb) / 0.2);
 }
 
 /* --------------------------------------------------------------------------
@@ -621,11 +613,11 @@ body > .meal-item {
 .move-meal-modal__backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(var(--color-shadow-rgb) / 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 300; /* above the drawer (161) and day-selector (200) */
+  z-index: var(--z-system); /* above the drawer and day-selector */
   padding: 16px;
 }
 
@@ -633,7 +625,7 @@ body > .meal-item {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--elev-3);
   width: 100%;
   max-width: 320px;
   overflow: hidden;
@@ -711,7 +703,7 @@ body > .meal-item {
   align-items: baseline;
   gap: 6px;
   padding: 8px 16px;
-  background: rgba(200, 169, 110, 0.05);
+  background: rgb(var(--color-primary-rgb) / 0.05);
   border-bottom: 1px solid var(--border);
 }
 
@@ -939,7 +931,7 @@ body > .meal-item {
 /* Error text shown below the generate button */
 .drawer-footer-error {
   margin: 6px 0 0;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--error);
   text-align: center;
   line-height: 1.4;
@@ -960,7 +952,7 @@ body > .meal-item {
   flex: 1;
   padding: 10px 16px;
   background: var(--surface2);
-  border: 1px solid rgba(232, 200, 122, 0.35);
+  border: 1px solid rgb(var(--color-tertiary-rgb) / 0.35);
   border-radius: var(--radius-sm);
   color: var(--generate-color);
   font-size: 0.85rem;
@@ -1047,7 +1039,7 @@ body > .meal-item {
 }
 
 .up-next__container--drag-over {
-  background: rgba(200, 169, 110, 0.06);
+  background: rgb(var(--color-primary-rgb) / 0.06);
   border-radius: var(--radius-sm);
 }
 
@@ -1079,13 +1071,13 @@ body > .meal-item {
 }
 
 .up-next__card:hover {
-  border-color: rgba(200, 169, 110, 0.4);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border-color: rgb(var(--color-primary-rgb) / 0.4);
+  box-shadow: var(--elev-1);
 }
 
 .up-next__card--dragging {
   cursor: grabbing;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--elev-2);
   opacity: 0.92;
 }
 
@@ -1103,7 +1095,7 @@ body > .meal-item {
 }
 
 .up-next__card-title {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text);
   margin: 0;
@@ -1172,8 +1164,8 @@ body > .meal-item {
 .grocery-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  z-index: 300; /* above drawer (161) and DaySelector (200) */
+  background: rgb(var(--color-shadow-rgb) / 0.65);
+  z-index: var(--z-system); /* above the drawer and DaySelector */
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1195,7 +1187,7 @@ body > .meal-item {
   border-radius: var(--radius) var(--radius) 0 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--elev-3-up);
   animation: grocery-slide-up 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   overflow: hidden;
 }
@@ -1215,7 +1207,7 @@ body > .meal-item {
 }
 
 .grocery-modal-title {
-  font-size: 1rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text);
   margin: 0;
@@ -1266,7 +1258,7 @@ body > .meal-item {
 
 .grocery-modal-empty {
   padding: 40px 24px 32px;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
   line-height: 1.6;
@@ -1302,10 +1294,10 @@ body > .meal-item {
 }
 
 .grocery-item__count {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--accent);
-  background: rgba(200, 169, 110, 0.12);
+  background: rgb(var(--color-primary-rgb) / var(--state-focus));
   border-radius: 10px;
   padding: 1px 7px;
   flex-shrink: 0;
@@ -1334,10 +1326,10 @@ body > .meal-item {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   /* Subtle shadow hints that the list scrolls underneath */
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--elev-1);
   /* Ensure it renders above sticky category headers */
   position: relative;
-  z-index: 2;
+  z-index: var(--z-content-raised);
 }
 
 .grocery-modal-add__row {
@@ -1353,7 +1345,7 @@ body > .meal-item {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   outline: none;
   transition: border-color 0.15s ease;
 }
@@ -1364,14 +1356,14 @@ body > .meal-item {
 
 .grocery-modal-add__input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(232, 200, 122, 0.15);
+  box-shadow: 0 0 0 3px rgb(var(--color-tertiary-rgb) / 0.15);
 }
 
 .grocery-modal-add__btn {
   padding: 8px 14px;
   min-height: 44px;
   background: var(--surface2);
-  border: 1px solid rgba(232, 200, 122, 0.3);
+  border: 1px solid rgb(var(--color-tertiary-rgb) / 0.3);
   border-radius: var(--radius-sm);
   color: var(--generate-color);
   font-size: 0.8rem;
@@ -1394,7 +1386,7 @@ body > .meal-item {
 
 .grocery-modal-add__error {
   margin: 5px 0 0;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--error);
   line-height: 1.3;
 }
@@ -1403,7 +1395,7 @@ body > .meal-item {
 .grocery-category-header {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: var(--z-content);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   /* Left accent line gives each category clear visual anchoring */
@@ -1475,7 +1467,7 @@ body > .meal-item {
 
 /* Quantity string (e.g. "2 lbs", "1 cup") */
 .grocery-item__quantity {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
@@ -1486,7 +1478,7 @@ body > .meal-item {
   font-size: 0.65rem;
   font-weight: 600;
   color: var(--accent);
-  background: rgba(200, 169, 110, 0.12);
+  background: rgb(var(--color-primary-rgb) / var(--state-focus));
   border-radius: 8px;
   padding: 1px 6px;
   white-space: nowrap;
@@ -1564,7 +1556,7 @@ body > .meal-item {
   gap: var(--spacing-sm);
   padding: var(--spacing-xl) var(--spacing-lg);
   background: var(--surface);
-  border: 1px solid rgba(232, 200, 122, 0.3);
+  border: 1px solid rgb(var(--color-tertiary-rgb) / 0.3);
   border-radius: var(--radius);
   text-align: center;
   animation: ggc-glow 3s ease-in-out infinite;
@@ -1573,7 +1565,7 @@ body > .meal-item {
 
 @keyframes ggc-glow {
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
-  50%       { box-shadow: 0 0 0 2px rgba(232, 200, 122, 0.4), 0 0 28px rgba(232, 200, 122, 0.12); }
+  50%       { box-shadow: 0 0 0 2px rgb(var(--color-tertiary-rgb) / 0.4), 0 0 28px rgb(var(--color-tertiary-rgb) / var(--state-focus)); }
 }
 
 /* Five animated bubbles — identical mechanics to .generating-bubble */
@@ -1608,7 +1600,7 @@ body > .meal-item {
 }
 
 .generating-grocery-card__title {
-  font-size: 1rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text);
   line-height: 1.3;
@@ -1617,7 +1609,7 @@ body > .meal-item {
 
 /* Rotating tip — fades in each time key prop changes */
 .generating-grocery-card__tip {
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   color: var(--generate-color);
   font-style: italic;
   margin: 0;
@@ -1631,7 +1623,7 @@ body > .meal-item {
 }
 
 .generating-grocery-card__subtitle {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin: 0;
 }
