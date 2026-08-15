@@ -8,6 +8,8 @@ export interface Env {
   JWT_SECRET?: string;
   // Explicit kill switch; omitted keeps the additive profile API enabled.
   CULINARY_PROFILE_ENABLED?: string;
+  // Explicit kill switch for the additive manual pantry API.
+  PANTRY_ENABLED?: string;
   // Optional service-to-service secret for passkey credential routes.
   PASSKEY_SERVICE_TOKEN?: string;
 }

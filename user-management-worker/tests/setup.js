@@ -67,6 +67,10 @@ global.Request = class MockRequest {
   header(name) {
     return this.headers.get(name);
   }
+
+  async json() {
+    return typeof this.body === 'string' ? JSON.parse(this.body) : this.body;
+  }
 };
 
 // Mock fetch for testing external calls

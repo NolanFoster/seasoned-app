@@ -12,6 +12,8 @@ import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
+import { usePantry } from './usePantry.js'
+import PantryModal from './PantryModal.jsx'
 import { withAllergenSummary } from '../../shared/allergen-graph.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
@@ -74,7 +76,7 @@ function useDebounce(fn, delay) {
   return [schedule, cancel]
 }
 
-function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
+function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile, onOpenPantry }) {
   const [open, setOpen] = useState(false)
   const [opacity, setOpacity] = useState(1)
   const [passkeyStatus, setPasskeyStatus] = useState('idle')
@@ -170,6 +172,15 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
               Kitchen profile
             </button>
           )}
+          {onOpenPantry && (
+            <button className="user-menu-item" role="menuitem" onClick={() => { closeMenu({ restoreFocus: true }); onOpenPantry() }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+                <path d="M7 4v4M17 10v4M10 16v4" />
+              </svg>
+              My pantry
+            </button>
+          )}
           {onRegisterPasskey && (
             <button
               className="user-menu-item"
@@ -237,6 +248,20 @@ export function buildAdaptRequest({ baseRecipe, profile = null, overrides = null
   return body
 }
 
+function getRecipeSourceLabel(recipe) {
+  if (recipe.source === 'elevated') return 'Elevated'
+  if (recipe.source === 'ai_generated' || recipe.id?.startsWith('ai-')) return 'AI'
+  if (recipe.source === 'adapted' || recipe.id?.startsWith('adapt-')) return 'Adapted'
+  if (recipe.source === 'youtube' || isYouTubeUrl(recipe.source_url || '')) return 'YouTube'
+  if (recipe.source === 'clipped') return 'Clipped'
+
+  try {
+    return new URL(recipe.source_url).hostname.replace(/^www\./, '')
+  } catch {
+    return 'Recipe'
+  }
+}
+
 export function annotateRecipeForProfile(recipe, profile) {
   const hardAllergens = profile?.hard_allergens || profile?.hardAllergens || []
   if (!Array.isArray(hardAllergens) || hardAllergens.length === 0) return recipe
@@ -257,9 +282,13 @@ export default function App() {
   const constraintGenerateEnabled = useFlag('constraint-generate')
   const recipeAdaptEnabled = useFlag('recipe-adapt')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [pantryOpen, setPantryOpen] = useState(false)
   const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
   const [adaptComposerOpen, setAdaptComposerOpen] = useState(false)
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
+  const pantryEnabled = useFlag('pantry')
+  const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
+  const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
 
   useEffect(() => {
     if (auth.loading) return
@@ -269,7 +298,7 @@ export default function App() {
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | adapting | error
   const [errorMsg, setErrorMsg] = useState('')
-  const [generationRetry, setGenerationRetry] = useState(null)
+  const [retryAction, setRetryAction] = useState(null)
   const [searchResults, setSearchResults] = useState([])
   const [lastSearchQuery, setLastSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -307,6 +336,7 @@ export default function App() {
       return
     }
     setStatus('searching')
+    setRetryAction({ mode: 'search', query: normalizedQuery })
     setShowDropdown(true)
     setActiveOptionKey(null)
     try {
@@ -348,11 +378,13 @@ export default function App() {
 
       setSearchResults(results.filter(Boolean))
       setLastSearchQuery(normalizedQuery)
+      setRetryAction(null)
     } catch (e) {
       if (requestId !== searchRequestIdRef.current) return
       setSearchResults([])
       setShowDropdown(false)
       setActiveOptionKey(null)
+      setRetryAction({ mode: 'search', query: normalizedQuery })
       setErrorMsg(e.message)
       setStatus('error')
       return
@@ -400,6 +432,8 @@ export default function App() {
   useEffect(() => {
     if (activeRecipe) {
       setIsDrawerOpen(false)
+      setShowDropdown(false)
+      setActiveOptionKey(null)
     }
   }, [activeRecipe])
 
@@ -410,6 +444,8 @@ export default function App() {
   const isSearchView = hasText
   const searchResultsMatchInput = isSearchView && lastSearchQuery === input.trim()
   const isBrowseView = input.trim().length === 0
+  const dropdownVisible = showDropdown && (!activeRecipe || isSearchView)
+  const isEmptyState = !activeRecipe && !busy && status !== 'error' && !input.trim() && recentRecipes.length === 0 && !dropdownVisible
   const visibleOptions = (searchResultsMatchInput
     ? searchResults.map((recipe, index) => ({
         key: `search-${recipe.id || index}-${index}`,
@@ -475,7 +511,7 @@ export default function App() {
     latestInputRef.current = val
     setInput(val)
     setErrorMsg('')
-    setGenerationRetry(null)
+    setRetryAction(null)
     setActiveOptionKey(null)
     searchRequestIdRef.current += 1
     if (!isValidUrl(val.trim()) && val.trim().length >= 2) {
@@ -494,7 +530,7 @@ export default function App() {
 
   // --- Clip ---
   async function doClip(url) {
-    setGenerationRetry(null)
+    setRetryAction({ mode: 'clip', url })
     invalidateSearch()
     latestInputRef.current = ''
     setStatus('clipping')
@@ -529,6 +565,7 @@ export default function App() {
       setActiveRecipe(clippedRecipe)
       addRecentRecipe(clippedRecipe)
       setInput('')
+      setRetryAction(null)
     } catch (e) {
       setErrorMsg(e.message)
       setStatus('error')
@@ -542,7 +579,7 @@ export default function App() {
   // --- Generate ---
   async function doGenerate(query, { elevate = false, baseRecipe = null, overrides = null } = {}) {
     invalidateSearch()
-    setGenerationRetry({ query, options: { elevate, baseRecipe, overrides } })
+    setRetryAction({ mode: 'generate', query, options: { elevate, baseRecipe, overrides } })
     latestInputRef.current = ''
     const dishName = elevate && baseRecipe ? baseRecipe.name : query
     setGeneratingName(dishName)
@@ -588,7 +625,7 @@ export default function App() {
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
-      setGenerationRetry(null)
+      setRetryAction(null)
       setGeneratingName('')
     } catch (e) {
       setGeneratingName('')
@@ -601,7 +638,7 @@ export default function App() {
 
   async function doAdapt(baseRecipe, overrides = null) {
     invalidateSearch()
-    setGenerationRetry({ mode: 'adapt', recipe: baseRecipe, overrides })
+    setRetryAction({ mode: 'adapt', recipe: baseRecipe, overrides })
     latestInputRef.current = ''
     setGeneratingName(baseRecipe.name)
     setInput('')
@@ -646,7 +683,7 @@ export default function App() {
       }
       setActiveRecipe(adaptedRecipe)
       addRecentRecipe(adaptedRecipe)
-      setGenerationRetry(null)
+      setRetryAction(null)
       setGeneratingName('')
     } catch (e) {
       setGeneratingName('')
@@ -701,7 +738,7 @@ export default function App() {
     }
 
     if (e.key === 'Enter') {
-      if (showDropdown && activeOption) {
+      if (dropdownVisible && activeOption) {
         e.preventDefault()
         selectOption(activeOption)
       } else {
@@ -775,14 +812,32 @@ export default function App() {
         onMouseEnter={() => setActiveOptionKey(option.key)}
         onClick={() => selectOption(option)}
       >
-        <span className="dropdown-name">{r.name}</span>
-        <span className="dropdown-meta">
-          {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
-          {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
-          {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+        {r.image ? (
+          <img className="dropdown-thumbnail" src={r.image} alt="" loading="lazy" />
+        ) : (
+          <span className="dropdown-thumbnail dropdown-thumbnail--placeholder" aria-hidden="true" />
+        )}
+        <span className="dropdown-item-content">
+          <span className="dropdown-name">{r.name}</span>
+          <span className="dropdown-meta">
+            <span className="dropdown-pill dropdown-source-pill">{getRecipeSourceLabel(r)}</span>
+            {r.prep_time && <span className="dropdown-pill">Prep: {parseDuration(r.prep_time)}</span>}
+            {r.cook_time && <span className="dropdown-pill">Cook: {parseDuration(r.cook_time)}</span>}
+            {r.recipe_yield && <span className="dropdown-pill">Serves: {r.recipe_yield}</span>}
+          </span>
         </span>
       </button>
     )
+  }
+
+  function applySuggestion(suggestion) {
+    latestInputRef.current = suggestion
+    setInput(suggestion)
+    setErrorMsg('')
+    setRetryAction(null)
+    setActiveOptionKey(null)
+    setShowDropdown(false)
+    inputRef.current?.focus()
   }
 
   // --- Save ---
@@ -837,7 +892,7 @@ export default function App() {
     clearActiveRecipe()
     setGeneratingName('')
     setErrorMsg('')
-    setGenerationRetry(null)
+    setRetryAction(null)
     setStatus('idle')
     setSaveState('idle')
     setSavedRecipeId(null)
@@ -862,6 +917,7 @@ export default function App() {
         onSignOut={auth.signOut}
         onRegisterPasskey={auth.registerPasskey}
         onOpenProfile={culinaryProfileEnabled && culinaryProfile.available ? () => setProfileOpen(true) : undefined}
+        onOpenPantry={pantryEnabled && pantry.available ? () => setPantryOpen(true) : undefined}
       />
       <div className="omnibox-wrapper">
         <div className="brand">
@@ -895,7 +951,7 @@ export default function App() {
               Search, clip, or generate a recipe
             </label>
             <span id="omnibox-instructions" className="sr-only">
-              Use the up and down arrow keys to review recipe suggestions, then press Enter to open one.
+              Type to search saved recipes, paste a link to clip, or describe a dish to generate one. Use the up and down arrow keys to review suggestions, then press Enter to open one.
             </span>
             <input
               id="recipe-omnibox-input"
@@ -903,7 +959,7 @@ export default function App() {
               className="omnibox-input"
               type="text"
               role="combobox"
-              placeholder="Search recipes, paste a URL, or describe a dish…"
+              placeholder="Search recipes, paste a link, or describe a dish…"
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -911,20 +967,32 @@ export default function App() {
               disabled={inputBusy}
               aria-autocomplete="list"
               aria-haspopup="listbox"
-              aria-expanded={showDropdown}
-              aria-controls={showDropdown ? listboxId : undefined}
-              aria-activedescendant={showDropdown && activeOption ? activeOption.domId : undefined}
+              aria-expanded={dropdownVisible}
+              aria-controls={dropdownVisible ? listboxId : undefined}
+              aria-activedescendant={dropdownVisible && activeOption ? activeOption.domId : undefined}
               aria-busy={status === 'searching'}
-              aria-describedby={`omnibox-instructions${status === 'error' && errorMsg ? ' omnibox-error' : ''}`}
+              aria-describedby={`omnibox-instructions omnibox-helper${status === 'error' && errorMsg ? ' omnibox-error' : ''}`}
               autoFocus
               autoComplete="off"
               spellCheck="false"
             />
 
-            <div className="omnibox-actions">
-              {/* Generate button — always visible when there's text and it's not a URL */}
+            <div className={`omnibox-actions ${isUrl ? 'omnibox-actions--clip' : ''}`}>
+              {/* Search is the contextual primary for text queries; generation stays secondary. */}
               {hasText && (
                 <>
+                  <button
+                    className="action-btn primary-btn search-btn"
+                    title="Search saved recipes"
+                    onClick={handleSubmit}
+                    disabled={busy}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m16.5 16.5 4 4" />
+                    </svg>
+                    <span>Search</span>
+                  </button>
                   {constraintGenerateEnabled && (
                     <button
                       className="action-btn tune-btn"
@@ -975,6 +1043,9 @@ export default function App() {
               )}
             </div>
           </div>
+          <p id="omnibox-helper" className="omnibox-helper">
+            Paste a recipe link to clip · type to search · describe a dish to generate
+          </p>
 
           {/* Loading label — for search/clip only; generate/elevate use GeneratingCard */}
           {busy && (status === 'searching' || status === 'clipping') && (
@@ -988,22 +1059,25 @@ export default function App() {
           {status === 'error' && errorMsg && (
             <div id="omnibox-error" className="error-label" role="alert">
               <span>{errorMsg}</span>
-              {generationRetry && (
+              {retryAction && (
                 <button
                   type="button"
                   className="error-retry"
-                  onClick={() => generationRetry.mode === 'adapt'
-                    ? doAdapt(generationRetry.recipe, generationRetry.overrides)
-                    : doGenerate(generationRetry.query, generationRetry.options)}
+                  onClick={() => {
+                    if (retryAction.mode === 'search') doSearch(retryAction.query)
+                    else if (retryAction.mode === 'clip') doClip(retryAction.url)
+                    else if (retryAction.mode === 'adapt') doAdapt(retryAction.recipe, retryAction.overrides)
+                    else doGenerate(retryAction.query, retryAction.options)
+                  }}
                 >
-                  Retry generation
+                  {retryAction.mode === 'generate' || retryAction.mode === 'adapt' ? 'Retry generation' : 'Retry'}
                 </button>
               )}
             </div>
           )}
 
           {/* Search dropdown */}
-          {showDropdown && (
+          {dropdownVisible && (
             <div className="dropdown" ref={dropdownRef}>
               {!isSearchView && recentRecipes.length > 0 && (
                 <div className="dropdown-section-label">
@@ -1083,6 +1157,24 @@ export default function App() {
           )}
         </div>
 
+        {isEmptyState && (
+          <section className="omnibox-empty-state" aria-labelledby="omnibox-empty-title">
+            <h2 id="omnibox-empty-title">Start with a recipe idea</h2>
+            <p>Search your collection, clip a favorite link, or let Seasoned shape a dish around your constraints.</p>
+            <div className="omnibox-suggestions" aria-label="Recipe ideas">
+              <button type="button" className="suggestion-chip" onClick={() => applySuggestion('20-minute vegetarian dinner')}>
+                20-minute vegetarian dinner
+              </button>
+              <button type="button" className="suggestion-chip" onClick={() => applySuggestion('high-protein weeknight pasta')}>
+                High-protein weeknight pasta
+              </button>
+              <button type="button" className="suggestion-chip" onClick={() => applySuggestion('cozy one-pot meal')}>
+                Cozy one-pot meal
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* GeneratingCard — shown while generate/elevate is in-flight */}
         <GenerationComposer
           open={generationComposerOpen && constraintGenerateEnabled && hasText}
@@ -1107,7 +1199,7 @@ export default function App() {
         )}
 
         {/* Recipe card */}
-        {activeRecipe && !['generating', 'adapting'].includes(status) && (
+        {activeRecipe && !['generating', 'adapting'].includes(status) && !(dropdownVisible && isSearchView) && (
           <RecipeCard
             recipe={activeRecipe}
             onClose={handleClose}
@@ -1129,6 +1221,17 @@ export default function App() {
           error={culinaryProfile.error}
           onSave={culinaryProfile.saveProfile}
           onClose={() => setProfileOpen(false)}
+        />
+        <PantryModal
+          open={pantryOpen && pantryEnabled && pantry.available}
+          items={pantry.items}
+          loading={pantry.loading}
+          syncError={pantry.syncError}
+          activeRecipe={activeRecipe}
+          onAdd={pantry.addItem}
+          onUpdate={pantry.updateItem}
+          onRemove={pantry.removeItem}
+          onClose={() => setPantryOpen(false)}
         />
       </div>
     </div>

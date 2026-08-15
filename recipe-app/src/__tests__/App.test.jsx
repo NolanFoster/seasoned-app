@@ -157,6 +157,24 @@ describe('Generation request builder', () => {
 
 // ── isValidUrl (tested via omnibox UI behaviour) ───────────────────────────
 
+describe('Omnibox first-run guidance', () => {
+  test('shows an actionable empty state and fills the omnibox from a suggestion', () => {
+    renderApp()
+
+    expect(screen.getByRole('heading', { name: 'Start with a recipe idea' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '20-minute vegetarian dinner' }))
+
+    expect(screen.getByRole('combobox')).toHaveValue('20-minute vegetarian dinner')
+    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument()
+  })
+
+  test('explains the search, clip, and generate paths beside the field', () => {
+    renderApp()
+    expect(screen.getByText('Paste a recipe link to clip · type to search · describe a dish to generate')).toBeInTheDocument()
+  })
+})
+
 describe('Omnibox input mode detection', () => {
   test('shows Generate button for plain text input', () => {
     renderApp();
@@ -292,6 +310,7 @@ describe('Search behaviour', () => {
     await waitFor(() =>
       expect(screen.getByText(/Search failed: 500/i)).toBeInTheDocument()
     );
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
   test('fetches full recipe data for each search result', async () => {
@@ -308,6 +327,19 @@ describe('Search behaviour', () => {
       expect.stringContaining('/api/recipes/abc123')
     );
   });
+
+  test('shows available thumbnails and source labels in result rows', async () => {
+    mockFetchOk(SEARCH_RESPONSE)
+    mockFetchOk(FULL_RECIPE_RESPONSE)
+
+    renderApp()
+    setInputValue('cake')
+    pressEnter()
+
+    await waitFor(() => screen.getByText('Chocolate Cake'))
+    expect(document.querySelector('.dropdown-thumbnail')).toHaveAttribute('src', 'https://example.com/cake.jpg')
+    expect(screen.getByText('example.com')).toBeInTheDocument()
+  })
 });
 
 describe('Core chrome accessibility', () => {
@@ -606,6 +638,7 @@ describe('Clip behaviour', () => {
     await waitFor(() =>
       expect(screen.getByText(/Clip failed: 422/i)).toBeInTheDocument()
     );
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
   test('shows Clip button for YouTube URLs', () => {
@@ -980,6 +1013,22 @@ describe('Recently viewed recipes', () => {
   beforeEach(() => {
     localStorage.clear();
   });
+
+  test('prioritizes the explicit Elevated source label over an AI id', () => {
+    seedLocalStorage([{
+      id: 'ai-elevated-1',
+      source: 'elevated',
+      name: 'Elevated Pasta',
+      image: '',
+      ingredients: [],
+      instructions: [],
+    }])
+
+    renderApp()
+    fireEvent.focus(screen.getByRole('combobox'))
+
+    expect(screen.getByText('Elevated')).toBeInTheDocument()
+  })
 
   test('stores a recipe in localStorage after viewing a search result', async () => {
     mockFetchOk(SEARCH_RESPONSE);
