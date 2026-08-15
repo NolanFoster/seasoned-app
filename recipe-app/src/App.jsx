@@ -249,9 +249,9 @@ export function buildAdaptRequest({ baseRecipe, profile = null, overrides = null
 }
 
 function getRecipeSourceLabel(recipe) {
+  if (recipe.source === 'elevated') return 'Elevated'
   if (recipe.source === 'ai_generated' || recipe.id?.startsWith('ai-')) return 'AI'
   if (recipe.source === 'adapted' || recipe.id?.startsWith('adapt-')) return 'Adapted'
-  if (recipe.source === 'elevated') return 'Elevated'
   if (recipe.source === 'youtube' || isYouTubeUrl(recipe.source_url || '')) return 'YouTube'
   if (recipe.source === 'clipped') return 'Clipped'
 

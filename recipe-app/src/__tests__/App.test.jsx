@@ -1014,6 +1014,22 @@ describe('Recently viewed recipes', () => {
     localStorage.clear();
   });
 
+  test('prioritizes the explicit Elevated source label over an AI id', () => {
+    seedLocalStorage([{
+      id: 'ai-elevated-1',
+      source: 'elevated',
+      name: 'Elevated Pasta',
+      image: '',
+      ingredients: [],
+      instructions: [],
+    }])
+
+    renderApp()
+    fireEvent.focus(screen.getByRole('combobox'))
+
+    expect(screen.getByText('Elevated')).toBeInTheDocument()
+  })
+
   test('stores a recipe in localStorage after viewing a search result', async () => {
     mockFetchOk(SEARCH_RESPONSE);
     mockFetchOk(FULL_RECIPE_RESPONSE);
