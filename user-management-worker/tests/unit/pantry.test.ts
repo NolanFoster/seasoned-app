@@ -86,6 +86,18 @@ describe('authenticated pantry routes', () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
+  it('reports an unconfigured deployment separately from a rejected token', async () => {
+    const prepare = vi.fn();
+    const response = await app.fetch(new Request('https://example.test/me/pantry-items', {
+      headers: { authorization: `Bearer ${await tokenFor('user-a')}` },
+    }), env({ JWT_SECRET: undefined, USER_DB: { prepare } as never }));
+    const rawBody = await response.json();
+    const body = (typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody) as { success: boolean; message: string };
+    expect(response.status).toBe(503);
+    expect(body.message).toBe('Authentication is not configured on this deployment');
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it('returns the authenticated user pantry rows and not a caller-supplied id', async () => {
     const all = vi.fn().mockResolvedValue({ results: [] });
     const bind = vi.fn().mockReturnValue({ all });
