@@ -2911,3 +2911,72 @@ textarea:focus-visible {
 .cn-allergen-notice {
   margin: 16px 20px 0;
 }
+
+/* ── AI provenance and quality signals ───────────────────────────── */
+.recipe-provenance {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(200, 169, 110, 0.35);
+  border-radius: 12px;
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.recipe-provenance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.recipe-provenance-heading h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.recipe-provenance-method {
+  color: var(--text-muted, #6f685d);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.recipe-provenance-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.recipe-provenance-item {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(120, 112, 99, 0.2);
+  border-radius: 999px;
+  color: var(--text-primary, #302c26);
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 0.78rem;
+}
+
+.recipe-provenance-item--passed {
+  border-color: rgba(63, 145, 91, 0.45);
+}
+
+.recipe-provenance-item--needs_review,
+.recipe-provenance-item--not_checked {
+  border-color: rgba(190, 132, 37, 0.45);
+}
+
+.recipe-provenance-item--blocked {
+  border-color: rgba(177, 61, 61, 0.55);
+  color: #8f2f2f;
+}
+
+.recipe-provenance-disclaimer {
+  margin: 0.7rem 0 0;
+  color: var(--text-muted, #6f685d);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

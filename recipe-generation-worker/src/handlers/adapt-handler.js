@@ -3,6 +3,7 @@ import {
   AllergenSafetyError,
   enforceAllergenSafety
 } from '../../../shared/allergen-graph.js';
+import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
 
 const ADAPT_CONSTRAINT_FIELDS = [
   'dietary',
@@ -317,13 +318,24 @@ export async function handleAdapt(request, env, corsHeaders) {
       ? constraintOverrides.preserve.filter((item) => typeof item === 'string' && item.trim()).slice(0, 10)
       : [];
 
+    const adaptationStartedAt = Date.now();
+    const adaptationMethod = env.AI ? 'llama-ai-recipe-adapt' : 'mock-ai';
     const adapted = env.AI
       ? await adaptWithAI(baseRecipe, constraints, env)
       : mockAdaptRecipe(baseRecipe, constraints);
-    const finalRecipe = enforceAllergenSafety(
-      applyLineage(adapted, baseRecipe, constraints, env.AI ? 'llama-ai-recipe-adapt' : 'mock-ai'),
+    let finalRecipe = enforceAllergenSafety(
+      applyLineage(adapted, baseRecipe, constraints, adaptationMethod),
       constraints.hardAllergens
     );
+    finalRecipe.generationTime = Date.now() - adaptationStartedAt;
+    finalRecipe = withQualityMetadata(finalRecipe, {
+      source: 'adapted',
+      generationMethod: adaptationMethod,
+      model: env.AI ? '@cf/meta/llama-4-scout-17b-16e-instruct' : null,
+      hardAllergens: constraints.hardAllergens,
+      appliedConstraints: constraints,
+      similarRecipeIds: []
+    });
 
     return new Response(JSON.stringify({
       success: true,
@@ -340,6 +352,17 @@ export async function handleAdapt(request, env, corsHeaders) {
         error: 'Recipe adaptation failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary
+      }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (error instanceof RecipeQualityError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe adaptation failed quality validation',
+        code: error.code,
+        qualityBar: error.result
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

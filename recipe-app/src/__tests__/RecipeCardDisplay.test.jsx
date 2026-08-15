@@ -106,3 +106,42 @@ describe('RecipeCardDisplay', () => {
     expect(screen.getByText('2 eggs')).toBeInTheDocument()
   })
 })
+
+describe('Recipe provenance and quality bar', () => {
+  test('shows transparent provenance for generated recipes', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI rice bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: {
+        source: 'ai_generated',
+        generationMethod: 'llama-ai',
+        model: '@cf/meta/llama-4-scout-17b-16e-instruct',
+        similarRecipeIds: ['recipe-1'],
+        nutritionCoverage: 80,
+        appliedConstraints: { dietary: ['vegetarian'] },
+      },
+    }} />)
+
+    const provenance = screen.getByRole('region', { name: 'How this was made' })
+    expect(provenance).toHaveTextContent('LLaMA generation')
+    expect(provenance).toHaveTextContent('96/100')
+    expect(provenance).toHaveTextContent('Checks passed')
+    expect(provenance).toHaveTextContent('@cf/meta/llama-4-scout-17b-16e-instruct')
+    expect(provenance).toHaveTextContent('1 similar recipe')
+    expect(provenance).toHaveTextContent('80% ingredient coverage')
+  })
+
+  test('does not add AI provenance chrome to a plain clipped recipe', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Clipped recipe',
+      source: 'clipped',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+    }} />)
+    expect(screen.queryByRole('region', { name: 'How this was made' })).not.toBeInTheDocument()
+  })
+})
