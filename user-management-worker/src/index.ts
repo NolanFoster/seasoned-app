@@ -5,6 +5,7 @@ import { logger } from 'hono/logger';
 import { Bindings } from './types/env';
 import { UserDatabaseService } from './services/user-database';
 import { DEFAULT_PROFILE, validateCulinaryProfileInput } from './services/culinary-profile';
+import { PantryService, validatePantryItemInput } from './services/pantry';
 
 const app = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -35,6 +36,10 @@ function culinaryProfileEnabled(env: Bindings): boolean {
   return env.CULINARY_PROFILE_ENABLED !== 'false';
 }
 
+function pantryEnabled(env: Bindings): boolean {
+  return env.PANTRY_ENABLED !== 'false';
+}
+
 function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string): string | undefined } }): boolean {
   const configuredToken = c.env.PASSKEY_SERVICE_TOKEN;
   if (c.env.ENVIRONMENT === 'development') return true;
@@ -49,8 +54,11 @@ app.use('*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization']
 // existing local workflow convenient; deployed environments require the shared
 // PASSKEY_SERVICE_TOKEN secret configured on both workers.
 app.use('*', async (c, next) => {
-  if (c.req.path === '/me/culinary-profile') {
-    if (!culinaryProfileEnabled(c.env)) {
+  if (c.req.path === '/me/culinary-profile' || c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/')) {
+    if (c.req.path === '/me/culinary-profile' && !culinaryProfileEnabled(c.env)) {
+      return c.json({ success: false, message: 'Not Found' }, 404);
+    }
+    if ((c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/')) && !pantryEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     const userId = await getAuthenticatedUserId(c);
@@ -143,6 +151,73 @@ app.put('/me/culinary-profile', async (c) => {
     return c.json({ success: true, data: result.data });
   } catch (error) {
     console.error('Error saving culinary profile:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Authenticated pantry inventory endpoints. Every query is scoped to the
+// verified JWT subject so a caller cannot read or mutate another user's items.
+app.get('/me/pantry-items', async (c) => {
+  try {
+    const items = await new PantryService(c.env.USER_DB).listItems(c.get('userId'));
+    return c.json({ success: true, data: items });
+  } catch (error) {
+    console.error('Error listing pantry items:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/me/pantry-items', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.item && typeof body.item === 'object'
+      ? body.item
+      : body;
+    const errors = validatePantryItemInput(input);
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry item', errors }, 400);
+
+    const item = await new PantryService(c.env.USER_DB).createItem(c.get('userId'), input);
+    if (!item) return c.json({ success: false, message: 'Failed to create pantry item' }, 500);
+    return c.json({ success: true, data: item }, 201);
+  } catch (error) {
+    console.error('Error creating pantry item:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.patch('/me/pantry-items/:item_id', async (c) => {
+  try {
+    const itemId = Number(c.req.param('item_id'));
+    if (!Number.isSafeInteger(itemId) || itemId < 1) {
+      return c.json({ success: false, message: 'Invalid pantry item id' }, 400);
+    }
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.item && typeof body.item === 'object'
+      ? body.item
+      : body;
+    const errors = validatePantryItemInput(input, { partial: true });
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry item', errors }, 400);
+
+    const item = await new PantryService(c.env.USER_DB).updateItem(c.get('userId'), itemId, input);
+    if (!item) return c.json({ success: false, message: 'Pantry item not found or no fields to update' }, 404);
+    return c.json({ success: true, data: item });
+  } catch (error) {
+    console.error('Error updating pantry item:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.delete('/me/pantry-items/:item_id', async (c) => {
+  try {
+    const itemId = Number(c.req.param('item_id'));
+    if (!Number.isSafeInteger(itemId) || itemId < 1) {
+      return c.json({ success: false, message: 'Invalid pantry item id' }, 400);
+    }
+    const affectedRows = await new PantryService(c.env.USER_DB).deleteItem(c.get('userId'), itemId);
+    if (affectedRows === 0) return c.json({ success: false, message: 'Pantry item not found' }, 404);
+    return c.json({ success: true, affectedRows });
+  } catch (error) {
+    console.error('Error deleting pantry item:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });
@@ -743,6 +818,11 @@ app.get('/', (c) => {
         path: '/me/culinary-profile',
         method: 'GET|PUT',
         description: 'Read or update the authenticated user culinary profile (Bearer JWT required)'
+      },
+      {
+        path: '/me/pantry-items',
+        method: 'GET|POST|PATCH|DELETE',
+        description: 'Manage authenticated user pantry inventory (Bearer JWT required)'
       },
       {
         path: '/passkey-credentials/*',

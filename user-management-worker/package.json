@@ -21,7 +21,10 @@
     "migrate:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/001_add_passkey_credentials.sql",
     "migrate:profile:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/002_add_culinary_profiles.sql",
     "migrate:profile:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/002_add_culinary_profiles.sql",
-    "migrate:profile:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/002_add_culinary_profiles.sql"
+    "migrate:profile:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/002_add_culinary_profiles.sql",
+    "migrate:pantry:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/003_add_pantry_items.sql",
+    "migrate:pantry:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/003_add_pantry_items.sql",
+    "migrate:pantry:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/003_add_pantry_items.sql"
   },
   "dependencies": {
     "hono": "^3.12.0",

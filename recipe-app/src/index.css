@@ -3110,3 +3110,308 @@ textarea:focus-visible {
   font-size: 0.75rem;
   line-height: 1.4;
 }
+
+/* ── Pantry inventory ──────────────────────────────────────────────── */
+.pantry-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(12, 19, 16, 0.48);
+  padding: 1rem;
+}
+
+.pantry-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 34rem);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.25rem;
+  background: var(--surface, #18221d);
+  color: var(--text, #f2f5ef);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.35);
+}
+
+.pantry-header,
+.pantry-form-heading,
+.pantry-list-heading,
+.pantry-item,
+.pantry-item-actions {
+  display: flex;
+  align-items: center;
+}
+
+.pantry-header {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pantry-header h2,
+.pantry-header p,
+.pantry-form h3,
+.pantry-list-heading h3,
+.pantry-group h4,
+.pantry-empty p {
+  margin: 0;
+}
+
+.pantry-header p {
+  max-width: 28rem;
+  margin-top: 0.3rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.pantry-close {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1.7rem;
+  cursor: pointer;
+}
+
+.pantry-close:hover,
+.pantry-close:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pantry-status {
+  margin: 0 0 0.8rem;
+  color: var(--accent, #c8a96e);
+  font-size: 0.86rem;
+}
+
+.pantry-status--offline {
+  color: #e6b477;
+}
+
+.pantry-leftovers,
+.pantry-primary {
+  min-height: 2.75rem;
+  border: 1px solid rgba(200, 169, 110, 0.6);
+  border-radius: 0.7rem;
+  background: rgba(200, 169, 110, 0.14);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pantry-leftovers {
+  width: 100%;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+
+.pantry-leftovers:hover,
+.pantry-leftovers:focus-visible,
+.pantry-primary:hover,
+.pantry-primary:focus-visible {
+  background: rgba(200, 169, 110, 0.24);
+}
+
+.pantry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.pantry-form-heading {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pantry-form-cancel {
+  border: 0;
+  background: transparent;
+  color: var(--accent, #c8a96e);
+  cursor: pointer;
+}
+
+.pantry-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.pantry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.pantry-field--wide {
+  width: 100%;
+}
+
+.pantry-field input,
+.pantry-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--text, #f2f5ef);
+  font: inherit;
+  font-weight: 400;
+}
+
+.pantry-field input:focus,
+.pantry-field select:focus {
+  border-color: var(--accent, #c8a96e);
+  outline: 2px solid rgba(200, 169, 110, 0.25);
+}
+
+.pantry-help {
+  color: var(--muted, #aab5ad);
+  font-weight: 400;
+}
+
+.pantry-primary {
+  align-self: flex-start;
+  padding: 0.6rem 1rem;
+}
+
+.pantry-primary:disabled,
+.pantry-leftovers:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.pantry-list {
+  margin-top: 1.3rem;
+}
+
+.pantry-list-heading {
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+
+.pantry-list-heading span {
+  color: var(--muted, #aab5ad);
+  font-size: 0.82rem;
+}
+
+.pantry-group {
+  margin-top: 1rem;
+}
+
+.pantry-group h4 {
+  margin-bottom: 0.35rem;
+  color: var(--accent, #c8a96e);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pantry-group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pantry-item {
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pantry-item-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pantry-item-copy strong {
+  overflow-wrap: anywhere;
+}
+
+.pantry-item-copy > span,
+.pantry-expiry {
+  color: var(--muted, #aab5ad);
+  font-size: 0.76rem;
+}
+
+.pantry-expiry--soon {
+  color: #e6b477;
+}
+
+.pantry-expiry--expired {
+  color: #ed8b83;
+}
+
+.pantry-item-actions {
+  flex: 0 0 auto;
+  gap: 0.25rem;
+}
+
+.pantry-item-actions button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--accent, #c8a96e);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.pantry-item-actions button:last-child {
+  color: #ed9a92;
+}
+
+.pantry-item-actions button:hover,
+.pantry-item-actions button:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pantry-empty {
+  padding: 1.25rem 0;
+  color: var(--muted, #aab5ad);
+  line-height: 1.45;
+}
+
+.pantry-empty strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--text, #f2f5ef);
+}
+
+@media (max-width: 600px) {
+  .pantry-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .pantry-sheet {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 1.25rem 1.25rem 0 0;
+  }
+}

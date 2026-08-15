@@ -217,3 +217,23 @@ CREATE TRIGGER IF NOT EXISTS update_user_activity_passkey_trigger
     BEGIN
         UPDATE users SET last_activity_at = NEW.login_timestamp WHERE user_id = NEW.user_id;
     END;
+
+-- Pantry inventory. Existing databases should use migrations/003_add_pantry_items.sql.
+CREATE TABLE IF NOT EXISTS pantry_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 200),
+    quantity REAL,
+    unit TEXT,
+    location TEXT NOT NULL DEFAULT 'pantry' CHECK (location IN ('fridge', 'freezer', 'pantry', 'other')),
+    expires_on TEXT,
+    tags TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(tags)),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pantry_items_user_expiry
+    ON pantry_items(user_id, expires_on, created_at);
+CREATE INDEX IF NOT EXISTS idx_pantry_items_user_location
+    ON pantry_items(user_id, location);

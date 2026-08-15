@@ -63,6 +63,30 @@ export interface CulinaryProfileInput {
   consent_flags?: ConsentFlags;
 }
 
+export type PantryLocation = 'fridge' | 'freezer' | 'pantry' | 'other';
+
+export interface PantryItem {
+  id: number;
+  user_id: string;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  location: PantryLocation;
+  expires_on: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PantryItemInput {
+  name: string;
+  quantity?: number | null;
+  unit?: string | null;
+  location?: PantryLocation;
+  expires_on?: string | null;
+  tags?: string[];
+}
+
 export type LoginMethod = 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
 
 export interface UserLoginHistory {

@@ -12,6 +12,8 @@ import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
+import { usePantry } from './usePantry.js'
+import PantryModal from './PantryModal.jsx'
 import { withAllergenSummary } from '../../shared/allergen-graph.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
@@ -74,7 +76,7 @@ function useDebounce(fn, delay) {
   return [schedule, cancel]
 }
 
-function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
+function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile, onOpenPantry }) {
   const [open, setOpen] = useState(false)
   const [opacity, setOpacity] = useState(1)
   const [passkeyStatus, setPasskeyStatus] = useState('idle')
@@ -168,6 +170,15 @@ function UserMenu({ user, onSignOut, onRegisterPasskey, onOpenProfile }) {
                 <path d="M8 12h8M12 8v8"/>
               </svg>
               Kitchen profile
+            </button>
+          )}
+          {onOpenPantry && (
+            <button className="user-menu-item" role="menuitem" onClick={() => { closeMenu({ restoreFocus: true }); onOpenPantry() }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+                <path d="M7 4v4M17 10v4M10 16v4" />
+              </svg>
+              My pantry
             </button>
           )}
           {onRegisterPasskey && (
@@ -271,9 +282,13 @@ export default function App() {
   const constraintGenerateEnabled = useFlag('constraint-generate')
   const recipeAdaptEnabled = useFlag('recipe-adapt')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [pantryOpen, setPantryOpen] = useState(false)
   const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
   const [adaptComposerOpen, setAdaptComposerOpen] = useState(false)
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
+  const pantryEnabled = useFlag('pantry')
+  const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
+  const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
 
   useEffect(() => {
     if (auth.loading) return
@@ -902,6 +917,7 @@ export default function App() {
         onSignOut={auth.signOut}
         onRegisterPasskey={auth.registerPasskey}
         onOpenProfile={culinaryProfileEnabled && culinaryProfile.available ? () => setProfileOpen(true) : undefined}
+        onOpenPantry={pantryEnabled && pantry.available ? () => setPantryOpen(true) : undefined}
       />
       <div className="omnibox-wrapper">
         <div className="brand">
@@ -1205,6 +1221,17 @@ export default function App() {
           error={culinaryProfile.error}
           onSave={culinaryProfile.saveProfile}
           onClose={() => setProfileOpen(false)}
+        />
+        <PantryModal
+          open={pantryOpen && pantryEnabled && pantry.available}
+          items={pantry.items}
+          loading={pantry.loading}
+          syncError={pantry.syncError}
+          activeRecipe={activeRecipe}
+          onAdd={pantry.addItem}
+          onUpdate={pantry.updateItem}
+          onRemove={pantry.removeItem}
+          onClose={() => setPantryOpen(false)}
         />
       </div>
     </div>
