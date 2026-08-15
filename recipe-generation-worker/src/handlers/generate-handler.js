@@ -6,6 +6,12 @@ import {
   enforceAllergenSafety,
   isRecipeSafe
 } from '../../../shared/allergen-graph.js';
+import {
+  RecipeQualityError,
+  assertRecipeQuality,
+  buildQualityBar,
+  withQualityMetadata
+} from '../quality-bar.js';
 
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
@@ -105,6 +111,14 @@ export async function handleGenerate(request, env, corsHeaders) {
         }
       }
 
+      finalRecipe = withQualityMetadata(finalRecipe, {
+        source: requestBody.elevate === true ? 'elevated' : 'ai_generated',
+        generationMethod: finalRecipe.elevationMethod || 'mock',
+        hardAllergens: appliedConstraints.hardAllergens,
+        appliedConstraints,
+        similarRecipeIds: []
+      });
+
       return new Response(JSON.stringify({
         success: true,
         recipe: finalRecipe,
@@ -159,6 +173,17 @@ export async function handleGenerate(request, env, corsHeaders) {
       }
     }
 
+    finalRecipe = withQualityMetadata(finalRecipe, {
+      source: requestBody.elevate === true ? 'elevated' : 'ai_generated',
+      generationMethod: requestBody.elevate === true
+        ? (finalRecipe.elevationMethod || 'llama-ai-elevate')
+        : (finalRecipe.generationMethod || 'llama-ai'),
+      model: env.AI ? '@cf/meta/llama-4-scout-17b-16e-instruct' : null,
+      hardAllergens: appliedConstraints.hardAllergens,
+      appliedConstraints,
+      similarRecipeIds: finalRecipe.similarRecipeIds || []
+    });
+
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
@@ -178,6 +203,20 @@ export async function handleGenerate(request, env, corsHeaders) {
         error: 'Recipe failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary
+      }), {
+        status: error.status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    if (error instanceof RecipeQualityError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe failed quality validation',
+        code: error.code,
+        qualityBar: error.result
       }), {
         status: error.status,
         headers: {
@@ -274,6 +313,12 @@ async function generateRecipeWithAI(requestData, env) {
 
     const duration = Date.now() - startTime;
     // Recipe generation completed in ${duration}ms
+    // Empty AI responses are blocked before they can cross the API boundary.
+    assertRecipeQuality(generatedRecipe);
+    const qualityBar = buildQualityBar({ ...generatedRecipe, generationTime: duration, similarRecipesFound: similarRecipes.length }, {
+      generationMethod: 'llama-ai',
+      hardAllergens: requestData.hardAllergens || []
+    });
 
     // Create Opik trace and spans with complete data
     if (env.OPIK_API_KEY && opikClient.isHealthy()) {
@@ -285,13 +330,15 @@ async function generateRecipeWithAI(requestData, env) {
         {
           recipe: generatedRecipe,
           generationTime: duration,
-          generationMethod: 'llama-ai'
+          generationMethod: 'llama-ai',
+          qualityBar
         },
         {
           similarRecipesFound: similarRecipes.length,
           queryTextLength: queryText.length,
           embeddingDimensions: queryEmbedding ? queryEmbedding.length : 0,
-          duration: duration
+          duration: duration,
+          qualityBar
         },
         operationData.traceStartTime,
         new Date().toISOString()
@@ -385,6 +432,7 @@ async function generateRecipeWithAI(requestData, env) {
       ...generatedRecipe,
       generationTime: duration,
       similarRecipesFound: similarRecipes.length,
+      similarRecipeIds: similarRecipes.map(({ id }) => id).filter(Boolean),
       generationMethod: 'llama-ai'
     };
 

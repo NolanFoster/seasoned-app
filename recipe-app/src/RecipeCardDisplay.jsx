@@ -87,6 +87,100 @@ export function AllergenSafetyNotice({ summary, hardAllergens = [], className = 
   )
 }
 
+const provenanceMethodLabels = {
+  'llama-ai': 'LLaMA generation',
+  'llama-ai-elevate': 'AI elevated',
+  'llama-ai-recipe-adapt': 'AI adapted',
+  'mock-ai': 'Local adaptation preview',
+  mock: 'Local generation preview',
+}
+
+function provenanceMethodLabel(value, source) {
+  if (provenanceMethodLabels[value]) return provenanceMethodLabels[value]
+  if (sourceBadgeMap[source]) return sourceBadgeMap[source].label
+  return value ? String(value).replace(/[-_]/g, ' ') : 'AI generated'
+}
+
+function qualityStatusLabel(value) {
+  return {
+    passed: 'Checks passed',
+    needs_review: 'Review recommended',
+    blocked: 'Blocked',
+    not_checked: 'Not checked',
+  }[value] || 'Not checked'
+}
+
+/**
+ * Explain the origin and deterministic checks behind an AI recipe without
+ * exposing retrieved recipe payloads or presenting a score as a guarantee.
+ */
+export function RecipeProvenance({ recipe }) {
+  const provenance = recipe.provenance || recipe.provenance_metadata
+  const qualityBar = recipe.qualityBar || recipe.quality_bar
+  const isAiRecipe = Boolean(
+    provenance
+      || recipe.source === 'ai_generated'
+      || recipe.source === 'adapted'
+      || recipe.generationMethod
+  )
+  if (!isAiRecipe) return null
+
+  const source = provenance?.source || recipe.source
+  const method = provenance?.generationMethod || recipe.generationMethod
+  const methodLabel = method ? provenanceMethodLabel(method, source) : null
+  const qualityScore = qualityBar?.score ?? provenance?.qualityScore
+  const similarRecipeIds = provenance?.similarRecipeIds || []
+  const nutritionCoverage = provenance?.nutritionCoverage
+  const allergenCheck = qualityBar?.allergenCheck
+    || (recipe.allergenSummary?.blocked?.length > 0
+      ? 'blocked'
+      : recipe.allergenSummary?.needs_review ? 'needs_review' : recipe.allergenSummary ? 'passed' : 'not_checked')
+  const constraintCount = Object.values(provenance?.appliedConstraints || recipe.appliedConstraints || {})
+    .filter((value) => (Array.isArray(value) ? value.length > 0 : value !== undefined && value !== null && value !== '')).length
+
+  return (
+    <section className="recipe-provenance" aria-label="How this was made">
+      <div className="recipe-provenance-heading">
+        <h3>How this was made</h3>
+        {methodLabel && (
+          <span className="recipe-provenance-method">{methodLabel}</span>
+        )}
+      </div>
+      <div className="recipe-provenance-grid">
+        {qualityScore !== null && qualityScore !== undefined && (
+          <span className={`recipe-provenance-item recipe-provenance-item--${qualityBar?.status || 'passed'}`}>
+            <strong>Quality</strong> {Math.round(Number(qualityScore))}/100
+          </span>
+        )}
+        <span className={`recipe-provenance-item recipe-provenance-item--${allergenCheck}`}>
+          <strong>Safety</strong> {qualityStatusLabel(allergenCheck)}
+        </span>
+        {provenance?.model && (
+          <span className="recipe-provenance-item">
+            <strong>Model</strong> {provenance.model}
+          </span>
+        )}
+        {similarRecipeIds.length > 0 && (
+          <span className="recipe-provenance-item">
+            <strong>Recipe context</strong> {similarRecipeIds.length} similar recipe{similarRecipeIds.length === 1 ? '' : 's'}
+          </span>
+        )}
+        {constraintCount > 0 && (
+          <span className="recipe-provenance-item">
+            <strong>Constraints</strong> {constraintCount} applied
+          </span>
+        )}
+        <span className="recipe-provenance-item">
+          <strong>Nutrition</strong> {typeof nutritionCoverage === 'number' ? `${Math.round(nutritionCoverage)}% ingredient coverage` : 'Not calculated'}
+        </span>
+      </div>
+      <p className="recipe-provenance-disclaimer">
+        Quality checks are automated signals, not a guarantee. Verify ingredients, labels, and preparation conditions.
+      </p>
+    </section>
+  )
+}
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -127,6 +221,7 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
       )}
 
       <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
+      <RecipeProvenance recipe={recipe} />
 
       <div className="recipe-meta">
         {recipe.prep_time && (

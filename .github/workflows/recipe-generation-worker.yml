@@ -46,6 +46,9 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
+      - name: Run generative quality evaluations
+        run: npm run test:eval
+
       - name: Run integration tests
         run: npm run test:integration
 

@@ -186,6 +186,15 @@ describe('Generate Handler - Unit Tests', () => {
       expect(data.recipe.name).toBeDefined();
       expect(data.recipe.ingredients).toBeInstanceOf(Array);
       expect(data.recipe.instructions).toBeInstanceOf(Array);
+      expect(data.recipe.qualityBar).toMatchObject({
+        status: 'passed',
+        generationMethod: 'llama-ai'
+      });
+      expect(data.recipe.provenance).toMatchObject({
+        source: 'ai_generated',
+        generationMethod: 'llama-ai',
+        similarRecipeIds: ['recipe-1']
+      });
       expect(data.environment).toBe('test');
 
       // Verify AI calls were made
@@ -1945,7 +1954,7 @@ describe('Generate Handler - Unit Tests', () => {
       expect(Array.isArray(data.recipe.ingredients)).toBe(true);
     });
 
-    it('should handle null/undefined ingredients (fallback to empty array)', async () => {
+    it('should block null/undefined ingredients as a catastrophic quality failure', async () => {
       const nullIngredientsEnv = {
         ...enhancedMockEnv,
         AI: {
@@ -1973,11 +1982,14 @@ describe('Generate Handler - Unit Tests', () => {
       const request = createPostRequest('/generate', { ingredients: ['test'] });
       const response = await handleGenerate(request, nullIngredientsEnv, corsHeaders);
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(422);
       const data = await response.json();
-      expect(data.success).toBe(true);
-      expect(Array.isArray(data.recipe.ingredients)).toBe(true);
-      expect(Array.isArray(data.recipe.instructions)).toBe(true);
+      expect(data).toMatchObject({
+        error: 'Recipe failed quality validation',
+        code: 'RECIPE_QUALITY_BLOCK',
+        qualityBar: { blockingIssues: ['missing_ingredients', 'missing_instructions'] }
+      });
+      expect(data.recipe).toBeUndefined();
     });
 
     it('should handle nested recipe structure from AI (flatten recipe.recipe)', async () => {

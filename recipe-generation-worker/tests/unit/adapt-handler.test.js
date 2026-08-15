@@ -44,6 +44,15 @@ describe('RecipeAdapt handler', () => {
     expect(data.recipe.adapted_from).toBe('recipe-123');
     expect(data.recipe.adaptation_constraints.preserve).toEqual(['the creamy texture']);
     expect(data.recipe.substitutions).toHaveLength(3);
+    expect(data.recipe.qualityBar).toMatchObject({
+      generationMethod: 'mock-ai',
+      status: 'needs_review'
+    });
+    expect(data.recipe.provenance).toMatchObject({
+      source: 'adapted',
+      generationMethod: 'mock-ai',
+      similarRecipeIds: []
+    });
     expect(data.recipe.ingredients.join(' ')).not.toMatch(/\b(?:butter|egg|pasta)\b/i);
     expect(data.recipe.adaptationNotes.length).toBeGreaterThan(0);
   });

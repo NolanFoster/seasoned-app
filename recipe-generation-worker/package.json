@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/unit",
+    "test:eval": "vitest run tests/evals",
     "test:integration": "vitest run tests/integration",
     "test:ui": "vitest --ui",
     "lint": "eslint src tests",
