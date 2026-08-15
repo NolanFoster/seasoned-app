@@ -44,6 +44,17 @@ describe('culinary profile foundation', () => {
     expect(response.status).toBe(401);
   });
 
+  it('answers 503 when the deployment has no JWT_SECRET to verify tokens with', async () => {
+    const request = new Request('https://example.test/me/culinary-profile', {
+      headers: { authorization: `Bearer ${await tokenFor('user-a')}` },
+    });
+    const response = await app.fetch(request, env({ JWT_SECRET: undefined }));
+    const rawBody = await response.json();
+    const body = (typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody) as { success: boolean; message: string };
+    expect(response.status).toBe(503);
+    expect(body.message).toBe('Authentication is not configured on this deployment');
+  });
+
   it('returns 404 when the feature kill switch is disabled', async () => {
     const request = new Request('https://example.test/me/culinary-profile');
     const response = await app.fetch(request, env({ CULINARY_PROFILE_ENABLED: 'false' }));

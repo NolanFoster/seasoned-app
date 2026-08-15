@@ -12,12 +12,26 @@ const app = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 const JWT_ISSUER = 'auth-worker.nolanfoster.workers.dev';
 const JWT_AUDIENCE = 'seasoned-app';
 
-async function getAuthenticatedUserId(c: { env: Bindings; req: { header(name: string): string | undefined } }): Promise<string | null> {
-  const authorization = c.req.header('Authorization');
+// A missing JWT_SECRET is a deployment fault, not a caller fault: without it no
+// token can ever verify, so every request would look like a rejected sign-in.
+// It is reported separately so the failure is diagnosable from the response and
+// the logs, while genuine token problems stay indistinguishable from each other.
+type AuthOutcome =
+  | { status: 'authenticated'; userId: string }
+  | { status: 'unauthenticated' }
+  | { status: 'unconfigured' };
+
+async function authenticateRequest(c: { env: Bindings; req: { header(name: string): string | undefined } }): Promise<AuthOutcome> {
   const secret = c.env.JWT_SECRET;
-  if (!authorization?.startsWith('Bearer ') || !secret) return null;
+  if (!secret) {
+    console.error('JWT_SECRET is not configured on this deployment; authenticated /me routes cannot verify tokens issued by auth-worker');
+    return { status: 'unconfigured' };
+  }
+
+  const authorization = c.req.header('Authorization');
+  if (!authorization?.startsWith('Bearer ')) return { status: 'unauthenticated' };
   const token = authorization.slice('Bearer '.length).trim();
-  if (!token || token.length > 4096) return null;
+  if (!token || token.length > 4096) return { status: 'unauthenticated' };
 
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
@@ -25,10 +39,12 @@ async function getAuthenticatedUserId(c: { env: Bindings; req: { header(name: st
       audience: JWT_AUDIENCE,
       algorithms: ['HS256'],
     });
-    return typeof payload.sub === 'string' && payload.sub.length > 0 ? payload.sub : null;
+    return typeof payload.sub === 'string' && payload.sub.length > 0
+      ? { status: 'authenticated', userId: payload.sub }
+      : { status: 'unauthenticated' };
   } catch {
     // Invalid tokens are intentionally indistinguishable from missing tokens.
-    return null;
+    return { status: 'unauthenticated' };
   }
 }
 
@@ -61,9 +77,14 @@ app.use('*', async (c, next) => {
     if ((c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/')) && !pantryEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
-    const userId = await getAuthenticatedUserId(c);
-    if (!userId) return c.json({ success: false, message: 'Authentication required' }, 401);
-    c.set('userId', userId);
+    const auth = await authenticateRequest(c);
+    if (auth.status === 'unconfigured') {
+      return c.json({ success: false, message: 'Authentication is not configured on this deployment' }, 503);
+    }
+    if (auth.status === 'unauthenticated') {
+      return c.json({ success: false, message: 'Authentication required' }, 401);
+    }
+    c.set('userId', auth.userId);
     await next();
     return;
   }

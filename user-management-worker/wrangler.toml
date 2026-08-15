@@ -51,7 +51,15 @@ database_id = "171ffc3f-40bd-4738-b879-4ccd8d79db39"
 [env.staging.observability]
 enabled = true
 
-# JWT_SECRET must match auth-worker for authenticated profile routes. Configure it as a secret:
+# JWT_SECRET must match the auth-worker that issued the token for authenticated
+# /me/culinary-profile and /me/pantry-items routes. Secrets are per Worker script,
+# so the top-level deployment needs its own copy — it is the script the deployed
+# frontend calls (recipe-app/.env.production points at
+# user-management-worker.nolanfoster.workers.dev), and it is not covered by any
+# --env flag. Without it every authenticated request fails; the routes answer 503
+# "Authentication is not configured on this deployment" so it is distinguishable
+# from a rejected token.
+#   wrangler secret put JWT_SECRET               # top-level deployment (auth-worker production)
 #   wrangler secret put JWT_SECRET --env preview
 #   wrangler secret put JWT_SECRET --env staging
 #   wrangler secret put JWT_SECRET --env production
