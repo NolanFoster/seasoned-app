@@ -113,9 +113,41 @@ describe('Allergen profile annotation', () => {
     expect(recipe.allergenSummary).toBeUndefined()
   })
 
-  test('leaves recipes unchanged when no hard allergens are configured', () => {
+  test('adds no allergen constraint when none are configured', () => {
     const recipe = { name: 'Rice bowl', ingredients: ['rice'] }
-    expect(annotateRecipeForProfile(recipe, { hard_allergens: [] })).toBe(recipe)
+    const annotated = annotateRecipeForProfile(recipe, { hard_allergens: [] })
+
+    expect(annotated).toMatchObject({ name: 'Rice bowl', ingredients: ['rice'] })
+    expect(annotated.allergenSummary).toBeUndefined()
+    expect(annotated.appliedConstraints).toBeUndefined()
+  })
+
+  test('annotates process hazards regardless of the allergen profile', () => {
+    const recipe = {
+      name: 'Canned Green Beans',
+      ingredients: ['3 lbs green beans'],
+      instructions: ['Pressure can the jars for the pantry.'],
+    }
+    const annotated = annotateRecipeForProfile(recipe, { hard_allergens: [] })
+
+    expect(annotated.processSafetySummary).toMatchObject({
+      checked: true,
+      status: 'blocked',
+      blocked: ['home_canning_low_acid'],
+      cook_gate: 'block',
+    })
+    // Clipped and searched recipes are labelled, never rewritten.
+    expect(annotated.instructions).toEqual(recipe.instructions)
+  })
+
+  test('keeps a process summary the generation worker already computed', () => {
+    const recipe = {
+      name: 'Kimchi',
+      processSafetySummary: { checked: true, status: 'needs_review', tags: ['fermentation_anaerobic'] },
+    }
+
+    expect(annotateRecipeForProfile(recipe, { hard_allergens: [] }).processSafetySummary)
+      .toBe(recipe.processSafetySummary)
   })
 })
 

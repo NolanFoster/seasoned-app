@@ -7,6 +7,11 @@ import {
   isRecipeSafe
 } from '../../../shared/allergen-graph.js';
 import {
+  ProcessSafetyError,
+  applyProcessSafetyGates,
+  enforceRecipeSafety
+} from '../process-safety.js';
+import {
   RecipeQualityError,
   assertRecipeQuality,
   buildQualityBar,
@@ -80,13 +85,19 @@ export async function handleGenerate(request, env, corsHeaders) {
       };
 
       // Check if elevation is requested in mock mode
-      let finalRecipe = enforceAllergenSafety(mockRecipe, appliedConstraints.hardAllergens);
+      let finalRecipe = enforceRecipeSafety(
+        mockRecipe,
+        appliedConstraints.hardAllergens,
+        env,
+        { 'process_safety.surface': 'generate_mock' }
+      );
       if (requestBody.elevate === true) {
         try {
           finalRecipe = await elevateRecipe(mockRecipe, env);
         } catch (elevationError) {
           // Safety failures must never fall back to an unchecked recipe.
           if (elevationError instanceof AllergenSafetyError) throw elevationError;
+          if (elevationError instanceof ProcessSafetyError) throw elevationError;
           // If elevation fails, return the original recipe with a warning
           console.warn('Recipe elevation failed in mock mode:', elevationError.message);
           finalRecipe = {
@@ -123,6 +134,7 @@ export async function handleGenerate(request, env, corsHeaders) {
         success: true,
         recipe: finalRecipe,
         appliedConstraints,
+        processSafetySummary: finalRecipe.processSafetySummary || null,
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -135,20 +147,28 @@ export async function handleGenerate(request, env, corsHeaders) {
 
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
-    let finalRecipe = enforceAllergenSafety(generatedRecipe, appliedConstraints.hardAllergens);
+    let finalRecipe = enforceRecipeSafety(
+      generatedRecipe,
+      appliedConstraints.hardAllergens,
+      env,
+      { 'process_safety.surface': 'generate' }
+    );
     finalRecipe.appliedConstraints = appliedConstraints;
 
     // Check if elevation is requested
     if (requestBody.elevate === true) {
       try {
-        finalRecipe = enforceAllergenSafety(
+        finalRecipe = enforceRecipeSafety(
           await elevateRecipe(finalRecipe, env),
-          appliedConstraints.hardAllergens
+          appliedConstraints.hardAllergens,
+          env,
+          { 'process_safety.surface': 'elevate' }
         );
         finalRecipe.appliedConstraints = appliedConstraints;
       } catch (elevationError) {
         // Safety failures must never fall back to an unchecked recipe.
         if (elevationError instanceof AllergenSafetyError) throw elevationError;
+        if (elevationError instanceof ProcessSafetyError) throw elevationError;
         // If elevation fails, return the original recipe with a warning
         console.warn('Recipe elevation failed:', elevationError.message);
         finalRecipe = {
@@ -188,6 +208,7 @@ export async function handleGenerate(request, env, corsHeaders) {
       success: true,
       recipe: finalRecipe,
       appliedConstraints,
+      processSafetySummary: finalRecipe.processSafetySummary || null,
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -198,11 +219,30 @@ export async function handleGenerate(request, env, corsHeaders) {
     });
   } catch (error) {
     // Allergen failures are client-actionable and must not expose the unsafe recipe.
+    // When a process hazard fired in the same request, both summaries are
+    // returned together; allergens remain the primary reason.
     if (error instanceof AllergenSafetyError) {
       return new Response(JSON.stringify({
         error: 'Recipe failed allergen safety validation',
         code: error.code,
-        allergenSummary: error.summary
+        allergenSummary: error.summary,
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+      }), {
+        status: error.status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Process hazards are withheld the same way: the unsafe technique text
+    // never reaches the client, only the policy decision that stopped it.
+    if (error instanceof ProcessSafetyError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe failed food-process safety validation',
+        code: error.code,
+        processSafetySummary: error.summary
       }), {
         status: error.status,
         headers: {
@@ -1001,9 +1041,14 @@ Make the recipe practical for home cooks with commonly available ingredients. In
  */
 export async function elevateRecipe(recipe, env) {
   const hardAllergens = recipe?.appliedConstraints?.hardAllergens || recipe?.hardAllergens || [];
-  const annotateElevated = (value) => hardAllergens.length > 0
-    ? enforceAllergenSafety(value, hardAllergens)
-    : value;
+  // Elevation rewrites technique, so it is re-checked here rather than trusting
+  // the pre-elevation result: a fancier method can introduce a preserving step
+  // the original recipe never had.
+  const annotateElevated = (value) => applyProcessSafetyGates(
+    hardAllergens.length > 0 ? enforceAllergenSafety(value, hardAllergens) : value,
+    env,
+    { 'process_safety.surface': 'elevate' }
+  );
 
   // Check if we're in a local development environment without AI access
   if (!env.AI) {

@@ -145,3 +145,94 @@ describe('Recipe provenance and quality bar', () => {
     expect(screen.queryByRole('region', { name: 'How this was made' })).not.toBeInTheDocument()
   })
 })
+
+describe('Process safety notice', () => {
+  const blockedSummary = {
+    checked: true,
+    safe: false,
+    status: 'blocked',
+    tags: ['home_canning_low_acid'],
+    blocked: ['home_canning_low_acid'],
+    requires_template: [],
+    warnings: [],
+    policyActions: [{ tag: 'home_canning_low_acid', label: 'Home canning of low-acid food', policy: 'block' }],
+    sources: [{ id: 'nchfp', label: 'USDA National Center for Home Food Preservation', url: 'https://nchfp.uga.edu/' }],
+    cook_gate: 'block',
+    disclaimer: 'Seasoned does not certify home preservation.',
+  }
+
+  test('announces a blocked technique with its authoritative sources', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Canned Green Beans',
+      ingredients: ['green beans'],
+      instructions: ['Follow a tested guide.'],
+      processSafetySummary: blockedSummary,
+    }} />)
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Unsafe technique blocked')
+    expect(alert).toHaveTextContent('Home canning of low-acid food')
+    expect(alert).toHaveTextContent('Seasoned does not certify home preservation.')
+    expect(screen.getByRole('link', { name: /National Center for Home Food Preservation/i }))
+      .toHaveAttribute('href', 'https://nchfp.uga.edu/')
+  })
+
+  test('explains a template redirect for a preserving recipe', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Strawberry Jam',
+      ingredients: ['strawberries'],
+      instructions: ['Follow a tested guide.'],
+      processSafetySummary: {
+        ...blockedSummary,
+        status: 'template_required',
+        tags: ['water_bath_preserve'],
+        blocked: [],
+        requires_template: ['water_bath_preserve'],
+        policyActions: [{ tag: 'water_bath_preserve', label: 'Water-bath preserving', policy: 'force_template' }],
+      },
+    }} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Use a tested process')
+    expect(screen.getByRole('alert')).toHaveTextContent('Water-bath preserving')
+  })
+
+  test('shows a warning without an alert for a review-only hazard', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Kimchi',
+      ingredients: ['cabbage'],
+      instructions: ['Ferment for 5 days.'],
+      processSafetySummary: {
+        ...blockedSummary,
+        safe: true,
+        status: 'needs_review',
+        tags: ['fermentation_anaerobic'],
+        blocked: [],
+        cook_gate: 'confirm',
+        warnings: [{
+          tag: 'fermentation_anaerobic',
+          label: 'Anaerobic fermentation',
+          reason: 'Salt and temperature ranges decide whether a ferment is safe.',
+          guidance: 'Verify against a tested fermentation guide.',
+        }],
+      },
+    }} />)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByText(/Check this technique/i)).toBeInTheDocument()
+    expect(screen.getByText(/Verify against a tested fermentation guide/i)).toBeInTheDocument()
+  })
+
+  test('renders nothing when the check found no hazard', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Roast Chicken',
+      ingredients: ['1 chicken'],
+      instructions: ['Roast until done.'],
+      processSafetySummary: {
+        checked: true, safe: true, status: 'passed', tags: [], blocked: [],
+        requires_template: [], warnings: [], sources: [], cook_gate: 'allow',
+      },
+    }} />)
+
+    expect(screen.queryByText(/technique/i)).not.toBeInTheDocument()
+  })
+})

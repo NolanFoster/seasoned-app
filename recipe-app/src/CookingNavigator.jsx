@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
-import RecipeCardDisplay, { AllergenSafetyNotice } from './RecipeCardDisplay.jsx'
+import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -909,6 +909,10 @@ export default function CookingNavigator({ recipe, onClose }) {
           summary={recipe.allergenSummary}
           hardAllergens={hardAllergens}
           className="cn-allergen-notice"
+        />
+        <ProcessSafetyNotice
+          summary={recipe.processSafetySummary}
+          className="cn-process-notice"
         />
         {showRecipe ? (
           <div className="cn-recipe-panel">

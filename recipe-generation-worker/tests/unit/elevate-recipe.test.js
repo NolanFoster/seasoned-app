@@ -49,6 +49,10 @@ describe('elevateRecipe', () => {
 
       expect(result).toEqual({
         ...mockRecipe,
+        // Elevation re-runs the food-process gates, so every elevated recipe
+        // carries a process-safety verdict even when nothing was detected.
+        processSafetySummary: expect.objectContaining({ checked: true, status: 'passed' }),
+        processSafetyValidation: 'PASSED',
         name: 'Elevated Simple Pasta',
         description: 'A basic pasta dish (Enhanced with professional culinary techniques)',
         ingredients: [
@@ -155,6 +159,8 @@ describe('elevateRecipe', () => {
 
       expect(result).toEqual({
         ...mockAIResponse.response,
+        processSafetySummary: expect.objectContaining({ checked: true, status: 'passed' }),
+        processSafetyValidation: 'PASSED',
         elevatedAt: expect.any(String),
         elevationMethod: 'llama-ai-culinary-expert'
       });

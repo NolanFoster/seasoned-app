@@ -261,3 +261,62 @@ describe('RecipeCard — accessibility baseline', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 })
+
+describe('RecipeCard — food-process safety gates', () => {
+  const blockedProcessRecipe = {
+    name: 'Canned Green Beans',
+    ingredients: ['3 lbs green beans'],
+    instructions: ['Follow a tested canning guide.'],
+    processSafetySummary: {
+      checked: true,
+      safe: false,
+      status: 'blocked',
+      tags: ['home_canning_low_acid'],
+      blocked: ['home_canning_low_acid'],
+      requires_template: [],
+      warnings: [],
+      policyActions: [{ tag: 'home_canning_low_acid', label: 'Home canning of low-acid food', policy: 'block' }],
+      sources: [],
+      cook_gate: 'block',
+      disclaimer: 'Seasoned does not certify home preservation.',
+    },
+  };
+
+  test('refuses to open cooking mode for a blocked technique', () => {
+    renderCard(blockedProcessRecipe);
+
+    fireEvent.click(screen.getByRole('button', { name: /Start step-by-step cooking mode/i }));
+
+    expect(screen.getByText(/Cooking mode is unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Exit cooking mode/i })).not.toBeInTheDocument();
+  });
+
+  test('opens cooking mode when the process check only warns', () => {
+    renderCard({
+      name: 'Kimchi',
+      instructions: ['Ferment for 5 days.'],
+      processSafetySummary: {
+        ...blockedProcessRecipe.processSafetySummary,
+        safe: true,
+        status: 'needs_review',
+        blocked: [],
+        cook_gate: 'confirm',
+        warnings: [{ tag: 'fermentation_anaerobic', label: 'Anaerobic fermentation', reason: 'Verify the brine.', guidance: 'Use a tested guide.' }],
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Start step-by-step cooking mode/i }));
+
+    expect(screen.queryByText(/Cooking mode is unavailable/i)).not.toBeInTheDocument();
+  });
+
+  test('disables the planner action for a blocked technique', () => {
+    renderCard(blockedProcessRecipe);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More recipe options' }));
+    const plannerItem = screen.getByRole('menuitem', { name: /planner/i });
+
+    expect(plannerItem).toBeDisabled();
+    expect(plannerItem).toHaveAttribute('title', expect.stringMatching(/food-process safety check/i));
+  });
+});

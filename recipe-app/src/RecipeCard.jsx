@@ -24,6 +24,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
   const mealPlannerEnabled = useFlag('meal-planner')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
+  const [cookBlocked, setCookBlocked] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
   // null | 'remix' | 'options'
   const [openMenu, setOpenMenu] = useState(null)
@@ -31,6 +32,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
   // null | 'success' | 'error'
   const [plannerFeedback, setPlannerFeedback] = useState(null)
   const plannerFeedbackTimerRef = useRef(null)
+  const cookBlockedTimerRef = useRef(null)
   const wakeLockRef = useRef(null)
   const wakeLockTimerRef = useRef(null)
   const menusRef = useRef(null)
@@ -44,12 +46,17 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
   const hasUnresolvedAllergenConflict = hardAllergens.length > 0
     && recipe?.allergenSummary
     && recipe.allergenSummary.safe === false
+  // A blocked or template-gated technique cannot be cooked from these
+  // instructions, so it cannot be planned as a meal either.
+  const processCookGate = recipe?.processSafetySummary?.cook_gate || 'allow'
+  const hasBlockedProcessHazard = processCookGate === 'block'
   const canAddToPlanner = Boolean(
     mealPlannerEnabled
       && mealPlanContext
       && recipe?.id
       && recipe?.name
       && !hasUnresolvedAllergenConflict
+      && !hasBlockedProcessHazard
   )
 
   const recipeDurationMins =
@@ -96,6 +103,7 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
   useEffect(() => () => {
     releaseWakeLock()
     clearTimeout(plannerFeedbackTimerRef.current)
+    clearTimeout(cookBlockedTimerRef.current)
   }, [])
 
   // Re-acquire after tab switch
@@ -113,11 +121,21 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
     if (!mealPlannerEnabled) setShowDaySelector(false)
   }, [mealPlannerEnabled])
 
+  function handleCookClick() {
+    if (hasBlockedProcessHazard) {
+      setCookBlocked(true)
+      clearTimeout(cookBlockedTimerRef.current)
+      cookBlockedTimerRef.current = setTimeout(() => setCookBlocked(false), 4000)
+      return
+    }
+    setIsCooking(true)
+  }
+
   function handleDaySelected(dateString, mealType) {
     setShowDaySelector(false)
     setOpenMenu(null)
-    if (hasUnresolvedAllergenConflict) {
-      setPlannerFeedback('blocked')
+    if (hasUnresolvedAllergenConflict || hasBlockedProcessHazard) {
+      setPlannerFeedback(hasUnresolvedAllergenConflict ? 'blocked' : 'process-blocked')
     } else {
       try {
         mealPlanContext.addMeal(dateString, mealType, recipe)
@@ -276,9 +294,11 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
                     ? 'Add to meal planner'
                     : hasUnresolvedAllergenConflict
                       ? 'Resolve the allergen warning before adding to the planner'
-                      : !mealPlannerEnabled
-                        ? 'Meal planner is off'
-                        : 'Meal planner unavailable'
+                      : hasBlockedProcessHazard
+                        ? 'This technique is blocked by the food-process safety check'
+                        : !mealPlannerEnabled
+                          ? 'Meal planner is off'
+                          : 'Meal planner unavailable'
                 }
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -365,7 +385,16 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
         </div>
       </div>
 
-      <RecipeCardDisplay recipe={recipe} onCookClick={() => setIsCooking(true)} />
+      <RecipeCardDisplay recipe={recipe} onCookClick={handleCookClick} />
+
+      {cookBlocked && (
+        <div className="planner-feedback planner-feedback--process-blocked" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+          Cooking mode is unavailable: follow a tested process from the safety notice above.
+        </div>
+      )}
 
       {isCooking && <CookingNavigator recipe={recipe} onClose={() => setIsCooking(false)} />}
 
@@ -396,6 +425,13 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
               Resolve the allergen warning before planning this recipe
+            </>
+          ) : plannerFeedback === 'process-blocked' ? (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+              This technique is blocked by the food-process safety check
             </>
           ) : (
             <>

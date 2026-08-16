@@ -14,7 +14,8 @@
     "./metrics-collector": "./metrics-collector.js",
     "./metrics": "./metrics-collector.js",
     "./culinary-profile": "./culinary-profile.js",
-    "./allergen-graph": "./allergen-graph.js"
+    "./allergen-graph": "./allergen-graph.js",
+    "./food-process-safety": "./food-process-safety.js"
   },
   "scripts": {
     "test": "node test-simple.js",

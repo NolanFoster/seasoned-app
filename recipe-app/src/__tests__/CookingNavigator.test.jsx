@@ -91,6 +91,30 @@ describe('CookingNavigator — rendering', () => {
     expect(screen.getByText(/AI can miss allergens and cross-contact/i)).toBeInTheDocument()
   })
 
+  test('keeps the food-process warning visible at cooking entry', () => {
+    renderNavigator({
+      processSafetySummary: {
+        checked: true,
+        safe: true,
+        status: 'needs_review',
+        tags: ['fermentation_anaerobic'],
+        blocked: [],
+        requires_template: [],
+        warnings: [{
+          tag: 'fermentation_anaerobic',
+          label: 'Anaerobic fermentation',
+          reason: 'Salt and temperature ranges decide whether a ferment is safe.',
+          guidance: 'Verify against a tested fermentation guide.',
+        }],
+        sources: [],
+        cook_gate: 'confirm',
+        disclaimer: 'Seasoned does not certify home preservation.',
+      },
+    })
+    expect(screen.getByText(/Check this technique/i)).toBeInTheDocument()
+    expect(screen.getByText(/Verify against a tested fermentation guide/i)).toBeInTheDocument()
+  })
+
   test('renders Prev and Start Cooking navigation buttons', () => {
     renderNavigator()
     expect(screen.getByText('← Prev')).toBeInTheDocument()

@@ -15,6 +15,7 @@ import { useCulinaryProfile } from './useCulinaryProfile.js'
 import { usePantry } from './usePantry.js'
 import PantryModal from './PantryModal.jsx'
 import { withAllergenSummary } from '../../shared/allergen-graph.js'
+import { analyzeProcessSafety } from '../../shared/food-process-safety.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -262,11 +263,21 @@ function getRecipeSourceLabel(recipe) {
   }
 }
 
+/**
+ * Annotate a recipe the app did not generate — a search result or a clipped
+ * page — with the safety summaries the generation worker adds server-side.
+ *
+ * Process hazards are analyzed rather than rewritten here: a clipped recipe is
+ * someone else's published text, so the app labels it and gates cook mode
+ * instead of editing their steps.
+ */
 export function annotateRecipeForProfile(recipe, profile) {
+  const processSafetySummary = recipe.processSafetySummary || analyzeProcessSafety(recipe)
+  const withProcess = { ...recipe, processSafetySummary }
   const hardAllergens = profile?.hard_allergens || profile?.hardAllergens || []
-  if (!Array.isArray(hardAllergens) || hardAllergens.length === 0) return recipe
+  if (!Array.isArray(hardAllergens) || hardAllergens.length === 0) return withProcess
   return withAllergenSummary({
-    ...recipe,
+    ...withProcess,
     appliedConstraints: {
       ...(recipe.appliedConstraints || {}),
       hardAllergens,
@@ -622,6 +633,8 @@ export default function App() {
         appliedConstraints: data.appliedConstraints || r.appliedConstraints || null,
         allergenSummary: r.allergenSummary || data.allergenSummary || null,
         allergenValidation: r.allergenValidation || data.allergenValidation || null,
+        processSafetySummary: r.processSafetySummary || data.processSafetySummary || null,
+        processSafetyValidation: r.processSafetyValidation || null,
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
@@ -676,6 +689,8 @@ export default function App() {
         dietary: r.dietary || baseRecipe.dietary || [],
         appliedConstraints: data.appliedConstraints || r.appliedConstraints || null,
         allergenSummary: r.allergenSummary || null,
+        processSafetySummary: r.processSafetySummary || data.processSafetySummary || null,
+        processSafetyValidation: r.processSafetyValidation || null,
         adapted_from: r.adapted_from || baseRecipe.id || baseRecipe.source_url || null,
         adaptation_constraints: r.adaptation_constraints || data.appliedConstraints || null,
         substitutions: r.substitutions || [],

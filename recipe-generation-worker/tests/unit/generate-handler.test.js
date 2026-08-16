@@ -2239,3 +2239,186 @@ describe('Allergen safety enforcement', () => {
     expect(data.recipe.similarRecipesFound).toBe(0);
   });
 });
+
+describe('Food-process safety enforcement', () => {
+  const processCorsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
+  const processMockAI = { run: vi.fn() };
+  const processEnv = {
+    ...mockEnv,
+    AI: processMockAI,
+    RECIPE_VECTORS: { query: vi.fn().mockResolvedValue({ matches: [] }) }
+  };
+
+  function mockGeneratedRecipe(recipe) {
+    processMockAI.run.mockImplementation((model) => {
+      if (model === '@cf/baai/bge-small-en-v1.5') {
+        return Promise.resolve({ data: [[0.1, 0.2, 0.3]] });
+      }
+      return Promise.resolve({
+        response: {
+          description: 'Test recipe',
+          prepTime: '5 minutes',
+          cookTime: '5 minutes',
+          totalTime: '10 minutes',
+          servings: '2 servings',
+          difficulty: 'Easy',
+          dietary: [],
+          ...recipe
+        }
+      });
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('blocks a low-acid canning recipe with a 422 and no cookable instructions', async () => {
+    mockGeneratedRecipe({
+      name: 'Canned Green Beans',
+      ingredients: ['3 lbs green beans', 'water'],
+      instructions: ['Pack the beans into jars.', 'Process the jars for 25 minutes at 10 lbs pressure.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Canned green beans'
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(422);
+    const data = await response.json();
+    expect(data).toMatchObject({
+      error: 'Recipe failed food-process safety validation',
+      code: 'PROCESS_SAFETY_BLOCK',
+      processSafetySummary: { blocked: ['home_canning_low_acid'] }
+    });
+    expect(data.recipe).toBeUndefined();
+    expect(JSON.stringify(data)).not.toMatch(/10 lbs pressure/);
+  });
+
+  it('blocks wild forage identification', async () => {
+    mockGeneratedRecipe({
+      name: 'Foraged Mushroom Toast',
+      ingredients: ['2 cups foraged mushrooms'],
+      instructions: ['Identify the mushrooms you found in the woods.', 'Sauté and serve on toast.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Foraged mushroom toast'
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(422);
+    const data = await response.json();
+    expect(data.processSafetySummary.blocked).toContain('wild_forage_id');
+  });
+
+  it('redirects a water-bath preserve to a tested template instead of blocking', async () => {
+    mockGeneratedRecipe({
+      name: 'Strawberry Jam',
+      ingredients: ['4 cups strawberries', '3 cups sugar', '1/4 cup lemon juice'],
+      instructions: ['Cook the jam until set.', 'Water bath can the jars for 10 minutes.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Strawberry jam'
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.recipe.processSafetyValidation).toBe('TEMPLATE_REQUIRED');
+    expect(data.recipe.processSafetySummary.cook_gate).toBe('block');
+    expect(data.recipe.instructions.join(' ')).not.toMatch(/Water bath can the jars for 10 minutes/);
+    expect(data.recipe.instructions.join(' ')).toMatch(/National Center for Home Food Preservation/);
+    expect(data.processSafetySummary.requires_template).toEqual(['water_bath_preserve']);
+  });
+
+  it('warns without withholding a fermentation recipe', async () => {
+    mockGeneratedRecipe({
+      name: 'Napa Kimchi',
+      ingredients: ['1 napa cabbage', '1/4 cup salt'],
+      instructions: ['Pack the cabbage into a jar.', 'Ferment at room temperature for 5 days.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Kimchi'
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.recipe.processSafetyValidation).toBe('NEEDS_REVIEW');
+    expect(data.recipe.processSafetySummary.warnings[0].tag).toBe('fermentation_anaerobic');
+    expect(data.recipe.instructions).toHaveLength(2);
+  });
+
+  it('marks an ordinary recipe as passed', async () => {
+    mockGeneratedRecipe({
+      name: 'Roast Chicken',
+      ingredients: ['1 whole chicken', 'butter'],
+      instructions: ['Roast at 425F for 50 minutes.', 'Rest and carve.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Roast chicken'
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.recipe.processSafetyValidation).toBe('PASSED');
+    expect(data.recipe.processSafetySummary.tags).toEqual([]);
+  });
+
+  it('reports allergens as the primary failure and includes the process summary', async () => {
+    mockGeneratedRecipe({
+      name: 'Canned Peanut Chicken',
+      ingredients: ['1 cup peanuts', '2 lbs chicken'],
+      instructions: ['Cook the chicken.', 'Pressure can the jars for the pantry.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Canned peanut chicken',
+      hardAllergens: ['peanuts']
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(422);
+    const data = await response.json();
+    expect(data).toMatchObject({
+      error: 'Recipe failed allergen safety validation',
+      code: 'ALLERGEN_SAFETY_BLOCK',
+      allergenSummary: { blocked: ['peanuts'] },
+      processSafetySummary: { blocked: ['home_canning_low_acid'] }
+    });
+  });
+
+  it('keeps the gates on in production when the flag asks for them off', async () => {
+    mockGeneratedRecipe({
+      name: 'Canned Green Beans',
+      ingredients: ['3 lbs green beans'],
+      instructions: ['Pressure can the jars for 25 minutes.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Canned green beans'
+    }), { ...processEnv, ENVIRONMENT: 'production', PROCESS_SAFETY_V1: 'false' }, processCorsHeaders);
+
+    expect(response.status).toBe(422);
+  });
+
+  it('allows the flag to disable the gates outside production', async () => {
+    mockGeneratedRecipe({
+      name: 'Canned Green Beans',
+      ingredients: ['3 lbs green beans'],
+      instructions: ['Pressure can the jars for 25 minutes.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Canned green beans'
+    }), { ...processEnv, ENVIRONMENT: 'staging', PROCESS_SAFETY_V1: 'false' }, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.recipe.processSafetySummary).toBeUndefined();
+  });
+});
