@@ -5,6 +5,12 @@ label. The shared `shared/allergen-graph.js` module detects the FDA major
 allergen set (milk, eggs, fish, shellfish, tree nuts, peanuts, wheat, soy, and
 sesame) using canonical IDs and explainable ingredient synonyms.
 
+This covers *ingredient* risk. Risk from a *technique* — home canning,
+fermentation, oil infusion, wild forage identification — is handled separately
+by the food-process gates in `docs/FOOD_PROCESS_SAFETY.md`. When both fire,
+allergens are reported as the primary failure and the process summary is
+returned alongside.
+
 ## Request flow
 
 1. Culinary profile and request overrides are normalized by

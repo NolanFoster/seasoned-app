@@ -1,8 +1,6 @@
 import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../shared/culinary-profile.js';
-import {
-  AllergenSafetyError,
-  enforceAllergenSafety
-} from '../../../shared/allergen-graph.js';
+import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
+import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
 
 const ADAPT_CONSTRAINT_FIELDS = [
@@ -323,9 +321,11 @@ export async function handleAdapt(request, env, corsHeaders) {
     const adapted = env.AI
       ? await adaptWithAI(baseRecipe, constraints, env)
       : mockAdaptRecipe(baseRecipe, constraints);
-    let finalRecipe = enforceAllergenSafety(
+    let finalRecipe = enforceRecipeSafety(
       applyLineage(adapted, baseRecipe, constraints, adaptationMethod),
-      constraints.hardAllergens
+      constraints.hardAllergens,
+      env,
+      { 'process_safety.surface': 'adapt' }
     );
     finalRecipe.generationTime = Date.now() - adaptationStartedAt;
     finalRecipe = withQualityMetadata(finalRecipe, {
@@ -341,6 +341,7 @@ export async function handleAdapt(request, env, corsHeaders) {
       success: true,
       recipe: finalRecipe,
       appliedConstraints: constraints,
+      processSafetySummary: finalRecipe.processSafetySummary || null,
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -351,7 +352,19 @@ export async function handleAdapt(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         error: 'Recipe adaptation failed allergen safety validation',
         code: error.code,
-        allergenSummary: error.summary
+        allergenSummary: error.summary,
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+      }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (error instanceof ProcessSafetyError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe adaptation failed food-process safety validation',
+        code: error.code,
+        processSafetySummary: error.summary
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

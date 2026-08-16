@@ -87,6 +87,73 @@ export function AllergenSafetyNotice({ summary, hardAllergens = [], className = 
   )
 }
 
+/**
+ * Explain a food-process gate decision. Rendered in the recipe card and at
+ * cooking-mode entry so the warning follows a user from browsing to cooking,
+ * exactly as the allergen notice does.
+ */
+export function ProcessSafetyNotice({ summary, className = '' }) {
+  if (!summary || !summary.checked) return null
+
+  const blocked = summary.blocked || []
+  const requiresTemplate = summary.requires_template || []
+  const warnings = summary.warnings || []
+  const sources = summary.sources || []
+  if (blocked.length === 0 && requiresTemplate.length === 0 && warnings.length === 0) return null
+
+  const gated = blocked.length > 0 || requiresTemplate.length > 0
+  const noticeClass = [
+    'recipe-process-notice',
+    blocked.length > 0 ? 'recipe-process-notice--blocked' : '',
+    requiresTemplate.length > 0 ? 'recipe-process-notice--template' : '',
+    warnings.length > 0 && !gated ? 'recipe-process-notice--review' : '',
+    className,
+  ].filter(Boolean).join(' ')
+
+  const labelsFor = (tags) => tags
+    .map((tag) => summary.policyActions?.find((action) => action.tag === tag)?.label || allergenLabel(tag))
+    .join(', ')
+
+  return (
+    <div className={noticeClass} role={gated ? 'alert' : 'note'}>
+      <strong>
+        {blocked.length > 0
+          ? 'Unsafe technique blocked'
+          : requiresTemplate.length > 0
+            ? 'Use a tested process'
+            : 'Check this technique'}
+      </strong>
+      {blocked.length > 0 && (
+        <p>
+          Seasoned will not generate instructions for {labelsFor(blocked)}. Follow a lab-tested
+          process from the sources below instead.
+        </p>
+      )}
+      {requiresTemplate.length > 0 && (
+        <p>
+          The {labelsFor(requiresTemplate)} steps were removed. Use a tested schedule for your food,
+          jar size, and altitude rather than an improvised one.
+        </p>
+      )}
+      {warnings.map((warning) => (
+        <p key={warning.tag}>
+          <strong>{warning.label}:</strong> {warning.reason} {warning.guidance}
+        </p>
+      ))}
+      {sources.length > 0 && (
+        <ul className="recipe-process-notice-sources">
+          {sources.map((source) => (
+            <li key={source.id}>
+              <a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p>{summary.disclaimer}</p>
+    </div>
+  )
+}
+
 const provenanceMethodLabels = {
   'llama-ai': 'LLaMA generation',
   'llama-ai-elevate': 'AI elevated',
@@ -221,6 +288,7 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
       )}
 
       <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
+      <ProcessSafetyNotice summary={recipe.processSafetySummary} />
       <RecipeProvenance recipe={recipe} />
 
       <div className="recipe-meta">

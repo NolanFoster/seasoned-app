@@ -938,6 +938,48 @@ textarea:focus-visible {
   border-color: rgb(var(--color-tertiary-rgb) / 0.75);
 }
 
+/* Food-process safety notice — same visual language as the allergen notice so
+   a technique gate reads as the same class of warning. */
+.recipe-process-notice {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgb(var(--color-tertiary-rgb) / 0.45);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgb(var(--color-tertiary-rgb) / 0.1);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.recipe-process-notice strong,
+.recipe-process-notice p {
+  display: block;
+  margin: 0;
+}
+
+.recipe-process-notice p + p {
+  margin-top: 0.35rem;
+}
+
+.recipe-process-notice--blocked {
+  border-color: rgb(var(--color-error-soft-rgb) / 0.75);
+  background: rgb(var(--color-error-container-rgb) / 0.18);
+}
+
+.recipe-process-notice--template,
+.recipe-process-notice--review {
+  border-color: rgb(var(--color-tertiary-rgb) / 0.75);
+}
+
+.recipe-process-notice-sources {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.recipe-process-notice-sources a {
+  color: inherit;
+}
+
 .recipe-description {
   padding: var(--spacing-lg) var(--spacing-5) 0;
   font-size: 0.9375rem;
@@ -2448,6 +2490,15 @@ textarea:focus-visible {
   border: 1px solid var(--color-success-container-outline);
   color: var(--color-success-on-container);
 }
+.planner-feedback--process-blocked {
+  background: var(--color-error-container);
+  border: 1px solid var(--error, var(--color-error));
+  color: var(--color-error-on-container);
+  /* This message names the remedy, so it needs more than one line. */
+  max-width: min(90%, 460px);
+  white-space: normal;
+  text-align: left;
+}
 .planner-feedback--error {
   background: var(--color-error-container);
   border: 1px solid var(--error, var(--color-error));
@@ -3038,7 +3089,8 @@ textarea:focus-visible {
   font-size: 0.74rem;
 }
 
-.cn-allergen-notice {
+.cn-allergen-notice,
+.cn-process-notice {
   margin: 16px 20px 0;
 }
 

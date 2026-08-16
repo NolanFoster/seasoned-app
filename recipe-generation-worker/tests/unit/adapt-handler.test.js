@@ -171,4 +171,33 @@ describe('RecipeAdapt handler', () => {
     expect(adapted.ingredients).toEqual(['1 cup rice']);
     expect(adapted.substitutions).toEqual([]);
   });
+  it('blocks an adaptation that introduces an unsafe preserving technique', async () => {
+    const request = createPostRequest('/adapt', {
+      baseRecipe: {
+        ...baseRecipe,
+        name: 'Canned Green Beans',
+        ingredients: ['3 lbs green beans'],
+        instructions: ['Pack the beans into jars.', 'Pressure can the jars for the pantry.']
+      }
+    });
+
+    const response = await handleAdapt(request, {}, corsHeaders);
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(422);
+    expect(data.code).toBe('PROCESS_SAFETY_BLOCK');
+    expect(data.processSafetySummary.blocked).toContain('home_canning_low_acid');
+    expect(data.recipe).toBeUndefined();
+  });
+
+  it('annotates an adapted recipe with a process-safety verdict', async () => {
+    const request = createPostRequest('/adapt', { baseRecipe });
+
+    const response = await handleAdapt(request, {}, corsHeaders);
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.processSafetyValidation).toBe('PASSED');
+    expect(data.processSafetySummary).toMatchObject({ checked: true, tags: [] });
+  });
 });
