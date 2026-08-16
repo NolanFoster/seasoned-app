@@ -176,6 +176,26 @@ describe('hazard detection', () => {
     expect(ferment.tags).toEqual(['fermentation_anaerobic'])
   })
 
+  it('reads preservation context from a different step than the technique', () => {
+    const summary = analyzeProcessSafety({
+      name: 'Garden Green Beans',
+      ingredients: ['3 lbs green beans'],
+      instructions: ['Can them after cooking.', 'Store in the pantry until winter.'],
+    })
+
+    expect(summary.blocked).toEqual(['home_canning_low_acid'])
+  })
+
+  it('still needs preservation context somewhere before a weak signal counts', () => {
+    const summary = analyzeProcessSafety({
+      name: 'Green Bean Salad',
+      ingredients: ['1 lb green beans'],
+      instructions: ['Blanch the beans, then shock them in ice water.', 'Toss with vinaigrette and serve.'],
+    })
+
+    expect(summary.tags).toEqual([])
+  })
+
   it('does not treat refrigerated preserves as canning', () => {
     const summary = analyzeProcessSafety({
       name: 'Refrigerator Pickles',
@@ -341,6 +361,20 @@ describe('policy application', () => {
     expect(containsProcessSchedule(redacted)).toBe(false)
     expect(redacted).toBe('Process the jars for [redacted] minutes at [redacted] lbs pressure.')
     expect(redactProcessSchedules('Sauté the onions.')).toBe('Sauté the onions.')
+  })
+
+  it('redacts every quantity in a schedule split across clauses', () => {
+    // Matching each fragment independently used to redact the pressure and
+    // leave the processing time behind in the 422 payload.
+    const redacted = redactProcessSchedules('Pressure can the jars at 10 lbs pressure for 25 minutes.')
+
+    expect(redacted).toBe('Pressure can the jars at [redacted] lbs pressure for [redacted] minutes.')
+    expect(containsProcessSchedule(redacted)).toBe(false)
+  })
+
+  it('leaves ordinary cooking times and temperatures alone', () => {
+    expect(redactProcessSchedules('Roast for 25 minutes at 400F, then rest 10 minutes.'))
+      .toBe('Roast for 25 minutes at 400F, then rest 10 minutes.')
   })
 })
 

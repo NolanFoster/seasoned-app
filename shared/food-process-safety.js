@@ -368,21 +368,27 @@ export function containsProcessSchedule(value) {
   return PROCESS_SCHEDULE_PATTERNS.some((pattern) => pattern.test(text))
 }
 
+// Quantities that carry a process schedule: pressure and duration. Deliberately
+// excludes temperatures, which are ordinary in any recipe.
+const SCHEDULE_QUANTITY = /\b\d+(?:\.\d+)?\s*(?:lbs?|pounds?|psi|minutes?|mins?|hours?|hrs?)\b/gi
+
 /**
  * Remove the numbers from a preservation schedule while leaving the sentence
  * readable. A blocked recipe still has to explain which step stopped it, but
  * the quoted evidence must not smuggle the model's invented PSI and timing
  * through the error payload.
+ *
+ * Redaction is all-or-nothing per line: once a line is identified as a
+ * schedule, every pressure and duration in it goes, because a schedule is
+ * frequently split across clauses ("at 10 lbs pressure for 25 minutes") and
+ * matching each fragment independently would leave half of it behind. Lines
+ * that are not schedules are returned untouched, so an ordinary "roast for 25
+ * minutes at 400F" keeps its numbers.
  */
 export function redactProcessSchedules(value) {
-  let text = String(value || '')
-  for (const pattern of PROCESS_SCHEDULE_PATTERNS) {
-    text = text.replace(
-      new RegExp(pattern.source, 'gi'),
-      (fragment) => fragment.replace(/\d+(?:\.\d+)?/g, SCHEDULE_REDACTION),
-    )
-  }
-  return text
+  const text = String(value || '')
+  if (!containsProcessSchedule(text)) return text
+  return text.replace(SCHEDULE_QUANTITY, (fragment) => fragment.replace(/\d+(?:\.\d+)?/, SCHEDULE_REDACTION))
 }
 
 /* ------------------------------------------------------------------ *
@@ -394,12 +400,17 @@ export function redactProcessSchedules(value) {
  * as "seal the jars" need supporting context, and are dropped entirely when
  * the recipe only ever stores the result cold — a refrigerator pickle is not a
  * canning recipe.
+ *
+ * The technique itself must be on the line, but its supporting context is read
+ * from the whole recipe: "Can them after cooking" and "Store in the pantry"
+ * are routinely separate steps, and requiring both on one line would let that
+ * pair through.
  */
 function canningEvidence(text, all = text) {
   const strong = matchAny(STRONG_CANNING, text)
   if (strong) return strong
   const weak = matchAny(WEAK_CANNING, text)
-  if (!weak || !matchAny(PRESERVATION_CONTEXT, text)) return null
+  if (!weak || !matchAny(PRESERVATION_CONTEXT, all)) return null
   if (matchAny(REFRIGERATED_STORAGE, all) && !matchAny(SHELF_STABLE_INTENT, all)) return null
   return weak
 }

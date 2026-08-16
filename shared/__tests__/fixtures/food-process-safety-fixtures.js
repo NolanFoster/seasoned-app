@@ -66,6 +66,16 @@ export const HAZARD_FIXTURES = [
     expect: { status: 'blocked', tags: ['home_canning_low_acid'] },
   },
   {
+    id: 'canning_context_on_a_separate_step',
+    note: 'The technique and its shelf-storage context are routinely separate steps.',
+    recipe: {
+      name: 'Garden Green Beans',
+      ingredients: ['3 lbs green beans'],
+      instructions: ['Can them after cooking.', 'Store in the pantry until winter.'],
+    },
+    expect: { status: 'blocked', tags: ['home_canning_low_acid'] },
+  },
+  {
     id: 'water_bath_strawberry_jam',
     note: 'High-acid preserve: redirect to a tested schedule instead of blocking.',
     recipe: {
