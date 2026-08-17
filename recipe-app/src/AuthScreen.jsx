@@ -52,16 +52,14 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP, onSignInWithPass
     }
   }
 
+  // No email needed: the authenticator offers whichever passkey it holds for
+  // this site. A typed address is still passed through, which is how a passkey
+  // registered before discoverability was required can sign in.
   async function handlePasskeySignIn() {
-    if (!isValidEmail(email)) {
-      setErrorMsg('Enter your email address to use a passkey')
-      setStatus('error')
-      return
-    }
     setStatus('loading')
     setErrorMsg('')
     try {
-      await onSignInWithPasskey(email)
+      await onSignInWithPasskey(isValidEmail(email) ? email : undefined)
       setStatus('success')
     } catch (err) {
       setErrorMsg(err.message)
@@ -202,7 +200,7 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP, onSignInWithPass
                   className="auth-passkey-btn"
                   type="button"
                   onClick={handlePasskeySignIn}
-                  disabled={isLoading || !email.trim()}
+                  disabled={isLoading}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                     <circle cx="12" cy="8" r="3"/>
@@ -210,7 +208,7 @@ export default function AuthScreen({ onRequestOTP, onVerifyOTP, onSignInWithPass
                   </svg>
                   {isLoading ? 'Waiting for passkey…' : 'Use a passkey'}
                 </button>
-                <p className="auth-passkey-hint">Passkeys use your device's screen lock or biometrics.</p>
+                <p className="auth-passkey-hint">No email needed — passkeys use your device's screen lock or biometrics.</p>
               </>
             )}
           </>

@@ -72,7 +72,22 @@ describe('AuthScreen — passkey sign-in', () => {
 
   test('shows passkey action when the browser supports WebAuthn', () => {
     setup({ onSignInWithPasskey: jest.fn(() => Promise.resolve({ success: true })) })
-    expect(screen.getByRole('button', { name: /use a passkey/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /use a passkey/i })).toBeEnabled()
+  })
+
+  test('signs in with no email so the authenticator can offer a discoverable passkey', async () => {
+    const onSignInWithPasskey = jest.fn(() => Promise.resolve({ success: true }))
+    setup({ onSignInWithPasskey })
+    fireEvent.click(screen.getByRole('button', { name: /use a passkey/i }))
+    await waitFor(() => expect(onSignInWithPasskey).toHaveBeenCalledWith(undefined))
+  })
+
+  test('omits a half-typed address rather than sending an invalid one', async () => {
+    const onSignInWithPasskey = jest.fn(() => Promise.resolve({ success: true }))
+    setup({ onSignInWithPasskey })
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'user@' } })
+    fireEvent.click(screen.getByRole('button', { name: /use a passkey/i }))
+    await waitFor(() => expect(onSignInWithPasskey).toHaveBeenCalledWith(undefined))
   })
 
   test('calls passkey sign-in with the entered email', async () => {

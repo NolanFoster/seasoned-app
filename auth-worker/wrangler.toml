@@ -35,6 +35,17 @@ name = "send_email"
 #   wrangler secret put PASSKEY_SERVICE_TOKEN --env staging
 #   wrangler secret put JWT_SECRET --env production
 #   wrangler secret put PASSKEY_SERVICE_TOKEN --env production
+#
+# EMAIL_ENCRYPTION_KEY is an auth-worker-only secret: base64 of 32 random bytes
+# (openssl rand -base64 32). It encrypts the address on the user row so a
+# discoverable passkey, which identifies its owner only by the one-way email
+# hash, can still mint a session token. Without it, usernameless sign-in
+# answers 503 and the email-first passkey flow continues to work. Rotating it
+# strands addresses stored under the old key; each account re-stores its own on
+# the next OTP sign-in, so rotate only when that re-prompt is acceptable.
+#   wrangler secret put EMAIL_ENCRYPTION_KEY --env preview
+#   wrangler secret put EMAIL_ENCRYPTION_KEY --env staging
+#   wrangler secret put EMAIL_ENCRYPTION_KEY --env production
 
 [observability]
 enabled = true

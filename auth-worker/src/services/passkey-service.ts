@@ -13,7 +13,7 @@ import type {
   RegistrationResponseJSON,
 } from '@simplewebauthn/types';
 import { Env } from '../types/env';
-import { generateSecureToken, hashEmail } from '../utils/crypto';
+import { decryptEmail, encryptEmail, generateSecureToken, hashEmail } from '../utils/crypto';
 
 const CHALLENGE_TTL_SECONDS = 300;
 const PASSKEY_TOKEN_TTL_SECONDS = 604800;
@@ -40,7 +40,14 @@ interface PasskeyCredentialRecord {
 
 interface UserRecord {
   status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+  email_encrypted?: string | null;
 }
+
+// A discoverable-credential challenge is not bound to a user: the account is
+// only known once the authenticator returns a user handle. The empty string
+// marks that state so a discoverable assertion can never satisfy a challenge
+// that was issued for a specific account, or the reverse.
+const DISCOVERABLE_CHALLENGE_USER = '';
 
 function encodeBase64Url(bytes: Uint8Array): string {
   let binary = '';
@@ -212,7 +219,11 @@ export class PasskeyService {
         transports: parseTransports(credential.transports),
       })),
       authenticatorSelection: {
-        residentKey: 'preferred',
+        // Discoverable so the authenticator can offer this credential before
+        // the account is known; 'preferred' would let an authenticator create
+        // a credential that only a username-first flow could ever find.
+        residentKey: 'required',
+        requireResidentKey: true,
         userVerification: 'required',
       },
     });
@@ -223,7 +234,32 @@ export class PasskeyService {
     return { success: true, state, options };
   }
 
-  async completeRegistration(userId: string, state: string, response: RegistrationResponseJSON): Promise<{
+  /**
+   * Store the address behind a user handle so a discoverable assertion can mint
+   * a session token. Best effort: the passkey itself is already usable through
+   * the email-first flow, so a storage failure degrades usernameless sign-in
+   * rather than losing a credential the authenticator has already created.
+   */
+  private async rememberEmail(userId: string, email: string): Promise<void> {
+    const key = this.env.EMAIL_ENCRYPTION_KEY;
+    if (!key) {
+      console.warn('EMAIL_ENCRYPTION_KEY is not configured; usernameless passkey sign-in will be unavailable for this credential');
+      return;
+    }
+
+    try {
+      const response = await this.userManagement(`/users/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        headers: this.serviceHeaders(true),
+        body: JSON.stringify({ email_encrypted: await encryptEmail(email, key) }),
+      });
+      if (!response.ok) throw new Error(`user update returned ${response.status}`);
+    } catch (error) {
+      console.error('Unable to store encrypted email for usernameless sign-in:', error);
+    }
+  }
+
+  async completeRegistration(userId: string, email: string, state: string, response: RegistrationResponseJSON): Promise<{
     success: boolean;
     credentialId?: string;
     error?: string;
@@ -273,15 +309,43 @@ export class PasskeyService {
       return { success: false, error: 'Unable to save passkey' };
     }
 
+    await this.rememberEmail(userId, email);
+
     return { success: true, credentialId };
   }
 
-  async beginAuthentication(email: string): Promise<{
+  /**
+   * Omitting the email starts a usernameless flow: the authenticator picks a
+   * discoverable credential and names its owner through the user handle. The
+   * email-scoped flow is kept for credentials that predate discoverability.
+   */
+  async beginAuthentication(email?: string): Promise<{
     success: boolean;
     state?: string;
     options?: PublicKeyCredentialRequestOptionsJSON;
     error?: string;
   }> {
+    if (!email) {
+      // The address is only recoverable from storage, so a missing key would
+      // fail after the user has already been prompted for verification.
+      if (!this.env.EMAIL_ENCRYPTION_KEY) {
+        return { success: false, error: 'Usernameless passkey sign-in is not configured on this deployment' };
+      }
+
+      const options = await generateAuthenticationOptions({
+        rpID: this.rpId,
+        userVerification: 'required',
+      });
+      const state = generateSecureToken(32);
+      await this.storeChallenge(state, {
+        challenge: options.challenge,
+        flow: 'authentication',
+        userId: DISCOVERABLE_CHALLENGE_USER,
+      });
+
+      return { success: true, state, options };
+    }
+
     const userId = await hashEmail(email);
     const credentials = await this.getCredentials(userId);
     if (credentials.length === 0) {
@@ -303,16 +367,57 @@ export class PasskeyService {
     return { success: true, state, options };
   }
 
-  async completeAuthentication(email: string, state: string, response: AuthenticationResponseJSON): Promise<{
+  /**
+   * Recover the address stored at registration. Returns null when the key is
+   * absent or the value cannot be authenticated, which keeps a rotated key from
+   * signing anyone in under an address it cannot actually verify.
+   */
+  private async recoverEmail(user: UserRecord | undefined): Promise<string | null> {
+    const key = this.env.EMAIL_ENCRYPTION_KEY;
+    if (!key || !user?.email_encrypted) return null;
+    return decryptEmail(user.email_encrypted, key);
+  }
+
+  /**
+   * Read the account id out of an assertion's user handle. Registration writes
+   * the SHA-256 email hash there, so anything else is rejected rather than
+   * trusted as an account id.
+   */
+  private decodeUserHandle(value: string | undefined): string | null {
+    if (typeof value !== 'string' || value.length === 0) return null;
+    try {
+      const handle = new TextDecoder().decode(decodeBase64Url(value));
+      return /^[a-f0-9]{64}$/.test(handle) ? handle : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async completeAuthentication(email: string | undefined, state: string, response: AuthenticationResponseJSON): Promise<{
     success: boolean;
     jwtToken?: string;
     user?: { id: string; email: string };
     error?: string;
   }> {
-    const userId = await hashEmail(email);
     const challenge = await this.consumeChallenge(state, 'authentication');
-    if (!challenge || challenge.userId !== userId) {
+    if (!challenge) {
       return { success: false, error: 'Authentication challenge expired or invalid' };
+    }
+
+    // The challenge records which account it was issued for, so an assertion
+    // can only complete the flow that produced it.
+    let userId: string;
+    if (email) {
+      userId = await hashEmail(email);
+      if (challenge.userId !== userId) {
+        return { success: false, error: 'Authentication challenge expired or invalid' };
+      }
+    } else {
+      const handle = this.decodeUserHandle(response.response.userHandle);
+      if (challenge.userId !== DISCOVERABLE_CHALLENGE_USER || !handle) {
+        return { success: false, error: 'Authentication challenge expired or invalid' };
+      }
+      userId = handle;
     }
 
     let credential: PasskeyCredentialRecord | undefined;
@@ -372,6 +477,20 @@ export class PasskeyService {
       return { success: false, error: 'Passkey authentication failed' };
     }
 
+    // Resolved before the counter is advanced so a credential registered before
+    // the address was stored can still be retried through the email-first flow.
+    const resolvedEmail = email ?? await this.recoverEmail(userBody.data);
+    if (!resolvedEmail) {
+      return { success: false, error: 'Enter your email address to use this passkey' };
+    }
+
+    // An email-first sign-in is the other moment the address is known, so a
+    // credential registered before this existed becomes usable without one on
+    // the next attempt.
+    if (email && !userBody.data?.email_encrypted) {
+      await this.rememberEmail(userId, email);
+    }
+
     const counterResponse = await this.userManagement(
       `/passkey-credentials/${encodeURIComponent(credential.credential_id)}/counter`,
       {
@@ -385,7 +504,7 @@ export class PasskeyService {
     }
 
     const { JWTService } = await import('./jwt-service');
-    const tokenResult = await new JWTService(this.env).createToken(userId, email, PASSKEY_TOKEN_TTL_SECONDS);
+    const tokenResult = await new JWTService(this.env).createToken(userId, resolvedEmail, PASSKEY_TOKEN_TTL_SECONDS);
     if (!tokenResult.success || !tokenResult.token) {
       return { success: false, error: 'Passkey authentication failed' };
     }
@@ -399,7 +518,7 @@ export class PasskeyService {
     return {
       success: true,
       jwtToken: tokenResult.token,
-      user: { id: userId, email },
+      user: { id: userId, email: resolvedEmail },
     };
   }
 }

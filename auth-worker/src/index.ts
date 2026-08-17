@@ -7,6 +7,7 @@ import { storeOTP, verifyOTPForEmail, hasOTP, deleteOTP, getOTPStats } from './u
 import { EmailService } from './services/email-service';
 import { JWTService } from './services/jwt-service';
 import { PasskeyService, isAuthenticationResponse, isRegistrationResponse } from './services/passkey-service';
+import { encryptEmail } from './utils/crypto';
 
 const app = new Hono<{ Bindings: Env }>();
 type AuthContext = Context<{ Bindings: Env }>;
@@ -31,6 +32,24 @@ async function getActiveUser(env: Env, userId: string): Promise<boolean> {
   if (!response.ok) return false;
   const body = await response.json() as { success?: boolean; data?: { status?: string } };
   return body.success === true && body.data?.status === 'ACTIVE';
+}
+
+// Usernameless passkey sign-in resolves an account from its user handle and
+// then needs the address to mint a token. Storing it encrypted whenever the
+// address is known keeps that flow working; failures only cost usernameless
+// sign-in, so they never interrupt the login in progress.
+async function rememberEmailForPasskeys(env: Env, userId: string, email: string): Promise<void> {
+  if (!env.EMAIL_ENCRYPTION_KEY) return;
+  try {
+    const response = await fetch(`${env.USER_MANAGEMENT_WORKER_URL}/users/${encodeURIComponent(userId)}`, {
+      method: 'PUT',
+      headers: userManagementHeaders(env, true),
+      body: JSON.stringify({ email_encrypted: await encryptEmail(email, env.EMAIL_ENCRYPTION_KEY) }),
+    });
+    if (!response.ok) console.error('Failed to store encrypted email:', response.status);
+  } catch (error) {
+    console.error('Error storing encrypted email:', error);
+  }
 }
 
 async function ensureUserForOTP(env: Env, userId: string): Promise<boolean> {
@@ -259,6 +278,11 @@ app.post('/otp/verify', async (c) => {
       } catch (jwtError) {
         console.error('Error generating JWT token:', jwtError);
       }
+
+      // Backfill the address a discoverable passkey will later need. Doing it
+      // on every OTP sign-in means accounts that registered a passkey before
+      // this existed become usable without the user re-registering one.
+      await rememberEmailForPasskeys(c.env, emailHash, email);
 
       // Record successful login (best effort after account status is confirmed).
       try {
@@ -610,7 +634,11 @@ async function completePasskeyRegistration(c: AuthContext) {
       return c.json({ success: false, message: 'state and a valid passkey response are required' }, 400);
     }
 
-    const result = await new PasskeyService(c.env).completeRegistration(payload.sub, state, body.response);
+    if (!payload.email) {
+      return c.json({ success: false, message: 'Authentication required' }, 401);
+    }
+
+    const result = await new PasskeyService(c.env).completeRegistration(payload.sub, payload.email, state, body.response);
     return result.success
       ? c.json({ success: true, credentialId: result.credentialId })
       : c.json({ success: false, message: result.error || 'Passkey registration failed' }, 400);
@@ -620,18 +648,31 @@ async function completePasskeyRegistration(c: AuthContext) {
   }
 }
 
+// An omitted email is the usernameless flow, not a malformed request; a
+// supplied one still has to be well formed.
+function hasEmailField(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 async function beginPasskeyAuthentication(c: AuthContext) {
   try {
     const body = await readJsonBody(c);
-    const email = normalizePasskeyEmail(body.email);
-    if (!email) {
-      return c.json({ success: false, message: 'A valid email is required' }, 400);
+    let email: string | undefined;
+    if (hasEmailField(body.email)) {
+      const normalized = normalizePasskeyEmail(body.email);
+      if (!normalized) {
+        return c.json({ success: false, message: 'A valid email is required' }, 400);
+      }
+      email = normalized;
     }
 
     const result = await new PasskeyService(c.env).beginAuthentication(email);
-    return result.success
-      ? c.json({ success: true, state: result.state, options: result.options })
-      : c.json({ success: false, message: 'No passkey is registered for this email' }, 404);
+    if (result.success) {
+      return c.json({ success: true, state: result.state, options: result.options });
+    }
+    return email
+      ? c.json({ success: false, message: 'No passkey is registered for this email' }, 404)
+      : c.json({ success: false, message: result.error || 'Unable to begin passkey sign-in' }, 503);
   } catch (error) {
     console.error('Error beginning passkey authentication:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
@@ -641,10 +682,18 @@ async function beginPasskeyAuthentication(c: AuthContext) {
 async function completePasskeyAuthentication(c: AuthContext) {
   try {
     const body = await readJsonBody(c);
-    const email = normalizePasskeyEmail(body.email);
+    let email: string | undefined;
+    if (hasEmailField(body.email)) {
+      const normalized = normalizePasskeyEmail(body.email);
+      if (!normalized) {
+        return c.json({ success: false, message: 'A valid email is required' }, 400);
+      }
+      email = normalized;
+    }
+
     const state = typeof body.state === 'string' ? body.state : body.sessionToken;
-    if (!email || typeof state !== 'string' || !isAuthenticationResponse(body.response)) {
-      return c.json({ success: false, message: 'email, state, and a valid passkey response are required' }, 400);
+    if (typeof state !== 'string' || !isAuthenticationResponse(body.response)) {
+      return c.json({ success: false, message: 'state and a valid passkey response are required' }, 400);
     }
 
     const result = await new PasskeyService(c.env).completeAuthentication(email, state, body.response);
@@ -722,14 +771,14 @@ app.get('/', (c) => {
       {
         path: '/passkeys/authenticate/begin',
         method: 'POST',
-        description: 'Create WebAuthn authentication options',
-        body: { email: 'string' }
+        description: 'Create WebAuthn authentication options; omit email for usernameless sign-in',
+        body: { email: 'string?' }
       },
       {
         path: '/passkeys/authenticate/complete',
         method: 'POST',
-        description: 'Verify a WebAuthn authentication response',
-        body: { email: 'string', state: 'string', response: 'object' }
+        description: 'Verify a WebAuthn authentication response; omit email for usernameless sign-in',
+        body: { email: 'string?', state: 'string', response: 'object' }
       }
     ]
   });
