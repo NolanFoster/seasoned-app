@@ -14,6 +14,7 @@ function TestHarness() {
       <button data-testid="request" onClick={() => auth.requestOTP('u@e.com')}>req</button>
       <button data-testid="verify" onClick={() => auth.verifyOTP('u@e.com', '123456')}>ver</button>
       <button data-testid="passkey" onClick={() => auth.signInWithPasskey('U@E.COM')}>passkey</button>
+      <button data-testid="passkey-no-email" onClick={() => auth.signInWithPasskey()}>passkey usernameless</button>
       <button data-testid="register-passkey" onClick={() => auth.registerPasskey()}>register</button>
       <button data-testid="signout" onClick={auth.signOut}>out</button>
     </div>
@@ -151,6 +152,50 @@ describe('useAuth', () => {
       expect.objectContaining({ method: 'POST', body: expect.stringContaining('credential-id') })
     )
     expect(screen.getByTestId('authenticated').textContent).toBe('true')
+    expect(localStorage.getItem('seasoned_auth_token')).toBe('passkey-jwt')
+  })
+
+  test('signInWithPasskey omits the email entirely when called without one', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', { value: function PublicKeyCredential() {}, configurable: true })
+    const get = jest.fn(() => Promise.resolve({
+      id: 'credential-id',
+      rawId: Uint8Array.from([1, 2, 3]).buffer,
+      type: 'public-key',
+      response: {
+        clientDataJSON: Uint8Array.from([4]).buffer,
+        authenticatorData: Uint8Array.from([5]).buffer,
+        signature: Uint8Array.from([6]).buffer,
+        // The authenticator names the account it chose.
+        userHandle: Uint8Array.from([11, 12]).buffer,
+      },
+      getClientExtensionResults: () => ({}),
+    }))
+    Object.defineProperty(navigator, 'credentials', { value: { get }, configurable: true })
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, state: 'state', options: { challenge: 'Y2hhbGxlbmdl', rpId: 'localhost' } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, token: 'passkey-jwt', user: { id: 'hash', email: 'u@e.com' } }),
+      })
+
+    render(<TestHarness />)
+    await waitFor(() => expect(screen.getByTestId('loading').textContent).toBe('false'))
+    await act(async () => screen.getByTestId('passkey-no-email').click())
+
+    // An empty-string email would be rejected as malformed rather than read as
+    // a usernameless request, so the field has to be absent.
+    const [beginUrl, beginInit] = global.fetch.mock.calls[0]
+    expect(beginUrl).toBe(`${AUTH_URL}/passkeys/authenticate/begin`)
+    expect(JSON.parse(beginInit.body)).toEqual({})
+
+    const completeBody = JSON.parse(global.fetch.mock.calls[1][1].body)
+    expect(completeBody).not.toHaveProperty('email')
+    expect(completeBody.response.response.userHandle).toBeTruthy()
     expect(localStorage.getItem('seasoned_auth_token')).toBe('passkey-jwt')
   })
 

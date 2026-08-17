@@ -125,7 +125,7 @@ describe('Passkey endpoints', () => {
     expect(generateRegistrationOptions).toHaveBeenCalledWith(expect.objectContaining({
       rpID: 'localhost',
       userName: email,
-      authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
+      authenticatorSelection: { residentKey: 'required', requireResidentKey: true, userVerification: 'required' },
     }));
   });
 
@@ -264,17 +264,17 @@ describe('Passkey endpoints', () => {
   it('rejects missing, malformed, mismatched, and replayed challenge records', async () => {
     const service = new PasskeyService(mockEnv);
     const validState = 'a'.repeat(64);
-    expect((await service.completeRegistration(userId, 'bad-state', passkeyResponse('create') as any)).success).toBe(false);
-    expect((await service.completeRegistration(userId, validState, passkeyResponse('create') as any)).success).toBe(false);
+    expect((await service.completeRegistration(userId, email, 'bad-state', passkeyResponse('create') as any)).success).toBe(false);
+    expect((await service.completeRegistration(userId, email, validState, passkeyResponse('create') as any)).success).toBe(false);
 
     kv.set(`passkey:challenge:${validState}`, 'not-json');
-    expect((await service.completeRegistration(userId, validState, passkeyResponse('create') as any)).success).toBe(false);
+    expect((await service.completeRegistration(userId, email, validState, passkeyResponse('create') as any)).success).toBe(false);
 
     kv.set(`passkey:challenge:${validState}`, JSON.stringify({ flow: 'authentication', challenge: 'c', userId }));
-    expect((await service.completeRegistration(userId, validState, passkeyResponse('create') as any)).success).toBe(false);
+    expect((await service.completeRegistration(userId, email, validState, passkeyResponse('create') as any)).success).toBe(false);
 
     kv.set(`passkey:challenge:${validState}`, JSON.stringify({ flow: 'registration', challenge: 'c', userId: 'other-user' }));
-    expect((await service.completeRegistration(userId, validState, passkeyResponse('create') as any)).success).toBe(false);
+    expect((await service.completeRegistration(userId, email, validState, passkeyResponse('create') as any)).success).toBe(false);
   });
 
   it('returns safe errors when registration verification or credential storage fails', async () => {
@@ -282,16 +282,16 @@ describe('Passkey endpoints', () => {
     const state = 'b'.repeat(64);
     kv.set(`passkey:challenge:${state}`, JSON.stringify({ flow: 'registration', challenge: 'c', userId }));
     verifyRegistrationResponse.mockRejectedValueOnce(new Error('bad origin'));
-    expect((await service.completeRegistration(userId, state, passkeyResponse('create') as any)).error).toMatch(/registration failed/i);
+    expect((await service.completeRegistration(userId, email, state, passkeyResponse('create') as any)).error).toMatch(/registration failed/i);
 
     kv.set(`passkey:challenge:${state}`, JSON.stringify({ flow: 'registration', challenge: 'c', userId }));
     verifyRegistrationResponse.mockResolvedValueOnce({ verified: false });
-    expect((await service.completeRegistration(userId, state, passkeyResponse('create') as any)).success).toBe(false);
+    expect((await service.completeRegistration(userId, email, state, passkeyResponse('create') as any)).success).toBe(false);
 
     kv.set(`passkey:challenge:${state}`, JSON.stringify({ flow: 'registration', challenge: 'c', userId }));
     verifyRegistrationResponse.mockResolvedValueOnce({ verified: true, registrationInfo: { credentialID: Uint8Array.from([1]), credentialPublicKey: Uint8Array.from([2]), counter: 0, credentialDeviceType: 'singleDevice', credentialBackedUp: false } });
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: false }, 409));
-    expect((await service.completeRegistration(userId, state, passkeyResponse('create') as any)).error).toMatch(/save passkey/i);
+    expect((await service.completeRegistration(userId, email, state, passkeyResponse('create') as any)).error).toMatch(/save passkey/i);
   });
 
   it('rejects authentication when the credential, signature, counter, or account is invalid', async () => {

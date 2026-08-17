@@ -201,6 +201,7 @@ export interface CreatePasskeyCredentialInput {
 
 // Update types
 export interface UpdateUserInput {
+  email_encrypted?: string;
   status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
   account_type?: 'FREE' | 'PREMIUM' | 'ADMIN';
   email_verified?: boolean;

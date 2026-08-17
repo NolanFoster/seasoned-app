@@ -21,6 +21,10 @@ export interface Env {
   // JWT configuration
   JWT_SECRET: string;
 
+  // Base64-encoded 32-byte AES-GCM key. Required only for usernameless passkey
+  // sign-in, which has to recover the address behind a user handle.
+  EMAIL_ENCRYPTION_KEY?: string;
+
   // WebAuthn relying-party configuration. Defaults are for local development only.
   WEBAUTHN_RP_ID?: string;
   WEBAUTHN_RP_NAME?: string;

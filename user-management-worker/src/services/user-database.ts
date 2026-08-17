@@ -90,6 +90,10 @@ export class UserDatabaseService {
       const updateFields: string[] = [];
       const values: any[] = [];
 
+      if (input.email_encrypted !== undefined) {
+        updateFields.push('email_encrypted = ?');
+        values.push(input.email_encrypted);
+      }
       if (input.status !== undefined) {
         updateFields.push('status = ?');
         values.push(input.status);

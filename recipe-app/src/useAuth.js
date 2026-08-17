@@ -192,16 +192,22 @@ export function useAuth() {
     return data
   }
 
+  // Called with no email for usernameless sign-in: the authenticator picks a
+  // discoverable passkey and the worker resolves the account from it. An email
+  // is still accepted, which is what credentials registered before
+  // discoverability was required need.
   async function signInWithPasskey(email) {
     if (!isPasskeyAvailable()) throw new Error('Passkeys are not supported in this browser')
-    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
     const beginResponse = await fetch(`${AUTH_WORKER_URL}/passkeys/authenticate/begin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: normalizedEmail }),
+      body: JSON.stringify(normalizedEmail ? { email: normalizedEmail } : {}),
     })
     const beginData = await beginResponse.json()
-    if (!beginResponse.ok || !beginData.success) throw new Error(beginData.message || 'No passkey is registered for this email')
+    if (!beginResponse.ok || !beginData.success) {
+      throw new Error(beginData.message || (normalizedEmail ? 'No passkey is registered for this email' : 'Passkey sign-in is unavailable'))
+    }
 
     let assertion
     try {
@@ -214,7 +220,7 @@ export function useAuth() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: normalizedEmail,
+        ...(normalizedEmail ? { email: normalizedEmail } : {}),
         state: beginData.state,
         response: serializeCredential(assertion),
       }),

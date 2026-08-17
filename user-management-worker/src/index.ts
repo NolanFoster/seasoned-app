@@ -348,10 +348,11 @@ app.put('/users/:user_id', async (c) => {
   try {
     const user_id = c.req.param('user_id');
     const body = await c.req.json();
-    const { status, account_type, email_verified, two_factor_enabled } = body;
+    const { email_encrypted, status, account_type, email_verified, two_factor_enabled } = body;
 
     const userDB = new UserDatabaseService(c.env.USER_DB);
     const result = await userDB.updateUser(user_id, {
+      email_encrypted,
       status,
       account_type,
       email_verified,
@@ -794,7 +795,7 @@ app.get('/', (c) => {
         path: '/users/:user_id',
         method: 'PUT',
         description: 'Update user',
-        body: { status: 'string?', account_type: 'string?', email_verified: 'boolean?', two_factor_enabled: 'boolean?' }
+        body: { email_encrypted: 'string?', status: 'string?', account_type: 'string?', email_verified: 'boolean?', two_factor_enabled: 'boolean?' }
       },
       {
         path: '/users/:user_id',
