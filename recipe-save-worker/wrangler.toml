@@ -35,6 +35,10 @@ id = "3f8a3b17db9e4f8ea3eae83d864ad518"
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
 
+[[env.staging.r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
+
 [[env.staging.queues.producers]]
 queue = "recipe-embedding-queue"
 binding = "EMBEDDING_QUEUE"
@@ -58,6 +62,10 @@ id = "dd001c20659a4d6982f6d650abcac880"
 [[env.production.r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
+
+[[env.production.r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
 
 [[env.production.queues.producers]]
 queue = "recipe-embedding-queue"
@@ -87,6 +95,10 @@ new_sqlite_classes = ["RecipeSaver"]
 [[r2_buckets]]
 binding = "RECIPE_IMAGES"
 bucket_name = "recipe-images"
+
+[[r2_buckets]]
+binding = "AI_GENERATED_RECIPE_IMAGES"
+bucket_name = "ai-generated-recipe-images"
 
 # Queue for recipe embedding
 [[queues.producers]]

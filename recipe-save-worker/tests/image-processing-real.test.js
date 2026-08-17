@@ -370,3 +370,98 @@ function createMockR2Bucket() {
     list: vi.fn().mockResolvedValue({ objects: [] })
   };
 }
+// AI-generated images are published under IMAGE_DOMAIN but live in the image
+// generation worker's own short-lived bucket, so saving a recipe has to copy
+// them into the permanent recipe bucket instead of linking straight to them.
+describe('AI-generated image ingestion', () => {
+  let mockEnv;
+  let recipeSaver;
+
+  const AI_URL = 'https://test-images.domain.com/ai-generated/recipe-soup-123.png';
+
+  beforeEach(() => {
+    mockEnv = {
+      RECIPE_STORAGE: createMockKVNamespace(),
+      RECIPE_IMAGES: createMockR2Bucket(),
+      AI_GENERATED_RECIPE_IMAGES: createMockR2Bucket(),
+      SEARCH_DB_URL: 'https://test-search-db.workers.dev',
+      IMAGE_DOMAIN: 'https://test-images.domain.com'
+    };
+
+    recipeSaver = new RecipeSaver(
+      {
+        id: { toString: () => 'test-do-id' },
+        storage: { get: vi.fn(), put: vi.fn(), delete: vi.fn() },
+        blockConcurrencyWhile: vi.fn().mockImplementation(async (fn) => fn())
+      },
+      mockEnv
+    );
+
+    global.fetch = vi.fn();
+  });
+
+  it('flags AI-generated URLs as needing a permanent copy', () => {
+    expect(recipeSaver.isExternalUrl(AI_URL)).toBe(false);
+    expect(recipeSaver.needsPermanentCopy(AI_URL)).toBe(true);
+    expect(recipeSaver.getGeneratedImageKey(AI_URL)).toBe('ai-generated/recipe-soup-123.png');
+  });
+
+  it('leaves images already in the permanent bucket alone', () => {
+    const ownUrl = 'https://test-images.domain.com/test-recipe-id/imageUrl_1.png';
+    expect(recipeSaver.needsPermanentCopy(ownUrl)).toBe(false);
+    expect(recipeSaver.getGeneratedImageKey(ownUrl)).toBeNull();
+  });
+
+  it('copies the AI image bucket-to-bucket and rewrites the URL', async () => {
+    mockEnv.AI_GENERATED_RECIPE_IMAGES.get.mockResolvedValue({
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(2048)),
+      httpMetadata: { contentType: 'image/png' }
+    });
+
+    const result = await recipeSaver.processRecipeImages(
+      { title: 'Soup', imageUrl: AI_URL },
+      'test-recipe-id'
+    );
+
+    expect(mockEnv.AI_GENERATED_RECIPE_IMAGES.get).toHaveBeenCalledWith('ai-generated/recipe-soup-123.png');
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockEnv.RECIPE_IMAGES.put).toHaveBeenCalled();
+    expect(result.imageUrl).toMatch(/^https:\/\/test-images\.domain\.com\/test-recipe-id\/imageUrl_\d+\.png$/);
+  });
+
+  it('falls back to HTTP when the generated object is missing from the bucket', async () => {
+    mockEnv.AI_GENERATED_RECIPE_IMAGES.get.mockResolvedValue(null);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'image/png' }),
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(512))
+    });
+
+    const result = await recipeSaver.processRecipeImages(
+      { title: 'Soup', imageUrl: AI_URL },
+      'test-recipe-id'
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(AI_URL);
+    expect(result.imageUrl).toMatch(/\/test-recipe-id\/imageUrl_\d+\.png$/);
+  });
+
+  it('keeps the original URL when the image cannot be reached at all', async () => {
+    mockEnv.AI_GENERATED_RECIPE_IMAGES.get.mockResolvedValue(null);
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404, headers: new Headers() });
+
+    const result = await recipeSaver.processRecipeImages(
+      { title: 'Soup', imageUrl: AI_URL },
+      'test-recipe-id'
+    );
+
+    expect(result.imageUrl).toBe(AI_URL);
+  });
+
+  it('never targets the generated bucket for deletion from the recipe bucket', () => {
+    expect(recipeSaver.getR2KeyFromUrl(AI_URL)).toBeNull();
+    expect(recipeSaver.getR2KeyFromUrl('https://test-images.domain.com/test-recipe-id/imageUrl_1.png'))
+      .toBe('test-recipe-id/imageUrl_1.png');
+  });
+});

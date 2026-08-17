@@ -2,6 +2,7 @@ import React from 'react'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
 import DragPortal from './DragPortal.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { parseDuration } from './RecipeCardDisplay.jsx'
 
 /**
  * UpNextCard — horizontal staging area for recipes queued via "Save to Up Next".
@@ -30,6 +31,25 @@ import { useMealPlan } from './MealPlanContext.jsx'
  *   up-next__card-remove     — remove button
  *   up-next__empty           — empty-state placeholder
  */
+/**
+ * Recipes reach the staging area straight from the recipe card, which uses the
+ * app's canonical field names (`image`, `prep_time`, `cook_time`), while worker
+ * payloads use camelCase. Read both so an AI-generated recipe keeps its image
+ * after being staged.
+ */
+function getImage(recipe) {
+  return recipe.image || recipe.imageUrl || recipe.image_url || ''
+}
+
+function getTimeLabel(recipe, canonical, camel, suffix) {
+  const value = recipe[canonical] ?? recipe[camel]
+  if (value == null || value === '') return null
+  // Bare numbers are already minutes; ISO durations need expanding.
+  if (typeof value === 'number') return `${value}m ${suffix}`
+  const parsed = parseDuration(value)
+  return parsed ? `${parsed} ${suffix}` : null
+}
+
 export default function UpNextCard() {
   const { upNext, removeUpNext } = useMealPlan()
 
@@ -51,7 +71,12 @@ export default function UpNextCard() {
               </p>
             )}
 
-            {upNext.map((recipe, index) => (
+            {upNext.map((recipe, index) => {
+              const image = getImage(recipe)
+              const prepLabel = getTimeLabel(recipe, 'prep_time', 'prepTime', 'prep')
+              const cookLabel = getTimeLabel(recipe, 'cook_time', 'cookTime', 'cook')
+
+              return (
               <Draggable
                 key={recipe.id}
                 draggableId={`upNext-${recipe.id}`}
@@ -66,9 +91,9 @@ export default function UpNextCard() {
                       className={`up-next__card${snapshot.isDragging ? ' up-next__card--dragging' : ''}`}
                       data-testid={`up-next-card-${recipe.id}`}
                     >
-                      {recipe.imageUrl && (
+                      {image && (
                         <img
-                          src={recipe.imageUrl}
+                          src={image}
                           alt={recipe.name}
                           className="up-next__card-image"
                         />
@@ -76,14 +101,10 @@ export default function UpNextCard() {
 
                       <div className="up-next__card-content">
                         <h4 className="up-next__card-title">{recipe.name}</h4>
-                        {(recipe.prepTime || recipe.cookTime) && (
+                        {(prepLabel || cookLabel) && (
                           <div className="up-next__card-meta">
-                            {recipe.prepTime != null && (
-                              <span>{recipe.prepTime}m prep</span>
-                            )}
-                            {recipe.cookTime != null && (
-                              <span>{recipe.cookTime}m cook</span>
-                            )}
+                            {prepLabel && <span>{prepLabel}</span>}
+                            {cookLabel && <span>{cookLabel}</span>}
                           </div>
                         )}
                       </div>
@@ -105,7 +126,8 @@ export default function UpNextCard() {
                   </DragPortal>
                 )}
               </Draggable>
-            ))}
+              )
+            })}
 
             {provided.placeholder}
           </div>

@@ -10,6 +10,11 @@ function log(level, message, data = {}, context = {}) {
   return baseLog(level, message, data, { worker: 'recipe-save-worker', ...context });
 }
 
+// Key prefix the AI image generation worker writes under in its own bucket.
+// Images there are transient, so saving a recipe copies them into the
+// permanent recipe image bucket rather than linking to them.
+const GENERATED_IMAGE_PREFIX = 'ai-generated/';
+
 
 
 // Parse recipe ingredients for nutrition calculation
@@ -241,7 +246,7 @@ export class RecipeSaver {
 
           // Process and download images
           log('info', 'Processing recipe images', { requestId, recipeId });
-          const processedRecipe = await this.processRecipeImages(recipe, recipeId, requestId);
+          const processedRecipe = await this.processRecipeImages(recipe, recipeId, null, requestId);
 
           // Calculate nutrition if missing
           log('info', 'Checking for nutrition information', { requestId, recipeId });
@@ -778,7 +783,7 @@ export class RecipeSaver {
     const imagesToProcess = [];
 
     // Collect all image URLs that need processing
-    if (recipe.imageUrl && this.isExternalUrl(recipe.imageUrl)) {
+    if (recipe.imageUrl && this.needsPermanentCopy(recipe.imageUrl)) {
       imagesToProcess.push({ field: 'imageUrl', url: recipe.imageUrl });
       log('debug', 'Found main image to process', { requestId, recipeId, url: recipe.imageUrl });
     }
@@ -786,7 +791,7 @@ export class RecipeSaver {
     // Check for images in recipe steps/instructions if they exist
     if (recipe.images && Array.isArray(recipe.images)) {
       recipe.images.forEach((img, index) => {
-        if (this.isExternalUrl(img)) {
+        if (this.needsPermanentCopy(img)) {
           imagesToProcess.push({ field: 'images', index, url: img });
           log('debug', 'Found step image to process', { requestId, recipeId, index, url: img });
         }
@@ -872,6 +877,49 @@ export class RecipeSaver {
     return processedRecipe;
   }
 
+  /**
+   * Read the bytes of a source image.
+   *
+   * AI-generated images are published to the `ai-generated-recipe-images`
+   * bucket under the same public hostname the permanent recipe bucket uses,
+   * so the public URL is not a reliable way to reach them. When the bucket is
+   * bound to this worker the object is read directly; the HTTP fetch stays as
+   * a fallback for every other source (and for local/dev without the binding).
+   */
+  async readSourceImage(imageUrl, recipeId, requestId = null) {
+    const generatedKey = this.getGeneratedImageKey(imageUrl);
+
+    if (generatedKey && this.env.AI_GENERATED_RECIPE_IMAGES) {
+      log('debug', 'Reading AI-generated image from R2 bucket', { requestId, recipeId, key: generatedKey });
+      const object = await this.env.AI_GENERATED_RECIPE_IMAGES.get(generatedKey);
+
+      if (object) {
+        return {
+          imageData: await object.arrayBuffer(),
+          contentType: object.httpMetadata?.contentType || 'image/png'
+        };
+      }
+
+      log('warn', 'AI-generated image not found in R2 bucket, falling back to HTTP', {
+        requestId,
+        recipeId,
+        key: generatedKey
+      });
+    }
+
+    log('debug', 'Downloading image', { requestId, recipeId, url: imageUrl });
+    const response = await fetch(imageUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status}`);
+    }
+
+    return {
+      imageData: await response.arrayBuffer(),
+      contentType: response.headers.get('content-type') || 'image/jpeg'
+    };
+  }
+
   async downloadAndStoreImage(imageUrl, recipeId, field, index, requestId = null) {
     const startTime = Date.now();
     log('info', 'Starting image download and storage', { 
@@ -883,43 +931,27 @@ export class RecipeSaver {
     });
 
     try {
-      // Download the image
-      log('debug', 'Downloading image', { requestId, recipeId, url: imageUrl });
-      const response = await fetch(imageUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download image: ${response.status}`);
-      }
-
-      // Get content type
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      // Fetch the source bytes. AI-generated images live in a separate,
+      // short-lived bucket, so they are copied bucket-to-bucket when the
+      // binding is available instead of round-tripping over the public domain.
+      const { imageData, contentType } = await this.readSourceImage(imageUrl, recipeId, requestId);
       const extension = this.getExtensionFromContentType(contentType);
-      
-      log('debug', 'Image download successful', { 
-        requestId, 
-        recipeId, 
-        status: response.status,
+
+      log('debug', 'Image source read', {
+        requestId,
+        recipeId,
         contentType,
         extension,
-        contentLength: response.headers.get('content-length')
+        size: imageData.byteLength
       });
 
       // Generate unique filename
       const timestamp = Date.now();
-      const filename = index !== undefined 
+      const filename = index !== undefined
         ? `${recipeId}/${field}_${index}_${timestamp}.${extension}`
         : `${recipeId}/${field}_${timestamp}.${extension}`;
 
       log('debug', 'Generated filename', { requestId, recipeId, filename });
-
-      // Get image data
-      log('debug', 'Reading image data', { requestId, recipeId });
-      const imageData = await response.arrayBuffer();
-      log('debug', 'Image data read', { 
-        requestId, 
-        recipeId, 
-        size: imageData.byteLength 
-      });
 
       // Store in R2
       log('info', 'Storing image in R2', { requestId, recipeId, filename });
@@ -1068,6 +1100,30 @@ export class RecipeSaver {
     }
   }
 
+  /**
+   * Key of an AI-generated image, or null when the URL is not one.
+   *
+   * The AI image worker writes to its own bucket under the `ai-generated/`
+   * prefix but publishes the URL on IMAGE_DOMAIN, so a URL on that host is
+   * only served by this worker's permanent bucket when it lacks the prefix.
+   */
+  getGeneratedImageKey(url) {
+    if (!url) return null;
+    const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
+    const prefix = `${imageDomain}/${GENERATED_IMAGE_PREFIX}`;
+    return url.startsWith(prefix) ? url.substring(imageDomain.length + 1) : null;
+  }
+
+  /**
+   * True when an image must be copied into the permanent recipe bucket:
+   * either it is hosted elsewhere, or it is an AI-generated image sitting in
+   * the short-lived generation bucket, where it would expire out from under
+   * the saved recipe.
+   */
+  needsPermanentCopy(url) {
+    return this.isExternalUrl(url) || this.getGeneratedImageKey(url) !== null;
+  }
+
   getExtensionFromContentType(contentType) {
     const typeMap = {
       'image/jpeg': 'jpg',
@@ -1085,7 +1141,10 @@ export class RecipeSaver {
     try {
       const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
       if (url.startsWith(imageDomain)) {
-        return url.substring(imageDomain.length + 1); // +1 for the trailing slash
+        const key = url.substring(imageDomain.length + 1); // +1 for the trailing slash
+        // Generated images live in the generation worker's bucket, not this
+        // one, so they are never ours to delete.
+        return key.startsWith(GENERATED_IMAGE_PREFIX) ? null : key;
       }
       return null;
     } catch {
