@@ -198,3 +198,39 @@ describe('UpNextCard — drag-drop structure', () => {
     expect(screen.getByRole('region', { name: /up next staging area/i })).toBeInTheDocument();
   });
 });
+
+// ── App-canonical recipe shape ───────────────────────────────────────────────
+// Recipes staged from the recipe card carry the app's canonical field names
+// (`image`, `prep_time`, `cook_time`) rather than the camelCase worker shape.
+// An AI-generated recipe must keep its image once it lands in Up Next.
+
+const RECIPE_CANONICAL = {
+  id: 'r4',
+  name: 'AI Tomato Soup',
+  source: 'ai_generated',
+  ingredients: ['tomatoes'],
+  image: 'https://images.seasonedapp.com/ai-generated/recipe-ai-tomato-soup.png',
+  prep_time: 'PT10M',
+  cook_time: 'PT25M',
+};
+
+describe('UpNextCard — canonical app recipe shape', () => {
+  beforeEach(() => {
+    mockUpNext = [RECIPE_CANONICAL];
+    mockRemoveUpNext.mockClear();
+  });
+
+  test('renders the image from the canonical `image` field', () => {
+    renderUpNextCard();
+    expect(screen.getByAltText('AI Tomato Soup')).toHaveAttribute(
+      'src',
+      'https://images.seasonedapp.com/ai-generated/recipe-ai-tomato-soup.png'
+    );
+  });
+
+  test('renders prep and cook time from ISO durations', () => {
+    renderUpNextCard();
+    expect(screen.getByText('10 min prep')).toBeInTheDocument();
+    expect(screen.getByText('25 min cook')).toBeInTheDocument();
+  });
+});
