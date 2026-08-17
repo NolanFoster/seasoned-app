@@ -83,7 +83,13 @@ new_classes = ["PasskeyChallengeObject"]
 ENVIRONMENT = "production"
 OTP_KV_PREFIX = "production"
 FROM_EMAIL = "verify@seasonedapp.com"
-USER_MANAGEMENT_WORKER_URL = "https://user-management-worker-production.nolanfoster.workers.dev"
+# Must be the same user-management-worker script the production frontend calls
+# (recipe-app/.env.production VITE_USER_MANAGEMENT_URL). User rows are created
+# through this URL, while culinary profile and pantry rows are written directly
+# by the frontend; both tables carry a FOREIGN KEY to users(user_id), so a split
+# across two scripts puts the parent row in a different D1 database than its
+# children and every write fails the constraint.
+USER_MANAGEMENT_WORKER_URL = "https://user-management-worker.nolanfoster.workers.dev"
 WEBAUTHN_RP_ID = "seasonedapp.com"
 WEBAUTHN_RP_NAME = "Seasoned"
 WEBAUTHN_ORIGIN = "https://seasonedapp.com"
