@@ -128,7 +128,11 @@
   flex-direction: column;
   background: var(--surface);
   border-left: 1px solid var(--border);
-  transform: translateX(100%);
+  /* Closed: slide fully off-screen. The drawer's right edge is inset by
+     --safe-right, so translating by its own width alone leaves a --safe-right
+     sliver of the panel visible against the viewport edge on notched devices
+     in landscape. Add the inset back so the panel clears the screen. */
+  transform: translateX(calc(100% + var(--safe-right)));
   transition: transform var(--mp-transition-drawer);
   overflow: hidden;
 }
@@ -783,8 +787,12 @@ body > .meal-item {
     top: auto;
     bottom: var(--safe-bottom);
     height: calc(100dvh - var(--safe-bottom));
-    /* Override right-to-left slide with bottom-to-top slide */
-    transform: translateY(100%);
+    /* Override right-to-left slide with bottom-to-top slide. The sheet sits
+       --safe-bottom above the viewport bottom, so translateY(100%) alone stops
+       --safe-bottom short and leaves a strip of the panel permanently visible
+       at the bottom of the screen on devices with a home indicator. Translate
+       by the sheet's height *plus* that inset so it clears the viewport. */
+    transform: translateY(calc(100% + var(--safe-bottom)));
     transition: transform var(--mp-transition-drawer);
   }
 
