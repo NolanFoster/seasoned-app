@@ -10,6 +10,8 @@ export interface Env {
   CULINARY_PROFILE_ENABLED?: string;
   // Explicit kill switch for the additive manual pantry API.
   PANTRY_ENABLED?: string;
+  // Explicit kill switch for the additive private recipe notes API.
+  RECIPE_NOTES_ENABLED?: string;
   // Optional service-to-service secret for passkey credential routes.
   PASSKEY_SERVICE_TOKEN?: string;
 }

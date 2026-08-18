@@ -87,6 +87,22 @@ export interface PantryItemInput {
   tags?: string[];
 }
 
+export interface RecipeNote {
+  id: number;
+  user_id: string;
+  recipe_id: string;
+  recipe_title: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeNoteInput {
+  recipe_id: string;
+  recipe_title?: string | null;
+  body: string;
+}
+
 export type LoginMethod = 'OTP' | 'MAGIC_LINK' | 'PASSKEY';
 
 export interface UserLoginHistory {

@@ -6,6 +6,7 @@ import { Bindings } from './types/env';
 import { UserDatabaseService } from './services/user-database';
 import { DEFAULT_PROFILE, validateCulinaryProfileInput } from './services/culinary-profile';
 import { PantryService, validatePantryItemInput } from './services/pantry';
+import { RecipeNotesService, validateRecipeNoteInput } from './services/recipe-notes';
 
 const app = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -56,6 +57,14 @@ function pantryEnabled(env: Bindings): boolean {
   return env.PANTRY_ENABLED !== 'false';
 }
 
+function recipeNotesEnabled(env: Bindings): boolean {
+  return env.RECIPE_NOTES_ENABLED !== 'false';
+}
+
+function isRecipeNotesPath(path: string): boolean {
+  return path === '/me/recipe-notes' || path.startsWith('/me/recipe-notes/');
+}
+
 function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string): string | undefined } }): boolean {
   const configuredToken = c.env.PASSKEY_SERVICE_TOKEN;
   if (c.env.ENVIRONMENT === 'development') return true;
@@ -70,11 +79,14 @@ app.use('*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization']
 // existing local workflow convenient; deployed environments require the shared
 // PASSKEY_SERVICE_TOKEN secret configured on both workers.
 app.use('*', async (c, next) => {
-  if (c.req.path === '/me/culinary-profile' || c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/')) {
+  if (c.req.path === '/me/culinary-profile' || c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/') || isRecipeNotesPath(c.req.path)) {
     if (c.req.path === '/me/culinary-profile' && !culinaryProfileEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     if ((c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/')) && !pantryEnabled(c.env)) {
+      return c.json({ success: false, message: 'Not Found' }, 404);
+    }
+    if (isRecipeNotesPath(c.req.path) && !recipeNotesEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     const auth = await authenticateRequest(c);
@@ -239,6 +251,75 @@ app.delete('/me/pantry-items/:item_id', async (c) => {
     return c.json({ success: true, affectedRows });
   } catch (error) {
     console.error('Error deleting pantry item:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Authenticated private recipe notes. Notes are scoped to the verified JWT
+// subject and stored beside the user's other data, so a note never mutates the
+// shared recipe record and is never visible to another user.
+app.get('/me/recipe-notes', async (c) => {
+  try {
+    const recipeId = c.req.query('recipeId') ?? c.req.query('recipe_id') ?? null;
+    const notes = await new RecipeNotesService(c.env.USER_DB).listNotes(c.get('userId'), recipeId);
+    return c.json({ success: true, data: notes });
+  } catch (error) {
+    console.error('Error listing recipe notes:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/me/recipe-notes', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.note && typeof body.note === 'object'
+      ? body.note
+      : body;
+    const errors = validateRecipeNoteInput(input);
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid recipe note', errors }, 400);
+
+    const note = await new RecipeNotesService(c.env.USER_DB).createNote(c.get('userId'), input);
+    if (!note) return c.json({ success: false, message: 'Failed to create recipe note' }, 500);
+    return c.json({ success: true, data: note }, 201);
+  } catch (error) {
+    console.error('Error creating recipe note:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.patch('/me/recipe-notes/:note_id', async (c) => {
+  try {
+    const noteId = Number(c.req.param('note_id'));
+    if (!Number.isSafeInteger(noteId) || noteId < 1) {
+      return c.json({ success: false, message: 'Invalid recipe note id' }, 400);
+    }
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.note && typeof body.note === 'object'
+      ? body.note
+      : body;
+    const errors = validateRecipeNoteInput(input, { partial: true });
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid recipe note', errors }, 400);
+
+    const note = await new RecipeNotesService(c.env.USER_DB).updateNote(c.get('userId'), noteId, input);
+    if (!note) return c.json({ success: false, message: 'Recipe note not found or no fields to update' }, 404);
+    return c.json({ success: true, data: note });
+  } catch (error) {
+    console.error('Error updating recipe note:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.delete('/me/recipe-notes/:note_id', async (c) => {
+  try {
+    const noteId = Number(c.req.param('note_id'));
+    if (!Number.isSafeInteger(noteId) || noteId < 1) {
+      return c.json({ success: false, message: 'Invalid recipe note id' }, 400);
+    }
+    const affectedRows = await new RecipeNotesService(c.env.USER_DB).deleteNote(c.get('userId'), noteId);
+    if (affectedRows === 0) return c.json({ success: false, message: 'Recipe note not found' }, 404);
+    return c.json({ success: true, affectedRows });
+  } catch (error) {
+    console.error('Error deleting recipe note:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });
@@ -845,6 +926,12 @@ app.get('/', (c) => {
         path: '/me/pantry-items',
         method: 'GET|POST|PATCH|DELETE',
         description: 'Manage authenticated user pantry inventory (Bearer JWT required)'
+      },
+      {
+        path: '/me/recipe-notes',
+        method: 'GET|POST|PATCH|DELETE',
+        description: 'Manage the authenticated user private recipe notes (Bearer JWT required)',
+        query: { recipeId: 'string? — narrow the listing to one recipe' }
       },
       {
         path: '/passkey-credentials/*',
