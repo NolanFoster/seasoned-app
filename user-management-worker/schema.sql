@@ -237,3 +237,21 @@ CREATE INDEX IF NOT EXISTS idx_pantry_items_user_expiry
     ON pantry_items(user_id, expires_on, created_at);
 CREATE INDEX IF NOT EXISTS idx_pantry_items_user_location
     ON pantry_items(user_id, location);
+
+-- Private per-user recipe notes. Existing databases should use
+-- migrations/004_add_recipe_notes.sql.
+CREATE TABLE IF NOT EXISTS recipe_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    recipe_id TEXT NOT NULL CHECK (length(trim(recipe_id)) BETWEEN 1 AND 200),
+    recipe_title TEXT,
+    body TEXT NOT NULL CHECK (length(trim(body)) BETWEEN 1 AND 4000),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_notes_user_recipe
+    ON recipe_notes(user_id, recipe_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recipe_notes_user_created
+    ON recipe_notes(user_id, created_at DESC);

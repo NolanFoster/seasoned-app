@@ -3467,3 +3467,366 @@ textarea:focus-visible {
     border-radius: 1.25rem 1.25rem 0 0;
   }
 }
+
+/* ── Recipe editor and private notes ─────────────────────────────────────── */
+/* Both sheets follow the pantry backdrop/sheet pattern so a recipe action
+   opens the same kind of surface the rest of the app uses. */
+
+.recipe-editor-backdrop,
+.recipe-notes-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(12, 19, 16, 0.48);
+  padding: 1rem;
+}
+
+.recipe-editor-sheet,
+.recipe-notes-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 38rem);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.25rem;
+  background: var(--surface, #18221d);
+  color: var(--text, #f2f5ef);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.35);
+}
+
+.recipe-notes-sheet {
+  width: min(100%, 34rem);
+}
+
+.recipe-editor-header,
+.recipe-notes-header,
+.recipe-notes-list-heading,
+.recipe-note,
+.recipe-note-actions,
+.recipe-editor-row-actions,
+.recipe-editor-actions {
+  display: flex;
+  align-items: center;
+}
+
+.recipe-editor-header,
+.recipe-notes-header {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.recipe-editor-header h2,
+.recipe-editor-header p,
+.recipe-notes-header h2,
+.recipe-notes-header p,
+.recipe-notes-list-heading h3,
+.recipe-notes-empty p,
+.recipe-note-copy p {
+  margin: 0;
+}
+
+.recipe-editor-header p,
+.recipe-notes-header p {
+  max-width: 28rem;
+  margin-top: 0.3rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.recipe-editor-close,
+.recipe-notes-close {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1.7rem;
+  cursor: pointer;
+}
+
+.recipe-editor-close:hover,
+.recipe-editor-close:focus-visible,
+.recipe-notes-close:hover,
+.recipe-notes-close:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.recipe-editor-status,
+.recipe-notes-status {
+  margin: 0 0 0.8rem;
+  color: var(--accent, #c8a96e);
+  font-size: 0.86rem;
+}
+
+.recipe-notes-status--offline {
+  color: #e6b477;
+}
+
+.recipe-editor-form,
+.recipe-notes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.recipe-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.recipe-editor-field,
+.recipe-notes-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.recipe-editor-field--wide {
+  width: 100%;
+}
+
+.recipe-editor-field input,
+.recipe-editor-field textarea,
+.recipe-editor-list input,
+.recipe-editor-list textarea,
+.recipe-notes-form textarea,
+.recipe-note-edit textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--text, #f2f5ef);
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.recipe-editor-field input:focus,
+.recipe-editor-field textarea:focus,
+.recipe-editor-list input:focus,
+.recipe-editor-list textarea:focus,
+.recipe-notes-form textarea:focus,
+.recipe-note-edit textarea:focus {
+  border-color: var(--accent, #c8a96e);
+  outline: 2px solid rgba(200, 169, 110, 0.25);
+}
+
+.recipe-editor-list {
+  min-width: 0;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+}
+
+.recipe-editor-list legend {
+  padding: 0 0.35rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.recipe-editor-list ol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 0.7rem;
+  padding-left: 1.4rem;
+}
+
+.recipe-editor-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.recipe-editor-row-actions {
+  flex: 0 0 auto;
+  gap: 0.2rem;
+}
+
+.recipe-editor-row-actions button,
+.recipe-note-actions button,
+.recipe-editor-actions button,
+.recipe-editor-add {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.recipe-editor-row-actions button:hover:not(:disabled),
+.recipe-note-actions button:hover,
+.recipe-editor-actions button:hover,
+.recipe-editor-add:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.recipe-editor-row-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.recipe-editor-actions {
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.recipe-editor-primary,
+.recipe-notes-primary {
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgba(200, 169, 110, 0.6);
+  border-radius: 0.7rem;
+  background: rgba(200, 169, 110, 0.14);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recipe-notes-primary {
+  align-self: flex-start;
+}
+
+.recipe-editor-primary:hover:not(:disabled),
+.recipe-editor-primary:focus-visible,
+.recipe-notes-primary:hover:not(:disabled),
+.recipe-notes-primary:focus-visible {
+  background: rgba(200, 169, 110, 0.24);
+}
+
+.recipe-editor-primary:disabled,
+.recipe-notes-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Labels the screen reader needs but the numbered list already conveys. */
+.recipe-editor-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.recipe-notes-list {
+  margin-top: 1.1rem;
+}
+
+.recipe-notes-list-heading {
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.82rem;
+}
+
+.recipe-notes-list ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-note {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.recipe-note-copy {
+  min-width: 0;
+}
+
+.recipe-note-copy p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.recipe-note-copy small {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.75rem;
+}
+
+.recipe-note-actions {
+  flex: 0 0 auto;
+  gap: 0.35rem;
+}
+
+.recipe-note-edit {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.recipe-notes-empty {
+  padding: 1rem;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 0.7rem;
+  color: var(--muted, #aab5ad);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.recipe-notes-empty strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--text, #f2f5ef);
+}
+
+/* Note count beside the Notes item in the recipe options menu. */
+.action-menu-count {
+  min-width: 1.25rem;
+  margin-left: auto;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(200, 169, 110, 0.22);
+  color: var(--accent, #c8a96e);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .recipe-editor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

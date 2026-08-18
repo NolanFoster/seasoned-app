@@ -18,10 +18,12 @@ function parseDurationToMinutes(val) {
   return mins
 }
 
-export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElevating, isAdapting = false, onSave, saveState, shareUrl }) {
+export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElevating, isAdapting = false, onSave, saveState, shareUrl, onEdit, onOpenNotes, noteCount = 0 }) {
   const elevateRecipeEnabled = useFlag('elevate-recipe')
   const recipeAdaptEnabled = useFlag('recipe-adapt')
   const mealPlannerEnabled = useFlag('meal-planner')
+  const recipeEditingEnabled = useFlag('recipe-editing')
+  const recipeNotesEnabled = useFlag('recipe-notes')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [cookBlocked, setCookBlocked] = useState(false)
@@ -58,6 +60,12 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
       && !hasUnresolvedAllergenConflict
       && !hasBlockedProcessHazard
   )
+
+  // Both actions address a recipe by id in a backing store, so they only make
+  // sense once the recipe is actually saved there.
+  const isStored = Boolean(recipe?.id) && saveState !== 'saving'
+  const canEdit = Boolean(recipeEditingEnabled && onEdit && isStored)
+  const canAnnotate = Boolean(recipeNotesEnabled && onOpenNotes && isStored)
 
   const recipeDurationMins =
     parseDurationToMinutes(recipe.prep_time) + parseDurationToMinutes(recipe.cook_time)
@@ -311,6 +319,37 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
                 </svg>
                 Add to Planner
               </button>
+              {recipeEditingEnabled && onEdit && (
+                <button
+                  className="action-menu-item"
+                  role="menuitem"
+                  onClick={() => { closeMenu({ restoreFocus: true }); onEdit() }}
+                  disabled={!canEdit}
+                  title={canEdit ? 'Edit this recipe' : 'Save this recipe before editing it'}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit
+                </button>
+              )}
+              {recipeNotesEnabled && onOpenNotes && (
+                <button
+                  className="action-menu-item"
+                  role="menuitem"
+                  onClick={() => { closeMenu({ restoreFocus: true }); onOpenNotes() }}
+                  disabled={!canAnnotate}
+                  title={canAnnotate ? 'Your private notes on this recipe' : 'Save this recipe before adding notes'}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"/>
+                  </svg>
+                  Notes
+                  {noteCount > 0 && <span className="action-menu-count">{noteCount}</span>}
+                </button>
+              )}
               <button
                 className={`action-menu-item${saveState === 'saved' ? ' saved' : saveState === 'error' ? ' error' : ''}`}
                 role="menuitem"

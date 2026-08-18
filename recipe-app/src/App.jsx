@@ -14,6 +14,9 @@ import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
 import { usePantry } from './usePantry.js'
 import PantryModal from './PantryModal.jsx'
+import RecipeEditor from './RecipeEditor.jsx'
+import RecipeNotesModal from './RecipeNotesModal.jsx'
+import { useRecipeNotes } from './useRecipeNotes.js'
 import { withAllergenSummary } from '../../shared/allergen-graph.js'
 import { analyzeProcessSafety } from '../../shared/food-process-safety.js'
 
@@ -300,6 +303,18 @@ export default function App() {
   const pantryEnabled = useFlag('pantry')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
+  const recipeEditingEnabled = useFlag('recipe-editing')
+  const recipeNotesEnabled = useFlag('recipe-notes')
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const recipeNotes = useRecipeNotes(auth.token, pantryUserId, activeRecipe?.id || '', recipeNotesEnabled)
+
+  // Both sheets hold a draft for the recipe they were opened on, so switching
+  // recipes underneath them closes them rather than retargeting the draft.
+  useEffect(() => {
+    setEditorOpen(false)
+    setNotesOpen(false)
+  }, [activeRecipe?.id])
 
   useEffect(() => {
     if (auth.loading) return
@@ -903,7 +918,40 @@ export default function App() {
     }
   }
 
+  // --- Edit ---
+  // The stored record uses the save worker's camelCase schema while the card
+  // works in the display shape, so the patch is translated on the way out and
+  // applied to the open card on the way back.
+  async function doUpdate(patch) {
+    if (!activeRecipe?.id) throw new Error('Save this recipe before editing it')
+    const res = await fetch(`${API_URL}/recipe/update`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipeId: activeRecipe.id,
+        updates: {
+          title: patch.name,
+          description: patch.description,
+          imageUrl: patch.image,
+          prepTime: patch.prep_time,
+          cookTime: patch.cook_time,
+          servings: patch.recipe_yield,
+          ingredients: patch.ingredients,
+          instructions: patch.instructions,
+        },
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || `Could not save your changes: ${res.status}`)
+    }
+    setActiveRecipe(annotateRecipeForProfile({ ...activeRecipe, ...patch }, culinaryProfile.profile))
+    setEditorOpen(false)
+  }
+
   function handleClose() {
+    setEditorOpen(false)
+    setNotesOpen(false)
     clearActiveRecipe()
     setGeneratingName('')
     setErrorMsg('')
@@ -1225,6 +1273,30 @@ export default function App() {
             onSave={() => doSave(activeRecipe)}
             saveState={saveState}
             shareUrl={shareUrl}
+            onEdit={recipeEditingEnabled ? () => setEditorOpen(true) : undefined}
+            onOpenNotes={recipeNotesEnabled ? () => setNotesOpen(true) : undefined}
+            noteCount={recipeNotes.notes.length}
+          />
+        )}
+
+        {editorOpen && activeRecipe && recipeEditingEnabled && (
+          <RecipeEditor
+            recipe={activeRecipe}
+            onSave={doUpdate}
+            onClose={() => setEditorOpen(false)}
+          />
+        )}
+
+        {notesOpen && activeRecipe && recipeNotesEnabled && (
+          <RecipeNotesModal
+            recipe={activeRecipe}
+            notes={recipeNotes.notes}
+            loading={recipeNotes.loading}
+            syncError={recipeNotes.syncError}
+            onAdd={recipeNotes.addNote}
+            onUpdate={recipeNotes.updateNote}
+            onRemove={recipeNotes.removeNote}
+            onClose={() => setNotesOpen(false)}
           />
         )}
 
