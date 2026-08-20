@@ -77,7 +77,7 @@ export class EmailService {
    * Send a verification email with OTP.
    */
   async sendVerificationEmail(to: string, otp: string, otpExpiryMinutes: number = 10): Promise<SendEmailResult> {
-    const subject = 'Seasoned - Verify Your Email Address';
+    const subject = `${otp} is your Seasoned verification code`;
     const htmlBody = this.generateVerificationEmailHTML(to, otp, otpExpiryMinutes);
     const textBody = this.generateVerificationEmailText(to, otp, otpExpiryMinutes);
 
@@ -165,6 +165,20 @@ export class EmailService {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
           }
+          .preheader {
+            display: none !important;
+            visibility: hidden;
+            opacity: 0;
+            color: transparent;
+            height: 0;
+            width: 0;
+            max-height: 0;
+            max-width: 0;
+            overflow: hidden;
+            mso-hide: all;
+            font-size: 1px;
+            line-height: 1px;
+          }
           .wrapper {
             padding: 28px 14px;
           }
@@ -217,7 +231,7 @@ export class EmailService {
             text-transform: uppercase;
           }
           .content {
-            padding: 28px 24px 14px;
+            padding: 24px 24px 14px;
           }
           .greeting {
             margin: 0 0 14px;
@@ -233,7 +247,13 @@ export class EmailService {
             font-weight: 600;
           }
           .otp-section {
-            margin: 24px 0;
+            margin: 0 0 24px;
+          }
+          .otp-expiry {
+            margin: 12px 0 0;
+            text-align: center;
+            color: #7a9b80;
+            font-size: 13px;
           }
           .otp-box {
             border-radius: 10px;
@@ -309,6 +329,7 @@ export class EmailService {
         </style>
       </head>
       <body>
+        <div class="preheader">${otp} is your Seasoned verification code. It expires in ${expiryMinutes} minutes.</div>
         <div class="wrapper">
           <div class="container">
             <div class="header">
@@ -324,16 +345,17 @@ export class EmailService {
               <p class="tagline">Omni Kitchen</p>
             </div>
             <div class="content">
-              <p class="greeting">Hello there! 👋</p>
-              <p>We received a request to verify your email address: <span class="email-highlight">${email}</span></p>
-              <p>Use the code below to sign in and continue finding your next meal.</p>
-
               <div class="otp-section">
                 <div class="otp-box">
                   <p class="otp-code">${otp}</p>
                   <p class="otp-label">Verification Code</p>
                 </div>
+                <p class="otp-expiry">Expires in ${expiryMinutes} minutes</p>
               </div>
+
+              <p class="greeting">Hello there! 👋</p>
+              <p>We received a request to verify your email address: <span class="email-highlight">${email}</span></p>
+              <p>Enter the code above to sign in and continue finding your next meal.</p>
 
               <div class="warning">
                 <strong>⚠️ Important:</strong> This code expires in ${expiryMinutes} minutes. If you did not request this, you can safely ignore this email.
@@ -361,15 +383,15 @@ export class EmailService {
    */
   private generateVerificationEmailText(email: string, otp: string, expiryMinutes: number): string {
     return `
+${otp} is your Seasoned verification code. It expires in ${expiryMinutes} minutes.
+
 Seasoned Recipe App - Email Verification
 
 Hello there! 👋
 
 We received a request to verify your email address: ${email}
 
-Please use the verification code below to complete your verification and start exploring delicious recipes:
-
-Verification Code: ${otp}
+Enter the verification code above to complete your verification and start exploring delicious recipes.
 
 IMPORTANT: This code will expire in ${expiryMinutes} minutes.
 If you didn't request this verification, please ignore this email.

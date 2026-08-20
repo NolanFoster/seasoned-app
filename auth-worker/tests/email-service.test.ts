@@ -107,13 +107,31 @@ describe('EmailService', () => {
 
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Seasoned - Verify Your Email Address',
+        subject: '123456 is your Seasoned verification code',
         htmlBody: expect.stringContaining('123456'),
         textBody: expect.stringContaining('123456')
       });
 
       expect(result.success).toBe(true);
       expect(result.messageId).toBe('test-id');
+    });
+
+    it('should lead the subject and both bodies with the code for notification previews', async () => {
+      const sendEmailSpy = vi.spyOn(emailService, 'sendEmail').mockResolvedValue({
+        success: true,
+        messageId: 'test-id'
+      });
+
+      await emailService.sendVerificationEmail('test@example.com', '123456', 10);
+
+      const { subject, htmlBody, textBody } = sendEmailSpy.mock.calls[0][0];
+
+      expect(subject.startsWith('123456')).toBe(true);
+      // Hidden preheader is the first thing the client picks up for the preview line
+      expect(htmlBody).toContain('<div class="preheader">123456 is your Seasoned verification code.');
+      expect(textBody?.startsWith('123456 is your Seasoned verification code')).toBe(true);
+      // Code block renders above the greeting
+      expect(htmlBody.indexOf('otp-code')).toBeLessThan(htmlBody.indexOf('class="greeting"'));
     });
 
     it('should handle different expiry times', async () => {
@@ -127,7 +145,7 @@ describe('EmailService', () => {
       expect(result.success).toBe(true);
       expect(sendEmailSpy).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: 'Seasoned - Verify Your Email Address',
+        subject: '123456 is your Seasoned verification code',
         htmlBody: expect.stringContaining('30 minutes'),
         textBody: expect.stringContaining('30 minutes')
       });
