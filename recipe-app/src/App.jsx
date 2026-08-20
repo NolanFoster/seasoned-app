@@ -905,6 +905,13 @@ export default function App() {
         // 409 = already exists — treat as saved
         if (res.status === 409) {
           if (body.id) setSavedRecipeId(body.id)
+          if (body.data) {
+            setActiveRecipe({
+              ...activeRecipe,
+              ...body.data,
+              image: body.data.imageUrl || body.data.image || activeRecipe.image
+            })
+          }
           setSaveState('saved')
           return
         }
@@ -912,6 +919,13 @@ export default function App() {
       }
       const data = await res.json().catch(() => ({}))
       if (data.id) setSavedRecipeId(data.id)
+      if (data.data) {
+        setActiveRecipe({
+          ...activeRecipe,
+          ...data.data,
+          image: data.data.imageUrl || data.data.image || activeRecipe.image
+        })
+      }
       setSaveState('saved')
     } catch (e) {
       setSaveState('error')
