@@ -2,7 +2,7 @@
  * Grocery List Handler
  *
  * Accepts a POST request with { ingredients: string[] }, sends them to the
- * Llama 3.2 3B Instruct LLM, and returns a deduplicated, categorized grocery list.
+ * grocery aggregation LLM, and returns a deduplicated, categorized grocery list.
  *
  * Response shape:
  *   {
@@ -14,9 +14,8 @@
  */
 
 import { OpikClient } from '../opik-client.js';
-
-/** Workers AI model id for grocery aggregation (keep in sync with env.AI.run below). */
-const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
+import { GROCERY_LLM_MODEL } from '../models.js';
+import { extractAiContent } from '../../../shared/workers-ai.js';
 
 /**
  * User message body for grocery aggregation. Must match `scripts/grocery_opik_helpers.py` BASELINE_PROMPT;
@@ -120,7 +119,7 @@ function arrayFromParsedCategories(parsed) {
  * Attempts to extract and parse a JSON array from raw LLM output.
  * Handles markdown fences, preamble text, and non-string bindings (parsed object).
  *
- * @param {unknown} raw - String or parsed object from env.AI.run().response
+ * @param {unknown} raw - String or parsed object extracted from the env.AI.run() result
  * @returns {Array} Parsed category array
  * @throws {Error} If no valid JSON array can be found
  */
@@ -307,7 +306,7 @@ export async function handleGroceryList(request, env, corsHeaders) {
       temperature: 0.3
     });
     llmEndIso = new Date().toISOString();
-    rawText = response?.response ?? '';
+    rawText = extractAiContent(response) ?? '';
     console.log(`[grocery-list] LLM responded in ${Date.now() - llmWallStart}ms`);
   } catch (err) {
     console.error('[grocery-list] LLM call failed:', err?.message ?? err);

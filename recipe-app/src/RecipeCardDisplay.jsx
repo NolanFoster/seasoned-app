@@ -155,7 +155,7 @@ export function ProcessSafetyNotice({ summary, className = '' }) {
 }
 
 const provenanceMethodLabels = {
-  'llama-ai': 'LLaMA generation',
+  'llama-ai': 'AI generated',
   'llama-ai-elevate': 'AI elevated',
   'llama-ai-recipe-adapt': 'AI adapted',
   'mock-ai': 'Local adaptation preview',

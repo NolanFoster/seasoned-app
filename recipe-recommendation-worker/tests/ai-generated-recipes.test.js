@@ -9,6 +9,7 @@ import {
   getRecipeRecommendations
 } from '../src/recommendation-service.js';
 import { generateRecipeImages } from '../src/utils/image-generator.js';
+import { RECOMMENDATION_LLM_MODEL } from '../src/models.js';
 
 // Mock the shared KV storage library
 vi.mock('../../shared/kv-storage.js', () => ({
@@ -123,7 +124,7 @@ describe('AI-Generated Recipes Functions', () => {
       const result = await generateAIOnlyRecipes('San Francisco', '2024-07-15', 3, mockEnv, requestId);
 
       expect(mockAI.run).toHaveBeenCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Generate 3 creative and unique recipe recommendations'),
           max_tokens: 1000

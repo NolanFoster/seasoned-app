@@ -127,7 +127,7 @@ describe('Recipe provenance and quality bar', () => {
     }} />)
 
     const provenance = screen.getByRole('region', { name: 'How this was made' })
-    expect(provenance).toHaveTextContent('LLaMA generation')
+    expect(provenance).toHaveTextContent('AI generated')
     expect(provenance).toHaveTextContent('96/100')
     expect(provenance).toHaveTextContent('Checks passed')
     expect(provenance).toHaveTextContent('@cf/meta/llama-4-scout-17b-16e-instruct')

@@ -1,4 +1,6 @@
 import { OpikClient } from '../opik-client.js';
+import { RECIPE_LLM_MODEL, EMBEDDING_MODEL } from '../models.js';
+import { extractAiObject } from '../../../shared/workers-ai.js';
 import { getRecipeFromKV } from '../../../shared/kv-storage.js';
 import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
 import {
@@ -198,7 +200,7 @@ export async function handleGenerate(request, env, corsHeaders) {
       generationMethod: requestBody.elevate === true
         ? (finalRecipe.elevationMethod || 'llama-ai-elevate')
         : (finalRecipe.generationMethod || 'llama-ai'),
-      model: env.AI ? '@cf/meta/llama-4-scout-17b-16e-instruct' : null,
+      model: env.AI ? RECIPE_LLM_MODEL : null,
       hardAllergens: appliedConstraints.hardAllergens,
       appliedConstraints,
       similarRecipeIds: finalRecipe.similarRecipeIds || []
@@ -447,7 +449,7 @@ async function generateRecipeWithAI(requestData, env) {
             { prompt: operationData.prompt },
             { response: operationData.llmResponse, structuredRecipe: generatedRecipe },
             {
-              model: '@cf/meta/llama-4-scout-17b-16e-instruct',
+              model: RECIPE_LLM_MODEL,
               provider: 'cloudflare',
               metadata: {
                 similarRecipesCount: similarRecipes.length,
@@ -557,7 +559,7 @@ function buildQueryText(requestData) {
  */
 async function generateQueryEmbedding(text, aiBinding) {
   try {
-    const response = await aiBinding.run('@cf/baai/bge-small-en-v1.5', {
+    const response = await aiBinding.run(EMBEDDING_MODEL, {
       text: text
     });
 
@@ -708,7 +710,7 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   };
 
   // Generate recipe using LLaMA with structured JSON output
-  const response = await aiBinding.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+  const response = await aiBinding.run(RECIPE_LLM_MODEL, {
     messages: [
       {
         role: 'system',
@@ -749,24 +751,20 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
     temperature: 0.65
   });
 
-  if (!response || !response.response) {
-    throw new Error('Invalid response from LLaMA model');
-  }
-
-  // Store LLM response for tracing
-  operationData.llmResponse = response.response;
-
-  // Debug: Print raw LLM response
-  console.log('Raw LLM response:', JSON.stringify(response.response, null, 2));
-
   // Parse the JSON response and flatten any nested structure
-  let structuredRecipe = response.response;
+  let structuredRecipe = extractAiObject(response);
 
   // Validate that the response is an object
   if (!structuredRecipe || typeof structuredRecipe !== 'object') {
     console.error('Invalid AI response for recipe generation:', structuredRecipe);
-    throw new Error(`AI returned invalid response type: ${typeof structuredRecipe}. Expected object.`);
+    throw new Error('Invalid response from the recipe generation model');
   }
+
+  // Store LLM response for tracing
+  operationData.llmResponse = structuredRecipe;
+
+  // Debug: Print raw LLM response
+  console.log('Raw LLM response:', JSON.stringify(structuredRecipe, null, 2));
 
   // Handle nested recipe structure (flatten recipe.recipe to just recipe)
   if (structuredRecipe.recipe && typeof structuredRecipe.recipe === 'object') {
@@ -1272,7 +1270,7 @@ Please provide the elevated version following the same JSON structure, with enha
   let response;
   try {
     console.log('Making AI call for recipe elevation...');
-    response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+    response = await env.AI.run(RECIPE_LLM_MODEL, {
       messages: [
         {
           role: 'system',
@@ -1301,17 +1299,13 @@ Please provide the elevated version following the same JSON structure, with enha
     throw new Error(`AI elevation failed: ${aiError.message || aiError.toString()}`);
   }
 
-  if (!response || !response.response) {
-    throw new Error('Invalid response from LLaMA model for recipe elevation');
-  }
-
   // Parse the JSON response
-  let elevatedRecipe = response.response;
+  let elevatedRecipe = extractAiObject(response);
 
   // Validate that the response is an object
   if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
     console.error('Invalid AI response for recipe elevation:', elevatedRecipe);
-    throw new Error(`AI returned invalid response type: ${typeof elevatedRecipe}. Expected object.`);
+    throw new Error('Invalid response from the recipe generation model for recipe elevation');
   }
 
   // Handle nested recipe structure (flatten recipe.recipe to just recipe)

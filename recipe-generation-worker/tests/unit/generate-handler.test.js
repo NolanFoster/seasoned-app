@@ -16,6 +16,7 @@ vi.mock('opik', () => ({
 
 import { handleGenerate } from '../../src/handlers/generate-handler.js';
 import { mockEnv, mockEnvWithOpik, createPostRequest, assertCorsHeaders, assertJsonResponse } from '../setup.js';
+import { RECIPE_LLM_MODEL } from '../../src/models.js';
 
 describe('Generate Handler - Unit Tests', () => {
   const corsHeaders = {
@@ -58,7 +59,7 @@ describe('Generate Handler - Unit Tests', () => {
         return Promise.resolve({
           data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
         });
-      } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+      } else if (model === RECIPE_LLM_MODEL) {
         // Extract request info from the user prompt to make dynamic responses
         const userMessage = params.messages?.find(m => m.role === 'user')?.content || '';
 
@@ -199,7 +200,7 @@ describe('Generate Handler - Unit Tests', () => {
 
       // Verify AI calls were made
       expect(mockAI.run).toHaveBeenCalledWith('@cf/baai/bge-small-en-v1.5', expect.any(Object));
-      expect(mockAI.run).toHaveBeenCalledWith('@cf/meta/llama-4-scout-17b-16e-instruct', expect.any(Object));
+      expect(mockAI.run).toHaveBeenCalledWith(RECIPE_LLM_MODEL, expect.any(Object));
       expect(mockVectors.query).toHaveBeenCalled();
     });
 
@@ -223,7 +224,7 @@ describe('Generate Handler - Unit Tests', () => {
 
       expect(response.status).toBe(200);
       expect(mockAI.run).toHaveBeenCalledWith(
-        '@cf/meta/llama-4-scout-17b-16e-instruct',
+        RECIPE_LLM_MODEL,
         expect.objectContaining({
           messages: expect.arrayContaining([
             expect.objectContaining({
@@ -234,7 +235,7 @@ describe('Generate Handler - Unit Tests', () => {
         })
       );
 
-      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === '@cf/meta/llama-4-scout-17b-16e-instruct');
+      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === RECIPE_LLM_MODEL);
       const prompt = llamaCall[1].messages.find(({ role }) => role === 'user').content;
       expect(prompt).toContain('serves 6 people');
       expect(prompt).toContain('italian cuisine');
@@ -275,7 +276,7 @@ describe('Generate Handler - Unit Tests', () => {
 
       const response = await handleGenerate(createPostRequest('/generate', requestBody), enhancedMockEnv, corsHeaders);
       const data = await response.json();
-      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === '@cf/meta/llama-4-scout-17b-16e-instruct');
+      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === RECIPE_LLM_MODEL);
       const prompt = llamaCall[1].messages.find(({ role }) => role === 'user').content;
 
       expect(prompt).toContain('using stovetop cooking method');
@@ -1024,7 +1025,7 @@ describe('Generate Handler - Unit Tests', () => {
               return Promise.resolve({
                 data: [[0.1, 0.2, 0.3, 0.4, 0.5]] // Mock embedding
               });
-            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+            } else if (model === RECIPE_LLM_MODEL) {
               // Check if this is an elevation call by looking for the culinary expert prompt
               const systemMessage = _params.messages?.find(m => m.role === 'system')?.content || '';
               if (systemMessage.includes('expert culinary teacher')) {
@@ -1137,7 +1138,7 @@ describe('Generate Handler - Unit Tests', () => {
               return Promise.resolve({
                 data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
               });
-            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+            } else if (model === RECIPE_LLM_MODEL) {
               return Promise.resolve({
                 response: {
                   name: 'Test Recipe',
@@ -1186,7 +1187,7 @@ describe('Generate Handler - Unit Tests', () => {
               return Promise.resolve({
                 data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
               });
-            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+            } else if (model === RECIPE_LLM_MODEL) {
               return Promise.resolve({
                 response: {
                   name: 'Test Recipe 2',
@@ -1235,7 +1236,7 @@ describe('Generate Handler - Unit Tests', () => {
               return Promise.resolve({
                 data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
               });
-            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+            } else if (model === RECIPE_LLM_MODEL) {
               return Promise.resolve({
                 response: {
                   name: 'Test Recipe 3',
@@ -1284,7 +1285,7 @@ describe('Generate Handler - Unit Tests', () => {
               return Promise.resolve({
                 data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
               });
-            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+            } else if (model === RECIPE_LLM_MODEL) {
               return Promise.resolve({
                 response: {
                   name: 'Test Recipe 4',
@@ -1423,7 +1424,7 @@ describe('Generate Handler - Unit Tests', () => {
               return Promise.resolve({
                 data: [[0.1, 0.2, 0.3, 0.4, 0.5]]
               });
-            } else if (model === '@cf/meta/llama-4-scout-17b-16e-instruct') {
+            } else if (model === RECIPE_LLM_MODEL) {
               return Promise.resolve({
                 response: {
                   name: 'Complex Test Recipe',

@@ -1,4 +1,6 @@
-// Recipe Clipper Worker using Cloudflare Workers AI with GPT-4o-mini model
+// Recipe Clipper Worker using Cloudflare Workers AI
+import { CLIPPER_LLM_MODEL } from './models.js';
+import { extractAiText } from '../../shared/workers-ai.js';
 import {
   generateRecipeId,
   getRecipeFromKV
@@ -1549,8 +1551,7 @@ ${truncatedHtml}`;
 
     console.log('Calling Cloudflare AI with prompt length:', prompt.length);
     
-    // Use faster Llama 3.1 8B model instead of GPT-OSS-20B
-    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const response = await env.AI.run(CLIPPER_LLM_MODEL, {
       prompt: prompt,
       max_tokens: 1024  // Limit tokens for faster response
     });
@@ -1914,6 +1915,41 @@ ${truncatedHtml}`;
 
 
 // Extract recipe data from AI response (for testing)
+/**
+ * Unwrap a recipe that arrived wrapped in envelope layers.
+ *
+ * Models return the recipe JSON at different depths: directly, as a stringified
+ * `response` field, or nested under `source.output[0].content[0].text`. Peel those
+ * layers until the payload stops looking like an envelope, so the caller only ever
+ * sees the recipe object itself.
+ *
+ * @param {unknown} data Parsed JSON from an AI response.
+ * @returns {unknown} The innermost payload.
+ */
+function unwrapNestedRecipeJson(data) {
+  let current = data;
+
+  // Bounded so a self-referential or pathological payload cannot spin here.
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (!current || typeof current !== 'object') return current;
+
+    const nestedText = current.source?.output?.[0]?.content?.[0]?.text;
+    const next = typeof nestedText === 'string'
+      ? nestedText
+      : typeof current.response === 'string' ? current.response : null;
+    if (next === null) return current;
+
+    try {
+      current = JSON.parse(next);
+    } catch (parseError) {
+      // Not an envelope after all -- keep the layer we already parsed.
+      return current;
+    }
+  }
+
+  return current;
+}
+
 function extractRecipeFromAIResponse(response, pageUrl) {
   try {
     if (!response || typeof response !== 'object') {
@@ -1929,9 +1965,9 @@ function extractRecipeFromAIResponse(response, pageUrl) {
           response.source.output[0].content[0].text) {
         content = response.source.output[0].content[0].text;
       } else {
-        // Fallback: try to find any text content in the response
-        const responseStr = JSON.stringify(response);
-        content = responseStr;
+        // Standard Workers AI shapes; falls back to the raw payload so the JSON
+        // scan below still gets a chance on an unrecognised structure.
+        content = extractAiText(response) ?? JSON.stringify(response);
       }
     } catch (extractError) {
       throw new Error('Failed to extract content from AI response structure');
@@ -1949,27 +1985,7 @@ function extractRecipeFromAIResponse(response, pageUrl) {
     try {
       // Since we're forcing the AI to return valid JSON, try parsing the entire content first
       try {
-        recipeData = JSON.parse(content);
-        
-        // Check if the parsed data has a 'response' field with stringified JSON
-        if (recipeData && typeof recipeData.response === 'string') {
-          try {
-            const innerJson = JSON.parse(recipeData.response);
-            // Check if this has the source.output structure
-            if (innerJson && innerJson.source && innerJson.source.output && 
-                innerJson.source.output[0] && innerJson.source.output[0].content && 
-                innerJson.source.output[0].content[0] && innerJson.source.output[0].content[0].text) {
-              const nestedText = innerJson.source.output[0].content[0].text;
-              // Parse the nested text as JSON
-              recipeData = JSON.parse(nestedText);
-            } else {
-              // Use the inner JSON directly
-              recipeData = innerJson;
-            }
-          } catch (innerParseError) {
-            // Keep the original parsed data
-          }
-        }
+        recipeData = unwrapNestedRecipeJson(JSON.parse(content));
       } catch (directParseError) {
         // First, try to extract JSON from markdown code blocks
         const codeBlockMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);

@@ -4,6 +4,7 @@
 
 import { log } from '../../../shared/utility-functions.js';
 import { metrics } from '../shared-utilities.js';
+import { RECOMMENDATION_LLM_MODEL } from '../models.js';
 
 export async function handleHealth(env, corsHeaders, requestId) {
   const startTime = Date.now();
@@ -18,7 +19,7 @@ export async function handleHealth(env, corsHeaders, requestId) {
     if (aiAvailable) {
       try {
         // Simple test to verify AI binding works
-        await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        await env.AI.run(RECOMMENDATION_LLM_MODEL, {
           prompt: 'Say "OK"',
           max_tokens: 5
         });

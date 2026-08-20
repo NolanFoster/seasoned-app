@@ -277,7 +277,10 @@ The saved file uses `{input_text}` placeholders (optimizer format). If your Opik
 ### Useful Environment Variables
 
 - `OPIK_GROCERY_DATASET`: dataset name override
-- `OPIK_GROCERY_MODEL`: model string override (defaults to `openrouter/meta-llama/llama-3.2-3b-instruct`)
+- `OPIK_GROCERY_MODEL`: model string override (defaults to `openrouter/meta-llama/llama-3.2-3b-instruct`).
+  Note: production grocery aggregation now runs `@cf/ibm-granite/granite-4.0-h-micro` (see
+  `src/models.js`), so this default no longer mirrors production. Point it at a Granite 4.0
+  mirror before treating eval scores as production-representative.
 - `OPIK_GROCERY_CANDIDATE`: candidate prompt text override (alternative to file)
 - `OPIK_GROCERY_INPUT_KEY`: prompt variable field name override (defaults to `input`)
 - `OPENROUTER_API_KEY`: required when using an `openrouter/` model

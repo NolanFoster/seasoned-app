@@ -13,6 +13,7 @@ import {
   extractCookingTerms
 } from '../src/index.js';
 import { metrics } from '../src/index.js';
+import { RECOMMENDATION_LLM_MODEL } from '../src/models.js';
 
 // Create error categorization function for testing
 function categorizeError(error, context = {}) {
@@ -226,7 +227,7 @@ describe('Health Check Error Scenarios', () => {
     
     // Verify AI was called for health check
     expect(mockEnvWithHealthyAI.AI.run).toHaveBeenCalledWith(
-      '@cf/meta/llama-3.1-8b-instruct',
+      RECOMMENDATION_LLM_MODEL,
       expect.objectContaining({
         prompt: 'Say "OK"',
         max_tokens: 5

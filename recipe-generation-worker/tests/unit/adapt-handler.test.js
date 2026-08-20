@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handleAdapt, mockAdaptRecipe, normalizeAdaptedRecipe } from '../../src/handlers/adapt-handler.js';
 import { createPostRequest } from '../setup.js';
+import { RECIPE_LLM_MODEL } from '../../src/models.js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,11 +109,48 @@ describe('RecipeAdapt handler', () => {
     expect(response.status).toBe(200);
     expect(data.recipe.name).toBe('Adapted Pasta');
     expect(data.recipe.substitutions[0].to).toBe('rice noodles');
-    expect(run).toHaveBeenCalledWith('@cf/meta/llama-4-scout-17b-16e-instruct', expect.objectContaining({
+    expect(run).toHaveBeenCalledWith(RECIPE_LLM_MODEL, expect.objectContaining({
       response_format: expect.objectContaining({
         json_schema: expect.objectContaining({ name: 'recipe_adaptation' })
       })
     }));
+  });
+
+  it('reads an adaptation returned in the OpenAI-compatible chat completion shape', async () => {
+    // gpt-oss returns choices[0].message.content when called with `messages`,
+    // rather than the native `{ response }` shape.
+    const run = vi.fn().mockResolvedValue({
+      id: 'chatcmpl-1',
+      object: 'chat.completion',
+      choices: [{
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: JSON.stringify({
+            name: 'Adapted Pasta',
+            description: 'A better-fit pasta.',
+            ingredients: ['8 oz rice noodles'],
+            instructions: ['Cook the noodles.'],
+            substitutions: [{ from: 'pasta', to: 'rice noodles', reason: 'Avoid wheat.' }],
+            adaptationNotes: ['The Italian flavor profile remains intact.']
+          })
+        }
+      }]
+    });
+
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        recipe: baseRecipe,
+        constraints: { dietary: ['gluten_free'] }
+      }),
+      { ENVIRONMENT: 'test', AI: { run } },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.name).toBe('Adapted Pasta');
+    expect(data.recipe.substitutions[0].to).toBe('rice noodles');
   });
 
   it('fails closed when an AI adaptation contains a hard allergen', async () => {

@@ -2,6 +2,8 @@ import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../s
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
 import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
+import { RECIPE_LLM_MODEL } from '../models.js';
+import { extractAiContent } from '../../../shared/workers-ai.js';
 
 const ADAPT_CONSTRAINT_FIELDS = [
   'dietary',
@@ -226,7 +228,7 @@ Preserve these aspects where possible: flavor profile, cuisine, core protein, re
 Hard allergens to exclude: ${(constraints.hardAllergens || []).join(', ') || 'none'}.
 Return substitutions as objects with from, to, and reason fields. Return adaptationNotes as concise strings.`;
 
-  const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+  const response = await env.AI.run(RECIPE_LLM_MODEL, {
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
@@ -271,10 +273,11 @@ Return substitutions as objects with from, to, and reason fields. Return adaptat
     temperature: 0.35
   });
 
-  if (!response || response.response === undefined) {
-    throw new Error('Invalid response from LLaMA model for recipe adaptation');
+  const content = extractAiContent(response);
+  if (content === null) {
+    throw new Error('Invalid response from the recipe generation model for recipe adaptation');
   }
-  return normalizeAdaptedRecipe(response.response, baseRecipe);
+  return normalizeAdaptedRecipe(content, baseRecipe);
 }
 
 /**
@@ -331,7 +334,7 @@ export async function handleAdapt(request, env, corsHeaders) {
     finalRecipe = withQualityMetadata(finalRecipe, {
       source: 'adapted',
       generationMethod: adaptationMethod,
-      model: env.AI ? '@cf/meta/llama-4-scout-17b-16e-instruct' : null,
+      model: env.AI ? RECIPE_LLM_MODEL : null,
       hardAllergens: constraints.hardAllergens,
       appliedConstraints: constraints,
       similarRecipeIds: []

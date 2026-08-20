@@ -467,6 +467,33 @@ await test('extractRecipeFromAIResponse handles object fields', async () => {
   assert(result.recipeInstructions[1].text === 'Step 2');
 });
 
+await test('extractRecipeFromAIResponse reads the OpenAI-compatible chat completion shape', async () => {
+  // Gemma 4 and other models on the OpenAI-compatible layer return the recipe at
+  // choices[0].message.content rather than in a `response` field.
+  const response = {
+    id: 'chatcmpl-1',
+    object: 'chat.completion',
+    choices: [{
+      index: 0,
+      message: {
+        role: 'assistant',
+        content: JSON.stringify({
+          name: 'Chat Completion Recipe',
+          image: 'https://example.com/image.jpg',
+          recipeIngredient: ['ingredient 1'],
+          recipeInstructions: ['Step 1', 'Step 2']
+        })
+      }
+    }]
+  };
+
+  const result = extractRecipeFromAIResponse(response, 'https://example.com');
+  assert(result !== null);
+  assert(result.name === 'Chat Completion Recipe');
+  assert(result.recipeIngredient.length === 1);
+  assert(result.recipeInstructions.length === 2);
+});
+
 await test('extractRecipeFromAIResponse validates required fields', async () => {
   const response = {
     response: JSON.stringify({

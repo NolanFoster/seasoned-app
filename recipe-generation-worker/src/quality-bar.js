@@ -1,6 +1,12 @@
 import { analyzeRecipeAllergens } from '../../shared/allergen-graph.js';
 
-const DEFAULT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
+/**
+ * Model that produced historic `llama-*` recipes. Used only to attribute stored
+ * records that predate explicit `model` provenance -- it must NOT track the current
+ * generation model (see src/models.js), or old recipes get relabelled with a model
+ * that never generated them.
+ */
+const LEGACY_LLAMA_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 const STOP_WORDS = new Set([
   'and', 'with', 'from', 'into', 'your', 'this', 'that', 'for', 'the', 'use',
   'cup', 'cups', 'tsp', 'tbsp', 'tablespoon', 'tablespoons', 'teaspoon',
@@ -253,7 +259,7 @@ export function buildRecipeProvenance(recipe, {
   return {
     source,
     generationMethod,
-    model: model || recipe.model || (generationMethod.startsWith('llama-') ? DEFAULT_MODEL : null),
+    model: model || recipe.model || (generationMethod.startsWith('llama-') ? LEGACY_LLAMA_MODEL : null),
     generatedAt: recipe.adaptedAt || recipe.generatedAt || new Date().toISOString(),
     appliedConstraints,
     similarRecipeIds: Array.isArray(similarRecipeIds)

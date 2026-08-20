@@ -7,6 +7,8 @@ import { metrics, sendAnalytics } from './shared-utilities.js';
 import { getRecipeFromKV as getRecipeFromKVShared } from '../../shared/kv-storage.js';
 import { generateRecipeImages } from './utils/image-generator.js';
 import { isRecipeSafe, withAllergenSummary } from '../../shared/allergen-graph.js';
+import { RECOMMENDATION_LLM_MODEL } from './models.js';
+import { extractAiText } from '../../shared/workers-ai.js';
 
 // Generate relevant ingredients from dish name for better image generation
 function generateIngredientsFromName(dishName) {
@@ -202,7 +204,7 @@ Make the categories relevant to the season, location, and context. Be specific w
   try {
     log('debug', 'Sending request to Cloudflare AI', {
       requestId,
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: RECOMMENDATION_LLM_MODEL,
       hasLocation,
       season,
       month,
@@ -211,18 +213,18 @@ Make the categories relevant to the season, location, and context. Be specific w
     });
     
     metrics.increment('ai_requests', 1, { 
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: RECOMMENDATION_LLM_MODEL,
       hasLocation: (!!location).toString(),
       season
     });
 
-    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const response = await env.AI.run(RECOMMENDATION_LLM_MODEL, {
       prompt,
       max_tokens: 1000
     });
 
     const aiDuration = Date.now() - aiStartTime;
-    metrics.timing('ai_request_duration', aiDuration, { model: '@cf/meta/llama-3.1-8b-instruct' });
+    metrics.timing('ai_request_duration', aiDuration, { model: RECOMMENDATION_LLM_MODEL });
     
     log('info', 'Cloudflare AI response received', { 
       requestId,
@@ -235,24 +237,14 @@ Make the categories relevant to the season, location, and context. Be specific w
     if (!response || typeof response !== 'object') {
       metrics.increment('ai_errors', 1, { 
         type: 'invalid_response',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error('Invalid response from Cloudflare AI');
     }
 
     // Extract content from response
-    let content;
-    if (response.response) {
-      content = response.response;
-    } else if (response.result) {
-      content = response.result;
-    } else if (response.text) {
-      content = response.text;
-    } else if (response.content) {
-      content = response.content;
-    } else if (typeof response === 'string') {
-      content = response;
-    } else {
+    let content = extractAiText(response);
+    if (!content) {
       log('warn', 'Unexpected AI response structure', {
         requestId,
         responseKeys: Object.keys(response),
@@ -260,7 +252,7 @@ Make the categories relevant to the season, location, and context. Be specific w
       });
       metrics.increment('ai_errors', 1, { 
         type: 'unexpected_structure',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error('Unexpected response structure from Cloudflare AI');
     }
@@ -284,7 +276,7 @@ Make the categories relevant to the season, location, and context. Be specific w
       const parseDuration = Date.now() - parseStartTime;
       metrics.timing('ai_response_parse_duration', parseDuration);
       metrics.increment('ai_success', 1, { 
-        model: '@cf/meta/llama-3.1-8b-instruct',
+        model: RECOMMENDATION_LLM_MODEL,
         hasLocation: (!!location).toString(),
         season
       });
@@ -298,7 +290,7 @@ Make the categories relevant to the season, location, and context. Be specific w
     } catch (parseError) {
       metrics.increment('ai_errors', 1, { 
         type: 'parse_error',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error(`Could not parse AI response: ${parseError.message}`);
     }
@@ -354,7 +346,7 @@ Make the categories relevant to the season, location, and context. Be specific w
       location: location ?? null,
       date,
       season,
-      aiModel: '@cf/meta/llama-3.1-8b-instruct',
+      aiModel: RECOMMENDATION_LLM_MODEL,
       processingMetrics: {
         totalDuration: duration,
         aiDuration,
@@ -362,7 +354,7 @@ Make the categories relevant to the season, location, and context. Be specific w
       }
     };
   } catch (error) {
-    const modelName = '@cf/meta/llama-3.1-8b-instruct'; // Define modelName for error handling
+    const modelName = RECOMMENDATION_LLM_MODEL; // Define modelName for error handling
     
     metrics.increment('ai_request_errors', 1, { 
       reason: 'ai_error',
@@ -442,7 +434,7 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
     
     log('debug', 'Sending AI-only recipe request to Cloudflare AI', {
       requestId,
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: RECOMMENDATION_LLM_MODEL,
       hasLocation,
       season,
       month,
@@ -451,18 +443,18 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
     });
     
     metrics.increment('ai_only_requests', 1, { 
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: RECOMMENDATION_LLM_MODEL,
       hasLocation: (!!location).toString(),
       season
     });
 
-    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const response = await env.AI.run(RECOMMENDATION_LLM_MODEL, {
       prompt,
       max_tokens: 1000
     });
 
     const aiDuration = Date.now() - aiStartTime;
-    metrics.timing('ai_only_request_duration', aiDuration, { model: '@cf/meta/llama-3.1-8b-instruct' });
+    metrics.timing('ai_only_request_duration', aiDuration, { model: RECOMMENDATION_LLM_MODEL });
     
     log('info', 'AI-only recipe response received', { 
       requestId,
@@ -475,24 +467,14 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
     if (!response) {
       metrics.increment('ai_only_errors', 1, { 
         type: 'invalid_response',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error('Invalid response from Cloudflare AI');
     }
 
     // Extract content from response
-    let content;
-    if (response.response) {
-      content = response.response;
-    } else if (response.result) {
-      content = response.result;
-    } else if (response.text) {
-      content = response.text;
-    } else if (response.content) {
-      content = response.content;
-    } else if (typeof response === 'string') {
-      content = response;
-    } else {
+    let content = extractAiText(response);
+    if (!content) {
       log('warn', 'Unexpected AI-only response structure', {
         requestId,
         responseKeys: Object.keys(response),
@@ -500,7 +482,7 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
       });
       metrics.increment('ai_only_errors', 1, { 
         type: 'unexpected_structure',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error('Unexpected response structure from Cloudflare AI');
     }
@@ -537,7 +519,7 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
       const parseDuration = Date.now() - parseStartTime;
       metrics.timing('ai_only_response_parse_duration', parseDuration);
       metrics.increment('ai_only_success', 1, { 
-        model: '@cf/meta/llama-3.1-8b-instruct',
+        model: RECOMMENDATION_LLM_MODEL,
         hasLocation: (!!location).toString(),
         season
       });
@@ -588,7 +570,7 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
     } catch (parseError) {
       metrics.increment('ai_only_errors', 1, { 
         type: 'parse_error',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error(`Could not parse AI-only response: ${parseError.message}`);
     }
@@ -604,7 +586,7 @@ Make the dishes creative, unique, and specific. Be descriptive with dish names.`
     
     metrics.increment('ai_only_request_errors', 1, { 
       reason: 'ai_error',
-      model: '@cf/meta/llama-3.1-8b-instruct'
+      model: RECOMMENDATION_LLM_MODEL
     });
     
     // Return empty array on error
@@ -670,7 +652,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
     
     log('debug', 'Sending AI-only per-category recipe request to Cloudflare AI', {
       requestId,
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: RECOMMENDATION_LLM_MODEL,
       hasLocation,
       season,
       month,
@@ -680,18 +662,18 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
     });
     
     metrics.increment('ai_only_requests', 1, { 
-      model: '@cf/meta/llama-3.1-8b-instruct',
+      model: RECOMMENDATION_LLM_MODEL,
       hasLocation: (!!location).toString(),
       season
     });
 
-    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const response = await env.AI.run(RECOMMENDATION_LLM_MODEL, {
       prompt,
       max_tokens: 1500
     });
 
     const aiDuration = Date.now() - aiStartTime;
-    metrics.timing('ai_only_request_duration', aiDuration, { model: '@cf/meta/llama-3.1-8b-instruct' });
+    metrics.timing('ai_only_request_duration', aiDuration, { model: RECOMMENDATION_LLM_MODEL });
     
     log('info', 'AI-only per-category recipe response received', { 
       requestId,
@@ -704,24 +686,14 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
     if (!response) {
       metrics.increment('ai_only_errors', 1, { 
         type: 'invalid_response',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error('Invalid response from Cloudflare AI');
     }
 
     // Extract content from response
-    let content;
-    if (response.response) {
-      content = response.response;
-    } else if (response.result) {
-      content = response.result;
-    } else if (response.text) {
-      content = response.text;
-    } else if (response.content) {
-      content = response.content;
-    } else if (typeof response === 'string') {
-      content = response;
-    } else {
+    let content = extractAiText(response);
+    if (!content) {
       log('warn', 'Unexpected AI-only per-category response structure', {
         requestId,
         responseKeys: Object.keys(response),
@@ -729,7 +701,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
       });
       metrics.increment('ai_only_errors', 1, { 
         type: 'unexpected_structure',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error('Unexpected response structure from Cloudflare AI');
     }
@@ -766,7 +738,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
       const parseDuration = Date.now() - parseStartTime;
       metrics.timing('ai_only_response_parse_duration', parseDuration);
       metrics.increment('ai_only_success', 1, { 
-        model: '@cf/meta/llama-3.1-8b-instruct',
+        model: RECOMMENDATION_LLM_MODEL,
         hasLocation: (!!location).toString(),
         season
       });
@@ -877,7 +849,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
     } catch (parseError) {
       metrics.increment('ai_only_errors', 1, { 
         type: 'parse_error',
-        model: '@cf/meta/llama-3.1-8b-instruct' 
+        model: RECOMMENDATION_LLM_MODEL 
       });
       throw new Error(`Could not parse AI-only per-category response: ${parseError.message}`);
     }
@@ -893,7 +865,7 @@ Make the dishes creative, unique, and specific to each category. Be descriptive 
     
     metrics.increment('ai_only_request_errors', 1, { 
       reason: 'ai_error',
-      model: '@cf/meta/llama-3.1-8b-instruct'
+      model: RECOMMENDATION_LLM_MODEL
     });
     
     // Return empty object on error

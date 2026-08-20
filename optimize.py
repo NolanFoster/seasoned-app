@@ -6,6 +6,8 @@ Environment variables:
   OPIK_GROCERY_DATASET     Optional, defaults to "Grocery List".
   OPIK_GROCERY_PROMPT      Optional, Opik prompt name for baseline (default: "Grocery List").
   OPIK_GROCERY_MODEL       Optional, defaults to "openrouter/meta-llama/llama-3.2-3b-instruct".
+                           Production now serves @cf/ibm-granite/granite-4.0-h-micro; set this to a
+                           Granite 4.0 mirror for production-representative scores.
   OPIK_GROCERY_CANDIDATE   Optional candidate prompt text for comparison.
   OPENROUTER_API_KEY       Required when using an "openrouter/" model.
   OPIK_LITELLM_TIMEOUT     Optional per-request timeout seconds for OpenRouter (default: 180).

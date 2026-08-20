@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { elevateRecipe } from '../../src/handlers/generate-handler.js';
+import { RECIPE_LLM_MODEL } from '../../src/models.js';
 
 describe('elevateRecipe', () => {
   let mockEnv;
@@ -128,7 +129,7 @@ describe('elevateRecipe', () => {
 
       const result = await elevateRecipe(mockRecipe, mockEnv);
 
-      expect(mockEnv.AI.run).toHaveBeenCalledWith('@cf/meta/llama-4-scout-17b-16e-instruct', {
+      expect(mockEnv.AI.run).toHaveBeenCalledWith(RECIPE_LLM_MODEL, {
         messages: [
           {
             role: 'system',
@@ -195,7 +196,7 @@ describe('elevateRecipe', () => {
       mockEnv.AI.run.mockResolvedValue({ response: null });
 
       await expect(elevateRecipe(mockRecipe, mockEnv)).rejects.toThrow(
-        'Invalid response from LLaMA model for recipe elevation'
+        'Invalid response from the recipe generation model for recipe elevation'
       );
     });
 

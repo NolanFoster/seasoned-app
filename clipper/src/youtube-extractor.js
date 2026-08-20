@@ -6,6 +6,7 @@ import {
   extractRecipeFromAIResponse,
   cleanRecipeData
 } from './recipe-clipper.js';
+import { CLIPPER_LLM_MODEL } from './models.js';
 
 const YOUTUBE_HOSTS = new Set([
   'youtube.com',
@@ -314,7 +315,7 @@ export async function extractRecipeFromYouTube(pageUrl, env, deps = {}) {
     transcript
   });
 
-  const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+  const aiResponse = await env.AI.run(CLIPPER_LLM_MODEL, {
     prompt,
     max_tokens: 1024
   });

@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getRecipeRecommendations } from '../src/recommendation-service.js';
+import { RECOMMENDATION_LLM_MODEL } from '../src/models.js';
 
 // Mock environment with AI binding
 const mockEnvWithAI = {
@@ -64,10 +65,10 @@ describe('AI Integration', () => {
       expect(result.location).toBe('San Francisco');
       expect(result.date).toBe('2024-07-15');
       expect(result.season).toBe('Summer');
-      expect(result.aiModel).toBe('@cf/meta/llama-3.1-8b-instruct');
+      expect(result.aiModel).toBe(RECOMMENDATION_LLM_MODEL);
       expect(result.processingMetrics).toBeDefined();
       expect(mockEnvWithAI.AI.run).toHaveBeenCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Summer'),
           max_tokens: 1000
@@ -98,7 +99,7 @@ describe('AI Integration', () => {
       expect(result).toBeDefined();
       expect(result.recommendations).toBeDefined();
       expect(result.season).toBe('Winter');
-      expect(result.aiModel).toBe('@cf/meta/llama-3.1-8b-instruct');
+      expect(result.aiModel).toBe(RECOMMENDATION_LLM_MODEL);
     });
 
     it('should handle valid AI response with text field', async () => {
@@ -200,7 +201,7 @@ describe('AI Integration', () => {
       expect(result.location).toBe('Seattle, WA');
 
       expect(mockEnvWithAI.AI.run).toHaveBeenCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Seattle, WA'),
           max_tokens: 1000
@@ -233,7 +234,7 @@ describe('AI Integration', () => {
       expect(result.location).toBe('');
 
       expect(mockEnvWithAI.AI.run).toHaveBeenCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Location: Not specified'),
           max_tokens: 1000
@@ -311,7 +312,7 @@ describe('AI Integration', () => {
       // Test different seasons
       await getRecipeRecommendations('Test', '2024-01-15', 3, 0, mockEnvWithAI, 'winter-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Winter'),
           max_tokens: 1000
@@ -320,7 +321,7 @@ describe('AI Integration', () => {
 
       await getRecipeRecommendations('Test', '2024-04-15', 3, 0, mockEnvWithAI, 'spring-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Spring'),
           max_tokens: 1000
@@ -329,7 +330,7 @@ describe('AI Integration', () => {
 
       await getRecipeRecommendations('Test', '2024-07-15', 3, 0, mockEnvWithAI, 'summer-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Summer'),
           max_tokens: 1000
@@ -338,7 +339,7 @@ describe('AI Integration', () => {
 
       await getRecipeRecommendations('Test', '2024-10-15', 3, 0, mockEnvWithAI, 'fall-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Fall'),
           max_tokens: 1000
@@ -365,7 +366,7 @@ describe('AI Integration', () => {
       // Test Christmas date
       await getRecipeRecommendations('Test', '2024-12-25', 3, 0, mockEnvWithAI, 'christmas-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Christmas'),
           max_tokens: 1000
@@ -375,7 +376,7 @@ describe('AI Integration', () => {
       // Test Thanksgiving date
       await getRecipeRecommendations('Test', '2024-11-28', 3, 0, mockEnvWithAI, 'thanksgiving-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Thanksgiving'),
           max_tokens: 1000
@@ -401,7 +402,7 @@ describe('AI Integration', () => {
 
       await getRecipeRecommendations('Seattle, WA', '2024-06-15', 3, 0, mockEnvWithAI, 'location-test');
       expect(mockEnvWithAI.AI.run).toHaveBeenLastCalledWith(
-        '@cf/meta/llama-3.1-8b-instruct',
+        RECOMMENDATION_LLM_MODEL,
         expect.objectContaining({
           prompt: expect.stringContaining('Seattle, WA'),
           max_tokens: 1000
