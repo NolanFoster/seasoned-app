@@ -124,6 +124,20 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
   const { setDragging, clearDrag } = useDragContext()
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
   const weekDays = buildWeekDays()
+  
+  const [opacity, setOpacity] = React.useState(1)
+
+  React.useEffect(() => {
+    function handleScroll() {
+      const y = window.scrollY
+      setOpacity(Math.max(0, 1 - y / 150))
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const resolvedOpacity = isOpen ? 1 : opacity
+  const hidden = resolvedOpacity === 0
 
   const handleDragStart = (start) => {
     // Signal drag start; pass the draggable ID so context-aware consumers
@@ -154,6 +168,7 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
         aria-label={isOpen ? 'Close meal planner' : 'Open meal planner'}
         aria-expanded={isOpen}
         data-testid="open-meal-planner-btn"
+        style={{ opacity: resolvedOpacity, pointerEvents: hidden ? 'none' : undefined }}
       >
         <CalendarIcon size={20} />
       </button>

@@ -292,6 +292,10 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
+.omnibox-input:focus-visible {
+  outline: none;
+}
+
 .omnibox-input:disabled {
   opacity: 0.5;
 }
