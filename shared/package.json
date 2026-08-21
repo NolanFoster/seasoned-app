@@ -15,7 +15,8 @@
     "./metrics": "./metrics-collector.js",
     "./culinary-profile": "./culinary-profile.js",
     "./allergen-graph": "./allergen-graph.js",
-    "./food-process-safety": "./food-process-safety.js"
+    "./food-process-safety": "./food-process-safety.js",
+    "./pantry-planning": "./pantry-planning.js"
   },
   "scripts": {
     "test": "node test-simple.js",
@@ -27,7 +28,8 @@
     "test:utility:vitest": "vitest run __tests__/utility-functions.test.js",
     "test:nutrition": "node test-nutrition-calculator.js",
     "test:metrics": "node test-metrics-collector.js",
-    "test:all": "node ../test-refactoring-complete.js"
+    "test:all": "node ../test-refactoring-complete.js",
+    "test:pantry": "node test-pantry-planning.js"
   },
   "keywords": [
     "cloudflare",

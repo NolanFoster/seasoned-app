@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const USER_MANAGEMENT_URL = import.meta.env.VITE_USER_MANAGEMENT_URL
 const CACHE_PREFIX = 'seasoned_pantry_'
@@ -24,15 +24,18 @@ function writeCache(userId, items) {
   try { localStorage.setItem(cacheKey(userId), JSON.stringify(items)) } catch { /* storage is best effort */ }
 }
 
-function itemPayload(item) {
-  return {
-    name: item.name,
-    quantity: item.quantity === '' ? null : item.quantity ?? null,
-    unit: item.unit || null,
-    location: item.location || 'pantry',
-    expiresOn: item.expiresOn || item.expires_on || null,
-    tags: Array.isArray(item.tags) ? item.tags : [],
-  }
+function itemPayload(item, { partial = false } = {}) {
+  const payload = {}
+  const has = (key) => Object.prototype.hasOwnProperty.call(item || {}, key)
+  const hasExpiry = has('expiresOn') || has('expires_on')
+
+  if (!partial || has('name')) payload.name = item?.name
+  if (!partial || has('quantity')) payload.quantity = item?.quantity === '' ? null : item?.quantity ?? null
+  if (!partial || has('unit')) payload.unit = item?.unit || null
+  if (!partial || has('location')) payload.location = item?.location || 'pantry'
+  if (!partial || hasExpiry) payload.expiresOn = item?.expiresOn || item?.expires_on || null
+  if (!partial || has('tags')) payload.tags = Array.isArray(item?.tags) ? item.tags : []
+  return payload
 }
 
 function normalizeItem(item) {
@@ -62,10 +65,12 @@ export function sortPantryItems(items) {
 export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMENT_URL) {
   const initialItems = useMemo(() => readCache(userId), [userId])
   const [items, setItems] = useState(initialItems)
+  const itemsRef = useRef(initialItems)
   const [loading, setLoading] = useState(Boolean(token && userId && enabled && apiUrl))
   const [syncError, setSyncError] = useState('')
 
   const persist = useCallback((nextItems) => {
+    itemsRef.current = nextItems
     setItems(nextItems)
     writeCache(userId, nextItems)
   }, [userId])
@@ -103,62 +108,62 @@ export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMEN
   }, [apiUrl, enabled, persist, request, token, userId])
 
   useEffect(() => {
-    setItems(readCache(userId))
+    const cached = readCache(userId)
+    itemsRef.current = cached
+    setItems(cached)
     void refresh()
   }, [refresh, userId])
 
   const addItem = useCallback(async (input) => {
     const optimistic = normalizeItem(itemPayload(input))
-    const previous = items
-    persist([optimistic, ...items])
+    persist([optimistic, ...itemsRef.current])
     if (!token || !apiUrl) return optimistic
     try {
       const body = await request('/me/pantry-items', { method: 'POST', body: JSON.stringify(itemPayload(input)) })
       const saved = normalizeItem(body.data || optimistic)
-      persist([saved, ...previous])
+      persist([saved, ...itemsRef.current.filter((item) => item.id !== optimistic.id)])
       setSyncError('')
       return saved
     } catch (error) {
       setSyncError(errorMessage(error))
       return optimistic
     }
-  }, [apiUrl, items, persist, request, token])
+  }, [apiUrl, persist, request, token])
 
   const updateItem = useCallback(async (id, input) => {
-    const previous = items
-    const nextItem = normalizeItem({ ...items.find((item) => item.id === id), ...input, id })
-    const nextItems = items.map((item) => item.id === id ? nextItem : item)
-    persist(nextItems)
+    const previousItem = itemsRef.current.find((item) => item.id === id)
+    const nextItem = normalizeItem({ ...previousItem, ...input, id })
+    persist(itemsRef.current.map((item) => item.id === id ? nextItem : item))
     if (!token || !apiUrl || String(id).startsWith('local-')) return nextItem
     try {
       const body = await request(`/me/pantry-items/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        body: JSON.stringify(itemPayload(input)),
+        body: JSON.stringify(itemPayload(input, { partial: true })),
       })
       const saved = normalizeItem(body.data || nextItem)
-      persist(items.map((item) => item.id === id ? saved : item))
+      persist(itemsRef.current.map((item) => item.id === id ? saved : item))
       setSyncError('')
       return saved
     } catch (error) {
-      persist(previous)
+      if (previousItem) persist(itemsRef.current.map((item) => item.id === id ? previousItem : item))
       setSyncError(errorMessage(error))
       throw error
     }
-  }, [apiUrl, items, persist, request, token])
+  }, [apiUrl, persist, request, token])
 
   const removeItem = useCallback(async (id) => {
-    const previous = items
-    persist(items.filter((item) => item.id !== id))
+    const previousItem = itemsRef.current.find((item) => item.id === id)
+    persist(itemsRef.current.filter((item) => item.id !== id))
     if (!token || !apiUrl || String(id).startsWith('local-')) return
     try {
       await request(`/me/pantry-items/${encodeURIComponent(id)}`, { method: 'DELETE' })
       setSyncError('')
     } catch (error) {
-      persist(previous)
+      if (previousItem && !itemsRef.current.some((item) => item.id === id)) persist([...itemsRef.current, previousItem])
       setSyncError(errorMessage(error))
       throw error
     }
-  }, [apiUrl, items, persist, request, token])
+  }, [apiUrl, persist, request, token])
 
   return {
     items: sortPantryItems(items),

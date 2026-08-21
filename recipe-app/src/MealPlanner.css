@@ -1657,3 +1657,112 @@ body > .meal-item {
     transform: none;
   }
 }
+
+/* Pantry-aware planning ---------------------------------------------------- */
+.pantry-planner-use-soon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--generate-color) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--generate-color) 10%, transparent);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.pantry-planner-use-soon > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pantry-planner-use-soon strong {
+  color: var(--generate-color);
+}
+
+.pantry-planner-use-soon span {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pantry-planner-use-soon button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 7px;
+  padding: 6px 9px;
+  background: var(--surface-raised, rgba(255, 255, 255, 0.08));
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--fs-xs);
+}
+
+.grocery-pantry-summary {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.grocery-inventory-sections {
+  display: grid;
+  gap: 15px;
+}
+
+.grocery-inventory-section {
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  padding-top: 10px;
+}
+
+.grocery-inventory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.grocery-inventory-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.grocery-inventory-header span {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.grocery-inventory-section--owned .grocery-inventory-header h3,
+.grocery-inventory-section--optional_staple .grocery-inventory-header h3 {
+  color: var(--accent, #a8d08d);
+}
+
+.grocery-item__status {
+  flex: 0 0 auto;
+  max-width: 112px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
+  border-radius: 6px;
+  padding: 5px 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.grocery-item__pantry-note {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 520px) {
+  .pantry-planner-use-soon {
+    align-items: flex-start;
+  }
+
+  .grocery-item__status {
+    max-width: 100px;
+  }
+}

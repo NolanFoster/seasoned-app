@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
+import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -9,7 +10,14 @@ function normalizeIngredients(ingredients) {
   if (!Array.isArray(ingredients)) return []
   return ingredients.map((ing) => {
     if (typeof ing === 'string') return ing
-    return ing.name || ing.text || JSON.stringify(ing)
+    if (ing && typeof ing === 'object') {
+      const name = ing.name || ing.ingredient || ing.text || ''
+      const amount = ing.quantity ?? ing.amount
+      const unit = ing.unit || ''
+      if (amount !== undefined && amount !== null && amount !== '') return [amount, unit, name].filter(Boolean).join(' ')
+      return name || JSON.stringify(ing)
+    }
+    return String(ing)
   })
 }
 
@@ -312,7 +320,13 @@ function formatTime(secs) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function CookingNavigator({ recipe, onClose }) {
+export default function CookingNavigator({
+  recipe,
+  onClose,
+  pantryItems = [],
+  pantryPlannerEnabled = false,
+  onDepletePantry,
+}) {
   const instructions = normalizeInstructions(recipe.instructions)
   const ingredients = normalizeIngredients(recipe.ingredients)
   const hardAllergens = recipe.appliedConstraints?.hardAllergens
@@ -343,6 +357,10 @@ export default function CookingNavigator({ recipe, onClose }) {
   const cookMenuRef = useRef(null)
   const cookMenuTriggerRef = useRef(null)
   const [showRecipe, setShowRecipe] = useState(false)
+  const [completionOpen, setCompletionOpen] = useState(false)
+  const [depletionWorking, setDepletionWorking] = useState(false)
+  const [depletionError, setDepletionError] = useState('')
+  const [depletionEdits, setDepletionEdits] = useState({})
   const overlayRef = useRef(null)
   const previousFocusRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -452,6 +470,69 @@ export default function CookingNavigator({ recipe, onClose }) {
   function closeCookMenu() {
     setCookMenuOpen(false)
     cookMenuTriggerRef.current?.focus()
+  }
+
+  const depletionPlan = pantryPlannerEnabled
+    ? buildPantryDepletionPlan(recipe, pantryItems)
+    : []
+
+  function openCompletionReview() {
+    setDepletionEdits(Object.fromEntries(
+      depletionPlan.map((operation) => [String(operation.pantryItemId), {
+        action: operation.action,
+        remainingQuantity: operation.remainingQuantity ?? '',
+      }])
+    ))
+    setDepletionError('')
+    setCompletionOpen(true)
+  }
+
+  function updateDepletionEdit(pantryItemId, updates) {
+    setDepletionEdits((current) => ({
+      ...current,
+      [String(pantryItemId)]: { ...current[String(pantryItemId)], ...updates },
+    }))
+  }
+
+  function editedDepletionPlan() {
+    return depletionPlan.flatMap((operation) => {
+      const edit = depletionEdits[String(operation.pantryItemId)] || operation
+      if (edit.action === 'skip') return []
+      if (edit.action === 'remove') return [{ ...operation, action: 'remove', remainingQuantity: null }]
+
+      const remaining = Number(edit.remainingQuantity)
+      if (!Number.isFinite(remaining) || remaining < 0) {
+        throw new Error(`Enter a valid remaining quantity for ${operation.ingredient}.`)
+      }
+      return [{
+        ...operation,
+        action: remaining > 0.0001 ? 'update' : 'remove',
+        remainingQuantity: remaining > 0.0001 ? Math.round(remaining * 10000) / 10000 : null,
+      }]
+    })
+  }
+
+  async function finishCooking(updatePantry) {
+    if (updatePantry && depletionPlan.length > 0 && onDepletePantry) {
+      let operations
+      try {
+        operations = editedDepletionPlan()
+      } catch (error) {
+        setDepletionError(error instanceof Error ? error.message : 'Enter valid pantry quantities.')
+        return
+      }
+      setDepletionWorking(true)
+      setDepletionError('')
+      try {
+        if (operations.length > 0) await onDepletePantry(operations)
+      } catch (error) {
+        setDepletionError(error instanceof Error ? error.message : 'Could not update your pantry.')
+        setDepletionWorking(false)
+        return
+      }
+      setDepletionWorking(false)
+    }
+    onClose()
   }
 
   function toggleGestureMode() {
@@ -1020,8 +1101,73 @@ export default function CookingNavigator({ recipe, onClose }) {
         )}
         </div>
 
+        {completionOpen && (
+          <div className="cn-completion-sheet" role="dialog" aria-modal="true" aria-labelledby="cn-completion-title">
+            <h2 id="cn-completion-title">Cooking complete</h2>
+            {depletionPlan.length > 0 && onDepletePantry ? (
+              <>
+                <p>Update your pantry for the ingredients you used?</p>
+                <ul className="cn-depletion-list">
+                  {depletionPlan.map((operation) => {
+                    const edit = depletionEdits[String(operation.pantryItemId)] || operation
+                    return (
+                      <li key={String(operation.pantryItemId)}>
+                        <div className="cn-depletion-item-copy">
+                          <span>{operation.ingredient}</span>
+                          <small>Used {operation.amount ?? 'an unknown amount'} {operation.unit || ''}</small>
+                        </div>
+                        <div className="cn-depletion-item-controls">
+                          <select
+                            value={edit.action}
+                            aria-label={`${operation.ingredient} pantry adjustment`}
+                            onChange={(event) => updateDepletionEdit(operation.pantryItemId, { action: event.target.value })}
+                            disabled={depletionWorking}
+                          >
+                            <option value="update">Keep remainder</option>
+                            <option value="remove">Remove item</option>
+                            <option value="skip">Skip</option>
+                          </select>
+                          {edit.action === 'update' && (
+                            <label>
+                              <span className="sr-only">Remaining {operation.ingredient}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={edit.remainingQuantity}
+                                aria-label={`Remaining ${operation.ingredient}`}
+                                onChange={(event) => updateDepletionEdit(operation.pantryItemId, { remainingQuantity: event.target.value })}
+                                disabled={depletionWorking}
+                              />
+                              <span>{operation.unit || 'units'}</span>
+                            </label>
+                          )}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {depletionError && <p className="cn-completion-error" role="alert">{depletionError}</p>}
+                <div className="cn-completion-actions">
+                  <button type="button" onClick={() => void finishCooking(true)} disabled={depletionWorking}>
+                    {depletionWorking ? 'Updating pantry…' : 'Update pantry & finish'}
+                  </button>
+                  <button type="button" className="cn-completion-secondary" onClick={() => finishCooking(false)} disabled={depletionWorking}>
+                    Finish without updating
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>Your recipe is ready. Nice work!</p>
+                <button type="button" className="cn-completion-primary" onClick={() => finishCooking(false)}>Finish cooking</button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Navigation */}
-        {!showRecipe && (
+        {!showRecipe && !completionOpen && (
           <div className="cn-nav">
             <button
               className="cn-nav-btn cn-nav-btn--prev"
@@ -1048,6 +1194,15 @@ export default function CookingNavigator({ recipe, onClose }) {
             >
               {currentStep === -1 ? 'Start Cooking →' : 'Next →'}
             </button>
+            {currentStep === total - 1 && total > 0 && (
+              <button
+                className="cn-nav-btn cn-nav-btn--finish"
+                type="button"
+                onClick={openCompletionReview}
+              >
+                Finish Cooking
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -101,13 +101,23 @@ function buildWeekDays() {
  * @param {() => void} onToggle - Toggle drawer open/closed
  * @param {() => void} onClose - Close the drawer
  */
-export default function MealPlanner({ isOpen, onToggle, onClose }) {
+export default function MealPlanner({
+  isOpen,
+  onToggle,
+  onClose,
+  pantryItems = [],
+  pantryPlannerEnabled = false,
+  onOpenPantry,
+}) {
   return (
     <DragProvider>
       <MealPlannerContent
         isOpen={isOpen}
         onToggle={onToggle}
         onClose={onClose}
+        pantryItems={pantryItems}
+        pantryPlannerEnabled={pantryPlannerEnabled}
+        onOpenPantry={onOpenPantry}
       />
     </DragProvider>
   )
@@ -120,7 +130,14 @@ export default function MealPlanner({ isOpen, onToggle, onClose }) {
  * Consumes useDragContext to wire up DragDropContext callbacks
  * without prop drilling through intermediate components.
  */
-function MealPlannerContent({ isOpen, onToggle, onClose }) {
+function MealPlannerContent({
+  isOpen,
+  onToggle,
+  onClose,
+  pantryItems,
+  pantryPlannerEnabled,
+  onOpenPantry,
+}) {
   const { setDragging, clearDrag } = useDragContext()
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
   const weekDays = buildWeekDays()
@@ -174,7 +191,13 @@ function MealPlannerContent({ isOpen, onToggle, onClose }) {
       </button>
 
       {/* Slide-over drawer — MealPlannerDrawer reads isDragging from context */}
-      <MealPlannerDrawer isOpen={isOpen} onClose={onClose}>
+      <MealPlannerDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        pantryItems={pantryItems}
+        pantryPlannerEnabled={pantryPlannerEnabled}
+        onOpenPantry={onOpenPantry}
+      >
         {/* Single DragDropContext covers both UpNextCard and DayCards so recipes
             can be dragged between the staging area and any date/meal slot. */}
         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

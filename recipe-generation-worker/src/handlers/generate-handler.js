@@ -38,6 +38,30 @@ export async function handleGenerate(request, env, corsHeaders) {
     }
 
     const requestBody = await request.json();
+    if (requestBody?.usePantry === true && Array.isArray(requestBody.pantryIngredients)) {
+      const seenPantryNames = new Set();
+      requestBody.pantryIngredients = requestBody.pantryIngredients
+        .filter((item) => item && typeof item === 'object' && typeof item.name === 'string' && item.name.trim())
+        .map((item) => {
+          const name = item.name.trim().replace(/\s+/g, ' ').slice(0, 200);
+          const key = name.toLocaleLowerCase();
+          if (seenPantryNames.has(key)) return null;
+          seenPantryNames.add(key);
+          const hasNumericQuantity = typeof item.quantity === 'number'
+            || (typeof item.quantity === 'string' && item.quantity.trim() !== '');
+          const numericQuantity = hasNumericQuantity ? Number(item.quantity) : null;
+          return {
+            name,
+            quantity: Number.isFinite(numericQuantity) && numericQuantity >= 0 ? numericQuantity : null,
+            unit: typeof item.unit === 'string' && item.unit.trim() ? item.unit.trim().slice(0, 40) : null
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 50);
+    } else {
+      requestBody.pantryIngredients = [];
+    }
+    requestBody.prioritizeExpiring = requestBody.usePantry === true && requestBody.prioritizeExpiring === true;
     const profile = requestBody?.culinaryProfile || requestBody?.profile || {};
     // Keep the generation worker compatible with the existing flat request
     // contract while allowing an authenticated client to provide profile
@@ -513,6 +537,10 @@ function buildQueryText(requestData) {
   // Add ingredients
   if (requestData.ingredients && requestData.ingredients.length > 0) {
     parts.push(`Ingredients: ${requestData.ingredients.join(', ')}`);
+  }
+
+  if (requestData.usePantry && requestData.pantryIngredients?.length > 0) {
+    parts.push(`Pantry ingredients to prioritize: ${requestData.pantryIngredients.map((item) => item.name).join(', ')}`);
   }
 
   // Add cuisine preference
@@ -1001,6 +1029,10 @@ function buildLLaMAPrompt(requestData, contexts) {
   }
   if (requestData.ingredients && requestData.ingredients.length > 0) {
     requirements.push(`must use these ingredients: ${requestData.ingredients.join(', ')}`);
+  }
+  if (requestData.usePantry && requestData.pantryIngredients?.length > 0) {
+    requirements.push(`prioritize using these ingredients already in the user's pantry when they fit the dish: ${requestData.pantryIngredients.map((item) => item.name).join(', ')}`);
+    if (requestData.prioritizeExpiring) requirements.push('prefer the pantry ingredients closest to their expiry date first when suitable');
   }
   if (requestData.skillLevel) {
     requirements.push(`write for a ${requestData.skillLevel} home cook`);

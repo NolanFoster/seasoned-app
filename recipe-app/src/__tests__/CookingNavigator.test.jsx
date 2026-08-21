@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react'
 import CookingNavigator from '../CookingNavigator'
 import useGestureMode from '../useGestureMode.js'
 
@@ -138,6 +138,26 @@ describe('CookingNavigator — rendering', () => {
     const { onClose } = renderNavigator()
     openOptionsMenu()
     fireEvent.click(screen.getByTitle('Exit cooking mode'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  test('offers an opt-in pantry depletion review after the last step', async () => {
+    const onDepletePantry = jest.fn(() => Promise.resolve())
+    const { onClose } = renderNavigator({}, {
+      pantryPlannerEnabled: true,
+      pantryItems: [{ id: 7, name: 'milk', quantity: 1, unit: 'l' }],
+      onDepletePantry,
+    })
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByText('Next →'))
+    fireEvent.click(screen.getByText('Next →'))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish Cooking' }))
+    expect(screen.getByRole('heading', { name: 'Cooking complete' })).toBeInTheDocument()
+    expect(onDepletePantry).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /Update pantry & finish/i }))
+    await waitFor(() => expect(onDepletePantry).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ pantryItemId: 7, action: 'update' }),
+    ])))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

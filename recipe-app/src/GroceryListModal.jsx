@@ -88,6 +88,17 @@ const CATEGORY_ORDER = [
   'Other',
 ]
 
+const INVENTORY_STATUS_ORDER = ['buy', 'owned', 'optional_staple']
+const INVENTORY_STATUS_LABELS = {
+  buy: 'Buy',
+  owned: 'Already have',
+  optional_staple: 'Staples on hand',
+}
+
+function inventoryStatusFor(item) {
+  return INVENTORY_STATUS_ORDER.includes(item?.inventoryStatus) ? item.inventoryStatus : 'buy'
+}
+
 /**
  * Groups a flat GroceryListItem array into sorted [category, items[]] pairs.
  * @param {Array} items
@@ -143,8 +154,14 @@ const ChevronIcon = ({ expanded }) => (
  * @param {boolean}  props.isOpen  - Whether the modal is currently visible
  * @param {function} props.onClose - Callback fired to close the modal
  */
-export default function GroceryListModal({ isOpen, onClose }) {
-  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem } = useMealPlan()
+export default function GroceryListModal({
+  isOpen,
+  onClose,
+  pantryItems = [],
+  pantryPlannerEnabled = false,
+}) {
+  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {} } = useMealPlan()
+  const safePantryItems = Array.isArray(pantryItems) ? pantryItems : []
 
   const [customInput, setCustomInput] = useState('')
   const [inputError, setInputError] = useState('')
@@ -152,8 +169,20 @@ export default function GroceryListModal({ isOpen, onClose }) {
   const [expandedCategories, setExpandedCategories] = useState({})
   const inputRef = useRef(null)
 
-  // Group and sort items by category
-  const categoryGroups = useMemo(() => groupByCategory(groceryList), [groceryList])
+  // Keep the familiar category grouping inside the three inventory sections.
+  // Old locally persisted lists have no status and safely default to Buy.
+  const inventorySections = useMemo(() => INVENTORY_STATUS_ORDER
+    .map((status) => ({
+      status,
+      items: groceryList.filter((item) => inventoryStatusFor(item) === status),
+    }))
+    .filter((section) => section.items.length > 0), [groceryList])
+  const displaySections = pantryPlannerEnabled
+    ? inventorySections
+    : [{ status: null, items: groceryList }]
+  const pantrySummary = pantryPlannerEnabled && safePantryItems.length > 0
+    ? `Pantry matching is on for ${safePantryItems.length} item${safePantryItems.length === 1 ? '' : 's'}`
+    : ''
 
   // Auto-expand any newly appearing categories
   useEffect(() => {
@@ -265,68 +294,104 @@ export default function GroceryListModal({ isOpen, onClose }) {
               No items yet — generate a list from the meal planner, or add items above.
             </p>
           ) : (
-            <ul className="grocery-list" role="list">
-              {categoryGroups.map(([category, items]) => {
-                const isExpanded = !!expandedCategories[category]
-                return (
-                  <li key={category}>
-                    <div className="grocery-category-header">
-                      <button
-                        type="button"
-                        className="grocery-category-toggle"
-                        aria-expanded={isExpanded}
-                        onClick={() => toggleCategoryExpanded(category)}
-                      >
-                        <ChevronIcon expanded={isExpanded} />
-                        {category}
-                        <span className="grocery-category-count">{items.length}</span>
-                      </button>
+            <>
+            {pantrySummary && (
+              <p className="grocery-pantry-summary" role="status">{pantrySummary}. Review the status before shopping.</p>
+            )}
+            <div className="grocery-inventory-sections">
+              {displaySections.map(({ status, items: statusItems }) => (
+                <section key={status || 'all'} className={status ? `grocery-inventory-section grocery-inventory-section--${status}` : ''} aria-labelledby={status ? `grocery-status-${status}` : undefined}>
+                  {status && (
+                    <div className="grocery-inventory-header">
+                      <h3 id={`grocery-status-${status}`}>{INVENTORY_STATUS_LABELS[status]}</h3>
+                      <span>{statusItems.length}</span>
                     </div>
-
-                    {isExpanded && (
-                      <ul className="grocery-list" role="list">
-                        {items.map((item) => (
-                          <li
-                            key={item.id}
-                            className={[
-                              'grocery-item',
-                              item.completed ? 'grocery-item--checked' : '',
-                              item.isCustom ? 'grocery-item--custom' : '',
-                            ].filter(Boolean).join(' ')}
-                          >
-                            <label className="grocery-item__label" htmlFor={`gi-${item.id}`}>
-                              <input
-                                type="checkbox"
-                                id={`gi-${item.id}`}
-                                className="grocery-item__checkbox"
-                                aria-label={item.name}
-                                checked={!!item.completed}
-                                onChange={() => toggleItemCompletion(item.id)}
-                              />
-                              <span className="grocery-item__text">{item.name}</span>
-                              {item.quantity && (
-                                <span className="grocery-item__quantity">{item.quantity}</span>
-                              )}
-                              {item.isCustom && (
-                                <span className="grocery-item__custom-badge">Custom</span>
-                              )}
-                            </label>
+                  )}
+                  <ul className="grocery-list" role="list">
+                    {groupByCategory(statusItems).map(([category, items]) => {
+                      const isExpanded = !!expandedCategories[category]
+                      return (
+                        <li key={`${status}-${category}`}>
+                          <div className="grocery-category-header">
                             <button
                               type="button"
-                              className="grocery-item__delete-btn"
-                              aria-label={`Delete ${item.name}`}
-                              onClick={() => deleteItem(item.id)}
+                              className="grocery-category-toggle"
+                              aria-expanded={isExpanded}
+                              onClick={() => toggleCategoryExpanded(category)}
                             >
-                              <CloseIcon />
+                              <ChevronIcon expanded={isExpanded} />
+                              {category}
+                              <span className="grocery-category-count">{items.length}</span>
                             </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
+                          </div>
+
+                          {isExpanded && (
+                            <ul className="grocery-list" role="list">
+                              {items.map((item) => {
+                                const itemStatus = inventoryStatusFor(item)
+                                return (
+                                  <li
+                                    key={item.id}
+                                    className={[
+                                      'grocery-item',
+                                      item.completed ? 'grocery-item--checked' : '',
+                                      item.isCustom ? 'grocery-item--custom' : '',
+                                      pantryPlannerEnabled ? `grocery-item--${itemStatus}` : '',
+                                    ].filter(Boolean).join(' ')}
+                                  >
+                                    <label className="grocery-item__label" htmlFor={`gi-${item.id}`}>
+                                      <input
+                                        type="checkbox"
+                                        id={`gi-${item.id}`}
+                                        className="grocery-item__checkbox"
+                                        aria-label={item.name}
+                                        checked={!!item.completed}
+                                        onChange={() => toggleItemCompletion(item.id)}
+                                      />
+                                      <span className="grocery-item__text">{item.name}</span>
+                                      {item.quantity && (
+                                        <span className="grocery-item__quantity">{item.quantity}</span>
+                                      )}
+                                      {item.missingQuantity && (
+                                        <span className="grocery-item__pantry-note">Have {item.pantryQuantity}; buy {item.missingQuantity}</span>
+                                      )}
+                                      {item.isCustom && (
+                                        <span className="grocery-item__custom-badge">Custom</span>
+                                      )}
+                                    </label>
+                                    {pantryPlannerEnabled && (
+                                      <select
+                                        className="grocery-item__status"
+                                        value={itemStatus}
+                                        aria-label={`${item.name} pantry status`}
+                                        onChange={(event) => editItem(item.id, { inventoryStatus: event.target.value })}
+                                      >
+                                        {INVENTORY_STATUS_ORDER.map((option) => (
+                                          <option key={option} value={option}>{INVENTORY_STATUS_LABELS[option]}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="grocery-item__delete-btn"
+                                      aria-label={`Delete ${item.name}`}
+                                      onClick={() => deleteItem(item.id)}
+                                    >
+                                      <CloseIcon />
+                                    </button>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+            </>
           )}
         </div>
       </div>

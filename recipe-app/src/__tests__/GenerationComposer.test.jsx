@@ -84,6 +84,29 @@ describe("GenerationComposer", () => {
     });
   });
 
+  test("includes pantry preference when the planner flag is enabled", () => {
+    const onGenerate = jest.fn();
+    render(
+      <GenerationComposer
+        open
+        profile={null}
+        query="pantry pasta"
+        busy={false}
+        pantryPlannerEnabled
+        pantryItems={[{ id: 1, name: "chickpeas" }]}
+        expiringPantryItems={[{ id: 1, name: "chickpeas" }]}
+        onClose={jest.fn()}
+        onGenerate={onGenerate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Use my pantry/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Use items expiring soon first/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Generate recipe" }));
+
+    expect(onGenerate).toHaveBeenCalledWith(expect.objectContaining({ usePantry: true, prioritizeExpiring: true }));
+  });
+
   test("Escape closes the composer", () => {
     const onClose = jest.fn();
     render(

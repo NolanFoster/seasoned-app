@@ -185,6 +185,18 @@ describe('Generation request builder', () => {
       ingredients: ['pasta', 'tomatoes'],
     })
   })
+
+  test('includes a bounded pantry ingredient snapshot only when requested', () => {
+    expect(buildGenerationRequest({
+      dishName: 'Chickpea bowl',
+      overrides: { usePantry: true },
+      pantryPlannerEnabled: true,
+      pantryItems: [{ id: 1, name: 'chickpeas', quantity: 2, unit: 'cans', expiresOn: '2026-12-01', tags: ['staple'] }],
+    })).toMatchObject({
+      usePantry: true,
+      pantryIngredients: [{ name: 'chickpeas', quantity: 2, unit: 'cans' }],
+    })
+  })
 })
 
 // ── isValidUrl (tested via omnibox UI behaviour) ───────────────────────────

@@ -203,6 +203,25 @@ describe('Generate Handler - Unit Tests', () => {
       expect(mockVectors.query).toHaveBeenCalled();
     });
 
+    it('prioritizes a bounded pantry snapshot when usePantry is enabled', async () => {
+      const request = createPostRequest('/generate', {
+        recipeName: 'Pantry dinner',
+        usePantry: true,
+        pantryIngredients: [
+          { name: 'chickpeas', quantity: 2, unit: 'cans' },
+          { name: ' CHICKPEAS ', quantity: -4, unit: null },
+          { name: 'spinach', quantity: null, unit: null }
+        ]
+      });
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+
+      expect(response.status).toBe(200);
+      const llamaCall = mockAI.run.mock.calls.find(([model]) => model === '@cf/meta/llama-4-scout-17b-16e-instruct');
+      const prompt = llamaCall[1].messages.find(({ role }) => role === 'user').content;
+      expect(prompt).toContain('prioritize using these ingredients already in the user\'s pantry');
+      expect(prompt).toContain('chickpeas, spinach');
+    });
+
     it('should apply culinary profile defaults without overriding explicit request fields', async () => {
       const requestBody = {
         ingredients: ['chicken', 'rice'],

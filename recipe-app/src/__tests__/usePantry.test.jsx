@@ -77,6 +77,8 @@ describe('usePantry', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Rename rice' }))
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('https://test-user.example.com/me/pantry-items/7', expect.objectContaining({ method: 'PATCH' })))
+    const patchCall = global.fetch.mock.calls.find(([url, options]) => url.endsWith('/me/pantry-items/7') && options.method === 'PATCH')
+    expect(JSON.parse(patchCall[1].body)).toEqual({ name: 'Brown rice', location: 'pantry' })
     fireEvent.click(screen.getByRole('button', { name: 'Remove rice' }))
     await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'))
   })

@@ -18,7 +18,23 @@ function parseDurationToMinutes(val) {
   return mins
 }
 
-export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElevating, isAdapting = false, onSave, saveState, shareUrl, onEdit, onOpenNotes, noteCount = 0 }) {
+export default function RecipeCard({
+  recipe,
+  onClose,
+  onElevate,
+  onAdapt,
+  isElevating,
+  isAdapting = false,
+  onSave,
+  saveState,
+  shareUrl,
+  onEdit,
+  onOpenNotes,
+  noteCount = 0,
+  pantryItems = [],
+  pantryPlannerEnabled = false,
+  onDepletePantry,
+}) {
   const elevateRecipeEnabled = useFlag('elevate-recipe')
   const recipeAdaptEnabled = useFlag('recipe-adapt')
   const mealPlannerEnabled = useFlag('meal-planner')
@@ -435,7 +451,15 @@ export default function RecipeCard({ recipe, onClose, onElevate, onAdapt, isElev
         </div>
       )}
 
-      {isCooking && <CookingNavigator recipe={recipe} onClose={() => setIsCooking(false)} />}
+      {isCooking && (
+        <CookingNavigator
+          recipe={recipe}
+          onClose={() => setIsCooking(false)}
+          pantryItems={pantryItems}
+          pantryPlannerEnabled={pantryPlannerEnabled}
+          onDepletePantry={onDepletePantry}
+        />
+      )}
 
       {mealPlannerEnabled && showDaySelector && (
         <DaySelector

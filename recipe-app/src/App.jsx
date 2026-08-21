@@ -19,6 +19,7 @@ import RecipeNotesModal from './RecipeNotesModal.jsx'
 import { useRecipeNotes } from './useRecipeNotes.js'
 import { withAllergenSummary } from '../../shared/allergen-graph.js'
 import { analyzeProcessSafety } from '../../shared/food-process-safety.js'
+import { getExpiringPantryItems, isPantryItemExpired } from '../../shared/pantry-planning.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -230,6 +231,8 @@ export function buildGenerationRequest({
   profile = null,
   overrides = null,
   baseIngredients = null,
+  pantryItems = [],
+  pantryPlannerEnabled = false,
 }) {
   const body = {
     recipeName: dishName,
@@ -242,6 +245,26 @@ export function buildGenerationRequest({
     if (!overrides.ingredients?.length) delete body.ingredients
   }
   if (elevate && baseIngredients) body.ingredients = baseIngredients
+  if (overrides?.usePantry && pantryPlannerEnabled) {
+    body.usePantry = true
+    const safePantryItems = (Array.isArray(pantryItems) ? pantryItems : [])
+      .filter((item) => !isPantryItemExpired(item))
+    const expiring = overrides.prioritizeExpiring
+      ? getExpiringPantryItems(safePantryItems, 7)
+      : []
+    const orderedPantry = expiring.length > 0
+      ? [...expiring, ...safePantryItems.filter((item) => !expiring.includes(item))]
+      : safePantryItems
+    body.pantryIngredients = orderedPantry
+      .filter((item) => item?.name)
+      .slice(0, 50)
+      .map((item) => ({
+        name: item.name,
+        quantity: item.quantity ?? null,
+        unit: item.unit || null,
+      }))
+    if (overrides.prioritizeExpiring && expiring.length > 0) body.prioritizeExpiring = true
+  }
   return body
 }
 
@@ -301,8 +324,19 @@ export default function App() {
   const [adaptComposerOpen, setAdaptComposerOpen] = useState(false)
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
   const pantryEnabled = useFlag('pantry')
+  const pantryPlannerEnabled = useFlag('pantry-planner')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
+  const usablePantryItems = pantry.items.filter((item) => !isPantryItemExpired(item))
+  const expiringPantryItems = getExpiringPantryItems(usablePantryItems, 7)
+
+  const pantryPlanningAvailable = Boolean(pantryEnabled && pantryPlannerEnabled && pantry.available)
+  const depletePantry = useCallback(async (operations) => {
+    for (const operation of operations) {
+      if (operation.action === 'remove') await pantry.removeItem(operation.pantryItemId)
+      else await pantry.updateItem(operation.pantryItemId, { quantity: operation.remainingQuantity })
+    }
+  }, [pantry.removeItem, pantry.updateItem])
   const recipeEditingEnabled = useFlag('recipe-editing')
   const recipeNotesEnabled = useFlag('recipe-notes')
   const [editorOpen, setEditorOpen] = useState(false)
@@ -622,6 +656,8 @@ export default function App() {
         profile: culinaryProfileEnabled ? culinaryProfile.profile : null,
         overrides,
         baseIngredients: baseRecipe?.ingredients || null,
+        pantryItems: pantry.items,
+        pantryPlannerEnabled: pantryPlanningAvailable,
       })
 
       const res = await fetch(`${RECIPE_GENERATION_URL}/generate`, {
@@ -987,6 +1023,9 @@ export default function App() {
           isOpen={isDrawerOpen}
           onToggle={() => setIsDrawerOpen((prev) => !prev)}
           onClose={() => setIsDrawerOpen(false)}
+          pantryItems={pantryPlanningAvailable ? pantry.items : []}
+          pantryPlannerEnabled={pantryPlanningAvailable}
+          onOpenPantry={pantryPlanningAvailable ? () => { setIsDrawerOpen(false); setPantryOpen(true) } : undefined}
         />
       )}
       <UserMenu
@@ -1260,6 +1299,9 @@ export default function App() {
           busy={inputBusy}
           onClose={() => setGenerationComposerOpen(false)}
           onGenerate={handleTunedGenerate}
+          pantryItems={usablePantryItems}
+          expiringPantryItems={expiringPantryItems}
+          pantryPlannerEnabled={pantryPlanningAvailable}
         />
 
         <AdaptComposer
@@ -1290,6 +1332,9 @@ export default function App() {
             onEdit={recipeEditingEnabled ? () => setEditorOpen(true) : undefined}
             onOpenNotes={recipeNotesEnabled ? () => setNotesOpen(true) : undefined}
             noteCount={recipeNotes.notes.length}
+            pantryItems={pantryPlanningAvailable ? pantry.items : []}
+            pantryPlannerEnabled={pantryPlanningAvailable}
+            onDepletePantry={pantryPlanningAvailable ? depletePantry : undefined}
           />
         )}
 
