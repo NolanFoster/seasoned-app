@@ -194,7 +194,7 @@ describe('Generation request builder', () => {
       pantryItems: [{ id: 1, name: 'chickpeas', quantity: 2, unit: 'cans', expiresOn: '2026-12-01', tags: ['staple'] }],
     })).toMatchObject({
       usePantry: true,
-      pantryIngredients: [{ name: 'chickpeas', quantity: 2, unit: 'cans' }],
+      pantryIngredients: [{ name: 'chickpeas', quantity: 2, unit: 'cans', expiresOn: '2026-12-01' }],
     })
   })
 })

@@ -262,6 +262,7 @@ export function buildGenerationRequest({
         name: item.name,
         quantity: item.quantity ?? null,
         unit: item.unit || null,
+        expiresOn: item.expiresOn || item.expires_on || null,
       }))
     if (overrides.prioritizeExpiring && expiring.length > 0) body.prioritizeExpiring = true
   }

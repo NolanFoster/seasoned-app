@@ -42,6 +42,9 @@ const expiring = getExpiringPantryItems([
 assert.deepEqual(expiring.map((item) => item.id), [1, 2])
 assert.equal(isPantryItemExpired({ expiresOn: '2026-01-01' }, { now }), true)
 assert.equal(isPantryItemExpired({ expiresOn: '2026-01-11' }, { now }), false)
+const expiryDay = new Date(2026, 0, 10, 23, 59, 59, 998)
+assert.equal(isPantryItemExpired({ expiresOn: '2026-01-10' }, { now: expiryDay }), false)
+assert.equal(isPantryItemExpired({ expiresOn: '2026-01-10' }, { now: new Date(2026, 0, 11, 0, 0, 0) }), true)
 
 const depletion = buildPantryDepletionPlan(
   { ingredients: ['1 cup milk', '2 green onions'] },
@@ -61,6 +64,22 @@ const repeated = buildPantryDepletionPlan(
 assert.deepEqual(repeated.map(({ pantryItemId, action }) => ({ pantryItemId, action })), [
   { pantryItemId: 4, action: 'remove' },
   { pantryItemId: 5, action: 'remove' },
+])
+
+const coalesced = buildPantryDepletionPlan(
+  { ingredients: ['1 cup milk', '1 cup coconut milk'] },
+  [{ id: 9, name: 'coconut milk', quantity: 3, unit: 'cup' }],
+  { now },
+)
+assert.deepEqual(coalesced, [
+  {
+    pantryItemId: 9,
+    ingredient: 'milk / coconut milk',
+    action: 'update',
+    amount: 2,
+    unit: 'cup',
+    remainingQuantity: 1,
+  },
 ])
 
 console.log('pantry-planning tests passed')

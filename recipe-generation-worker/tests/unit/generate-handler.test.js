@@ -208,10 +208,11 @@ describe('Generate Handler - Unit Tests', () => {
         recipeName: 'Pantry dinner',
         usePantry: true,
         pantryIngredients: [
-          { name: 'chickpeas', quantity: 2, unit: 'cans' },
+          { name: 'chickpeas', quantity: 2, unit: 'cans', expiresOn: '2026-08-22' },
           { name: ' CHICKPEAS ', quantity: -4, unit: null },
           { name: 'spinach', quantity: null, unit: null }
-        ]
+        ],
+        prioritizeExpiring: true
       });
       const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
 
@@ -220,6 +221,7 @@ describe('Generate Handler - Unit Tests', () => {
       const prompt = llamaCall[1].messages.find(({ role }) => role === 'user').content;
       expect(prompt).toContain('prioritize using these ingredients already in the user\'s pantry');
       expect(prompt).toContain('chickpeas, spinach');
+      expect(prompt).toContain('chickpeas (use by 2026-08-22)');
     });
 
     it('should apply culinary profile defaults without overriding explicit request fields', async () => {

@@ -148,10 +148,28 @@ export function pantryNamesMatch(left, right) {
   return overlap === smaller.size && (smaller.size > 1 || [...smaller][0].length >= 3)
 }
 
+/**
+ * Pantry expiry values are calendar dates, not UTC instants. Interpret them
+ * in the cook's local timezone so an item remains usable through the end of
+ * its selected day (the same contract used by the pantry date input).
+ */
+function localDateEndOfDay(value) {
+  const match = String(value || '').slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day, 23, 59, 59, 999)
+  // Date normalisation (for example, 2026-02-30 -> March 2) means the input
+  // was not a real calendar date and should not affect pantry matching.
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null
+  return date
+}
+
 function isExpired(expiresOn, now = new Date()) {
   if (!expiresOn) return false
-  const expiry = new Date(`${String(expiresOn).slice(0, 10)}T23:59:59.999Z`)
-  return !Number.isNaN(expiry.getTime()) && expiry.getTime() < now.getTime()
+  const expiry = localDateEndOfDay(expiresOn)
+  return expiry !== null && expiry.getTime() < now.getTime()
 }
 
 /** Return whether a pantry record is past its expiry date. */
@@ -291,10 +309,8 @@ export function getExpiringPantryItems(items, days = 7, { now = new Date() } = {
   end.setHours(23, 59, 59, 999)
   return (Array.isArray(items) ? items : [])
     .filter((item) => {
-      const value = item?.expiresOn || item?.expires_on
-      if (!value) return false
-      const expiry = new Date(`${String(value).slice(0, 10)}T23:59:59.999Z`)
-      return !Number.isNaN(expiry.getTime()) && expiry >= start && expiry <= end
+      const expiry = localDateEndOfDay(item?.expiresOn || item?.expires_on)
+      return expiry !== null && expiry >= start && expiry <= end
     })
     .sort((a, b) => String(a.expiresOn || a.expires_on).localeCompare(String(b.expiresOn || b.expires_on)))
 }
@@ -336,6 +352,55 @@ export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date()
   }
 
   const operations = []
+  const operationByItem = new Map()
+  const itemStates = new Map()
+
+  function itemState(item) {
+    const key = String(item.id)
+    let state = itemStates.get(key)
+    if (!state) {
+      const parsed = parsePantryQuantity(item.quantity, item.unit)
+      state = { remaining: parsed.amount, unit: parsed.unit, removed: false }
+      itemStates.set(key, state)
+    }
+    return state
+  }
+
+  function addOperation(item, requirement, action, amount, unit, remainingQuantity) {
+    const key = String(item.id)
+    const existing = operationByItem.get(key)
+    if (!existing) {
+      const operation = {
+        pantryItemId: item.id,
+        ingredient: requirement.name,
+        action,
+        amount,
+        unit,
+      }
+      if (remainingQuantity !== undefined) operation.remainingQuantity = remainingQuantity
+      operationByItem.set(key, operation)
+      operations.push(operation)
+      return
+    }
+
+    // A pantry record can match more than one recipe line (for example,
+    // "milk" and "coconut milk"). Keep one operation per record so the
+    // completion UI and sequential API updates cannot apply stale deltas.
+    if (existing.ingredient !== requirement.name && !existing.ingredient.split(' / ').includes(requirement.name)) {
+      existing.ingredient = `${existing.ingredient} / ${requirement.name}`
+    }
+    if (action === 'remove' || existing.action === 'remove') {
+      existing.action = 'remove'
+      existing.amount = null
+      existing.unit = null
+      existing.remainingQuantity = null
+      return
+    }
+    existing.amount = Math.round((existing.amount + amount) * 10000) / 10000
+    existing.unit = existing.unit || unit
+    existing.remainingQuantity = remainingQuantity
+  }
+
   for (const requirement of requirements.values()) {
     if (requirement.amount !== null && requirement.amount <= 0) continue
     const matches = pantryMatchesFor({ name: requirement.name }, pantryItems, now)
@@ -354,8 +419,11 @@ export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date()
     // example) cannot produce a numeric delta. Removing one matched item is
     // deliberately explicit in the review UI rather than silently mutating it.
     if (requirement.amount === null) {
-      const match = matches[0].item
-      operations.push({ pantryItemId: match.id, ingredient: requirement.name, action: 'remove', amount: null, unit: null })
+      const match = matches.find(({ item }) => !itemState(item).removed)?.item
+      if (match) {
+        itemState(match).removed = true
+        addOperation(match, requirement, 'remove', null, null)
+      }
       continue
     }
 
@@ -363,34 +431,47 @@ export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date()
     let appliedMeasuredOperation = false
     for (const { item } of matches) {
       if (remainingNeed <= 0.0001) break
-      const pantryQuantity = parsePantryQuantity(item.quantity, item.unit)
-      if (pantryQuantity.amount === null || !compatibleUnits(requirement.unit, pantryQuantity.unit)) continue
-      const neededInPantryUnit = requirement.unit && pantryQuantity.unit
-        ? convertAmount(remainingNeed, requirement.unit, pantryQuantity.unit)
+      const state = itemState(item)
+      if (state.removed || state.remaining === null || !compatibleUnits(requirement.unit, state.unit)) continue
+      const neededInPantryUnit = requirement.unit && state.unit
+        ? convertAmount(remainingNeed, requirement.unit, state.unit)
         : remainingNeed
       if (neededInPantryUnit === null) continue
 
-      const decrement = Math.min(pantryQuantity.amount, neededInPantryUnit)
-      const remainingQuantity = pantryQuantity.amount - decrement
-      remainingNeed -= requirement.unit && pantryQuantity.unit
-        ? convertAmount(decrement, pantryQuantity.unit, requirement.unit)
+      const decrement = Math.min(state.remaining, neededInPantryUnit)
+      if (decrement <= 0) continue
+      const consumed = requirement.unit && state.unit
+        ? convertAmount(decrement, state.unit, requirement.unit)
         : decrement
+      if (consumed === null || consumed <= 0) continue
+
+      state.remaining = Math.max(0, state.remaining - decrement)
+      if (state.remaining <= 0.0001) {
+        state.remaining = 0
+        state.removed = true
+      }
+      remainingNeed -= consumed
       appliedMeasuredOperation = true
-      operations.push({
-        pantryItemId: item.id,
-        ingredient: requirement.name,
-        action: remainingQuantity > 0.0001 ? 'update' : 'remove',
-        amount: Math.round(decrement * 10000) / 10000,
-        unit: pantryQuantity.unit || requirement.unit || null,
-        remainingQuantity: remainingQuantity > 0.0001 ? Math.round(remainingQuantity * 10000) / 10000 : null,
-      })
+      addOperation(
+        item,
+        requirement,
+        state.removed ? 'remove' : 'update',
+        Math.round(decrement * 10000) / 10000,
+        state.unit || requirement.unit || null,
+        state.removed ? null : Math.round(state.remaining * 10000) / 10000,
+      )
     }
 
-    // Preserve the previous conservative behavior when an item matches by
-    // name but has no usable quantity/unit: let the user approve removing it.
+    // Preserve the conservative behavior when an item matches by name but
+    // has no usable quantity/unit: let the user approve removing it. The
+    // state guard prevents that same record being removed again for another
+    // matching ingredient.
     if (!appliedMeasuredOperation && matches.length > 0) {
-      const match = matches[0].item
-      operations.push({ pantryItemId: match.id, ingredient: requirement.name, action: 'remove', amount: null, unit: null })
+      const match = matches.find(({ item }) => !itemState(item).removed)?.item
+      if (match) {
+        itemState(match).removed = true
+        addOperation(match, requirement, 'remove', null, null)
+      }
     }
   }
   return operations
