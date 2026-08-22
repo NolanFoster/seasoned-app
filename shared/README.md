@@ -361,3 +361,75 @@ console.log('Nutrition result:', result);
 - `validateCulinaryProfileInput(input)` for API boundary validation
 
 The profile schema uses snake_case storage/API fields (`diet_tags`, `hard_allergens`, `max_cook_time_min`, etc.), while the generation contract retains the existing worker names (`dietary`, `maxCookTime`, `servings`).
+
+## Recipe Process Graph IR
+
+`recipe-process-graph.js` is the canonical, instance-level representation of a
+recipe procedure. It is a validated DAG, not a replacement for the existing
+linear recipe fields. The graph keeps ingredient quantities and allergen
+references explicit, connects actions to tools and intermediate states, and
+makes parallel work and timers machine-readable.
+
+The versioned schema is also available at
+[`recipe-process-graph.schema.json`](./recipe-process-graph.schema.json).
+
+### Node and edge contract
+
+A graph has `schemaVersion: "1.0"`, `graphType: "recipe_process"`, `nodes`, and
+`edges`. Nodes have one of these types:
+
+- `ingredient` — source line, parsed quantity/unit, state, and `allergenRefs`
+- `tool` — equipment identifier such as `oven`, `skillet`, or `bowl`
+- `action` — an executable step with `text`, `stepIndex`, and either a tool
+  reference or `no_tool: true`
+- `intermediate` — a state produced by an action (`mixed`, `browned`, etc.)
+- `timer` — a positive `durationSeconds` value associated with an action
+
+Edges are typed `uses`, `produces`, `before`, `parallel_ok`, `heats_in`, or
+`rests`. `parallel_ok` is an annotation and does not create a dependency for
+cycle detection. All other edges participate in the dependency DAG.
+
+```js
+import {
+  liftRecipeToProcessGraph,
+  validateRecipeProcessGraph,
+  getStepLocalIngredients,
+  renderRecipeFromProcessGraph,
+} from './recipe-process-graph.js'
+
+const graph = liftRecipeToProcessGraph(recipe)
+const validation = validateRecipeProcessGraph(graph)
+const stepIngredients = getStepLocalIngredients(graph, 0)
+const linearRecipe = renderRecipeFromProcessGraph(graph, recipe)
+```
+
+`liftRecipeToProcessGraph` is deterministic and safe for legacy recipes. It
+uses explicit ingredient-to-step edges when names are present and records a
+warning when it has to associate an unmatched ingredient with a step. Invalid
+or incomplete output is marked `graphConfidence: "low"`; callers should keep
+the linear recipe visible rather than treating an unvalidated graph as safe.
+`assertValidRecipeProcessGraph` throws `RecipeProcessGraphValidationError` with
+machine-readable `errors` for write/evaluation boundaries.
+
+The server-side `recipe_process_graph_v1` flag is off by default. Generation and
+adaptation attach a graph only when `RECIPE_PROCESS_GRAPH_V1` (or its explicit
+worker aliases) is enabled. Existing clients continue to use
+`ingredients`/`instructions` when the flag is off or graph confidence is low.
+
+## Uncertainty and selective abstention
+
+`uncertainty.js` provides the opt-in `uncertainty_guards_v1` contract used by
+recipe generation and adaptation. `buildRecipeUncertainty()` combines the
+existing allergen graph, process-safety summary, nutrition provenance,
+timing, product identity, and quality metadata into deterministic per-
+dimension signals. The levels are `high`, `medium`, `low`, and `abstain`;
+`medium` and below require review, while `abstain` means the app must not make
+that claim. This is not a medical score or a guarantee of safety.
+
+The worker flag `UNCERTAINTY_GUARDS_V1` is off by default. When enabled,
+`/generate` and `/adapt` return `uncertaintySummary` both at the response root
+and on the recipe. The summary is display-safe: reasons are short categories,
+and evidence references must not contain chain-of-thought or private pantry
+content. Uncertainty never weakens `enforceAllergenSafety` or
+`enforceProcessSafety`; low/abstained safety dimensions remain distinct from a
+hard `BLOCK` and must never be rendered as `PASSED`.

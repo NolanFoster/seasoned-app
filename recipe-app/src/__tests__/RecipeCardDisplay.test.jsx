@@ -236,3 +236,59 @@ describe('Process safety notice', () => {
     expect(screen.queryByText(/technique/i)).not.toBeInTheDocument()
   })
 })
+
+describe('Uncertainty and abstention banner', () => {
+  const summary = {
+    checked: true,
+    level: 'abstain',
+    confidence: 0,
+    abstained: true,
+    dimensions: {
+      nutrition: { level: 'abstain', reasons: ['nutrition_not_calculated'] },
+      allergen_coverage: { level: 'abstain', reasons: ['opaque_or_precautionary_ingredient_terms'] },
+      process_safety: { level: 'high', reasons: [] },
+      authenticity: { level: 'medium', reasons: ['generated_content_not_independently_verified'] },
+    },
+  }
+
+  test('explains knowledge gaps and separates abstention from a hard block', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI blend bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup seasoning blend'],
+      instructions: ['Stir in the seasoning blend.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: { source: 'ai_generated', generationMethod: 'llama-ai' },
+      uncertaintySummary: summary,
+    }} />)
+
+    const banner = screen.getByRole('alert', { name: 'Recipe uncertainty' })
+    expect(banner).toHaveTextContent('Safety information needs review')
+    expect(banner).toHaveTextContent('Macros were not calculated')
+    expect(banner).toHaveTextContent('Some ingredient terms are ambiguous')
+    expect(screen.getByRole('region', { name: 'How this was made' }))
+      .toHaveTextContent('Review required')
+    expect(screen.getByText('Safety').closest('span')).toHaveClass('recipe-provenance-item--abstain')
+  })
+
+  test('renders a review note for non-safety uncertainty', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Estimated bowl',
+      source: 'ai_generated',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      uncertaintySummary: {
+        checked: true,
+        level: 'medium',
+        dimensions: {
+          nutrition: { level: 'medium', reasons: ['nutrition_is_estimated'] },
+          allergen_coverage: { level: 'high', reasons: [] },
+          process_safety: { level: 'high', reasons: [] },
+        },
+      },
+    }} />)
+
+    expect(screen.getByRole('note', { name: 'Recipe uncertainty' })).toHaveTextContent('Macros are estimates')
+  })
+})

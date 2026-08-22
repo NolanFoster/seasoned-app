@@ -19,7 +19,13 @@ export function generateRecipeId(url) {
 export async function compressData(data) {
   const encoder = new TextEncoder();
   const jsonString = JSON.stringify(data);
-  const jsonBytes = encoder.encode(jsonString);
+  // JSON.stringify(undefined) returns undefined rather than a JSON document.
+  // Preserve that supported round-trip explicitly instead of compressing the
+  // literal text "undefined", which cannot be parsed on decompression.
+  const serializedData = jsonString === undefined
+    ? JSON.stringify('__SEASONED_UNDEFINED__')
+    : jsonString;
+  const jsonBytes = encoder.encode(serializedData);
   
   // Use CompressionStream for gzip compression
   const cs = new CompressionStream('gzip');
@@ -82,7 +88,8 @@ export async function decompressData(compressedBase64) {
   
   const decoder = new TextDecoder();
   const jsonString = decoder.decode(decompressedBytes);
-  return JSON.parse(jsonString);
+  const parsed = JSON.parse(jsonString);
+  return parsed === '__SEASONED_UNDEFINED__' ? undefined : parsed;
 }
 
 // Save recipe to KV storage

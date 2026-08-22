@@ -140,3 +140,39 @@ describe('renderRecipeCard', () => {
     expect(html).toContain('https://example.com/original');
   });
 });
+
+describe('renderRecipeCard uncertainty disclosure', () => {
+  it('includes a machine-readable uncertainty notice on AI-touched share cards', () => {
+    const html = renderRecipeCard({
+      name: 'AI recipe',
+      source: 'ai_generated',
+      ingredients: ['1 cup seasoning blend'],
+      uncertaintySummary: {
+        checked: true,
+        level: 'abstain',
+        abstained: true,
+        dimensions: {
+          allergen_coverage: { level: 'abstain' },
+          nutrition: { level: 'abstain' },
+        },
+        reasons: ['opaque_or_precautionary_ingredient_terms'],
+      },
+    })
+
+    expect(html).toContain('data-uncertainty-level="abstain"')
+    expect(html).toContain('Safety information needs review')
+    expect(html).toContain('opaque_or_precautionary_ingredient_terms')
+  })
+
+  it('does not add uncertainty chrome when the summary is high confidence', () => {
+    const html = renderRecipeCard({
+      name: 'Verified recipe',
+      uncertaintySummary: {
+        checked: true,
+        level: 'high',
+        dimensions: { nutrition: { level: 'high' } },
+      },
+    })
+    expect(html).not.toContain('recipe-uncertainty-banner')
+  })
+})
