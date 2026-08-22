@@ -11,6 +11,7 @@ function PantryHarness() {
       <button type="button" onClick={() => pantry.addItem({ name: 'Rice', location: 'pantry' })}>Add rice</button>
       <button type="button" onClick={() => void pantry.updateItem(7, { name: 'Brown rice', location: 'pantry' }).catch(() => {})}>Rename rice</button>
       <button type="button" onClick={() => void pantry.removeItem(7).catch(() => {})}>Remove rice</button>
+      <button type="button" onClick={() => pantry.scanPhoto(new File(['image'], 'pantry.jpg', { type: 'image/jpeg' }))}>Scan pantry</button>
     </div>
   )
 }
@@ -23,6 +24,9 @@ describe('usePantry', () => {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ success: true, data: [{
           id: 7, name: 'Rice', quantity: 1, unit: 'bag', location: 'pantry', tags: [], expires_on: null,
         }] }) })
+      }
+      if (options.method === 'POST' && options.body instanceof FormData) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ success: true, data: { items: [{ name: 'spinach' }] } }) })
       }
       if (options.method === 'POST') {
         return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ success: true, data: {
@@ -62,6 +66,18 @@ describe('usePantry', () => {
     render(<LocalHarness />)
     fireEvent.click(screen.getByRole('button', { name: 'Add local' }))
     expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  test('uploads photo scans as multipart data without a JSON content type', async () => {
+    render(<PantryHarness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Scan pantry' }))
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('https://test-user.example.com/me/pantry-scan', expect.objectContaining({
+      method: 'POST',
+      body: expect.any(FormData),
+      headers: expect.objectContaining({ Authorization: 'Bearer token-a' }),
+    })))
+    const scanCall = global.fetch.mock.calls.find(([url]) => url.endsWith('/me/pantry-scan'))
+    expect(scanCall[1].headers['Content-Type']).toBeUndefined()
   })
 
   test('loads, adds, updates, and removes user-scoped items through the API', async () => {

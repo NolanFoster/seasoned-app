@@ -3472,6 +3472,158 @@ textarea:focus-visible {
   }
 }
 
+/* ── Pantry photo scan ─────────────────────────────────────────────────── */
+.pantry-scan-trigger {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px dashed rgba(200, 169, 110, 0.7);
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--accent, #c8a96e);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pantry-scan-trigger:hover,
+.pantry-scan-trigger:focus-visible {
+  background: rgba(200, 169, 110, 0.12);
+}
+
+.pantry-scan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+  padding: 1rem;
+  border: 1px solid rgba(200, 169, 110, 0.35);
+  border-radius: 0.9rem;
+  background: rgba(200, 169, 110, 0.06);
+}
+
+.pantry-scan-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.pantry-scan-heading h3,
+.pantry-scan-results h4 {
+  margin: 0;
+}
+
+.pantry-scan-heading p,
+.pantry-scan-results > p {
+  margin: 0.3rem 0 0;
+  color: var(--muted, #aab5ad);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.pantry-scan-upload {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.55rem;
+  color: var(--text, #f2f5ef);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pantry-scan-upload input {
+  max-width: 10rem;
+  color: var(--muted, #aab5ad);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.pantry-scan-preview {
+  width: 100%;
+  max-height: 12rem;
+  object-fit: contain;
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.pantry-scan-file,
+.pantry-scan-confidence {
+  margin: 0;
+  color: var(--muted, #aab5ad);
+  font-size: 0.75rem;
+}
+
+.pantry-scan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.pantry-scan-actions .pantry-leftovers,
+.pantry-scan-actions .pantry-primary {
+  width: auto;
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+}
+
+.pantry-scan-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pantry-scan-results ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pantry-scan-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.pantry-scan-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  color: var(--text, #f2f5ef);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.pantry-scan-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .pantry-scan-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pantry-scan-fields .pantry-field:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ── Recipe editor and private notes ─────────────────────────────────────── */
 /* Both sheets follow the pantry backdrop/sheet pattern so a recipe action
    opens the same kind of surface the rest of the app uses. */

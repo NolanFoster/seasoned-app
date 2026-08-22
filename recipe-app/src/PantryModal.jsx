@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { PANTRY_LOCATIONS } from './usePantry.js'
+import PantryPhotoScan from './PantryPhotoScan.jsx'
 
 const LOCATION_LABELS = {
   fridge: 'Fridge',
@@ -101,18 +102,22 @@ export default function PantryModal({
   onAdd,
   onUpdate,
   onRemove,
+  scannerEnabled = false,
+  onScan,
   onClose,
 }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
   const [message, setMessage] = useState('')
   const [working, setWorking] = useState(false)
+  const [scanOpen, setScanOpen] = useState(false)
 
   useEffect(() => {
     if (!open) {
       setEditingId(null)
       setForm(EMPTY_FORM)
       setMessage('')
+      setScanOpen(false)
     }
   }, [open])
 
@@ -206,6 +211,21 @@ export default function PantryModal({
           <button type="button" className="pantry-leftovers" onClick={addRecipeIngredients} disabled={working}>
             Add leftovers from “{activeRecipe.name || 'this recipe'}”
           </button>
+        )}
+
+        {scannerEnabled && onScan && (
+          <button type="button" className="pantry-scan-trigger" onClick={() => setScanOpen((current) => !current)} disabled={working}>
+            {scanOpen ? 'Hide photo scan' : 'Scan a fridge or pantry photo'}
+          </button>
+        )}
+
+        {scannerEnabled && onScan && scanOpen && (
+          <PantryPhotoScan
+            open={scanOpen}
+            onScan={onScan}
+            onAdd={onAdd}
+            onClose={() => setScanOpen(false)}
+          />
         )}
 
         <form className="pantry-form" onSubmit={handleSubmit}>

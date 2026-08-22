@@ -326,6 +326,7 @@ export default function App() {
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
   const pantryEnabled = useFlag('pantry')
   const pantryPlannerEnabled = useFlag('pantry-planner')
+  const pantryScanEnabled = useFlag('pantry-scan')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
   const usablePantryItems = pantry.items.filter((item) => !isPantryItemExpired(item))
@@ -1378,6 +1379,8 @@ export default function App() {
           onAdd={pantry.addItem}
           onUpdate={pantry.updateItem}
           onRemove={pantry.removeItem}
+          scannerEnabled={pantryScanEnabled}
+          onScan={pantry.scanPhoto}
           onClose={() => setPantryOpen(false)}
         />
       </div>

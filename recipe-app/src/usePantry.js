@@ -77,13 +77,15 @@ export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMEN
 
   const request = useCallback(async (path, options = {}) => {
     if (!apiUrl || !token) throw new Error('Pantry sync is unavailable')
+    const isMultipart = typeof FormData !== 'undefined' && options.body instanceof FormData
+    const headers = {
+      ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    }
     const response = await fetch(`${apiUrl}${path}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
+      headers,
     })
     const body = await response.json().catch(() => ({}))
     if (!response.ok || !body.success) throw new Error(body.message || `Pantry request failed: ${response.status}`)
@@ -151,6 +153,15 @@ export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMEN
     }
   }, [apiUrl, persist, request, token])
 
+  const scanPhoto = useCallback(async (file) => {
+    if (!apiUrl || !token) throw new Error('Pantry photo scan is unavailable')
+    if (typeof FormData === 'undefined') throw new Error('Pantry photo scan is unavailable in this browser')
+    const formData = new FormData()
+    formData.append('image', file)
+    const body = await request('/me/pantry-scan', { method: 'POST', body: formData })
+    return Array.isArray(body.data?.items) ? body.data.items : []
+  }, [apiUrl, request, token])
+
   const removeItem = useCallback(async (id) => {
     const previousItem = itemsRef.current.find((item) => item.id === id)
     persist(itemsRef.current.filter((item) => item.id !== id))
@@ -173,6 +184,7 @@ export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMEN
     addItem,
     updateItem,
     removeItem,
+    scanPhoto,
     available: Boolean(enabled && (apiUrl || !token)),
   }
 }
