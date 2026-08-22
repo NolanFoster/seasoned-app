@@ -686,7 +686,7 @@ export default function App() {
       if (!data.success || !data.recipe) throw new Error(data.error || 'Generation returned no recipe')
 
       const r = data.recipe
-      const generatedRecipe = {
+      const generatedRecipeData = {
         id: `ai-${Date.now()}`,
         source: elevate ? 'elevated' : 'ai_generated',
         name: r.name,
@@ -707,6 +707,9 @@ export default function App() {
         provenance: r.provenance || null,
         nutrition: r.nutrition || null,
       }
+      const generatedRecipe = uncertaintyGuardsEnabled
+        ? annotateRecipeForProfile(generatedRecipeData, culinaryProfile.profile, true)
+        : generatedRecipeData
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
       setRetryAction(null)
@@ -745,7 +748,7 @@ export default function App() {
       if (!data.success || !data.recipe) throw new Error(data.error || 'Adaptation returned no recipe')
 
       const r = data.recipe
-      const adaptedRecipe = {
+      const adaptedRecipeData = {
         id: `adapt-${Date.now()}`,
         source: 'adapted',
         name: r.name || baseRecipe.name,
@@ -771,6 +774,9 @@ export default function App() {
         substitutions: r.substitutions || [],
         adaptationNotes: r.adaptationNotes || [],
       }
+      const adaptedRecipe = uncertaintyGuardsEnabled
+        ? annotateRecipeForProfile(adaptedRecipeData, culinaryProfile.profile, true)
+        : adaptedRecipeData
       setActiveRecipe(adaptedRecipe)
       addRecentRecipe(adaptedRecipe)
       setRetryAction(null)
