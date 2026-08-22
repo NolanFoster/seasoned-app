@@ -28,7 +28,7 @@ export default function GeneratingCard({ dishName }) {
         <span className="generating-bubble" />
       </div>
       <div className="generating-dish-name">{dishName}</div>
-      <p className="generating-phrase" key={phraseIndex}>
+      <p className="generating-phrase" key={phraseIndex} aria-live="polite" aria-atomic="true">
         {KITCHEN_PHRASES[phraseIndex]}
       </p>
       <p className="generating-hint">AI recipes take about 15 seconds</p>

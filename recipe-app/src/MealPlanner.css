@@ -520,22 +520,36 @@
    -------------------------------------------------------------------------- */
 
 .day-card__empty-state {
+  height: 100px;
+  margin: var(--spacing-sm);
+  border: 2px dashed var(--border);
+  border-radius: calc(var(--radius) - 4px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 120px gives adequate visual presence and touch/drop target area */
-  min-height: 120px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  background: rgb(var(--color-shadow-rgb) / 0.02);
-  transition: border-color 0.15s ease, background 0.15s ease;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: all var(--duration-short) ease;
+  pointer-events: none;
 }
 
 /* Highlight when a meal is dragged over an empty day */
 .day-card--drag-over .day-card__empty-state {
-  border-color: rgb(var(--color-primary-rgb) / 0.5); /* --accent at mid opacity */
-  background: rgb(var(--color-primary-rgb) / 0.05);
+  height: 100px;
+  margin: var(--spacing-sm);
+  border: 2px dashed var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: all var(--duration-short) ease;
+  pointer-events: none;
 }
 
 .day-card__empty-state__text {

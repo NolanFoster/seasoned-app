@@ -300,6 +300,21 @@ textarea:focus-visible {
   opacity: 0.5;
 }
 
+.omnibox-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.omnibox-clear-btn:hover {
+  color: var(--text);
+}
+
 .omnibox-actions {
   display: flex;
   gap: var(--spacing-sm);
@@ -3448,9 +3463,12 @@ textarea:focus-visible {
 }
 
 .pantry-empty {
-  padding: 1.25rem 0;
-  color: var(--muted, #aab5ad);
-  line-height: 1.45;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .pantry-empty strong {
@@ -3802,12 +3820,12 @@ textarea:focus-visible {
 }
 
 .recipe-notes-empty {
-  padding: 1rem;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  border-radius: 0.7rem;
-  color: var(--muted, #aab5ad);
-  font-size: 0.86rem;
+  padding: var(--spacing-2xl) var(--spacing-lg);
   text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .recipe-notes-empty strong {

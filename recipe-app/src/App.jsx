@@ -1093,6 +1093,29 @@ export default function App() {
               autoComplete="off"
               spellCheck="false"
             />
+            
+            {input.length > 0 && !inputBusy && (
+              <button
+                type="button"
+                className="omnibox-clear-btn"
+                aria-label="Clear search"
+                onClick={() => {
+                  setInput('');
+                  setSearchResults([]);
+                  setErrorMsg('');
+                  setRetryAction(null);
+                  setActiveOptionKey(null);
+                  if (inputRef.current) {
+                    inputRef.current.focus();
+                  }
+                  // Force a manual trigger of handleInputChange if needed, but setInput clears the visual
+                  // We manually clear the search state so it behaves like the user deleted everything.
+                  latestInputRef.current = '';
+                }}
+              >
+                ×
+              </button>
+            )}
 
             <div className={`omnibox-actions ${isUrl ? 'omnibox-actions--clip' : ''}`}>
               {/* Search is the contextual primary for text queries; generation stays secondary. */}

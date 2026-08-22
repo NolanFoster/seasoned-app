@@ -242,6 +242,11 @@ export default function PantryModal({
           <div className="pantry-list-heading"><h3>On hand</h3><span>{items.length} item{items.length === 1 ? '' : 's'}</span></div>
           {loading ? <p className="pantry-empty">Loading your pantry…</p> : groupedItems.length === 0 ? (
             <div className="pantry-empty">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" style={{ opacity: 0.5, marginBottom: '16px' }}>
+                <path d="M4 7V17C4 18.1046 4.89543 19 6 19H18C19.1046 19 20 18.1046 20 17V7" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 19V11C9 9.89543 9.89543 9 11 9H13C14.1046 9 15 9.89543 15 11V19" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4 7C4 5.89543 4.89543 5 6 5H18C19.1046 5 20 5.89543 20 7C20 8.10457 19.1046 9 18 9H6C4.89543 9 4 8.10457 4 7Z" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               <strong>Your pantry is empty</strong>
               <p>Add a few staples above, or add ingredients from the open recipe.</p>
             </div>
