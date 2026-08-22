@@ -20,6 +20,7 @@ import { useRecipeNotes } from './useRecipeNotes.js'
 import { withAllergenSummary } from '../../shared/allergen-graph.js'
 import { analyzeProcessSafety } from '../../shared/food-process-safety.js'
 import { getExpiringPantryItems, isPantryItemExpired } from '../../shared/pantry-planning.js'
+import { buildRecipeUncertainty } from '../../shared/uncertainty.js'
 
 const SEARCH_DB_URL = import.meta.env.VITE_SEARCH_DB_URL
 const CLIPPER_API_URL = import.meta.env.VITE_CLIPPER_API_URL
@@ -298,18 +299,29 @@ function getRecipeSourceLabel(recipe) {
  * someone else's published text, so the app labels it and gates cook mode
  * instead of editing their steps.
  */
-export function annotateRecipeForProfile(recipe, profile) {
+export function annotateRecipeForProfile(recipe, profile, uncertaintyEnabled = false) {
   const processSafetySummary = recipe.processSafetySummary || analyzeProcessSafety(recipe)
   const withProcess = { ...recipe, processSafetySummary }
   const hardAllergens = profile?.hard_allergens || profile?.hardAllergens || []
-  if (!Array.isArray(hardAllergens) || hardAllergens.length === 0) return withProcess
-  return withAllergenSummary({
-    ...withProcess,
-    appliedConstraints: {
-      ...(recipe.appliedConstraints || {}),
-      hardAllergens,
-    },
-  }, hardAllergens)
+  const withAllergens = Array.isArray(hardAllergens) && hardAllergens.length > 0
+    ? withAllergenSummary({
+      ...withProcess,
+      appliedConstraints: {
+        ...(recipe.appliedConstraints || {}),
+        hardAllergens,
+      },
+    }, hardAllergens)
+    : withProcess
+  return uncertaintyEnabled
+    ? {
+      ...withAllergens,
+      uncertaintySummary: buildRecipeUncertainty(withAllergens, {
+        hardAllergens,
+        allergenSummary: withAllergens.allergenSummary,
+        processSafetySummary,
+      }),
+    }
+    : withAllergens
 }
 
 export default function App() {
@@ -319,6 +331,7 @@ export default function App() {
   const culinaryProfileEnabled = useFlag('culinary-profile')
   const constraintGenerateEnabled = useFlag('constraint-generate')
   const recipeAdaptEnabled = useFlag('recipe-adapt')
+  const uncertaintyGuardsEnabled = useFlag('uncertainty_guards_v1')
   const [profileOpen, setProfileOpen] = useState(false)
   const [pantryOpen, setPantryOpen] = useState(false)
   const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
@@ -426,8 +439,9 @@ export default function App() {
               instructions: d.instructions || d.recipeInstructions || [],
               source_url: d.url || d.source_url || '',
               allergenSummary: d.allergenSummary || null,
+              uncertaintySummary: d.uncertaintySummary || null,
             }
-            return annotateRecipeForProfile(searchRecipe, culinaryProfile.profile)
+            return annotateRecipeForProfile(searchRecipe, culinaryProfile.profile, uncertaintyGuardsEnabled)
           } catch {
             return null
           }
@@ -623,7 +637,7 @@ export default function App() {
         instructions: d.instructions || d.recipeInstructions || [],
         source_url: url,
         allergenSummary: d.allergenSummary || null,
-      }, culinaryProfile.profile)
+      }, culinaryProfile.profile, uncertaintyGuardsEnabled)
       setActiveRecipe(clippedRecipe)
       addRecentRecipe(clippedRecipe)
       setInput('')
@@ -688,6 +702,10 @@ export default function App() {
         allergenValidation: r.allergenValidation || data.allergenValidation || null,
         processSafetySummary: r.processSafetySummary || data.processSafetySummary || null,
         processSafetyValidation: r.processSafetyValidation || null,
+        uncertaintySummary: r.uncertaintySummary || data.uncertaintySummary || null,
+        qualityBar: r.qualityBar || null,
+        provenance: r.provenance || null,
+        nutrition: r.nutrition || null,
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
@@ -744,6 +762,10 @@ export default function App() {
         allergenSummary: r.allergenSummary || null,
         processSafetySummary: r.processSafetySummary || data.processSafetySummary || null,
         processSafetyValidation: r.processSafetyValidation || null,
+        uncertaintySummary: r.uncertaintySummary || data.uncertaintySummary || null,
+        qualityBar: r.qualityBar || null,
+        provenance: r.provenance || null,
+        nutrition: r.nutrition || null,
         adapted_from: r.adapted_from || baseRecipe.id || baseRecipe.source_url || null,
         adaptation_constraints: r.adaptation_constraints || data.appliedConstraints || null,
         substitutions: r.substitutions || [],
@@ -934,6 +956,10 @@ export default function App() {
             adaptation_constraints: r.adaptation_constraints || null,
             substitutions: r.substitutions || [],
             adaptationNotes: r.adaptationNotes || [],
+            uncertaintySummary: r.uncertaintySummary || null,
+            qualityBar: r.qualityBar || null,
+            provenance: r.provenance || null,
+            nutrition: r.nutrition || null,
           },
           options: { overwrite: false },
         }),

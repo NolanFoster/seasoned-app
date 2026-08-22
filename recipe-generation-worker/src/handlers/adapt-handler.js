@@ -2,6 +2,7 @@ import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../s
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
 import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
+import { buildRecipeUncertainty, isUncertaintyGuardsEnabled } from '../../../shared/uncertainty.js';
 import {
   isRecipeProcessGraphEnabled,
   withRecipeProcessGraph
@@ -79,6 +80,42 @@ const MOCK_SUBSTITUTIONS = [
     reason: 'Adds a similar toasted finish without sesame.'
   }
 ];
+
+function buildSafetyErrorUncertainty(error) {
+  return buildRecipeUncertainty({
+    ingredients: [],
+    allergenSummary: error instanceof AllergenSafetyError ? error.summary : null,
+    processSafetySummary: error instanceof ProcessSafetyError ? error.summary : error.processSafetySummary
+  });
+}
+
+function withOptionalUncertaintyMetadata(recipe, constraints, env) {
+  if (!isUncertaintyGuardsEnabled(env)) return recipe;
+  const uncertaintySummary = buildRecipeUncertainty(recipe, {
+    hardAllergens: constraints.hardAllergens,
+    allergenSummary: recipe.allergenSummary,
+    processSafetySummary: recipe.processSafetySummary,
+    qualityBar: recipe.qualityBar
+  });
+  return {
+    ...recipe,
+    uncertaintySummary,
+    qualityBar: recipe.qualityBar
+      ? {
+        ...recipe.qualityBar,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.qualityBar,
+    provenance: recipe.provenance
+      ? {
+        ...recipe.provenance,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.provenance
+  };
+}
 
 function objectOrEmpty(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -345,11 +382,14 @@ export async function handleAdapt(request, env, corsHeaders) {
       similarRecipeIds: []
     });
 
+    finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, constraints, env);
+
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
       appliedConstraints: constraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -361,7 +401,8 @@ export async function handleAdapt(request, env, corsHeaders) {
         error: 'Recipe adaptation failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary,
-        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {}),
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -372,7 +413,8 @@ export async function handleAdapt(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         error: 'Recipe adaptation failed food-process safety validation',
         code: error.code,
-        processSafetySummary: error.summary
+        processSafetySummary: error.summary,
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

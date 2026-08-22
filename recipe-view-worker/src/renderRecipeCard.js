@@ -29,6 +29,28 @@ const sourceBadgeMap = {
   elevated: { label: 'Elevated', color: '#e8c87a' },
 };
 
+function renderUncertaintyNotice(recipe) {
+  const summary = recipe.uncertaintySummary;
+  if (!summary || summary.checked !== true) return '';
+  const dimensions = Object.entries(summary.dimensions || {})
+    .filter(([, detail]) => detail && detail.level && detail.level !== 'high');
+  if (dimensions.length === 0) return '';
+  const safetyConcern = ['allergen_coverage', 'process_safety'].some((dimension) =>
+    ['medium', 'low', 'abstain'].includes(summary.dimensions?.[dimension]?.level),
+  );
+  const level = summary.level || 'medium';
+  const heading = safetyConcern && (level === 'abstain' || summary.abstained)
+    ? 'Safety information needs review'
+    : safetyConcern ? 'Safety review recommended' : 'Some recipe details need review';
+  const reasons = (summary.reasons || []).map((reason) => escapeHtml(reason)).join(', ');
+  return `<section class="recipe-uncertainty-banner${safetyConcern ? ' recipe-uncertainty-banner--safety' : ''}" data-uncertainty-level="${escapeHtml(level)}" aria-label="Recipe uncertainty">
+    <strong>${escapeHtml(heading)}</strong>
+    <p>Seasoned could not verify every recipe detail. This is not a safety clearance or medical nutrition assessment.</p>
+    ${reasons ? `<p>Review: ${reasons}.</p>` : ''}
+    <p>Verify labels, measurements, and preparation conditions before relying on this recipe.</p>
+  </section>`;
+}
+
 export function renderRecipeCard(recipe) {
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst;
@@ -59,6 +81,8 @@ export function renderRecipeCard(recipe) {
   ${recipe.image ? `<img class="recipe-image" src="${escapeHtml(recipe.image)}" alt="${escapeHtml(recipe.name)}" />` : ''}
 
   ${recipe.description ? `<p class="recipe-description">${escapeHtml(recipe.description)}</p>` : ''}
+
+  ${renderUncertaintyNotice(recipe)}
 
   <div class="recipe-meta">
     ${recipe.prep_time ? `<span class="recipe-meta-pill"><strong>Prep</strong> ${escapeHtml(parseDuration(recipe.prep_time))}</span>` : ''}

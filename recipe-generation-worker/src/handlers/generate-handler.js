@@ -21,6 +21,43 @@ import {
   isRecipeProcessGraphEnabled,
   withRecipeProcessGraph
 } from '../../../shared/recipe-process-graph.js';
+import { buildRecipeUncertainty, isUncertaintyGuardsEnabled } from '../../../shared/uncertainty.js';
+
+function buildSafetyErrorUncertainty(error) {
+  return buildRecipeUncertainty({
+    ingredients: [],
+    allergenSummary: error instanceof AllergenSafetyError ? error.summary : null,
+    processSafetySummary: error instanceof ProcessSafetyError ? error.summary : error.processSafetySummary
+  });
+}
+
+function withOptionalUncertaintyMetadata(recipe, appliedConstraints, env) {
+  if (!isUncertaintyGuardsEnabled(env)) return recipe;
+  const uncertaintySummary = buildRecipeUncertainty(recipe, {
+    hardAllergens: appliedConstraints.hardAllergens,
+    allergenSummary: recipe.allergenSummary,
+    processSafetySummary: recipe.processSafetySummary,
+    qualityBar: recipe.qualityBar
+  });
+  return {
+    ...recipe,
+    uncertaintySummary,
+    qualityBar: recipe.qualityBar
+      ? {
+        ...recipe.qualityBar,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.qualityBar,
+    provenance: recipe.provenance
+      ? {
+        ...recipe.provenance,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.provenance
+  };
+}
 
 function normalizePantryExpiry(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -179,11 +216,14 @@ export async function handleGenerate(request, env, corsHeaders) {
         similarRecipeIds: []
       });
 
+      finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, appliedConstraints, env);
+
       return new Response(JSON.stringify({
         success: true,
         recipe: finalRecipe,
         appliedConstraints,
         processSafetySummary: finalRecipe.processSafetySummary || null,
+        ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -258,11 +298,14 @@ export async function handleGenerate(request, env, corsHeaders) {
       similarRecipeIds: finalRecipe.similarRecipeIds || []
     });
 
+    finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, appliedConstraints, env);
+
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
       appliedConstraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -280,7 +323,8 @@ export async function handleGenerate(request, env, corsHeaders) {
         error: 'Recipe failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary,
-        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {}),
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: {
@@ -296,7 +340,8 @@ export async function handleGenerate(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         error: 'Recipe failed food-process safety validation',
         code: error.code,
-        processSafetySummary: error.summary
+        processSafetySummary: error.summary,
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: {

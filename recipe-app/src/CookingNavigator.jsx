@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
+import UncertaintyBanner from './UncertaintyBanner.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
 import { getNavigatorSteps } from '../../shared/recipe-process-graph.js'
 
@@ -1038,6 +1039,7 @@ export default function CookingNavigator({
           summary={recipe.processSafetySummary}
           className="cn-process-notice"
         />
+        <UncertaintyBanner summary={recipe.uncertaintySummary} className="cn-uncertainty-notice" />
         {showRecipe ? (
           <div className="cn-recipe-panel">
             <RecipeCardDisplay recipe={recipe} />

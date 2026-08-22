@@ -9,6 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ENVIRONMENT = "development"
 RECIPE_PROCESS_GRAPH_V1 = "false"
+UNCERTAINTY_GUARDS_V1 = "false"
 # Food-process safety gates (issue #367). On everywhere; may only be
 # switched off outside production, or via PROCESS_SAFETY_BREAK_GLASS.
 PROCESS_SAFETY_V1 = "true"
@@ -41,6 +42,7 @@ name = "recipe-generation-worker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
 RECIPE_PROCESS_GRAPH_V1 = "false"
+UNCERTAINTY_GUARDS_V1 = "false"
 # Food-process safety gates (issue #367). On everywhere; may only be
 # switched off outside production, or via PROCESS_SAFETY_BREAK_GLASS.
 PROCESS_SAFETY_V1 = "true"
@@ -67,6 +69,7 @@ name = "recipe-generation-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 RECIPE_PROCESS_GRAPH_V1 = "false"
+UNCERTAINTY_GUARDS_V1 = "false"
 # Food-process safety gates (issue #367). On everywhere; may only be
 # switched off outside production, or via PROCESS_SAFETY_BREAK_GLASS.
 PROCESS_SAFETY_V1 = "true"
@@ -96,6 +99,7 @@ name = "recipe-generation-worker"
 [env.production.vars]
 ENVIRONMENT = "production"
 RECIPE_PROCESS_GRAPH_V1 = "false"
+UNCERTAINTY_GUARDS_V1 = "false"
 # Food-process safety gates (issue #367). On everywhere; may only be
 # switched off outside production, or via PROCESS_SAFETY_BREAK_GLASS.
 PROCESS_SAFETY_V1 = "true"
@@ -126,6 +130,7 @@ name = "recipe-generation-worker"
 [env.development.vars]
 ENVIRONMENT = "development"
 RECIPE_PROCESS_GRAPH_V1 = "false"
+UNCERTAINTY_GUARDS_V1 = "false"
 # Food-process safety gates (issue #367). On everywhere; may only be
 # switched off outside production, or via PROCESS_SAFETY_BREAK_GLASS.
 PROCESS_SAFETY_V1 = "true"

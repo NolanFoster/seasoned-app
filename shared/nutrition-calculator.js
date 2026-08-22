@@ -665,12 +665,32 @@ export async function calculateNutritionalFacts(ingredients, apiKey, servings = 
     
     // Format for recipe schema
     const formattedNutrition = aggregator.formatForRecipeSchema(nutritionTotals, servings);
+    const processedIngredients = nutritionDataArray.length;
+    const totalIngredients = ingredients.length;
+    const coveragePercent = totalIngredients > 0
+      ? Math.round((processedIngredients / totalIngredients) * 100)
+      : 0;
+    // USDA matches are useful estimates, not a labeled-product clearance. Keep
+    // this machine-readable so consumers can abstain instead of presenting
+    // precise-looking macros as fact.
+    formattedNutrition.coveragePercent = coveragePercent;
+    formattedNutrition.provenance = 'usda_estimate';
+    formattedNutrition.uncertainty = {
+      level: processedIngredients === 0 || coveragePercent < 60 ? 'abstain' : 'medium',
+      confidence: processedIngredients > 0 ? Math.min(0.75, coveragePercent / 100) : 0,
+      reasons: processedIngredients > 0
+        ? ['nutrition_is_estimated']
+        : ['nutrition_not_calculated'],
+      evidence_refs: ['usda_fooddata_central'],
+    };
 
     return {
       success: true,
       nutrition: formattedNutrition,
-      processedIngredients: nutritionDataArray.length,
-      totalIngredients: ingredients.length
+      processedIngredients,
+      totalIngredients,
+      nutritionUncertainty: formattedNutrition.uncertainty,
+      nutritionCoverage: coveragePercent,
     };
 
   } catch (error) {

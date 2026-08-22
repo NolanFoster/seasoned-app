@@ -415,3 +415,21 @@ The server-side `recipe_process_graph_v1` flag is off by default. Generation and
 adaptation attach a graph only when `RECIPE_PROCESS_GRAPH_V1` (or its explicit
 worker aliases) is enabled. Existing clients continue to use
 `ingredients`/`instructions` when the flag is off or graph confidence is low.
+
+## Uncertainty and selective abstention
+
+`uncertainty.js` provides the opt-in `uncertainty_guards_v1` contract used by
+recipe generation and adaptation. `buildRecipeUncertainty()` combines the
+existing allergen graph, process-safety summary, nutrition provenance,
+timing, product identity, and quality metadata into deterministic per-
+dimension signals. The levels are `high`, `medium`, `low`, and `abstain`;
+`medium` and below require review, while `abstain` means the app must not make
+that claim. This is not a medical score or a guarantee of safety.
+
+The worker flag `UNCERTAINTY_GUARDS_V1` is off by default. When enabled,
+`/generate` and `/adapt` return `uncertaintySummary` both at the response root
+and on the recipe. The summary is display-safe: reasons are short categories,
+and evidence references must not contain chain-of-thought or private pantry
+content. Uncertainty never weakens `enforceAllergenSafety` or
+`enforceProcessSafety`; low/abstained safety dimensions remain distinct from a
+hard `BLOCK` and must never be rendered as `PASSED`.

@@ -1,4 +1,5 @@
 import React from 'react'
+import UncertaintyBanner from './UncertaintyBanner.jsx'
 
 export function parseDuration(val) {
   if (!val) return null
@@ -173,6 +174,8 @@ function qualityStatusLabel(value) {
     passed: 'Checks passed',
     needs_review: 'Review recommended',
     blocked: 'Blocked',
+    abstain: 'Review required',
+    low: 'Review required',
     not_checked: 'Not checked',
   }[value] || 'Not checked'
 }
@@ -198,10 +201,22 @@ export function RecipeProvenance({ recipe }) {
   const qualityScore = qualityBar?.score ?? provenance?.qualityScore
   const similarRecipeIds = provenance?.similarRecipeIds || []
   const nutritionCoverage = provenance?.nutritionCoverage
-  const allergenCheck = qualityBar?.allergenCheck
-    || (recipe.allergenSummary?.blocked?.length > 0
-      ? 'blocked'
-      : recipe.allergenSummary?.needs_review ? 'needs_review' : recipe.allergenSummary ? 'passed' : 'not_checked')
+  const allergenUncertaintyLevel = recipe.uncertaintySummary?.dimensions?.allergen_coverage?.level
+  const allergenCheck = allergenUncertaintyLevel && allergenUncertaintyLevel !== 'high'
+    ? (allergenUncertaintyLevel === 'abstain' ? 'abstain' : 'needs_review')
+    : qualityBar?.allergenCheck
+      || (recipe.allergenSummary?.blocked?.length > 0
+        ? 'blocked'
+        : recipe.allergenSummary?.needs_review ? 'needs_review' : recipe.allergenSummary ? 'passed' : 'not_checked')
+  const effectiveQualityStatus = recipe.uncertaintySummary?.level === 'abstain'
+    ? 'needs_review'
+    : qualityBar?.status
+  const nutritionUncertaintyLevel = recipe.uncertaintySummary?.dimensions?.nutrition?.level
+  const nutritionLabel = nutritionUncertaintyLevel === 'abstain'
+    ? 'Needs verification'
+    : nutritionUncertaintyLevel && nutritionUncertaintyLevel !== 'high'
+      ? 'Estimated — review'
+      : typeof nutritionCoverage === 'number' ? `${Math.round(nutritionCoverage)}% ingredient coverage` : 'Not calculated'
   const constraintCount = Object.values(provenance?.appliedConstraints || recipe.appliedConstraints || {})
     .filter((value) => (Array.isArray(value) ? value.length > 0 : value !== undefined && value !== null && value !== '')).length
 
@@ -215,7 +230,7 @@ export function RecipeProvenance({ recipe }) {
       </div>
       <div className="recipe-provenance-grid">
         {qualityScore !== null && qualityScore !== undefined && (
-          <span className={`recipe-provenance-item recipe-provenance-item--${qualityBar?.status || 'passed'}`}>
+          <span className={`recipe-provenance-item recipe-provenance-item--${effectiveQualityStatus || 'passed'}`}>
             <strong>Quality</strong> {Math.round(Number(qualityScore))}/100
           </span>
         )}
@@ -238,7 +253,7 @@ export function RecipeProvenance({ recipe }) {
           </span>
         )}
         <span className="recipe-provenance-item">
-          <strong>Nutrition</strong> {typeof nutritionCoverage === 'number' ? `${Math.round(nutritionCoverage)}% ingredient coverage` : 'Not calculated'}
+          <strong>Nutrition</strong> {nutritionLabel}
         </span>
       </div>
       <p className="recipe-provenance-disclaimer">
@@ -289,6 +304,7 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
 
       <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
       <ProcessSafetyNotice summary={recipe.processSafetySummary} />
+      <UncertaintyBanner summary={recipe.uncertaintySummary} />
       <RecipeProvenance recipe={recipe} />
 
       <div className="recipe-meta">

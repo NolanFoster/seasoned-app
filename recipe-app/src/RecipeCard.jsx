@@ -40,6 +40,7 @@ export default function RecipeCard({
   const mealPlannerEnabled = useFlag('meal-planner')
   const recipeEditingEnabled = useFlag('recipe-editing')
   const recipeNotesEnabled = useFlag('recipe-notes')
+  const uncertaintyGuardsEnabled = useFlag('uncertainty_guards_v1')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [cookBlocked, setCookBlocked] = useState(false)
@@ -68,6 +69,10 @@ export default function RecipeCard({
   // instructions, so it cannot be planned as a meal either.
   const processCookGate = recipe?.processSafetySummary?.cook_gate || 'allow'
   const hasBlockedProcessHazard = processCookGate === 'block'
+  const allergenUncertaintyLevel = recipe?.uncertaintySummary?.dimensions?.allergen_coverage?.level
+  const processUncertaintyLevel = recipe?.uncertaintySummary?.dimensions?.process_safety?.level
+  const uncertainSafety = uncertaintyGuardsEnabled
+    && [allergenUncertaintyLevel, processUncertaintyLevel].some((level) => ['low', 'abstain'].includes(level))
   const canAddToPlanner = Boolean(
     mealPlannerEnabled
       && mealPlanContext
@@ -75,6 +80,7 @@ export default function RecipeCard({
       && recipe?.name
       && !hasUnresolvedAllergenConflict
       && !hasBlockedProcessHazard
+      && !uncertainSafety
   )
 
   // Both actions address a recipe by id in a backing store, so they only make
@@ -158,8 +164,8 @@ export default function RecipeCard({
   function handleDaySelected(dateString, mealType) {
     setShowDaySelector(false)
     setOpenMenu(null)
-    if (hasUnresolvedAllergenConflict || hasBlockedProcessHazard) {
-      setPlannerFeedback(hasUnresolvedAllergenConflict ? 'blocked' : 'process-blocked')
+    if (hasUnresolvedAllergenConflict || hasBlockedProcessHazard || uncertainSafety) {
+      setPlannerFeedback(hasUnresolvedAllergenConflict ? 'blocked' : hasBlockedProcessHazard ? 'process-blocked' : 'uncertainty-blocked')
     } else {
       try {
         mealPlanContext.addMeal(dateString, mealType, recipe)
@@ -320,7 +326,9 @@ export default function RecipeCard({
                       ? 'Resolve the allergen warning before adding to the planner'
                       : hasBlockedProcessHazard
                         ? 'This technique is blocked by the food-process safety check'
-                        : !mealPlannerEnabled
+                        : uncertainSafety
+                          ? 'Review the recipe safety information before planning it'
+                          : !mealPlannerEnabled
                           ? 'Meal planner is off'
                           : 'Meal planner unavailable'
                 }
@@ -495,6 +503,14 @@ export default function RecipeCard({
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
               This technique is blocked by the food-process safety check
+            </>
+          ) : plannerFeedback === 'uncertainty-blocked' ? (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                <path d="M12 9v4M12 17h.01"/>
+                <path d="M10.3 3.8 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/>
+              </svg>
+              Review the recipe safety information before planning it
             </>
           ) : (
             <>

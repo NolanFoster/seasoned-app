@@ -17,6 +17,7 @@
     "./allergen-graph": "./allergen-graph.js",
     "./food-process-safety": "./food-process-safety.js",
     "./pantry-planning": "./pantry-planning.js",
+    "./uncertainty": "./uncertainty.js",
     "./recipe-process-graph": "./recipe-process-graph.js"
   },
   "scripts": {
