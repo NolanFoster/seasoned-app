@@ -1,4 +1,5 @@
 import { analyzeRecipeAllergens } from '../../shared/allergen-graph.js';
+import { calculateProcessGraphCoverage } from '../../shared/recipe-process-graph.js';
 
 const DEFAULT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 const STOP_WORDS = new Set([
@@ -220,6 +221,7 @@ export function buildQualityBar(recipe, {
     : result.warnings.length > 0
       ? 'needs_review'
       : 'passed';
+  const graph = recipe.processGraph ? calculateProcessGraphCoverage(recipe.processGraph) : null;
 
   return {
     status,
@@ -227,6 +229,12 @@ export function buildQualityBar(recipe, {
     generationMethod,
     allergenCheck: result.checks.allergenSafety.status,
     ingredientStepCoverage: Math.round(result.checks.ingredientCoverage.ratio * 100),
+    ...(graph ? {
+      graphValid: graph.valid,
+      graphCoverage: graph.percent,
+      graph_valid: graph.valid,
+      graph_coverage: graph.percent
+    } : {}),
     similarRecipesFound: Number(recipe.similarRecipesFound) || 0,
     generationTimeMs: Number(recipe.generationTime) || null,
     warnings: result.warnings

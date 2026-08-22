@@ -2,6 +2,10 @@ import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../s
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
 import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
+import {
+  isRecipeProcessGraphEnabled,
+  withRecipeProcessGraph
+} from '../../../shared/recipe-process-graph.js';
 
 const ADAPT_CONSTRAINT_FIELDS = [
   'dietary',
@@ -328,6 +332,10 @@ export async function handleAdapt(request, env, corsHeaders) {
       { 'process_safety.surface': 'adapt' }
     );
     finalRecipe.generationTime = Date.now() - adaptationStartedAt;
+    finalRecipe = withRecipeProcessGraph(finalRecipe, {
+      enabled: isRecipeProcessGraphEnabled(env),
+      recipeId: baseRecipe.id || baseRecipe.recipeId || null
+    });
     finalRecipe = withQualityMetadata(finalRecipe, {
       source: 'adapted',
       generationMethod: adaptationMethod,
