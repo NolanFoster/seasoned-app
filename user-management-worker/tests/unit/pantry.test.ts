@@ -2,6 +2,7 @@ import { SignJWT } from 'jose';
 import { describe, expect, it, vi } from 'vitest';
 import app from '../../src/index';
 import { PantryService, normalizePantryItemInput, validatePantryItemInput } from '../../src/services/pantry';
+import { detectPantryItems, parsePantryScanResponse, validatePantryPhoto } from '../../src/services/pantry-scan';
 import type { Bindings } from '../../src/types/env';
 
 const SECRET = 'test-secret-that-is-long-enough-for-hs256';
@@ -128,5 +129,77 @@ describe('authenticated pantry routes', () => {
     const body = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
     expect(body).toMatchObject({ success: true, data: { user_id: 'user-a', name: 'Oats', tags: ['breakfast'] } });
     expect(bind).toHaveBeenCalledWith('user-a', 'Oats', 1, 'bag', 'pantry', '2026-12-01', '["breakfast"]');
+  });
+});
+
+
+describe('pantry photo scanning', () => {
+  it('validates supported image types and the 10 MB limit', () => {
+    expect(validatePantryPhoto({ size: 0, type: 'image/jpeg', arrayBuffer: vi.fn() })).toEqual(['The pantry photo is empty']);
+    expect(validatePantryPhoto({ size: 1, type: 'image/gif', arrayBuffer: vi.fn() })).toEqual(['Use a JPG, PNG, or WebP pantry photo']);
+    expect(validatePantryPhoto({ size: 10 * 1024 * 1024 + 1, type: 'image/jpeg', arrayBuffer: vi.fn() })).toEqual(['Pantry photos must be 10 MB or smaller']);
+    expect(validatePantryPhoto({ size: 4, type: 'image/jpeg', arrayBuffer: vi.fn() })).toEqual([]);
+  });
+
+  it('parses, normalizes, and deduplicates model candidates', () => {
+    expect(parsePantryScanResponse('```json\n{"items":[{"name":"  Spinach ","quantity":"2","unit":"bags","location":"fridge","confidence":85},{"name":"spinach","location":"fridge","confidence":0.4},{"name":"unknown"}]}\n```')).toEqual([
+      expect.objectContaining({ name: 'Spinach', quantity: 2, unit: 'bags', location: 'fridge', confidence: 0.85, needsReview: true }),
+      expect.objectContaining({ name: 'unknown', location: 'other', confidence: 0.5 }),
+    ]);
+  });
+
+  it('sends image bytes to Workers AI and returns only reviewable candidates', async () => {
+    const run = vi.fn().mockResolvedValue({ description: '{"items":[{"name":"Tomatoes","quantity":3,"unit":"cans"}]}' });
+    const file = { size: 3, type: 'image/png', arrayBuffer: async () => Uint8Array.from([1, 2, 3]).buffer };
+    const items = await detectPantryItems(file, { run });
+    expect(run).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ image: [1, 2, 3] }));
+    expect(items[0]).toMatchObject({ name: 'Tomatoes', quantity: 3, needsReview: true });
+  });
+
+  it('requires authentication before parsing a scan upload', async () => {
+    const response = await app.fetch(new Request('https://example.test/me/pantry-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }), env({ AI: { run: vi.fn() } }));
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects non-multipart and oversized uploads before parsing the body', async () => {
+    const token = await tokenFor('user-a');
+    const ai = { run: vi.fn() };
+    const invalidType = await app.fetch(new Request('https://example.test/me/pantry-scan', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    }), env({ AI: ai }));
+    expect(invalidType.status).toBe(400);
+
+    const oversized = await app.fetch(new Request('https://example.test/me/pantry-scan', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'multipart/form-data; boundary=test',
+        'content-length': String(10 * 1024 * 1024 + 64 * 1024 + 1),
+      },
+    }), env({ AI: ai }));
+    expect(oversized.status).toBe(413);
+    expect(ai.run).not.toHaveBeenCalled();
+  });
+
+  it('can be disabled independently from the manual pantry API', async () => {
+    const token = await tokenFor('user-a');
+    const response = await app.fetch(new Request('https://example.test/me/pantry-scan', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'multipart/form-data' },
+    }), env({ AI: { run: vi.fn() }, PANTRY_SCAN_ENABLED: 'false' }));
+    expect(response.status).toBe(404);
+  });
+
+  it('returns a clear setup error when Workers AI is not bound', async () => {
+    const token = await tokenFor('user-a');
+    const response = await app.fetch(new Request('https://example.test/me/pantry-scan', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+    }), env());
+    expect(response.status).toBe(503);
   });
 });

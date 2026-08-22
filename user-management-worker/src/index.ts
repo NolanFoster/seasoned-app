@@ -6,6 +6,8 @@ import { Bindings } from './types/env';
 import { UserDatabaseService } from './services/user-database';
 import { DEFAULT_PROFILE, validateCulinaryProfileInput } from './services/culinary-profile';
 import { PantryService, validatePantryItemInput } from './services/pantry';
+import { detectPantryItems, MAX_PANTRY_PHOTO_BYTES, validatePantryPhoto } from './services/pantry-scan';
+import type { PantryScanFile } from './services/pantry-scan';
 import { RecipeNotesService, validateRecipeNoteInput } from './services/recipe-notes';
 
 const app = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
@@ -57,6 +59,14 @@ function pantryEnabled(env: Bindings): boolean {
   return env.PANTRY_ENABLED !== 'false';
 }
 
+function pantryScanEnabled(env: Bindings): boolean {
+  return env.PANTRY_SCAN_ENABLED !== 'false';
+}
+
+function isPantryPath(path: string): boolean {
+  return path === '/me/pantry-items' || path.startsWith('/me/pantry-items/') || path === '/me/pantry-scan';
+}
+
 function recipeNotesEnabled(env: Bindings): boolean {
   return env.RECIPE_NOTES_ENABLED !== 'false';
 }
@@ -79,11 +89,14 @@ app.use('*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization']
 // existing local workflow convenient; deployed environments require the shared
 // PASSKEY_SERVICE_TOKEN secret configured on both workers.
 app.use('*', async (c, next) => {
-  if (c.req.path === '/me/culinary-profile' || c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/') || isRecipeNotesPath(c.req.path)) {
+  if (c.req.path === '/me/culinary-profile' || isPantryPath(c.req.path) || isRecipeNotesPath(c.req.path)) {
     if (c.req.path === '/me/culinary-profile' && !culinaryProfileEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
-    if ((c.req.path === '/me/pantry-items' || c.req.path.startsWith('/me/pantry-items/')) && !pantryEnabled(c.env)) {
+    if (isPantryPath(c.req.path) && !pantryEnabled(c.env)) {
+      return c.json({ success: false, message: 'Not Found' }, 404);
+    }
+    if (c.req.path === '/me/pantry-scan' && !pantryScanEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     if (isRecipeNotesPath(c.req.path) && !recipeNotesEnabled(c.env)) {
@@ -252,6 +265,44 @@ app.delete('/me/pantry-items/:item_id', async (c) => {
   } catch (error) {
     console.error('Error deleting pantry item:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Pantry photos are sent directly to Workers AI and are never persisted by this
+// worker. The client must review the returned candidates before creating pantry
+// rows through the normal CRUD endpoint.
+app.post('/me/pantry-scan', async (c) => {
+  const ai = c.env.AI;
+  if (!ai) return c.json({ success: false, message: 'Pantry photo scan is not configured' }, 503);
+
+  const contentLength = Number(c.req.header('Content-Length') || 0);
+  if (contentLength > MAX_PANTRY_PHOTO_BYTES + 64 * 1024) {
+    return c.json({ success: false, message: 'Pantry photos must be 10 MB or smaller' }, 413);
+  }
+  const contentType = (c.req.header('Content-Type') || '').toLowerCase();
+  if (!contentType.startsWith('multipart/form-data')) {
+    return c.json({ success: false, message: 'Upload a pantry photo as multipart form data' }, 400);
+  }
+
+  try {
+    const body = await c.req.parseBody();
+    const file = body.image || body.photo;
+    if (!file) return c.json({ success: false, message: 'Upload a pantry photo in the image form field' }, 400);
+    const errors = validatePantryPhoto(file);
+    if (errors.length > 0) return c.json({ success: false, message: errors[0] }, 400);
+
+    const items = await detectPantryItems(file as PantryScanFile, ai);
+    return c.json({
+      success: true,
+      data: {
+        items,
+        processedEphemerally: true,
+        message: items.length ? 'Review these estimates before adding them to your pantry.' : 'No food items were detected.',
+      },
+    });
+  } catch (error) {
+    console.error('Error scanning pantry photo:', error);
+    return c.json({ success: false, message: 'Could not scan that pantry photo. Try another image.' }, 502);
   }
 });
 
@@ -926,6 +977,11 @@ app.get('/', (c) => {
         path: '/me/pantry-items',
         method: 'GET|POST|PATCH|DELETE',
         description: 'Manage authenticated user pantry inventory (Bearer JWT required)'
+      },
+      {
+        path: '/me/pantry-scan',
+        method: 'POST',
+        description: 'Identify food candidates in an ephemeral pantry photo (Bearer JWT required)'
       },
       {
         path: '/me/recipe-notes',

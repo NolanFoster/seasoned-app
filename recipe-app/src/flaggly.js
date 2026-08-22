@@ -6,6 +6,20 @@ import { useSyncExternalStore } from 'react'
 const FLAGGLY_PROXY_URL =
   typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8787'
 
+const FLAG_DEFAULTS = {
+  'voice-control': true,
+  'gesture-support': true,
+  dictation: true,
+  'elevate-recipe': true,
+  'meal-planner': true,
+  'culinary-profile': true,
+  'constraint-generate': true,
+  'recipe-adapt': true,
+  pantry: true,
+  'pantry-planner': true,
+  'pantry-scan': false,
+}
+
 let flaggly
 try {
   flaggly = new Flaggly({
@@ -15,20 +29,11 @@ try {
     env: import.meta.env.VITE_FLAGGLY_ENV_ID || 'production',
     lazy: true, // prevent SDK's internal fetch which has binding issues in Vite modules
     bootstrap: {
-      'voice-control': true,
-      'gesture-support': true,
-      'dictation': true,
-      'elevate-recipe': true,
-      'meal-planner': true,
-      'culinary-profile': true,
-      'constraint-generate': true,
-      'recipe-adapt': true,
-      'pantry': true,
-      'pantry-planner': true,
+      ...FLAG_DEFAULTS,
     },
   })
 } catch (err) {
-  console.error('[flaggly] SDK failed to initialize — all flags will default to true:', err)
+  console.error('[flaggly] SDK failed to initialize — using local flag defaults:', err)
   flaggly = { store: { subscribe: () => () => {}, get: () => ({}) } }
 }
 
@@ -67,7 +72,7 @@ export async function syncFlagglyUser(user) {
     const keys = state ? Object.keys(state) : []
     if (keys.length === 0) {
       console.warn(
-        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile, constraint-generate, recipe-adapt, pantry, pantry-planner) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
+        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile, constraint-generate, recipe-adapt, pantry, pantry-planner, pantry-scan) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
       )
     } else if (import.meta.env.DEV) {
       console.info(`[flaggly] Eval OK — ${keys.length} flag(s):`, keys.join(', '))
@@ -105,5 +110,5 @@ flaggly.store.subscribe(() => {
 export const useFlag = (key) => {
   const store = flaggly.store
   const data = useSyncExternalStore(store.subscribe.bind(store), store.get.bind(store))
-  return data?.[key]?.result ?? true
+  return data?.[key]?.result ?? FLAG_DEFAULTS[key] ?? true
 }
