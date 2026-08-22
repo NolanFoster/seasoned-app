@@ -756,3 +756,103 @@ describe('CookingNavigator — accessibility baseline', () => {
     expect(screen.getByRole('button', { name: 'Start 5 minutes timer' })).toBeInTheDocument()
   })
 })
+
+// ── Read aloud — natural voice ────────────────────────────────────────────────
+
+function mockSpeechSynthesis(voiceNames = ['Zarvox', 'Samantha', 'Ava (Natural)']) {
+  const spoken = []
+  const voices = voiceNames.map((name) => ({
+    name, voiceURI: name, lang: 'en-US', localService: true, default: false,
+  }))
+  const synth = {
+    speaking: false,
+    getVoices: () => voices,
+    speak: jest.fn((u) => { spoken.push(u); synth.speaking = true; u.onstart?.() }),
+    cancel: jest.fn(() => { synth.speaking = false }),
+    resume: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  }
+  window.speechSynthesis = synth
+  window.SpeechSynthesisUtterance = function (text) {
+    this.text = text
+    this.onstart = null
+    this.onend = null
+    this.onerror = null
+  }
+  return { synth, spoken, voices }
+}
+
+describe('CookingNavigator — read aloud', () => {
+  afterEach(() => {
+    delete window.speechSynthesis
+    delete window.SpeechSynthesisUtterance
+    localStorage.removeItem('cn-voice-uri')
+  })
+
+  test('reads the step with the most natural voice available', () => {
+    const { spoken } = mockSpeechSynthesis()
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+
+    expect(spoken).toHaveLength(1)
+    expect(spoken[0].voice.name).toBe('Ava (Natural)')
+  })
+
+  test('speaks measurements the way a cook says them', () => {
+    const { spoken } = mockSpeechSynthesis()
+    renderNavigator({ instructions: ['Add 2 tbsp oil and bake at 350°F.'] })
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+
+    expect(spoken[0].text).toContain('2 tablespoons oil')
+    expect(spoken[0].text).toContain('350 degrees Fahrenheit')
+  })
+
+  test('lets the user pick a voice and remembers the choice', () => {
+    const { spoken } = mockSpeechSynthesis()
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    const select = screen.getByLabelText('Voice')
+    expect(select.value).toBe('Ava (Natural)')
+    // Novelty voices are never offered.
+    expect(screen.queryByRole('option', { name: 'Zarvox' })).not.toBeInTheDocument()
+
+    fireEvent.change(select, { target: { value: 'Samantha' } })
+    expect(localStorage.getItem('cn-voice-uri')).toBe('Samantha')
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+    expect(spoken[spoken.length - 1].voice.name).toBe('Samantha')
+  })
+
+  test('stops speaking when the step changes', () => {
+    const { synth } = mockSpeechSynthesis()
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+    synth.cancel.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(synth.cancel).toHaveBeenCalled()
+  })
+
+  test('hides read-aloud controls when speech synthesis is unavailable', () => {
+    delete window.speechSynthesis
+    delete window.SpeechSynthesisUtterance
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    expect(screen.queryByRole('menuitem', { name: 'Read step aloud' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Voice')).not.toBeInTheDocument()
+  })
+})
