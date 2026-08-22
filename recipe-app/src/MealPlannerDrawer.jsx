@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useDragContext } from './useDragContext.js'
 import { useMealPlan } from './MealPlanContext.jsx'
 import GroceryListModal from './GroceryListModal.jsx'
 import GeneratingGroceryCard from './GeneratingGroceryCard.jsx'
 import { flattenIngredients } from './GroceryListModal.jsx'
+import { classifyGroceryItems, getExpiringPantryItems } from '../../shared/pantry-planning.js'
 
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 
@@ -49,11 +50,15 @@ const ShoppingCartIcon = ({ size = 16 }) => (
  * @param {Array<{ category: string, items: Array<{ name: string, quantity: string }> }>} categories
  * @returns {Array<Object>}
  */
-function normalizeApiResponse(categories) {
+export function normalizeApiResponse(categories, pantryItems = [], pantryPlannerEnabled = false) {
   const items = []
   const now = Date.now()
-  categories.forEach(({ category, items: apiItems }) => {
-    apiItems.forEach((apiItem) => {
+  const safeCategories = Array.isArray(categories) ? categories : []
+  safeCategories.forEach(({ category, items: apiItems }) => {
+    const safeItems = Array.isArray(apiItems) ? apiItems : []
+    safeItems.forEach((apiItem) => {
+      if (!apiItem || typeof apiItem !== 'object' || !apiItem.name) return
+      const isStaple = Boolean(apiItem.isStaple || apiItem.is_staple || apiItem.optionalStaple)
       items.push({
         id: now.toString(36) + Math.random().toString(36).substr(2),
         name: apiItem.name,
@@ -65,10 +70,12 @@ function normalizeApiResponse(categories) {
         notes: '',
         createdAt: now,
         source: 'ai-generated',
+        isStaple,
+        optionalStaple: isStaple,
       })
     })
   })
-  return items
+  return pantryPlannerEnabled ? classifyGroceryItems(items, pantryItems) : items
 }
 
 /**
@@ -92,7 +99,14 @@ function normalizeApiResponse(categories) {
  *   LOADING — isGeneratingList === true; shows GeneratingGroceryCard animation.
  *   LOADED  — groceryList.length > 0; shows "View List" + "Regenerate" buttons.
  */
-export default function MealPlannerDrawer({ isOpen, onClose, children }) {
+export default function MealPlannerDrawer({
+  isOpen,
+  onClose,
+  children,
+  pantryItems = [],
+  pantryPlannerEnabled = false,
+  onOpenPantry,
+}) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
   const drawerRef = useRef(null)
@@ -159,6 +173,11 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
       Object.values(day || {}).some((slot) => Array.isArray(slot) && slot.length > 0)
     )
 
+  const expiringPantryItems = useMemo(
+    () => pantryPlannerEnabled ? getExpiringPantryItems(pantryItems, 7) : [],
+    [pantryItems, pantryPlannerEnabled]
+  )
+
   // Lock body scroll when the drawer is open to prevent "scroll leakage"
   // to the main page background.
   useEffect(() => {
@@ -201,7 +220,7 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
       const data = await res.json()
       if (!data.success || !Array.isArray(data.categories))
         throw new Error('Invalid response from server. Please try again.')
-      setGroceryList(normalizeApiResponse(data.categories))
+      setGroceryList(normalizeApiResponse(data.categories, pantryItems, pantryPlannerEnabled))
     } catch (err) {
       generateGroceryListError(
         err.name === 'AbortError'
@@ -315,6 +334,17 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
           </button>
         </div>
         <div className="drawer-content">
+          {pantryPlannerEnabled && expiringPantryItems.length > 0 && (
+            <div className="pantry-planner-use-soon" role="status">
+              <div>
+                <strong>Use soon</strong>
+                <span>{expiringPantryItems.slice(0, 3).map((item) => item.name).join(' · ')}</span>
+              </div>
+              {onOpenPantry && (
+                <button type="button" onClick={onOpenPantry}>Open pantry</button>
+              )}
+            </div>
+          )}
           {children}
         </div>
         <div className="drawer-footer">
@@ -325,6 +355,8 @@ export default function MealPlannerDrawer({ isOpen, onClose, children }) {
       <GroceryListModal
         isOpen={isGroceryModalOpen}
         onClose={() => setIsGroceryModalOpen(false)}
+        pantryItems={pantryPlannerEnabled ? pantryItems : []}
+        pantryPlannerEnabled={pantryPlannerEnabled}
       />
     </>
   )

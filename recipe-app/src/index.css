@@ -3856,3 +3856,179 @@ textarea:focus-visible {
     align-self: flex-end;
   }
 }
+
+/* Pantry depletion confirmation at the end of a cook session. */
+.cn-nav-btn--finish {
+  border-color: rgba(168, 208, 141, 0.7);
+  background: rgba(168, 208, 141, 0.16);
+  color: var(--accent, #a8d08d);
+}
+
+.cn-completion-sheet {
+  position: absolute;
+  z-index: 3;
+  inset: 72px 18px 78px;
+  overflow: auto;
+  padding: clamp(1rem, 4vw, 2rem);
+  border: 1px solid rgba(200, 169, 110, 0.4);
+  border-radius: 1rem;
+  background: var(--surface, #172019);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.cn-completion-sheet h2 {
+  margin: 0 0 0.55rem;
+  color: var(--accent, #c8a96e);
+}
+
+.cn-completion-sheet p {
+  color: var(--muted, #aab5ad);
+}
+
+.cn-depletion-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cn-depletion-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cn-depletion-item-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.cn-depletion-item-copy small {
+  color: var(--muted, #aab5ad);
+}
+
+.cn-depletion-item-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.cn-depletion-item-controls select,
+.cn-depletion-item-controls input {
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  background: var(--surface2, #202b23);
+  color: var(--text, #f2f5ef);
+}
+
+.cn-depletion-item-controls select {
+  max-width: 132px;
+}
+
+.cn-depletion-item-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--muted, #aab5ad);
+  font-size: var(--fs-xs);
+}
+
+.cn-depletion-item-controls input {
+  width: 76px;
+}
+
+.cn-completion-actions {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.cn-completion-actions button,
+.cn-completion-primary {
+  min-height: 44px;
+  border: 1px solid rgba(168, 208, 141, 0.6);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(168, 208, 141, 0.16);
+  color: var(--text, #f2f5ef);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.cn-completion-actions .cn-completion-secondary {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--muted, #aab5ad);
+}
+
+.cn-completion-error {
+  color: #f0a0a0 !important;
+}
+
+@media (max-width: 560px) {
+  .cn-depletion-list li {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .cn-depletion-item-controls {
+    justify-content: stretch;
+  }
+
+  .cn-depletion-item-controls select,
+  .cn-depletion-item-controls label {
+    flex: 1;
+  }
+
+  .cn-depletion-item-controls input {
+    width: 100%;
+  }
+}
+
+.generation-composer-pantry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(168, 208, 141, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(168, 208, 141, 0.08);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.generation-composer-pantry input {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.generation-composer-pantry span {
+  display: grid;
+  gap: 3px;
+}
+
+.generation-composer-pantry small {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.generation-composer-pantry--secondary {
+  margin-top: -8px;
+  border-color: rgba(168, 208, 141, 0.2);
+  background: rgba(168, 208, 141, 0.04);
+}

@@ -18,6 +18,12 @@ import {
   withQualityMetadata
 } from '../quality-bar.js';
 
+function normalizePantryExpiry(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : null;
+}
+
 /**
  * Recipe generation endpoint handler - processes recipe generation requests
  */
@@ -38,6 +44,40 @@ export async function handleGenerate(request, env, corsHeaders) {
     }
 
     const requestBody = await request.json();
+    if (requestBody?.usePantry === true && Array.isArray(requestBody.pantryIngredients)) {
+      const seenPantryNames = new Set();
+      requestBody.pantryIngredients = requestBody.pantryIngredients
+        .filter((item) => item && typeof item === 'object' && typeof item.name === 'string' && item.name.trim())
+        .map((item) => {
+          const name = item.name.trim().replace(/\s+/g, ' ').slice(0, 200);
+          const key = name.toLocaleLowerCase();
+          if (seenPantryNames.has(key)) return null;
+          seenPantryNames.add(key);
+          const hasNumericQuantity = typeof item.quantity === 'number'
+            || (typeof item.quantity === 'string' && item.quantity.trim() !== '');
+          const numericQuantity = hasNumericQuantity ? Number(item.quantity) : null;
+          const expiresOn = normalizePantryExpiry(item.expiresOn);
+          return {
+            name,
+            quantity: Number.isFinite(numericQuantity) && numericQuantity >= 0 ? numericQuantity : null,
+            unit: typeof item.unit === 'string' && item.unit.trim() ? item.unit.trim().slice(0, 40) : null,
+            expiresOn
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 50);
+    } else {
+      requestBody.pantryIngredients = [];
+    }
+    requestBody.prioritizeExpiring = requestBody.usePantry === true && requestBody.prioritizeExpiring === true;
+    if (requestBody.prioritizeExpiring) {
+      requestBody.pantryIngredients.sort((left, right) => {
+        if (!left.expiresOn && !right.expiresOn) return 0;
+        if (!left.expiresOn) return 1;
+        if (!right.expiresOn) return -1;
+        return left.expiresOn.localeCompare(right.expiresOn);
+      });
+    }
     const profile = requestBody?.culinaryProfile || requestBody?.profile || {};
     // Keep the generation worker compatible with the existing flat request
     // contract while allowing an authenticated client to provide profile
@@ -513,6 +553,10 @@ function buildQueryText(requestData) {
   // Add ingredients
   if (requestData.ingredients && requestData.ingredients.length > 0) {
     parts.push(`Ingredients: ${requestData.ingredients.join(', ')}`);
+  }
+
+  if (requestData.usePantry && requestData.pantryIngredients?.length > 0) {
+    parts.push(`Pantry ingredients to prioritize: ${requestData.pantryIngredients.map((item) => item.name).join(', ')}`);
   }
 
   // Add cuisine preference
@@ -1001,6 +1045,19 @@ function buildLLaMAPrompt(requestData, contexts) {
   }
   if (requestData.ingredients && requestData.ingredients.length > 0) {
     requirements.push(`must use these ingredients: ${requestData.ingredients.join(', ')}`);
+  }
+  if (requestData.usePantry && requestData.pantryIngredients?.length > 0) {
+    const pantryNames = requestData.pantryIngredients.map((item) => item.name).join(', ');
+    requirements.push(`prioritize using these ingredients already in the user's pantry when they fit the dish: ${pantryNames}`);
+    if (requestData.prioritizeExpiring) {
+      const expiryDetails = requestData.pantryIngredients
+        .filter((item) => item.expiresOn)
+        .map((item) => `${item.name} (use by ${item.expiresOn})`)
+        .join(', ');
+      requirements.push(expiryDetails
+        ? `prefer the pantry ingredients closest to their expiry date first when suitable; the pantry list is ordered by use-by date: ${expiryDetails}`
+        : 'prefer the pantry ingredients closest to their expiry date first when suitable; the pantry list is ordered by use-by date');
+    }
   }
   if (requestData.skillLevel) {
     requirements.push(`write for a ${requestData.skillLevel} home cook`);

@@ -46,6 +46,8 @@ function initialForm(profile) {
     cookingMethod: "",
     ingredients: "",
     excludeIngredients: listValue(profile?.exclude_ingredients).join(", "),
+    usePantry: false,
+    prioritizeExpiring: false,
   };
 }
 
@@ -62,6 +64,9 @@ export default function GenerationComposer({
   busy,
   onClose,
   onGenerate,
+  pantryItems = [],
+  expiringPantryItems = [],
+  pantryPlannerEnabled = false,
 }) {
   const [form, setForm] = useState(() => initialForm(profile));
   const firstFieldRef = useRef(null);
@@ -96,7 +101,7 @@ export default function GenerationComposer({
 
   function submit(event) {
     event.preventDefault();
-    onGenerate({
+    const overrides = {
       dietary: form.dietary,
       equipment: form.equipment,
       servings: Number(form.servings),
@@ -106,7 +111,12 @@ export default function GenerationComposer({
       cookingMethod: form.cookingMethod,
       ingredients: commaSeparated(form.ingredients),
       excludeIngredients: commaSeparated(form.excludeIngredients),
-    });
+    };
+    if (pantryPlannerEnabled && form.usePantry) {
+      overrides.usePantry = true;
+      if (form.prioritizeExpiring && expiringPantryItems.length > 0) overrides.prioritizeExpiring = true;
+    }
+    onGenerate(overrides);
   }
 
   return (
@@ -262,6 +272,35 @@ export default function GenerationComposer({
               ))}
             </div>
           </fieldset>
+
+          {pantryPlannerEnabled && (
+            <>
+              <label className="generation-composer-pantry">
+                <input
+                  type="checkbox"
+                  checked={form.usePantry}
+                  onChange={(event) => setField("usePantry", event.target.checked)}
+                />
+                <span>
+                  <strong>Use my pantry</strong>
+                  <small>{pantryItems.length > 0 ? `${pantryItems.length} item${pantryItems.length === 1 ? "" : "s"} available to use first` : "Your pantry is empty — add items from My pantry"}</small>
+                </span>
+              </label>
+              {form.usePantry && expiringPantryItems.length > 0 && (
+                <label className="generation-composer-pantry generation-composer-pantry--secondary">
+                  <input
+                    type="checkbox"
+                    checked={form.prioritizeExpiring}
+                    onChange={(event) => setField("prioritizeExpiring", event.target.checked)}
+                  />
+                  <span>
+                    <strong>Use items expiring soon first</strong>
+                    <small>{expiringPantryItems.slice(0, 3).map((item) => item.name).join(" · ")}</small>
+                  </span>
+                </label>
+              )}
+            </>
+          )}
 
           <label className="generation-composer-field">
             Must-use ingredients

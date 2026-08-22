@@ -11,6 +11,7 @@ let mockGroceryList = [];
 let mockToggleItemCompletion = jest.fn();
 let mockDeleteItem = jest.fn();
 let mockAddCustomItem = jest.fn();
+let mockEditItem = jest.fn();
 
 jest.mock('../MealPlanContext.jsx', () => ({
   useMealPlan: () => ({
@@ -20,6 +21,7 @@ jest.mock('../MealPlanContext.jsx', () => ({
     toggleItemCompletion: mockToggleItemCompletion,
     deleteItem: mockDeleteItem,
     addCustomItem: mockAddCustomItem,
+    editItem: mockEditItem,
   }),
 }));
 
@@ -193,6 +195,7 @@ describe('GroceryListModal — rendering', () => {
     mockToggleItemCompletion = jest.fn();
     mockDeleteItem = jest.fn();
     mockAddCustomItem = jest.fn();
+    mockEditItem = jest.fn();
   });
 
   test('renders nothing when isOpen is false', () => {
@@ -418,6 +421,16 @@ describe('GroceryListModal — custom item badge', () => {
     mockGroceryList = MOCK_GROCERY_LIST;
     renderModal();
     expect(screen.queryByText('Custom')).not.toBeInTheDocument();
+  });
+
+  test('pantry planner status can be corrected manually', () => {
+    mockGroceryList = MOCK_GROCERY_LIST;
+    render(<GroceryListModal isOpen onClose={jest.fn()} pantryPlannerEnabled pantryItems={[{ id: 1, name: 'flour' }]} />);
+    const status = screen.getByRole('combobox', { name: 'All-purpose flour pantry status' });
+    expect(status).toHaveValue('buy');
+    fireEvent.change(status, { target: { value: 'owned' } });
+    expect(mockEditItem).toHaveBeenCalledWith('item-1', { inventoryStatus: 'owned' });
+    expect(screen.getByRole('heading', { name: 'Buy' })).toBeInTheDocument();
   });
 });
 
