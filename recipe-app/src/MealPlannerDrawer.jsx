@@ -43,6 +43,23 @@ const ShoppingCartIcon = ({ size = 16 }) => (
   </svg>
 )
 
+const SparklesIcon = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+    <path d="M19 15l.9 2.4L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.6L19 15z" />
+  </svg>
+)
+
 /**
  * Converts the API grocery response (categories array) into a flat array
  * of GroceryListItem objects suitable for MealPlanContext storage.
@@ -106,6 +123,8 @@ export default function MealPlannerDrawer({
   pantryItems = [],
   pantryPlannerEnabled = false,
   onOpenPantry,
+  autofillEnabled = false,
+  onOpenAutofill,
 }) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
@@ -323,6 +342,18 @@ export default function MealPlannerDrawer({
       >
         <div className="drawer-header">
           <span id="meal-planner-title" className="drawer-title">Meal Planner</span>
+          {autofillEnabled && typeof onOpenAutofill === 'function' && (
+            <button
+              type="button"
+              className="drawer-autofill-btn"
+              onClick={onOpenAutofill}
+              aria-label="Auto-fill my week"
+              title="Auto-fill empty slots with recipes"
+            >
+              <SparklesIcon size={16} />
+              <span>Auto-fill</span>
+            </button>
+          )}
           <button
             type="button"
             ref={closeButtonRef}
