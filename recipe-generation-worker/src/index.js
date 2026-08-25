@@ -3,6 +3,7 @@ import { handleHealth } from './handlers/health-handler.js';
 import { handleGenerate } from './handlers/generate-handler.js';
 import { handleAdapt } from './handlers/adapt-handler.js';
 import { handleGroceryList } from './handlers/grocery-list-handler.js';
+import { handleMealPlanFill } from './handlers/meal-plan-fill-handler.js';
 
 export default {
   async fetch(request, env) {
@@ -43,6 +44,11 @@ export default {
     // Grocery list aggregation endpoint
     if (url.pathname === '/grocery-list' && request.method === 'POST') {
       return handleGroceryList(request, env, corsHeaders);
+    }
+
+    // Meal-plan auto-fill endpoint
+    if (url.pathname === '/meal-plan-fill' && request.method === 'POST') {
+      return handleMealPlanFill(request, env, corsHeaders);
     }
 
     // 404 for unknown routes

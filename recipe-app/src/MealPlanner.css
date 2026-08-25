@@ -1766,3 +1766,36 @@ body > .meal-item {
     max-width: 100px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Auto-fill button (drawer header)
+   -------------------------------------------------------------------------- */
+
+.drawer-autofill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--color-on-primary, #fff);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.drawer-autofill-btn:hover {
+  background: var(--accent-hover, var(--accent));
+  border-color: var(--accent-hover, var(--accent));
+}
+
+.drawer-autofill-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

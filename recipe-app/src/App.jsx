@@ -10,6 +10,7 @@ import { useMealPlan } from './MealPlanContext.jsx'
 import { syncFlagglyUser, useFlag } from './flaggly.js'
 import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
+import AutoFillMealPlan from './AutoFillMealPlan.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
 import { usePantry } from './usePantry.js'
@@ -327,6 +328,7 @@ export default function App() {
   const pantryEnabled = useFlag('pantry')
   const pantryPlannerEnabled = useFlag('pantry-planner')
   const pantryScanEnabled = useFlag('pantry-scan')
+  const mealPlanAutofillEnabled = useFlag('meal-plan-autofill')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
   const usablePantryItems = pantry.items.filter((item) => !isPantryItemExpired(item))
@@ -357,6 +359,7 @@ export default function App() {
     void syncFlagglyUser(auth.user ?? null)
   }, [auth.loading, auth.user])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [autofillOpen, setAutofillOpen] = useState(false)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | adapting | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -1028,6 +1031,18 @@ export default function App() {
           pantryItems={pantryPlanningAvailable ? pantry.items : []}
           pantryPlannerEnabled={pantryPlanningAvailable}
           onOpenPantry={pantryPlanningAvailable ? () => { setIsDrawerOpen(false); setPantryOpen(true) } : undefined}
+          autofillEnabled={mealPlanAutofillEnabled}
+          onOpenAutofill={() => setAutofillOpen(true)}
+        />
+      )}
+      {mealPlanAutofillEnabled && (
+        <AutoFillMealPlan
+          open={autofillOpen}
+          onClose={() => setAutofillOpen(false)}
+          profile={culinaryProfileEnabled ? culinaryProfile.profile : null}
+          usePantry={pantryPlanningAvailable}
+          pantryIngredients={pantryPlanningAvailable ? usablePantryItems : []}
+          prioritizeExpiring={false}
         />
       )}
       <UserMenu
