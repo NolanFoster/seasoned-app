@@ -11,6 +11,7 @@ import { syncFlagglyUser, useFlag } from './flaggly.js'
 import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
 import AutoFillMealPlan from './AutoFillMealPlan.jsx'
+import BulkScheduleMeals from './BulkScheduleMeals.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
 import { usePantry } from './usePantry.js'
@@ -329,6 +330,7 @@ export default function App() {
   const pantryPlannerEnabled = useFlag('pantry-planner')
   const pantryScanEnabled = useFlag('pantry-scan')
   const mealPlanAutofillEnabled = useFlag('meal-plan-autofill')
+  const mealPlanBulkScheduleEnabled = useFlag('meal-plan-bulk-schedule')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
   const usablePantryItems = pantry.items.filter((item) => !isPantryItemExpired(item))
@@ -360,6 +362,7 @@ export default function App() {
   }, [auth.loading, auth.user])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [autofillOpen, setAutofillOpen] = useState(false)
+  const [bulkScheduleOpen, setBulkScheduleOpen] = useState(false)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | adapting | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -1033,6 +1036,15 @@ export default function App() {
           onOpenPantry={pantryPlanningAvailable ? () => { setIsDrawerOpen(false); setPantryOpen(true) } : undefined}
           autofillEnabled={mealPlanAutofillEnabled}
           onOpenAutofill={() => setAutofillOpen(true)}
+          bulkScheduleEnabled={mealPlanBulkScheduleEnabled}
+          onOpenBulkSchedule={() => setBulkScheduleOpen(true)}
+          recentRecipes={recentRecipes}
+        />
+      )}
+      {mealPlanBulkScheduleEnabled && (
+        <BulkScheduleMeals
+          open={bulkScheduleOpen}
+          onClose={() => setBulkScheduleOpen(false)}
         />
       )}
       {mealPlanAutofillEnabled && (

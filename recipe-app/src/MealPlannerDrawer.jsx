@@ -5,6 +5,7 @@ import GroceryListModal from './GroceryListModal.jsx'
 import GeneratingGroceryCard from './GeneratingGroceryCard.jsx'
 import { flattenIngredients } from './GroceryListModal.jsx'
 import { classifyGroceryItems, getExpiringPantryItems } from '../../shared/pantry-planning.js'
+import PlannerSuggestions from './PlannerSuggestions.jsx'
 
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 
@@ -57,6 +58,27 @@ const SparklesIcon = ({ size = 16 }) => (
   >
     <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
     <path d="M19 15l.9 2.4L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.6L19 15z" />
+  </svg>
+)
+
+const CalendarPlusIcon = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <line x1="12" y1="13" x2="12" y2="19" />
+    <line x1="9" y1="16" x2="15" y2="16" />
   </svg>
 )
 
@@ -125,6 +147,9 @@ export default function MealPlannerDrawer({
   onOpenPantry,
   autofillEnabled = false,
   onOpenAutofill,
+  bulkScheduleEnabled = false,
+  onOpenBulkSchedule,
+  recentRecipes = [],
 }) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
@@ -354,6 +379,23 @@ export default function MealPlannerDrawer({
               <span>Auto-fill</span>
             </button>
           )}
+          {bulkScheduleEnabled && typeof onOpenBulkSchedule === 'function' && (
+            <button
+              type="button"
+              className="drawer-bulk-schedule-btn"
+              onClick={onOpenBulkSchedule}
+              disabled={upNext.length === 0}
+              aria-label="Schedule all staged recipes"
+              title={
+                upNext.length === 0
+                  ? 'Stage recipes in Up Next first'
+                  : 'Schedule every recipe staged in Up Next'
+              }
+            >
+              <CalendarPlusIcon size={16} />
+              <span>Schedule all</span>
+            </button>
+          )}
           <button
             type="button"
             ref={closeButtonRef}
@@ -376,6 +418,9 @@ export default function MealPlannerDrawer({
               )}
             </div>
           )}
+          {/* Only while the drawer is open: the panel stays mounted when closed,
+              and a hidden copy of every recent recipe helps nobody. */}
+          {isOpen && bulkScheduleEnabled && <PlannerSuggestions recipes={recentRecipes} />}
           {children}
         </div>
         <div className="drawer-footer">
