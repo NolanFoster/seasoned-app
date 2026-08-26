@@ -110,6 +110,9 @@ export default function MealPlanner({
   onOpenPantry,
   autofillEnabled = false,
   onOpenAutofill,
+  bulkScheduleEnabled = false,
+  onOpenBulkSchedule,
+  recentRecipes = [],
 }) {
   return (
     <DragProvider>
@@ -122,6 +125,9 @@ export default function MealPlanner({
         onOpenPantry={onOpenPantry}
         autofillEnabled={autofillEnabled}
         onOpenAutofill={onOpenAutofill}
+        bulkScheduleEnabled={bulkScheduleEnabled}
+        onOpenBulkSchedule={onOpenBulkSchedule}
+        recentRecipes={recentRecipes}
       />
     </DragProvider>
   )
@@ -143,6 +149,9 @@ function MealPlannerContent({
   onOpenPantry,
   autofillEnabled,
   onOpenAutofill,
+  bulkScheduleEnabled,
+  onOpenBulkSchedule,
+  recentRecipes,
 }) {
   const { setDragging, clearDrag } = useDragContext()
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
@@ -205,6 +214,9 @@ function MealPlannerContent({
         onOpenPantry={onOpenPantry}
         autofillEnabled={autofillEnabled}
         onOpenAutofill={onOpenAutofill}
+        bulkScheduleEnabled={bulkScheduleEnabled}
+        onOpenBulkSchedule={onOpenBulkSchedule}
+        recentRecipes={recentRecipes}
       >
         {/* Single DragDropContext covers both UpNextCard and DayCards so recipes
             can be dragged between the staging area and any date/meal slot. */}

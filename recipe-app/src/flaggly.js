@@ -19,6 +19,7 @@ const FLAG_DEFAULTS = {
   'pantry-planner': true,
   'pantry-scan': false,
   'meal-plan-autofill': false,
+  'meal-plan-bulk-schedule': false,
 }
 
 let flaggly
@@ -73,7 +74,7 @@ export async function syncFlagglyUser(user) {
     const keys = state ? Object.keys(state) : []
     if (keys.length === 0) {
       console.warn(
-        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile, constraint-generate, recipe-adapt, pantry, pantry-planner, pantry-scan, meal-plan-autofill) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
+        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile, constraint-generate, recipe-adapt, pantry, pantry-planner, pantry-scan, meal-plan-autofill, meal-plan-bulk-schedule) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
       )
     } else if (import.meta.env.DEV) {
       console.info(`[flaggly] Eval OK — ${keys.length} flag(s):`, keys.join(', '))
