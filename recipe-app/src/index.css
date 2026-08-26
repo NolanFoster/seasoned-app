@@ -1548,6 +1548,36 @@ textarea:focus-visible {
   50%       { box-shadow: 0 0 0 4px rgb(var(--color-info-rgb) / 0.2); }
 }
 
+/* Voice picker inside the cooking options menu */
+.cn-voice-picker {
+  cursor: default;
+}
+.cn-voice-picker:hover {
+  background: none;
+  color: var(--text-muted);
+}
+.cn-voice-picker-label {
+  flex-shrink: 0;
+}
+.cn-voice-select {
+  flex: 1;
+  min-width: 0;
+  margin-left: auto;
+  max-width: 150px;
+  padding: 4px 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  cursor: pointer;
+}
+.cn-voice-select:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 1px;
+}
+
 .cn-hands-free-bar {
   display: flex;
   align-items: center;

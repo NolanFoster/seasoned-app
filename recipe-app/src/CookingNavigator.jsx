@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
+import useNaturalVoice from './useNaturalVoice.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
 
@@ -347,7 +348,15 @@ export default function CookingNavigator({
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
   const recognitionRef = useRef(null)
-  const [isSpeaking, setIsSpeaking] = useState(false)
+  const {
+    supported: speechSupported,
+    voices: naturalVoices,
+    voice: naturalVoice,
+    selectVoice,
+    speak,
+    stop: stopSpeaking,
+    isSpeaking,
+  } = useNaturalVoice()
   const currentStepRef = useRef(currentStep)
   useEffect(() => { currentStepRef.current = currentStep }, [currentStep])
 
@@ -724,23 +733,10 @@ export default function CookingNavigator({
   // Stop voice on unmount
   useEffect(() => () => stopHandsFreeMode(), [])
 
-  function stopSpeaking() {
-    if (window.speechSynthesis) window.speechSynthesis.cancel()
-    setIsSpeaking(false)
-  }
-
   function speakCurrentStep() {
-    if (!window.speechSynthesis) return
-    window.speechSynthesis.cancel()
     const step = currentStepRef.current
     if (step === -1) {
-      const utterance = new SpeechSynthesisUtterance(
-        'Mise en place. Gather and prepare all your ingredients and equipment before you start cooking.'
-      )
-      utterance.onstart = () => setIsSpeaking(true)
-      utterance.onend = () => setIsSpeaking(false)
-      utterance.onerror = () => setIsSpeaking(false)
-      window.speechSynthesis.speak(utterance)
+      speak('Mise en place. Gather and prepare all your ingredients and equipment before you start cooking.')
       return
     }
     const stepInstructions = instructions[step] || ''
@@ -750,19 +746,11 @@ export default function CookingNavigator({
     const ingredientLine = relevantIngredients.length > 0
       ? ` Ingredients for this step: ${relevantIngredients.join(', ')}.`
       : ''
-    const text = `Step ${step + 1} of ${total}. ${stepInstructions}.${ingredientLine}`
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-    window.speechSynthesis.speak(utterance)
+    speak(`Step ${step + 1} of ${total}. ${stepInstructions}.${ingredientLine}`)
   }
 
   // Cancel speech when navigating steps
-  useEffect(() => { stopSpeaking() }, [currentStep]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Stop speech on unmount
-  useEffect(() => () => stopSpeaking(), [])
+  useEffect(() => { stopSpeaking() }, [currentStep, stopSpeaking])
 
   const stepText = instructions[currentStep] || ''
   const timerEntries = Object.entries(activeTimers)
@@ -861,21 +849,23 @@ export default function CookingNavigator({
                     </svg>
                     Close
                   </button>
-                  <button
-                    className={`action-menu-item${isSpeaking ? ' active' : ''}`}
-                    role="menuitem"
-                    onClick={() => { closeCookMenu(); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
-                    title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
-                    aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
-                    aria-pressed={isSpeaking}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                    </svg>
-                    {isSpeaking ? 'Stop reading' : 'Read aloud'}
-                  </button>
+                  {speechSupported && (
+                    <button
+                      className={`action-menu-item${isSpeaking ? ' active' : ''}`}
+                      role="menuitem"
+                      onClick={() => { closeCookMenu(); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
+                      title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
+                      aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
+                      aria-pressed={isSpeaking}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      </svg>
+                      {isSpeaking ? 'Stop reading' : 'Read aloud'}
+                    </button>
+                  )}
                   <button
                     className={`action-menu-item${textSize !== 'normal' ? ' active' : ''}`}
                     role="menuitem"
@@ -888,6 +878,30 @@ export default function CookingNavigator({
                     </svg>
                     Text size: {textSize === 'normal' ? 'A' : textSize === 'large' ? 'A+' : 'A++'}
                   </button>
+                  {speechSupported && naturalVoices.length > 1 && (
+                    <div className="action-menu-item cn-voice-picker" role="none">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                        <line x1="12" y1="18" x2="12" y2="22"/>
+                      </svg>
+                      <label className="cn-voice-picker-label" htmlFor="cn-voice-select">Voice</label>
+                      <select
+                        id="cn-voice-select"
+                        className="cn-voice-select"
+                        value={naturalVoice?.voiceURI || ''}
+                        onChange={(e) => {
+                          stopSpeaking()
+                          selectVoice(e.target.value)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {naturalVoices.map((v) => (
+                          <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {voiceControlEnabled && dictationEnabled && (
                     <button
                       className={`action-menu-item${handsFreeModeActive ? ' active' : ''}`}
