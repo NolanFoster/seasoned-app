@@ -48,6 +48,16 @@ Output ONLY this JSON structure:
   }
 ]`;
 
+/**
+ * Appended to the base prompt on the one retry after a parse failure. Kept
+ * separate from GROCERY_AGGREGATOR_USER_PROMPT so the Opik-synced baseline
+ * prompt in `scripts/grocery_opik_helpers.py` stays byte-identical.
+ */
+const STRICT_JSON_REMINDER =
+  'CRITICAL: your previous answer was not valid JSON. Reply with the JSON array ONLY. ' +
+  'Start with "[" and end with "]". No prose before or after, no markdown fences, ' +
+  'no trailing commas, and escape any double quote that appears inside a value.';
+
 /** @param {unknown} raw */
 function serializeLlmOutputForOpik(raw) {
   if (raw == null) {
@@ -117,8 +127,117 @@ function arrayFromParsedCategories(parsed) {
 }
 
 /**
+ * Repairs JSON dialect slips small instruct models commonly emit.
+ * Only applied as a fallback, after a strict parse has already failed, so
+ * well-formed output is never rewritten.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+function repairJsonDialect(s) {
+  return s
+    // Python literals: `"isStaple": False` → `"isStaple": false`
+    .replace(/:(\s*)True\b/g, ':$1true')
+    .replace(/:(\s*)False\b/g, ':$1false')
+    .replace(/:(\s*)None\b/g, ':$1null')
+    // Trailing commas before a closing bracket
+    .replace(/,(\s*[}\]])/g, '$1');
+}
+
+/**
+ * Walks `text` from `start`, tracking bracket depth while ignoring brackets that
+ * appear inside JSON strings, and returns the balanced region beginning there.
+ *
+ * Also reports the longest prefix that ends on a complete element plus the
+ * containers still open at that point, which lets a truncated response be
+ * salvaged instead of discarded.
+ *
+ * @param {string} text
+ * @param {number} start - Index of the opening `[` or `{`
+ * @returns {{ text: string, complete: boolean, salvaged: string|null }}
+ */
+function scanBalanced(text, start) {
+  const closerFor = { '[': ']', '{': '}' };
+  const stack = [];
+  let inString = false;
+  let escaped = false;
+  let lastElementEnd = -1;
+  let stackAtLastElementEnd = null;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === '[' || ch === '{') {
+      stack.push(closerFor[ch]);
+      continue;
+    }
+
+    if (ch === ']' || ch === '}') {
+      stack.pop();
+      if (stack.length === 0) {
+        return { text: text.slice(start, i + 1), complete: true, salvaged: null };
+      }
+      // A complete element closed while containers remain open: a safe cut point.
+      lastElementEnd = i;
+      stackAtLastElementEnd = [...stack];
+    }
+  }
+
+  // Ran off the end: the model stopped mid-output (usually max_tokens).
+  const salvaged =
+    lastElementEnd === -1
+      ? null
+      : text.slice(start, lastElementEnd + 1) + [...stackAtLastElementEnd].reverse().join('');
+
+  return { text: text.slice(start), complete: false, salvaged };
+}
+
+/**
+ * Parses `candidate` as a category array, retrying once with dialect repairs.
+ *
+ * Rejects an array that parses but holds no category block (e.g. a bare item
+ * list lifted out of an `"items": [...]` key) so the caller keeps scanning for
+ * the real array instead of returning an empty grocery list.
+ *
+ * @param {string} candidate
+ * @returns {Array|null} Category array, or null if it does not parse
+ */
+function parseCategoryCandidate(candidate) {
+  for (const text of [candidate, repairJsonDialect(candidate)]) {
+    try {
+      const result = arrayFromParsedCategories(JSON.parse(text));
+      if (result && (result.length === 0 || result.some(isCategoryBlock))) {
+        return result;
+      }
+    } catch {
+      // Try the next variant
+    }
+  }
+  return null;
+}
+
+/**
  * Attempts to extract and parse a JSON array from raw LLM output.
- * Handles markdown fences, preamble text, and non-string bindings (parsed object).
+ *
+ * Handles markdown fences, prose before or after the JSON (including prose that
+ * itself contains brackets), duplicated arrays, common JSON dialect slips, and
+ * non-string bindings (already-parsed object).
  *
  * @param {unknown} raw - String or parsed object from env.AI.run().response
  * @returns {Array} Parsed category array
@@ -136,34 +255,58 @@ function extractJsonArray(raw) {
     raw = String(raw ?? '');
   }
 
-  try {
-    const parsed = JSON.parse(raw);
-    const fromJson = arrayFromParsedCategories(parsed);
-    if (fromJson) {
-      return fromJson;
-    }
-  } catch {
-    // Fall through to bracket extraction
+  if (raw.trim() === '') {
+    throw new Error('LLM returned an empty response');
+  }
+
+  const wholeDocument = parseCategoryCandidate(raw);
+  if (wholeDocument) {
+    return wholeDocument;
   }
 
   const fenceStripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '');
 
-  const start = fenceStripped.indexOf('[');
-  const end = fenceStripped.lastIndexOf(']');
-  if (start === -1 || end === -1 || end < start) {
-    if (start !== -1 && end === -1) {
-      throw new Error(
-        'LLM response looks truncated (opened [ but no ]); output may have hit max_tokens'
-      );
+  // The first `[` may belong to prose ("Here is the list [by aisle]:"), so try
+  // every bracket in turn and keep the first that yields a real category array.
+  let sawTruncation = false;
+  const salvageCandidates = [];
+
+  for (let i = 0; i < fenceStripped.length; i++) {
+    const ch = fenceStripped[i];
+    if (ch !== '[' && ch !== '{') {
+      continue;
     }
-    throw new Error('No JSON array found in LLM response');
+
+    const region = scanBalanced(fenceStripped, i);
+    if (region.complete) {
+      const parsed = parseCategoryCandidate(region.text);
+      if (parsed) {
+        return parsed;
+      }
+      continue;
+    }
+
+    sawTruncation = true;
+    if (region.salvaged) {
+      salvageCandidates.push(region.salvaged);
+    }
+    // An unbalanced region runs to end of input; later brackets are inside it.
+    break;
   }
 
-  const candidate = fenceStripped.slice(start, end + 1);
-  const parsed = JSON.parse(candidate);
-  const fromBracket = arrayFromParsedCategories(parsed);
-  if (fromBracket) {
-    return fromBracket;
+  // Truncated output: return the complete prefix rather than failing outright.
+  for (const candidate of salvageCandidates) {
+    const parsed = parseCategoryCandidate(candidate);
+    if (parsed) {
+      console.warn('[grocery-list] LLM output was truncated; salvaged the complete prefix');
+      return parsed;
+    }
+  }
+
+  if (sawTruncation) {
+    throw new Error(
+      'LLM response looks truncated (unbalanced brackets); output may have hit max_tokens'
+    );
   }
   throw new Error('No JSON array found in LLM response');
 }
@@ -297,17 +440,28 @@ export async function handleGroceryList(request, env, corsHeaders) {
   let llmStartIso;
   let llmEndIso;
 
+  /**
+   * One Workers AI call. `content` is passed verbatim so the retry can append a
+   * strictness reminder without mutating the Opik-synced base prompt.
+   *
+   * @param {string} content
+   * @param {number} temperature
+   */
+  const runLlm = async (content, temperature) => {
+    const response = await env.AI.run(GROCERY_LLM_MODEL, {
+      messages: [{ role: 'user', content }],
+      // Workers AI defaults max_tokens to ~256 for many LLMs; grocery JSON needs more headroom.
+      max_tokens: 4096,
+      temperature
+    });
+    return response?.response ?? '';
+  };
+
   try {
     llmStartIso = new Date().toISOString();
     const llmWallStart = Date.now();
-    const response = await env.AI.run(GROCERY_LLM_MODEL, {
-      messages: [{ role: 'user', content: prompt }],
-      // Workers AI defaults max_tokens to ~256 for many LLMs; grocery JSON needs more headroom.
-      max_tokens: 4096,
-      temperature: 0.3
-    });
+    rawText = await runLlm(prompt, 0.3);
     llmEndIso = new Date().toISOString();
-    rawText = response?.response ?? '';
     console.log(`[grocery-list] LLM responded in ${Date.now() - llmWallStart}ms`);
   } catch (err) {
     console.error('[grocery-list] LLM call failed:', err?.message ?? err);
@@ -337,32 +491,44 @@ export async function handleGroceryList(request, env, corsHeaders) {
   try {
     const parsed = extractJsonArray(rawText);
     categories = mergeDuplicateCategories(validateCategories(parsed));
-  } catch (err) {
-    console.error('[grocery-list] Failed to parse LLM output:', err?.message);
-    console.error('[grocery-list] Raw LLM output:', rawText);
-    if (tracingEnabled) {
-      const rawStr = serializeLlmOutputForOpik(rawText);
-      const errTrace = opikClient.createTrace(
-        'Grocery List Error',
-        { ingredientCount: ingredientStrings.length, ingredients: ingredientStrings },
-        {
-          error: err?.message ?? String(err),
-          code: 'PARSE_ERROR',
-          rawPreview: truncateForOpik(rawStr, 16000)
-        },
-        { phase: 'parse', model: GROCERY_LLM_MODEL, rawLength: rawStr.length },
-        traceStartIso,
-        new Date().toISOString()
-      );
-      if (errTrace) {
-        opikClient.endTrace(errTrace, err instanceof Error ? err : new Error(String(err)));
-        await flushOpikSafe();
+  } catch (firstErr) {
+    // A 3B model occasionally emits JSON no amount of repair can recover
+    // (an unescaped quote inside a name, an empty completion). One stricter,
+    // deterministic retry costs a round trip and rescues most of those.
+    console.warn(`[grocery-list] First parse failed (${firstErr?.message}); retrying once`);
+    try {
+      llmStartIso = new Date().toISOString();
+      rawText = await runLlm(`${prompt}\n\n${STRICT_JSON_REMINDER}`, 0);
+      llmEndIso = new Date().toISOString();
+      categories = mergeDuplicateCategories(validateCategories(extractJsonArray(rawText)));
+      console.log('[grocery-list] Retry produced parseable JSON');
+    } catch (err) {
+      console.error('[grocery-list] Failed to parse LLM output:', err?.message);
+      console.error('[grocery-list] Raw LLM output:', rawText);
+      if (tracingEnabled) {
+        const rawStr = serializeLlmOutputForOpik(rawText);
+        const errTrace = opikClient.createTrace(
+          'Grocery List Error',
+          { ingredientCount: ingredientStrings.length, ingredients: ingredientStrings },
+          {
+            error: err?.message ?? String(err),
+            code: 'PARSE_ERROR',
+            rawPreview: truncateForOpik(rawStr, 16000)
+          },
+          { phase: 'parse', model: GROCERY_LLM_MODEL, rawLength: rawStr.length },
+          traceStartIso,
+          new Date().toISOString()
+        );
+        if (errTrace) {
+          opikClient.endTrace(errTrace, err instanceof Error ? err : new Error(String(err)));
+          await flushOpikSafe();
+        }
       }
+      return json(
+        { success: false, error: 'Failed to parse AI response', code: 'PARSE_ERROR' },
+        500
+      );
     }
-    return json(
-      { success: false, error: 'Failed to parse AI response', code: 'PARSE_ERROR' },
-      500
-    );
   }
 
   const durationMs = Date.now() - traceWallStart;
