@@ -1,14 +1,27 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   isLegacyFormat,
   migrateFromLegacy,
   isValidMealType,
   createEmptyDay,
 } from './utils/mealPlanMigration.js';
+import {
+  StaleWriteError,
+  chooseWinner,
+  fetchGroceryList,
+  fetchMealPlan,
+  isGroceryListEmpty,
+  isMealPlanEmpty,
+  saveGroceryList,
+  saveMealPlan,
+  storageKey,
+} from './utils/mealPlanSync.js';
 
-const STORAGE_KEY = 'seasoned_meal_plan';
-const GROCERY_STORAGE_KEY = 'mealPlan_groceryList';
-const GROCERY_METADATA_KEY = 'mealPlan_groceryList_metadata';
+const USER_MANAGEMENT_URL = import.meta.env.VITE_USER_MANAGEMENT_URL;
+
+// Edits arrive in bursts (a drag reorders two slots, a generated list writes
+// forty items), so pushes are coalesced instead of sent per keystroke.
+const PUSH_DEBOUNCE_MS = 800;
 
 /**
  * Generates a unique ID for grocery list items.
@@ -20,33 +33,35 @@ function generateId() {
 }
 
 /**
- * Loads grocery list items from localStorage.
+ * Loads grocery list items from localStorage for one account scope.
  * Returns empty array if key doesn't exist or data is malformed.
- * @returns {Array}
+ * @param {string|null} userId - signed-in user id, or null for the guest scope
+ * @returns {{ items: Array, updatedAt: number }}
  */
-function loadGroceryListFromStorage() {
+function loadGroceryListFromStorage(userId) {
   try {
-    const raw = localStorage.getItem(GROCERY_STORAGE_KEY);
-    if (!raw) return [];
+    const raw = localStorage.getItem(storageKey('grocery', userId));
+    if (!raw) return { items: [], updatedAt: 0 };
     const data = JSON.parse(raw);
     if (!Array.isArray(data.items)) {
       console.warn('mealPlan_groceryList: unexpected shape, resetting to []');
-      return [];
+      return { items: [], updatedAt: 0 };
     }
-    return data.items;
+    return { items: data.items, updatedAt: Number(data.updatedAt || 0) };
   } catch (e) {
     console.warn('Failed to load grocery list from localStorage:', e);
-    return [];
+    return { items: [], updatedAt: 0 };
   }
 }
 
 /**
- * Loads grocery list metadata from localStorage.
+ * Loads grocery list metadata from localStorage for one account scope.
+ * @param {string|null} userId
  * @returns {{ lastGeneratedAt: number|null }}
  */
-function loadGroceryMetadataFromStorage() {
+function loadGroceryMetadataFromStorage(userId) {
   try {
-    const raw = localStorage.getItem(GROCERY_METADATA_KEY);
+    const raw = localStorage.getItem(storageKey('groceryMeta', userId));
     if (!raw) return { lastGeneratedAt: null };
     return JSON.parse(raw);
   } catch (e) {
@@ -62,18 +77,20 @@ export function useMealPlan() {
 }
 
 /**
- * Loads and deserializes persisted state from localStorage.
- * Handles three storage shapes for backward compatibility:
- *   1. New envelope:  { mealPlan: {...}, upNext: [...] }
+ * Loads and deserializes persisted state from localStorage for one account
+ * scope. Handles three storage shapes for backward compatibility:
+ *   1. New envelope:  { mealPlan: {...}, upNext: [...], updatedAt: 0 }
  *   2. Old direct:    { 'YYYY-MM-DD': { breakfast: [], ... } }  (no upNext)
  *   3. Legacy flat:   { 'YYYY-MM-DD': [recipe, ...] }           (pre-mealType era)
  *
- * @returns {{ mealPlan: Object, upNext: Array }}
+ * @param {string|null} userId - signed-in user id, or null for the guest scope
+ * @returns {{ mealPlan: Object, upNext: Array, updatedAt: number }}
  */
-function loadFromStorage() {
+function loadFromStorage(userId) {
+  const key = storageKey('plan', userId);
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { mealPlan: {}, upNext: [] };
+    const raw = localStorage.getItem(key);
+    if (!raw) return { mealPlan: {}, upNext: [], updatedAt: 0 };
     const parsed = JSON.parse(raw);
 
     // Shape 1 — new envelope format: { mealPlan, upNext }
@@ -86,66 +103,361 @@ function loadFromStorage() {
     ) {
       const planPart = parsed.mealPlan ?? {};
       const upNextPart = Array.isArray(parsed.upNext) ? parsed.upNext : [];
+      const updatedAt = Number(parsed.updatedAt || 0);
       if (isLegacyFormat(planPart)) {
         console.info('🔄 Meal plan (inside envelope) migrated from legacy format');
-        return { mealPlan: migrateFromLegacy(planPart), upNext: upNextPart };
+        return { mealPlan: migrateFromLegacy(planPart), upNext: upNextPart, updatedAt };
       }
-      return { mealPlan: planPart, upNext: upNextPart };
+      return { mealPlan: planPart, upNext: upNextPart, updatedAt };
     }
 
     // Shape 3 — legacy flat format: date keys map to plain arrays
     if (isLegacyFormat(parsed)) {
       console.info('🔄 Meal plan migrated from legacy format');
       const migrated = migrateFromLegacy(parsed);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mealPlan: migrated, upNext: [] }));
-      return { mealPlan: migrated, upNext: [] };
+      localStorage.setItem(key, JSON.stringify({ mealPlan: migrated, upNext: [], updatedAt: 0 }));
+      return { mealPlan: migrated, upNext: [], updatedAt: 0 };
     }
 
     // Shape 2 — old direct format: mealPlan stored at top level, no upNext
-    return { mealPlan: parsed ?? {}, upNext: [] };
+    return { mealPlan: parsed ?? {}, upNext: [], updatedAt: 0 };
   } catch {
-    return { mealPlan: {}, upNext: [] };
+    return { mealPlan: {}, upNext: [], updatedAt: 0 };
   }
 }
 
-export function MealPlanProvider({ children }) {
-  const [mealPlan, setMealPlan] = useState(() => loadFromStorage().mealPlan);
-  const [upNext, setUpNext] = useState(() => loadFromStorage().upNext);
+function writePlanToStorage(userId, mealPlan, upNext, updatedAt) {
+  try {
+    localStorage.setItem(storageKey('plan', userId), JSON.stringify({ mealPlan, upNext, updatedAt }));
+  } catch (e) {
+    console.error('Failed to save meal plan to localStorage:', e);
+  }
+}
+
+function writeGroceryToStorage(userId, items, lastGeneratedAt, updatedAt) {
+  try {
+    localStorage.setItem(storageKey('grocery', userId), JSON.stringify({ items, updatedAt }));
+    localStorage.setItem(
+      storageKey('groceryMeta', userId),
+      JSON.stringify({ lastGeneratedAt, version: '1.0' })
+    );
+  } catch (e) {
+    console.error('Failed to save grocery list to localStorage:', e);
+  }
+}
+
+function sameIdentity(a, b) {
+  return (a?.userId ?? null) === (b?.userId ?? null) && (a?.token ?? null) === (b?.token ?? null);
+}
+
+export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
+  // Who the local cache and every push belongs to. Null means signed out, which
+  // keeps the historic guest keys and never talks to the worker.
+  const [identity, setIdentityState] = useState(null);
+  // Kept current every render: the sliding-expiration token refresh changes the
+  // token without changing who is signed in, and that must not re-run a sync.
+  const identityRef = useRef(null);
+  identityRef.current = identity;
+  const scopeRef = useRef(null);
+
+  // One read of the signed-out cache at mount; every later read is scoped to
+  // whichever account the provider has been pointed at.
+  const initialRef = useRef(null);
+  if (initialRef.current === null) {
+    initialRef.current = {
+      plan: loadFromStorage(null),
+      grocery: loadGroceryListFromStorage(null),
+      groceryMeta: loadGroceryMetadataFromStorage(null),
+    };
+  }
+  const initial = initialRef.current;
+
+  const [mealPlan, setMealPlan] = useState(() => initial.plan.mealPlan);
+  const [upNext, setUpNext] = useState(() => initial.plan.upNext);
   const [activeRecipe, setActiveRecipe] = useState(null);
 
   // ── Grocery list state ───────────────────────────────────────────────────
-  const [groceryList, setGroceryListState] = useState(() => loadGroceryListFromStorage());
+  const [groceryList, setGroceryListState] = useState(() => initial.grocery.items);
   const [isGeneratingList, setIsGeneratingList] = useState(false);
   const [listGenerationError, setListGenerationError] = useState(null);
-  const [lastListGeneratedAt, setLastListGeneratedAt] = useState(
-    () => loadGroceryMetadataFromStorage().lastGeneratedAt
-  );
+  const [lastListGeneratedAt, setLastListGeneratedAt] = useState(() => initial.groceryMeta.lastGeneratedAt);
 
-  // Persist both mealPlan and upNext together under a single key
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mealPlan, upNext }));
-  }, [mealPlan, upNext]);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | synced | error
+  const [syncError, setSyncError] = useState(null);
 
-  // Persist grocery list items to localStorage on change
-  useEffect(() => {
+  // Latest values, read by debounced pushes that fire after the render that
+  // produced them.
+  const planStateRef = useRef({ mealPlan, upNext });
+  const groceryStateRef = useRef({ items: groceryList, lastGeneratedAt: lastListGeneratedAt });
+  planStateRef.current = { mealPlan, upNext };
+  groceryStateRef.current = { items: groceryList, lastGeneratedAt: lastListGeneratedAt };
+
+  // Timestamp of the last local edit, per document. Both the local cache and
+  // the worker compare these to decide which copy of a plan is newer.
+  const planUpdatedAtRef = useRef(initial.plan.updatedAt);
+  const groceryUpdatedAtRef = useRef(initial.grocery.updatedAt);
+
+  // Set while a document's state is being replaced by a copy that did not come
+  // from the user, so adopting the server's plan is not mistaken for an edit.
+  const adoptingPlanRef = useRef(true);
+  const adoptingGroceryRef = useRef(true);
+  const planTimerRef = useRef(null);
+  const groceryTimerRef = useRef(null);
+
+  const identityUserId = identity?.userId ?? null;
+  const syncAvailable = Boolean(apiUrl && identity?.token && identityUserId);
+
+  /**
+   * Points the provider at an account, or at null when signed out. Safe to call
+   * on every render: an unchanged identity is ignored, so it never re-syncs.
+   */
+  const setSyncIdentity = useCallback((next) => {
+    const normalized = next?.token && next?.userId
+      ? { token: String(next.token), userId: String(next.userId) }
+      : null;
+    setIdentityState((prev) => (sameIdentity(prev, normalized) ? prev : normalized));
+  }, []);
+
+  const applyPlanDocument = useCallback((document) => {
+    adoptingPlanRef.current = true;
+    planUpdatedAtRef.current = Number(document.clientUpdatedAt || 0);
+    setMealPlan(document.mealPlan || {});
+    setUpNext(document.upNext || []);
+  }, []);
+
+  const applyGroceryDocument = useCallback((document) => {
+    adoptingGroceryRef.current = true;
+    groceryUpdatedAtRef.current = Number(document.clientUpdatedAt || 0);
+    setGroceryListState(document.items || []);
+    setLastListGeneratedAt(document.lastGeneratedAt ?? null);
+  }, []);
+
+  const pushPlan = useCallback(async () => {
+    const active = identityRef.current;
+    if (!apiUrl || !active) return;
+    const { mealPlan: plan, upNext: staged } = planStateRef.current;
     try {
-      localStorage.setItem(GROCERY_STORAGE_KEY, JSON.stringify({ items: groceryList }));
-    } catch (e) {
-      console.error('Failed to save grocery list to localStorage:', e);
+      await saveMealPlan(apiUrl, active.token, {
+        mealPlan: plan,
+        upNext: staged,
+        clientUpdatedAt: planUpdatedAtRef.current,
+      });
+      setSyncStatus('synced');
+      setSyncError(null);
+    } catch (error) {
+      // A 409 means another device saved something newer; that copy wins and
+      // becomes what this device shows rather than being overwritten.
+      if (error instanceof StaleWriteError && error.data) {
+        applyPlanDocument(error.data);
+        writePlanToStorage(scopeRef.current, error.data.mealPlan || {}, error.data.upNext || [], Number(error.data.clientUpdatedAt || 0));
+        setSyncStatus('synced');
+        setSyncError(null);
+        return;
+      }
+      setSyncStatus('error');
+      setSyncError(error instanceof Error ? error.message : 'Meal plan sync failed');
     }
-  }, [groceryList]);
+  }, [apiUrl, applyPlanDocument]);
 
-  // Persist grocery list metadata to localStorage on change
-  useEffect(() => {
+  const pushGroceryList = useCallback(async () => {
+    const active = identityRef.current;
+    if (!apiUrl || !active) return;
+    const { items, lastGeneratedAt } = groceryStateRef.current;
     try {
-      localStorage.setItem(
-        GROCERY_METADATA_KEY,
-        JSON.stringify({ lastGeneratedAt: lastListGeneratedAt, version: '1.0' })
-      );
-    } catch (e) {
-      console.error('Failed to save grocery list metadata to localStorage:', e);
+      await saveGroceryList(apiUrl, active.token, {
+        items,
+        lastGeneratedAt,
+        clientUpdatedAt: groceryUpdatedAtRef.current,
+      });
+      setSyncStatus('synced');
+      setSyncError(null);
+    } catch (error) {
+      if (error instanceof StaleWriteError && error.data) {
+        applyGroceryDocument(error.data);
+        writeGroceryToStorage(scopeRef.current, error.data.items || [], error.data.lastGeneratedAt ?? null, Number(error.data.clientUpdatedAt || 0));
+        setSyncStatus('synced');
+        setSyncError(null);
+        return;
+      }
+      setSyncStatus('error');
+      setSyncError(error instanceof Error ? error.message : 'Grocery list sync failed');
     }
-  }, [lastListGeneratedAt]);
+  }, [apiUrl, applyGroceryDocument]);
+
+  const schedulePlanPush = useCallback(() => {
+    if (!apiUrl || !identityRef.current) return;
+    if (planTimerRef.current) clearTimeout(planTimerRef.current);
+    planTimerRef.current = setTimeout(() => {
+      planTimerRef.current = null;
+      void pushPlan();
+    }, PUSH_DEBOUNCE_MS);
+  }, [apiUrl, pushPlan]);
+
+  const scheduleGroceryPush = useCallback(() => {
+    if (!apiUrl || !identityRef.current) return;
+    if (groceryTimerRef.current) clearTimeout(groceryTimerRef.current);
+    groceryTimerRef.current = setTimeout(() => {
+      groceryTimerRef.current = null;
+      void pushGroceryList();
+    }, PUSH_DEBOUNCE_MS);
+  }, [apiUrl, pushGroceryList]);
+
+  // Hydration: runs on sign-in, on sign-out, and on a switch between accounts.
+  // Declared before the persistence effects so the storage scope is already
+  // pointing at the new account when they run.
+  useEffect(() => {
+    const userId = identityUserId;
+    scopeRef.current = userId;
+
+    // A push queued for the previous account must not fire against this one.
+    if (planTimerRef.current) {
+      clearTimeout(planTimerRef.current);
+      planTimerRef.current = null;
+    }
+    if (groceryTimerRef.current) {
+      clearTimeout(groceryTimerRef.current);
+      groceryTimerRef.current = null;
+    }
+
+    // Load this account's cached copy first so the planner paints immediately
+    // rather than flashing an empty week while the request is in flight.
+    const cachedPlan = loadFromStorage(userId);
+    const cachedGrocery = loadGroceryListFromStorage(userId);
+    const cachedMeta = loadGroceryMetadataFromStorage(userId);
+    // A first sign-in has no per-user cache yet, so the plan the person just
+    // built as a guest is carried into their account instead of vanishing.
+    const guestPlan = userId ? loadFromStorage(null) : null;
+    const guestGrocery = userId ? loadGroceryListFromStorage(null) : null;
+    const localPlan = guestPlan && isMealPlanEmpty(cachedPlan.mealPlan, cachedPlan.upNext) && !isMealPlanEmpty(guestPlan.mealPlan, guestPlan.upNext)
+      ? guestPlan
+      : cachedPlan;
+    const localGrocery = guestGrocery && isGroceryListEmpty(cachedGrocery.items) && !isGroceryListEmpty(guestGrocery.items)
+      ? { ...guestGrocery, lastGeneratedAt: loadGroceryMetadataFromStorage(null).lastGeneratedAt }
+      : { ...cachedGrocery, lastGeneratedAt: cachedMeta.lastGeneratedAt };
+
+    applyPlanDocument({ mealPlan: localPlan.mealPlan, upNext: localPlan.upNext, clientUpdatedAt: localPlan.updatedAt });
+    applyGroceryDocument({
+      items: localGrocery.items,
+      lastGeneratedAt: localGrocery.lastGeneratedAt ?? null,
+      clientUpdatedAt: localGrocery.updatedAt,
+    });
+
+    if (!apiUrl || !userId) {
+      setSyncStatus('idle');
+      setSyncError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setSyncStatus('syncing');
+    setSyncError(null);
+
+    (async () => {
+      try {
+        const token = identityRef.current?.token;
+        const [remotePlan, remoteGrocery] = await Promise.all([
+          fetchMealPlan(apiUrl, token),
+          fetchGroceryList(apiUrl, token),
+        ]);
+        if (cancelled || identityRef.current?.userId !== userId) return;
+
+        const planWinner = chooseWinner({
+          localUpdatedAt: localPlan.updatedAt,
+          remoteUpdatedAt: remotePlan.clientUpdatedAt,
+          localEmpty: isMealPlanEmpty(localPlan.mealPlan, localPlan.upNext),
+          remoteEmpty: isMealPlanEmpty(remotePlan.mealPlan, remotePlan.upNext),
+        });
+        if (planWinner === 'remote') {
+          applyPlanDocument(remotePlan);
+          writePlanToStorage(userId, remotePlan.mealPlan, remotePlan.upNext, remotePlan.clientUpdatedAt);
+        } else {
+          // The browser holds the newer plan (or the only one), so the account
+          // gets it: this is what makes a guest plan survive a first sign-in.
+          // Never below what an edit made during the fetch already stamped.
+          planUpdatedAtRef.current = Math.max(planUpdatedAtRef.current, localPlan.updatedAt || Date.now());
+          await pushPlan();
+        }
+
+        const groceryWinner = chooseWinner({
+          localUpdatedAt: localGrocery.updatedAt,
+          remoteUpdatedAt: remoteGrocery.clientUpdatedAt,
+          localEmpty: isGroceryListEmpty(localGrocery.items),
+          remoteEmpty: isGroceryListEmpty(remoteGrocery.items),
+        });
+        if (groceryWinner === 'remote') {
+          applyGroceryDocument(remoteGrocery);
+          writeGroceryToStorage(userId, remoteGrocery.items, remoteGrocery.lastGeneratedAt, remoteGrocery.clientUpdatedAt);
+        } else {
+          groceryUpdatedAtRef.current = Math.max(groceryUpdatedAtRef.current, localGrocery.updatedAt || Date.now());
+          await pushGroceryList();
+        }
+
+        if (!cancelled) {
+          setSyncStatus((prev) => (prev === 'error' ? prev : 'synced'));
+        }
+      } catch (error) {
+        if (cancelled) return;
+        // Sync is additive: a worker that is down or unreachable leaves the
+        // planner working exactly as it did before, on the local copy.
+        setSyncStatus('error');
+        setSyncError(error instanceof Error ? error.message : 'Meal plan sync is unavailable');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [apiUrl, identityUserId, applyPlanDocument, applyGroceryDocument, pushPlan, pushGroceryList]);
+
+  // Persist the plan on every change, and queue a push when signed in.
+  useEffect(() => {
+    const adopting = adoptingPlanRef.current;
+    adoptingPlanRef.current = false;
+    if (!adopting) planUpdatedAtRef.current = Date.now();
+    writePlanToStorage(scopeRef.current, mealPlan, upNext, planUpdatedAtRef.current);
+    if (!adopting) schedulePlanPush();
+  }, [mealPlan, upNext, schedulePlanPush]);
+
+  // Persist grocery items and their metadata together so the pair never drifts.
+  useEffect(() => {
+    const adopting = adoptingGroceryRef.current;
+    adoptingGroceryRef.current = false;
+    if (!adopting) groceryUpdatedAtRef.current = Date.now();
+    writeGroceryToStorage(scopeRef.current, groceryList, lastListGeneratedAt, groceryUpdatedAtRef.current);
+    if (!adopting) scheduleGroceryPush();
+  }, [groceryList, lastListGeneratedAt, scheduleGroceryPush]);
+
+  // A queued push must not outlive the provider. Anything still pending is kept
+  // by the local cache with a newer timestamp than the server's, so the next
+  // sign-in pushes it rather than losing it.
+  useEffect(() => () => {
+    if (planTimerRef.current) {
+      clearTimeout(planTimerRef.current);
+      planTimerRef.current = null;
+    }
+    if (groceryTimerRef.current) {
+      clearTimeout(groceryTimerRef.current);
+      groceryTimerRef.current = null;
+    }
+  }, []);
+
+  // Best effort flush on the way out: a plan edited a moment before the tab
+  // closes reaches the worker without waiting out the debounce.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const flush = () => {
+      if (planTimerRef.current) {
+        clearTimeout(planTimerRef.current);
+        planTimerRef.current = null;
+        void pushPlan();
+      }
+      if (groceryTimerRef.current) {
+        clearTimeout(groceryTimerRef.current);
+        groceryTimerRef.current = null;
+        void pushGroceryList();
+      }
+    };
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, [pushPlan, pushGroceryList]);
 
   /**
    * Adds a recipe to a specific date and meal type slot.
@@ -535,6 +847,11 @@ export function MealPlanProvider({ children }) {
       clearGroceryList,
       generateGroceryListStart,
       generateGroceryListError,
+      // Cross-device sync
+      setSyncIdentity,
+      syncStatus,
+      syncError,
+      syncAvailable,
     }),
     [
       mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal,
@@ -542,6 +859,7 @@ export function MealPlanProvider({ children }) {
       groceryList, isGeneratingList, listGenerationError, lastListGeneratedAt,
       setGroceryList, addCustomItem, toggleItemCompletion, editItem, deleteItem,
       clearGroceryList, generateGroceryListStart, generateGroceryListError,
+      setSyncIdentity, syncStatus, syncError, syncAvailable,
     ]
   );
 
