@@ -260,7 +260,16 @@ export default function MealPlannerDrawer({
         signal: controller.signal,
       })
       clearTimeout(tid)
-      if (!res.ok) throw new Error(`Server error: ${res.status}`)
+      if (!res.ok) {
+        // The worker returns { error, code } on failure; surface it instead of a
+        // bare status so users (and bug reports) say what actually went wrong.
+        const detail = await res.json().catch(() => null)
+        throw new Error(
+          detail?.error
+            ? `${detail.error}${detail.code ? ` (${detail.code})` : ''}`
+            : `Server error: ${res.status}`
+        )
+      }
       const data = await res.json()
       if (!data.success || !Array.isArray(data.categories))
         throw new Error('Invalid response from server. Please try again.')

@@ -54,7 +54,7 @@ describe('Grocery List Handler', () => {
     expect(data.code).toBe('LLM_ERROR');
   });
 
-  it('returns 500 when LLM returns unparseable output', async () => {
+  it('returns 500 when LLM returns unparseable output twice', async () => {
     const mockAI = { run: vi.fn().mockResolvedValue({ response: 'not json' }) };
     const env = { ...mockEnvWithOpik, AI: mockAI };
     const request = createPostRequest('/grocery-list', { ingredients: ['a'] });
@@ -62,6 +62,100 @@ describe('Grocery List Handler', () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.code).toBe('PARSE_ERROR');
+    expect(mockAI.run).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Regression: malformed-but-recoverable LLM output used to 500 ───────────
+
+  const recoverable = {
+    'prose after the array containing a bracket':
+      `${validLlmJson}\n\nNote: quantities are approximate [see recipes].`,
+    'prose before the array containing a bracket':
+      `Here is the list [organized by aisle]:\n${validLlmJson}`,
+    'markdown fences with a preamble':
+      `Here is your grocery list:\n\`\`\`json\n${validLlmJson}\n\`\`\``,
+    'trailing comma before a closing bracket':
+      '[{"category":"Produce","items":[{"name":"lime","quantity":"1","isStaple":false},]}]',
+    'python-style boolean literal':
+      '[{"category":"Produce","items":[{"name":"lime","quantity":"1","isStaple":False}]}]',
+    'the array emitted twice':
+      `${validLlmJson}\n${validLlmJson}`
+  };
+
+  for (const [label, response] of Object.entries(recoverable)) {
+    it(`recovers from ${label} without a retry`, async () => {
+      const mockAI = { run: vi.fn().mockResolvedValue({ response }) };
+      const env = { ...mockEnvWithOpik, AI: mockAI };
+      const request = createPostRequest('/grocery-list', { ingredients: ['1 lime'] });
+      const res = await handleGroceryList(request, env, corsHeaders);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.categories).toHaveLength(1);
+      expect(data.categories[0].items[0].name).toBe('lime');
+      expect(mockAI.run).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  it('finds the category array when the model wraps it in an unknown key', async () => {
+    const wrapped = `{"grocery_list": ${validLlmJson}}`;
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: wrapped }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['1 lime'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.categories[0].items[0].name).toBe('lime');
+    expect(mockAI.run).toHaveBeenCalledTimes(1);
+  });
+
+  it('salvages the complete prefix when output is truncated at max_tokens', async () => {
+    const items = Array.from(
+      { length: 5 },
+      (_, i) => `{"name":"item${i}","quantity":"1","isStaple":false}`
+    ).join(',');
+    const truncated = `[{"category":"Produce","items":[${items},{"name":"half-writ`;
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: truncated }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['a'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.categories[0].items).toHaveLength(5);
+    expect(mockAI.run).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries once and succeeds when the first response is unrecoverable', async () => {
+    const mockAI = {
+      run: vi
+        .fn()
+        .mockResolvedValueOnce({ response: '[{"category":"Produce","items":[{"name":"1/2" onion"}]}]' })
+        .mockResolvedValueOnce({ response: validLlmJson })
+    };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['1 lime'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.categories[0].items[0].name).toBe('lime');
+    expect(mockAI.run).toHaveBeenCalledTimes(2);
+    // The retry appends a strictness reminder to the base prompt.
+    expect(mockAI.run.mock.calls[1][1].messages[0].content).toContain('CRITICAL');
+    expect(mockAI.run.mock.calls[1][1].temperature).toBe(0);
+  });
+
+  it('retries once when the LLM returns an empty completion', async () => {
+    const mockAI = {
+      run: vi
+        .fn()
+        .mockResolvedValueOnce({ response: '' })
+        .mockResolvedValueOnce({ response: validLlmJson })
+    };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['1 lime'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    expect(res.status).toBe(200);
+    expect(mockAI.run).toHaveBeenCalledTimes(2);
   });
 
   it('succeeds without OPIK_API_KEY (tracing skipped)', async () => {
