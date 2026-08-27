@@ -16,6 +16,8 @@ export interface Env {
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   // Explicit kill switch for the additive private recipe notes API.
   RECIPE_NOTES_ENABLED?: string;
+  // Explicit kill switch for meal plan / grocery list sync.
+  MEAL_PLAN_SYNC_ENABLED?: string;
   // Optional service-to-service secret for passkey credential routes.
   PASSKEY_SERVICE_TOKEN?: string;
 }

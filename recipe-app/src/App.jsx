@@ -316,7 +316,7 @@ export function annotateRecipeForProfile(recipe, profile) {
 
 export default function App() {
   const auth = useAuth()
-  const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
+  const { activeRecipe, setActiveRecipe, clearActiveRecipe, setSyncIdentity } = useMealPlan()
   const mealPlannerEnabled = useFlag('meal-planner')
   const culinaryProfileEnabled = useFlag('culinary-profile')
   const constraintGenerateEnabled = useFlag('constraint-generate')
@@ -360,6 +360,14 @@ export default function App() {
     if (auth.loading) return
     void syncFlagglyUser(auth.user ?? null)
   }, [auth.loading, auth.user])
+
+  // Hand the planner the signed-in account so the plan and grocery list are
+  // stored server side rather than only in this browser. Signing out hands back
+  // null, which returns the planner to its local guest copy.
+  useEffect(() => {
+    if (auth.loading) return
+    setSyncIdentity?.(auth.token && pantryUserId ? { token: auth.token, userId: pantryUserId } : null)
+  }, [auth.loading, auth.token, pantryUserId, setSyncIdentity])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [autofillOpen, setAutofillOpen] = useState(false)
   const [bulkScheduleOpen, setBulkScheduleOpen] = useState(false)

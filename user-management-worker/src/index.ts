@@ -9,6 +9,14 @@ import { PantryService, validatePantryItemInput } from './services/pantry';
 import { detectPantryItems, MAX_PANTRY_PHOTO_BYTES, validatePantryPhoto } from './services/pantry-scan';
 import type { PantryScanFile } from './services/pantry-scan';
 import { RecipeNotesService, validateRecipeNoteInput } from './services/recipe-notes';
+import {
+  EMPTY_GROCERY_LIST,
+  EMPTY_MEAL_PLAN,
+  MealPlanService,
+  isStaleWrite,
+  validateGroceryListInput,
+  validateMealPlanInput,
+} from './services/meal-plan';
 
 const app = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
@@ -75,6 +83,14 @@ function isRecipeNotesPath(path: string): boolean {
   return path === '/me/recipe-notes' || path.startsWith('/me/recipe-notes/');
 }
 
+function mealPlanSyncEnabled(env: Bindings): boolean {
+  return env.MEAL_PLAN_SYNC_ENABLED !== 'false';
+}
+
+function isMealPlanSyncPath(path: string): boolean {
+  return path === '/me/meal-plan' || path === '/me/grocery-list';
+}
+
 function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string): string | undefined } }): boolean {
   const configuredToken = c.env.PASSKEY_SERVICE_TOKEN;
   if (c.env.ENVIRONMENT === 'development') return true;
@@ -89,7 +105,7 @@ app.use('*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization']
 // existing local workflow convenient; deployed environments require the shared
 // PASSKEY_SERVICE_TOKEN secret configured on both workers.
 app.use('*', async (c, next) => {
-  if (c.req.path === '/me/culinary-profile' || isPantryPath(c.req.path) || isRecipeNotesPath(c.req.path)) {
+  if (c.req.path === '/me/culinary-profile' || isPantryPath(c.req.path) || isRecipeNotesPath(c.req.path) || isMealPlanSyncPath(c.req.path)) {
     if (c.req.path === '/me/culinary-profile' && !culinaryProfileEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
@@ -100,6 +116,9 @@ app.use('*', async (c, next) => {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     if (isRecipeNotesPath(c.req.path) && !recipeNotesEnabled(c.env)) {
+      return c.json({ success: false, message: 'Not Found' }, 404);
+    }
+    if (isMealPlanSyncPath(c.req.path) && !mealPlanSyncEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     const auth = await authenticateRequest(c);
@@ -371,6 +390,73 @@ app.delete('/me/recipe-notes/:note_id', async (c) => {
     return c.json({ success: true, affectedRows });
   } catch (error) {
     console.error('Error deleting recipe note:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Authenticated meal plan and grocery list sync. Both documents are stored per
+// user so a plan built on one device is the same plan after a sign-out, a
+// reinstall, or a sign-in from another browser. The JWT subject is the only
+// key; a caller cannot read or write another person's plan.
+app.get('/me/meal-plan', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const document = await new MealPlanService(c.env.USER_DB).getMealPlan(userId);
+    return c.json({ success: true, exists: Boolean(document), data: document || EMPTY_MEAL_PLAN });
+  } catch (error) {
+    console.error('Error getting meal plan:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.put('/me/meal-plan', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.plan && typeof body.plan === 'object'
+      ? body.plan
+      : body;
+    const errors = validateMealPlanInput(input);
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid meal plan', errors }, 400);
+
+    const result = await new MealPlanService(c.env.USER_DB).saveMealPlan(c.get('userId'), input);
+    // A save older than the stored one is refused rather than applied, so a
+    // stale tab cannot roll back an edit made on another device.
+    if (isStaleWrite(result)) {
+      return c.json({ success: false, stale: true, message: 'A newer meal plan is already stored', data: result.current }, 409);
+    }
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error saving meal plan:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.get('/me/grocery-list', async (c) => {
+  try {
+    const document = await new MealPlanService(c.env.USER_DB).getGroceryList(c.get('userId'));
+    return c.json({ success: true, exists: Boolean(document), data: document || EMPTY_GROCERY_LIST });
+  } catch (error) {
+    console.error('Error getting grocery list:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.put('/me/grocery-list', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.list && typeof body.list === 'object'
+      ? body.list
+      : body;
+    const errors = validateGroceryListInput(input);
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid grocery list', errors }, 400);
+
+    const result = await new MealPlanService(c.env.USER_DB).saveGroceryList(c.get('userId'), input);
+    if (isStaleWrite(result)) {
+      return c.json({ success: false, stale: true, message: 'A newer grocery list is already stored', data: result.current }, 409);
+    }
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error saving grocery list:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });

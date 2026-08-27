@@ -53,6 +53,7 @@ Dev uses `.env.development` (staging workers); production uses `.env.production`
 - **URL detection** — `isValidUrl()` switches button action between Search and Clip
 - **Recipe elevation** — re-generates a recipe using its existing ingredients
 - **409 = success** — duplicate save returns 409 conflict, treated as non-error
+- **Meal plan persistence** — `MealPlanContext` keeps the plan, Up Next, and grocery list in `localStorage` and, once signed in, mirrors them to `user-management-worker` (`/me/meal-plan`, `/me/grocery-list`) via `utils/mealPlanSync.js`. Local storage is scoped per account, so a plan follows the user across devices rather than the browser, and a worker outage degrades to the local copy
 - **Field normalization** — API responses use inconsistent field names (name/title, prepTime/prep_time); App.jsx normalizes them
 
 ### Testing
