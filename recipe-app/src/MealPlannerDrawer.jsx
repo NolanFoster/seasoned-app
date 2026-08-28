@@ -122,7 +122,18 @@ export function normalizeApiResponse(categories, pantryItems = [], pantryPlanner
       })
     })
   })
-  return pantryPlannerEnabled ? classifyGroceryItems(items, pantryItems) : items
+  if (!pantryPlannerEnabled) return items
+
+  // The worker already applies the pantry quantity and returns the remaining
+  // gap as `quantity`. Reclassify against the live client snapshot, but start
+  // from the original request quantity; otherwise a partial match is
+  // subtracted twice (for example, 2 requested - 1 on hand becomes a 1-item
+  // response that is then incorrectly marked owned by the browser).
+  const itemsForClassification = items.map((item) => ({
+    ...item,
+    quantity: item.requestedQuantity ?? item.quantity,
+  }))
+  return classifyGroceryItems(itemsForClassification, pantryItems)
 }
 
 /**
