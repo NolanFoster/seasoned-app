@@ -38,7 +38,9 @@ import { buildGenerationConstraints } from '../../../shared/culinary-profile.js'
 
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 const MAX_SLOTS = 28;
+const MAX_PLAN_DAYS = 7;
 const CONCURRENCY = 4;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const SAFETY_ERROR_CODES = new Set([
   'ALLERGEN_SAFETY_BLOCK',
   'PROCESS_SAFETY_BLOCK',
@@ -90,6 +92,35 @@ function isValidDateString(value) {
   return date.getUTCFullYear() === year
     && date.getUTCMonth() === month - 1
     && date.getUTCDate() === day;
+}
+
+/**
+ * Keep the endpoint scoped to a single week. Counting distinct dates alone is
+ * not enough: a request for Monday and the following Wednesday is two dates
+ * but spans nine calendar days. Dates are parsed as UTC because these are
+ * calendar labels, not instants in the caller's timezone.
+ */
+function isWithinPlanWindow(slots) {
+  const dates = [...new Set(slots.map((slot) => slot.date))];
+  if (dates.length > MAX_PLAN_DAYS) return false;
+  const timestamps = dates.map((date) => Date.parse(`${date}T00:00:00.000Z`));
+  const earliest = Math.min(...timestamps);
+  const latest = Math.max(...timestamps);
+  return latest - earliest <= (MAX_PLAN_DAYS - 1) * DAY_MS;
+}
+
+/**
+ * A profile's hard allergen block is safety state, not a normal generation
+ * preference. Explicit overrides may add an allergen, but must never clear a
+ * profile allergen for one meal in an auto-filled week.
+ */
+function mergeHardAllergens(profile, overrides) {
+  const profileConstraints = buildGenerationConstraints(profile, {});
+  const overrideConstraints = buildGenerationConstraints({}, overrides);
+  return [...new Set([
+    ...(profileConstraints.hardAllergens || []),
+    ...(overrideConstraints.hardAllergens || [])
+  ])];
 }
 
 /**
@@ -178,6 +209,9 @@ async function fillOneSlot(slot, ctx, env, corsHeaders) {
       if (rawOverrides[field] !== undefined) requestBody[field] = rawOverrides[field];
     }
 
+    // The merged list is assigned after copying overrides so an empty
+    // `hardAllergens` override cannot weaken the profile's safety block.
+    requestBody.hardAllergens = ctx.constraints.hardAllergens;
     requestBody.recipeName = slotDishName(slot.mealType, ctx.constraints, ctx.index);
     requestBody.culinaryProfile = ctx.profile;
     requestBody.usePantry = ctx.usePantry;
@@ -269,15 +303,27 @@ export async function handleMealPlanFill(request, env, corsHeaders) {
   if (slots.length === 0) {
     return json({ success: false, error: 'No valid slots provided', code: 'INVALID_INPUT', warnings }, 400, corsHeaders);
   }
+  if (!isWithinPlanWindow(slots)) {
+    return json({
+      success: false,
+      error: `At most ${MAX_PLAN_DAYS} consecutive calendar days may be filled per request`,
+      code: 'INVALID_INPUT',
+      warnings
+    }, 400, corsHeaders);
+  }
 
   // Normalize constraints once so the per-slot generate requests are consistent.
   const profile = body?.culinaryProfile || body?.profile || {};
-  const constraints = buildGenerationConstraints(profile, body?.overrides || {});
+  const rawOverrides = body?.overrides && typeof body.overrides === 'object'
+    ? body.overrides
+    : {};
+  const constraints = buildGenerationConstraints(profile, rawOverrides);
+  constraints.hardAllergens = mergeHardAllergens(profile, rawOverrides);
 
   const ctx = {
     profile,
     constraints,
-    overrides: body?.overrides || {},
+    overrides: rawOverrides,
     usePantry: body?.usePantry === true,
     pantryIngredients: Array.isArray(body?.pantryIngredients) ? body.pantryIngredients : [],
     prioritizeExpiring: body?.prioritizeExpiring === true && body?.usePantry === true,

@@ -172,6 +172,33 @@ describe('handleMealPlanFill — input validation', () => {
 // ── successful fill ───────────────────────────────────────────────────────
 
 describe('handleMealPlanFill — successful fill', () => {
+  it('rejects requests that span more than seven calendar days', async () => {
+    const req = createPostRequest('/meal-plan-fill', {
+      slots: ['2026-08-17::dinner', '2026-08-24::dinner'],
+      generateImage: false
+    });
+    const res = await handleMealPlanFill(req, enhancedMockEnv, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.code).toBe('INVALID_INPUT');
+    expect(mockAI.run).not.toHaveBeenCalled();
+  });
+
+  it('rejects more than seven distinct plan dates even when slot count is small', async () => {
+    const slots = Array.from({ length: 8 }, (_, index) =>
+      `2026-08-${String(17 + index).padStart(2, '0')}::dinner`
+    );
+    const req = createPostRequest('/meal-plan-fill', { slots, generateImage: false });
+    const res = await handleMealPlanFill(req, enhancedMockEnv, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.code).toBe('INVALID_INPUT');
+    expect(mockAI.run).not.toHaveBeenCalled();
+  });
+
   it('fills a single slot and returns one meal', async () => {
     const req = createPostRequest('/meal-plan-fill', {
       slots: ['2026-08-17::dinner'],
@@ -216,6 +243,20 @@ describe('handleMealPlanFill — successful fill', () => {
     expect(data.success).toBe(true);
     expect(data.meals.length).toBe(4);
     expect(data.meals.map((m) => m.mealType).sort()).toEqual(['breakfast', 'dinner', 'lunch', 'snack']);
+  });
+
+  it('never lets an empty override clear profile hard allergens', async () => {
+    const req = createPostRequest('/meal-plan-fill', {
+      slots: ['2026-08-17::dinner'],
+      generateImage: false,
+      culinaryProfile: { hard_allergens: ['peanuts'] },
+      overrides: { hardAllergens: [] }
+    });
+    const res = await handleMealPlanFill(req, enhancedMockEnv, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.meals[0].recipe.appliedConstraints.hardAllergens).toContain('peanuts');
   });
 
   it('propagates override constraints to the generate pipeline', async () => {

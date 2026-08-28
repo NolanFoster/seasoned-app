@@ -279,7 +279,10 @@ export function classifyGroceryItems(items, pantryItems, { now = new Date() } = 
       }
     } else if (matches.length && !hasIncompatibleUnit) {
       inventoryStatus = 'owned'
-    } else if (item.optionalStaple || item.isStaple || /pantry|staple/i.test(item.category || '')) {
+    } else if (item.optionalStaple || item.isStaple === true) {
+      // Category names are aisle labels, not proof that an item is already
+      // on hand. Trust the LLM's explicit staple marker so a specialty item
+      // placed in "Pantry Staples" still appears in Buy.
       inventoryStatus = 'optional_staple'
     }
 

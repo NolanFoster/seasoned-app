@@ -102,7 +102,7 @@ export function normalizeApiResponse(categories, pantryItems = [], pantryPlanner
         id: now.toString(36) + Math.random().toString(36).substr(2),
         name: apiItem.name,
         quantity: apiItem.quantity || '',
-        unit: '',
+        unit: apiItem.unit || '',
         category,
         completed: false,
         isCustom: false,
@@ -111,6 +111,14 @@ export function normalizeApiResponse(categories, pantryItems = [], pantryPlanner
         source: 'ai-generated',
         isStaple,
         optionalStaple: isStaple,
+        // Preserve the worker's deterministic gap-fill metadata. The client
+        // rechecks it below against its current pantry snapshot, which keeps
+        // a list accurate if inventory changed while the request was running.
+        ...(apiItem.inventoryStatus ? { inventoryStatus: apiItem.inventoryStatus } : {}),
+        ...(Array.isArray(apiItem.pantryItemIds) ? { pantryItemIds: apiItem.pantryItemIds } : {}),
+        ...(apiItem.pantryQuantity != null ? { pantryQuantity: apiItem.pantryQuantity } : {}),
+        ...(apiItem.missingQuantity != null ? { missingQuantity: apiItem.missingQuantity } : {}),
+        ...(apiItem.requestedQuantity != null ? { requestedQuantity: apiItem.requestedQuantity } : {}),
       })
     })
   })
@@ -256,7 +264,21 @@ export default function MealPlannerDrawer({
       const res = await fetch(`${RECIPE_GENERATION_URL}/grocery-list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients }),
+        body: JSON.stringify({
+          ingredients,
+          // The worker performs the same deterministic gap-fill pass as the
+          // client. Send only the fields it needs; the client still
+          // reclassifies with its live pantry snapshot for offline changes.
+          ...(pantryPlannerEnabled ? {
+            pantryItems: pantryItems.map(({ id, name, quantity, unit, expiresOn, expires_on }) => ({
+              id,
+              name,
+              quantity,
+              unit,
+              expiresOn: expiresOn || expires_on || null,
+            }))
+          } : {})
+        }),
         signal: controller.signal,
       })
       clearTimeout(tid)
