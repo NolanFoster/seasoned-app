@@ -16,7 +16,8 @@
     "./culinary-profile": "./culinary-profile.js",
     "./allergen-graph": "./allergen-graph.js",
     "./food-process-safety": "./food-process-safety.js",
-    "./pantry-planning": "./pantry-planning.js"
+    "./pantry-planning": "./pantry-planning.js",
+    "./nutrition-grounding": "./nutrition-grounding.js"
   },
   "scripts": {
     "test": "node test-simple.js",

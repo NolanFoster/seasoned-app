@@ -32,10 +32,10 @@ async function runTests() {
   let passedTests = 0;
   let totalTests = 0;
   
-  const runTest = (testName, testFn) => {
+  const runTest = async (testName, testFn) => {
     totalTests++;
     try {
-      testFn();
+      await testFn();
       console.log(`✅ ${testName}`);
       passedTests++;
     } catch (error) {
@@ -44,7 +44,7 @@ async function runTests() {
   };
   
   // Test 1: generateRecipeId consistency
-  runTest('generateRecipeId should generate consistent hashes', async () => {
+  await runTest('generateRecipeId should generate consistent hashes', async () => {
     const id1 = await generateRecipeId(testUrl);
     const id2 = await generateRecipeId(testUrl);
     
@@ -54,7 +54,7 @@ async function runTests() {
   });
   
   // Test 2: generateRecipeId uniqueness
-  runTest('generateRecipeId should generate different hashes for different URLs', async () => {
+  await runTest('generateRecipeId should generate different hashes for different URLs', async () => {
     const id1 = await generateRecipeId(testUrl);
     const id2 = await generateRecipeId('https://different-url.com/recipe');
     
@@ -62,7 +62,7 @@ async function runTests() {
   });
   
   // Test 3: generateRecipeId empty URL
-  runTest('generateRecipeId should handle empty URL', async () => {
+  await runTest('generateRecipeId should handle empty URL', async () => {
     const id = await generateRecipeId('');
     
     assert(typeof id === 'string', 'Generated ID should be a string');
@@ -70,7 +70,7 @@ async function runTests() {
   });
   
   // Test 4: compression and decompression
-  runTest('compressData and decompressData should work correctly', async () => {
+  await runTest('compressData and decompressData should work correctly', async () => {
     const compressed = await compressData(testRecipeData);
     const decompressed = await decompressData(compressed);
     
@@ -81,7 +81,7 @@ async function runTests() {
   });
   
   // Test 5: compression with different data types
-  runTest('compression should work with different data types', async () => {
+  await runTest('compression should work with different data types', async () => {
     const testCases = [
       'test string',
       [1, 2, 3, 'test'],
@@ -106,7 +106,7 @@ async function runTests() {
   });
   
   // Test 6: compression with empty data
-  runTest('compression should handle empty data', async () => {
+  await runTest('compression should handle empty data', async () => {
     const compressed = await compressData({});
     const decompressed = await decompressData(compressed);
     
@@ -115,7 +115,7 @@ async function runTests() {
   });
   
   // Test 7: base64 validation
-  runTest('compressed data should be valid base64', async () => {
+  await runTest('compressed data should be valid base64', async () => {
     const compressed = await compressData(testRecipeData);
     
     // Base64 should only contain valid characters
@@ -124,7 +124,7 @@ async function runTests() {
   });
   
   // Test 8: error handling for invalid base64
-  runTest('decompressData should throw error for invalid base64', async () => {
+  await runTest('decompressData should throw error for invalid base64', async () => {
     let errorThrown = false;
     try {
       await decompressData('invalid-base64!@#');
@@ -136,7 +136,7 @@ async function runTests() {
   });
   
   // Test 9: large data compression
-  runTest('compression should handle large data', async () => {
+  await runTest('compression should handle large data', async () => {
     const largeData = {
       name: 'Large Recipe',
       ingredients: Array.from({ length: 100 }, (_, i) => `ingredient ${i + 1}`),
@@ -154,7 +154,7 @@ async function runTests() {
   });
   
   // Test 10: special characters
-  runTest('compression should handle special characters', async () => {
+  await runTest('compression should handle special characters', async () => {
     const specialData = {
       name: 'Recipe with special chars: éñüß',
       ingredients: ['salt & pepper', 'olive oil (extra virgin)', 'garlic (minced)'],
