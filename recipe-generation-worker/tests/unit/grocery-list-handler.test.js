@@ -29,6 +29,57 @@ describe('Grocery List Handler', () => {
     vi.clearAllMocks();
   });
 
+  it('classifies grocery items against pantry quantities on the server', async () => {
+    const mockAI = {
+      run: vi.fn().mockResolvedValue({
+        response: JSON.stringify([{
+          category: 'Produce',
+          items: [
+            { name: 'green onion', quantity: '2', unit: 'piece', isStaple: false },
+            { name: 'lemons', quantity: '3', unit: 'piece', isStaple: false }
+          ]
+        }])
+      })
+    };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', {
+      ingredients: ['2 green onions', '3 lemons'],
+      pantryItems: [
+        { id: 'pantry-1', name: 'scallions', quantity: 2, unit: 'piece' },
+        { id: 'pantry-2', name: 'lemon', quantity: 1, unit: 'piece' }
+      ]
+    });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.pantryMatched).toBe(true);
+    expect(data.categories[0].items[0]).toEqual(expect.objectContaining({
+      name: 'green onion',
+      inventoryStatus: 'owned',
+      pantryItemIds: ['pantry-1']
+    }));
+    expect(data.categories[0].items[1]).toEqual(expect.objectContaining({
+      name: 'lemons',
+      inventoryStatus: 'buy',
+      pantryQuantity: '1 piece',
+      missingQuantity: '2 piece',
+      quantity: '2 piece'
+    }));
+  });
+
+  it('does not add pantry metadata when the optional pantry field is omitted', async () => {
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: validLlmJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['1 lime'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.pantryMatched).toBeUndefined();
+    expect(data.categories[0].items[0].inventoryStatus).toBeUndefined();
+  });
+
   it('returns categorized list when LLM returns valid JSON', async () => {
     const mockAI = {
       run: vi.fn().mockResolvedValue({ response: validLlmJson })

@@ -1,19 +1,23 @@
 /**
  * Grocery List Handler
  *
- * Accepts a POST request with { ingredients: string[] }, sends them to the
- * Llama 3.2 3B Instruct LLM, and returns a deduplicated, categorized grocery list.
+ * Accepts a POST request with { ingredients: string[], pantryItems?: PantryItem[] },
+ * sends ingredients to the Llama 3.2 3B Instruct LLM, and returns a
+ * deduplicated, categorized grocery list. When pantryItems is present, each
+ * item is also classified as buy, owned, or optional_staple by the
+ * deterministic gap-fill pass (the LLM never decides inventory state).
  *
  * Response shape:
  *   {
  *     success: true,
  *     categories: [
- *       { category: string, items: [{ name: string, quantity: string, isStaple: boolean }] }
+ *       { category: string, items: [{ name: string, quantity: string, unit?: string, isStaple: boolean, inventoryStatus?: string }] }
  *     ]
  *   }
  */
 
 import { OpikClient } from '../opik-client.js';
+import { classifyGroceryItems } from '../../../shared/pantry-planning.js';
 
 /** Workers AI model id for grocery aggregation (keep in sync with env.AI.run below). */
 const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
@@ -331,6 +335,7 @@ function validateCategories(parsed) {
         .map((item) => ({
           name: String(item.name),
           quantity: item.quantity != null ? String(item.quantity) : '',
+          unit: item.unit != null ? String(item.unit) : '',
           isStaple: Boolean(item.isStaple)
         }))
     }))
@@ -360,6 +365,70 @@ function mergeDuplicateCategories(categories) {
 }
 
 /**
+ * Pantry input is supplied by the signed-in app so the worker can return a
+ * portable, already gap-filled list. It is still untrusted request data: keep
+ * the payload bounded and discard fields the classifier does not need.
+ *
+ * `null` means the caller did not ask for pantry matching. An empty array is a
+ * meaningful request (it lets the UI show staple lines while explaining that
+ * the pantry is empty), so callers should preserve that distinction.
+ */
+function sanitizePantryItems(value) {
+  if (!Array.isArray(value)) return null;
+  return value
+    .filter((item) => item && typeof item === 'object' && typeof item.name === 'string')
+    .map((item, index) => {
+      const name = item.name.trim().replace(/\s+/g, ' ').slice(0, 200);
+      const rawQuantity = item.quantity;
+      const quantity = typeof rawQuantity === 'number'
+        ? rawQuantity
+        : typeof rawQuantity === 'string' && rawQuantity.trim() !== ''
+          ? rawQuantity.trim().slice(0, 40)
+          : null;
+      const rawExpiry = item.expiresOn ?? item.expires_on;
+      const parsedExpiry = typeof rawExpiry === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(rawExpiry)
+        ? new Date(`${rawExpiry}T00:00:00.000Z`)
+        : null;
+      const expiresOn = parsedExpiry && !Number.isNaN(parsedExpiry.getTime()) &&
+        parsedExpiry.toISOString().slice(0, 10) === rawExpiry
+        ? rawExpiry
+        : null;
+      return {
+        id: item.id == null ? `request-pantry-${index}` : String(item.id).slice(0, 100),
+        name,
+        quantity,
+        unit: typeof item.unit === 'string' ? item.unit.trim().slice(0, 40) : null,
+        expiresOn
+      };
+    })
+    .filter((item) => item.name)
+    .slice(0, 100);
+}
+
+/**
+ * Apply deterministic pantry gap filling after the LLM has normalized aisle
+ * categories. Keeping this pass outside the prompt means an LLM cannot
+ * accidentally claim an on-hand item is still needed (or hide a missing
+ * quantity). The response remains backward compatible when pantryItems is not
+ * supplied: no inventory metadata is added in that mode.
+ */
+function classifyCategories(categories, pantryItems) {
+  if (pantryItems === null) return categories;
+  return categories.map((category) => ({
+    ...category,
+    items: classifyGroceryItems(
+      category.items.map((item) => ({
+        ...item,
+        category: category.category,
+        optionalStaple: item.optionalStaple || item.isStaple
+      })),
+      pantryItems
+    )
+  }));
+}
+
+/**
  * POST /grocery-list handler
  *
  * @param {Request} request
@@ -384,6 +453,9 @@ export async function handleGroceryList(request, env, corsHeaders) {
   }
 
   const { ingredients } = body ?? {};
+  // Keep `undefined` distinct from `[]`: only the former means legacy
+  // grocery-list behavior without pantry classification.
+  const pantryItems = sanitizePantryItems(body?.pantryItems);
 
   if (!Array.isArray(ingredients) || ingredients.length === 0) {
     return json(
@@ -406,14 +478,14 @@ export async function handleGroceryList(request, env, corsHeaders) {
 
   if (!env.AI) {
     console.warn('[grocery-list] env.AI not available — returning mock response');
+    const categories = [{
+      category: 'Pantry Staples',
+      items: ingredientStrings.map((i) => ({ name: i, quantity: '', isStaple: false }))
+    }];
     return json({
       success: true,
-      categories: [
-        {
-          category: 'Pantry Staples',
-          items: ingredientStrings.map((i) => ({ name: i, quantity: '', isStaple: false }))
-        }
-      ]
+      categories: classifyCategories(categories, pantryItems),
+      ...(pantryItems === null ? {} : { pantryMatched: true })
     });
   }
 
@@ -603,6 +675,12 @@ export async function handleGroceryList(request, env, corsHeaders) {
     }
   }
 
+  categories = classifyCategories(categories, pantryItems);
+
   console.log(`[grocery-list] Returning ${categories.length} categorie(s)`);
-  return json({ success: true, categories });
+  return json({
+    success: true,
+    categories,
+    ...(pantryItems === null ? {} : { pantryMatched: true })
+  });
 }
