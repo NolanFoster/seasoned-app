@@ -16,9 +16,11 @@ export function generateRecipeId(url) {
 }
 
 // Compress data using gzip and encode as base64
+const UNDEFINED_SENTINEL = '__SEASONED_KV_UNDEFINED_V1__';
+
 export async function compressData(data) {
   const encoder = new TextEncoder();
-  const jsonString = JSON.stringify(data);
+  const jsonString = JSON.stringify(data === undefined ? UNDEFINED_SENTINEL : data);
   const jsonBytes = encoder.encode(jsonString);
   
   // Use CompressionStream for gzip compression
@@ -82,7 +84,8 @@ export async function decompressData(compressedBase64) {
   
   const decoder = new TextDecoder();
   const jsonString = decoder.decode(decompressedBytes);
-  return JSON.parse(jsonString);
+  const value = JSON.parse(jsonString);
+  return value === UNDEFINED_SENTINEL ? undefined : value;
 }
 
 // Save recipe to KV storage

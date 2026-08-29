@@ -15,7 +15,10 @@ function log(level, message, data = {}, context = {}) {
 // permanent recipe image bucket rather than linking to them.
 const GENERATED_IMAGE_PREFIX = 'ai-generated/';
 
-
+function isNutritionGroundingEnabled(env) {
+  const value = env?.NUTRITION_DB_GROUNDING_V1 ?? env?.nutrition_db_grounding_v1;
+  return ['1', 'true', 'on', 'enabled'].includes(String(value ?? '').trim().toLowerCase());
+}
 
 // Parse recipe ingredients for nutrition calculation
 export function parseIngredientsForNutrition(ingredients) {
@@ -1163,6 +1166,7 @@ export class RecipeSaver {
 
     try {
       // Check if nutrition info already exists
+      const groundingEnabled = isNutritionGroundingEnabled(this.env);
       if (recipe.nutrition && Object.keys(recipe.nutrition).length > 0) {
         log('info', 'Recipe already has nutrition information', { 
           requestId, 
@@ -1215,18 +1219,40 @@ export class RecipeSaver {
       const servings = extractServingsFromYield(recipe.servings || recipe.yield || recipe.recipeYield);
 
       // Calculate nutrition
-      log('info', 'Calling nutrition calculator', { 
-        requestId, 
+      log('info', 'Calling nutrition calculator', {
+        requestId,
         recipeId: recipe.id,
         servings,
-        ingredientCount: parsedIngredients.length
+        ingredientCount: parsedIngredients.length,
+        groundingEnabled
       });
-      
-      const nutritionResult = await calculateNutritionalFacts(
-        parsedIngredients,
-        this.env.FDC_API_KEY,
-        servings
-      );
+
+      let nutritionResult;
+      if (groundingEnabled) {
+        // Keep the rollout opt-in and load the provider lazily so the legacy
+        // calculator remains the only path when the flag is absent.
+        const {
+          createUSDAFoodDataCentralProvider,
+          groundRecipeNutrition
+        } = await import('../../shared/nutrition-grounding.js');
+        nutritionResult = await groundRecipeNutrition(recipe.ingredients, {
+          provider: createUSDAFoodDataCentralProvider(this.env.FDC_API_KEY, {
+            dbVersion: this.env.FDC_DB_VERSION || 'live'
+          }),
+          servings,
+          coverageThreshold: this.env.NUTRITION_DB_COVERAGE_THRESHOLD
+        });
+        if (nutritionResult.success && nutritionResult.nutrition) {
+          recipe.nutrition = nutritionResult.nutrition;
+          recipe.nutritionProvenance = nutritionResult.nutritionProvenance;
+        }
+      } else {
+        nutritionResult = await calculateNutritionalFacts(
+          parsedIngredients,
+          this.env.FDC_API_KEY,
+          servings
+        );
+      }
 
       if (nutritionResult.success && nutritionResult.nutrition) {
         // Add nutrition to recipe
