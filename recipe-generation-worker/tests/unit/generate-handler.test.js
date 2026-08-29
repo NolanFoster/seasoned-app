@@ -2484,7 +2484,7 @@ describe('Food-process safety enforcement', () => {
       recipeName: 'Basil Chicken',
       inferredPreferences: {
         top_cuisines: [{ name: 'thai', score: 8.5, count: 4 }],
-        top_ingredients: [{ name: 'garlic', score: 6.2, count: 5 }],
+        top_ingredients: [{ name: 'garlic', score: 6.2, count: 5 }]
       }
     }), processEnv, processCorsHeaders);
 
