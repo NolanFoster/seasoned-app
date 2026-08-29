@@ -856,3 +856,34 @@ describe('CookingNavigator — read aloud', () => {
     expect(screen.queryByLabelText('Voice')).not.toBeInTheDocument()
   })
 })
+
+describe('CookingNavigator — post-cook feedback & preference learning', () => {
+  test('allows rating and selecting feedback tags upon finishing cooking', () => {
+    const onCookFeedback = jest.fn()
+    renderNavigator({}, { onCookFeedback })
+
+    // Step through to finish
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+    // Click Finish Cooking to open completion modal sheet
+    fireEvent.click(screen.getByRole('button', { name: 'Finish Cooking' }))
+
+    expect(screen.getByText('Cooking complete')).toBeInTheDocument()
+    expect(screen.getByText('How did it turn out?')).toBeInTheDocument()
+
+    // Rate 5 stars
+    fireEvent.click(screen.getByLabelText('5 stars'))
+    // Select a tag
+    fireEvent.click(screen.getByText('Loved flavor'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Finish cooking' }))
+    expect(onCookFeedback).toHaveBeenCalledWith({
+      rating: 5,
+      tags: ['loved_flavor'],
+    })
+  })
+})
+
+

@@ -9,6 +9,7 @@ import { PantryService, validatePantryItemInput } from './services/pantry';
 import { detectPantryItems, MAX_PANTRY_PHOTO_BYTES, validatePantryPhoto } from './services/pantry-scan';
 import type { PantryScanFile } from './services/pantry-scan';
 import { RecipeNotesService, validateRecipeNoteInput } from './services/recipe-notes';
+import { CulinaryEventsService, validateCulinaryEventInput } from './services/culinary-events';
 import {
   EMPTY_GROCERY_LIST,
   EMPTY_MEAL_PLAN,
@@ -91,6 +92,10 @@ function isMealPlanSyncPath(path: string): boolean {
   return path === '/me/meal-plan' || path === '/me/grocery-list';
 }
 
+function isCulinaryEventsPath(path: string): boolean {
+  return path === '/me/culinary-events' || path === '/me/inferred-preferences';
+}
+
 function hasPasskeyServiceAccess(c: { env: Bindings; req: { header(name: string): string | undefined } }): boolean {
   const configuredToken = c.env.PASSKEY_SERVICE_TOKEN;
   if (c.env.ENVIRONMENT === 'development') return true;
@@ -105,8 +110,8 @@ app.use('*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization']
 // existing local workflow convenient; deployed environments require the shared
 // PASSKEY_SERVICE_TOKEN secret configured on both workers.
 app.use('*', async (c, next) => {
-  if (c.req.path === '/me/culinary-profile' || isPantryPath(c.req.path) || isRecipeNotesPath(c.req.path) || isMealPlanSyncPath(c.req.path)) {
-    if (c.req.path === '/me/culinary-profile' && !culinaryProfileEnabled(c.env)) {
+  if (c.req.path === '/me/culinary-profile' || isPantryPath(c.req.path) || isRecipeNotesPath(c.req.path) || isMealPlanSyncPath(c.req.path) || isCulinaryEventsPath(c.req.path)) {
+    if ((c.req.path === '/me/culinary-profile' || isCulinaryEventsPath(c.req.path)) && !culinaryProfileEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     if (isPantryPath(c.req.path) && !pantryEnabled(c.env)) {
@@ -216,6 +221,81 @@ app.put('/me/culinary-profile', async (c) => {
     return c.json({ success: true, data: result.data });
   } catch (error) {
     console.error('Error saving culinary profile:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Authenticated culinary event stream and inferred preference learning endpoints.
+app.get('/me/culinary-events', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const limit = Number(c.req.query('limit') || 50);
+    const events = await new CulinaryEventsService(c.env.USER_DB).listEvents(userId, limit);
+    return c.json({ success: true, data: events });
+  } catch (error) {
+    console.error('Error listing culinary events:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/me/culinary-events', async (c) => {
+  try {
+    const userId = c.get('userId');
+    // Check if user has opted into learning from activity
+    const profileResult = await new UserDatabaseService(c.env.USER_DB).getCulinaryProfile(userId);
+    const consent = profileResult.data?.consent_flags?.learn_from_activity;
+    if (consent === false) {
+      return c.json({ success: true, recorded: false, message: 'Learning from activity is disabled in profile' });
+    }
+
+    const body = await c.req.json();
+    const errors = validateCulinaryEventInput(body);
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid culinary event', errors }, 400);
+
+    const event = await new CulinaryEventsService(c.env.USER_DB).recordEvent(userId, body);
+    return c.json({ success: true, recorded: true, data: event }, 201);
+  } catch (error) {
+    console.error('Error recording culinary event:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.delete('/me/culinary-events', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const changes = await new CulinaryEventsService(c.env.USER_DB).deleteEvents(userId);
+    return c.json({ success: true, deleted: changes });
+  } catch (error) {
+    console.error('Error deleting culinary events:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.get('/me/inferred-preferences', async (c) => {
+  try {
+    const userId = c.get('userId');
+    const profileResult = await new UserDatabaseService(c.env.USER_DB).getCulinaryProfile(userId);
+    const consent = profileResult.data?.consent_flags?.learn_from_activity;
+    if (consent === false) {
+      return c.json({
+        success: true,
+        data: {
+          top_cuisines: [],
+          top_ingredients: [],
+          top_cooking_methods: [],
+          avg_prep_time_min: null,
+          avg_cook_time_min: null,
+          feedback_summary: { average_rating: null, tags_count: {} },
+          total_events: 0,
+          recent_events_count: 0,
+        },
+      });
+    }
+
+    const preferences = await new CulinaryEventsService(c.env.USER_DB).computeInferredPreferences(userId);
+    return c.json({ success: true, data: preferences });
+  } catch (error) {
+    console.error('Error computing inferred preferences:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });

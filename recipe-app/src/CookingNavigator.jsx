@@ -327,6 +327,7 @@ export default function CookingNavigator({
   pantryItems = [],
   pantryPlannerEnabled = false,
   onDepletePantry,
+  onCookFeedback,
 }) {
   const instructions = normalizeInstructions(recipe.instructions)
   const ingredients = normalizeIngredients(recipe.ingredients)
@@ -370,6 +371,8 @@ export default function CookingNavigator({
   const [depletionWorking, setDepletionWorking] = useState(false)
   const [depletionError, setDepletionError] = useState('')
   const [depletionEdits, setDepletionEdits] = useState({})
+  const [cookRating, setCookRating] = useState(0)
+  const [cookTags, setCookTags] = useState([])
   const overlayRef = useRef(null)
   const previousFocusRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -522,6 +525,12 @@ export default function CookingNavigator({
   }
 
   async function finishCooking(updatePantry) {
+    if (onCookFeedback) {
+      void onCookFeedback({
+        rating: cookRating > 0 ? cookRating : undefined,
+        tags: cookTags.length > 0 ? cookTags : undefined,
+      })
+    }
     if (updatePantry && depletionPlan.length > 0 && onDepletePantry) {
       let operations
       try {
@@ -1174,6 +1183,44 @@ export default function CookingNavigator({
             ) : (
               <>
                 <p>Your recipe is ready. Nice work!</p>
+                <div className="cn-feedback-section" aria-label="Rate this cook">
+                  <span className="cn-feedback-title">How did it turn out?</span>
+                  <div className="cn-star-rating">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className={`cn-star-btn ${cookRating >= star ? 'cn-star-btn--filled' : ''}`}
+                        onClick={() => setCookRating(star)}
+                        aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                  <div className="cn-feedback-tags">
+                    {[
+                      ['loved_flavor', 'Loved flavor'],
+                      ['too_spicy', 'Too spicy'],
+                      ['too_bland', 'Too bland'],
+                      ['quick_easy', 'Quick & easy'],
+                      ['too_complex', 'Too complex'],
+                    ].map(([tagKey, tagLabel]) => (
+                      <button
+                        key={tagKey}
+                        type="button"
+                        className={`cn-feedback-tag ${cookTags.includes(tagKey) ? 'cn-feedback-tag--active' : ''}`}
+                        onClick={() => {
+                          setCookTags((prev) =>
+                            prev.includes(tagKey) ? prev.filter((t) => t !== tagKey) : [...prev, tagKey]
+                          )
+                        }}
+                      >
+                        {tagLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button type="button" className="cn-completion-primary" onClick={() => finishCooking(false)}>Finish cooking</button>
               </>
             )}

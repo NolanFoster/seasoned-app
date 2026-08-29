@@ -20,6 +20,7 @@ const FLAG_DEFAULTS = {
   'pantry-scan': false,
   'meal-plan-autofill': false,
   'meal-plan-bulk-schedule': false,
+  'preference-learning': true,
 }
 
 let flaggly
