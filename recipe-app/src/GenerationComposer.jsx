@@ -44,6 +44,7 @@ function initialForm(profile) {
     cuisine: profile?.cuisine_likes?.[0] || "",
     mealType: "",
     cookingMethod: "",
+    nutritionFocus: profile?.nutrition_goals?.focus || "",
     ingredients: "",
     excludeIngredients: listValue(profile?.exclude_ingredients).join(", "),
     usePantry: false,
@@ -112,6 +113,9 @@ export default function GenerationComposer({
       ingredients: commaSeparated(form.ingredients),
       excludeIngredients: commaSeparated(form.excludeIngredients),
     };
+    if (form.nutritionFocus) {
+      overrides.nutritionGoals = { focus: form.nutritionFocus };
+    }
     if (pantryPlannerEnabled && form.usePantry) {
       overrides.usePantry = true;
       if (form.prioritizeExpiring && expiringPantryItems.length > 0) overrides.prioritizeExpiring = true;
@@ -162,6 +166,9 @@ export default function GenerationComposer({
               {profile.default_servings} servings
               {" · up to "}
               {profile.max_cook_time_min} min
+              {profile.nutrition_goals?.focus && (
+                <> · {profile.nutrition_goals.focus.replace(/_/g, " ")}</>
+              )}
             </span>
             {profile.hard_allergens?.length > 0 && (
               <span className="generation-composer-safety">
@@ -213,6 +220,19 @@ export default function GenerationComposer({
                     {value[0].toUpperCase() + value.slice(1)}
                   </option>
                 ))}
+              </select>
+            </label>
+            <label>
+              Nutrition focus
+              <select
+                value={form.nutritionFocus}
+                onChange={(event) => setField("nutritionFocus", event.target.value)}
+              >
+                <option value="">Any / Balanced</option>
+                <option value="high_protein">High protein</option>
+                <option value="low_sodium">Low sodium</option>
+                <option value="lower_carb">Lower carb</option>
+                <option value="heart_healthy">Heart healthy</option>
               </select>
             </label>
             <label>

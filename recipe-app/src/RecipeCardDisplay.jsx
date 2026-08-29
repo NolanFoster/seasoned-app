@@ -248,6 +248,106 @@ export function RecipeProvenance({ recipe }) {
   )
 }
 
+/**
+ * Nutrition panel showing per-serving macros, USDA coverage/confidence indicator,
+ * expandable micronutrients when available, and clear honest non-medical disclaimers.
+ */
+export function NutritionPanel({ recipe, onGoalAdaptClick }) {
+  const nutrition = recipe?.nutrition
+  const nutritionProvenance = recipe?.nutritionProvenance || recipe?.nutrition_provenance
+  const coveragePct = typeof nutritionProvenance?.coverage_pct === 'number'
+    ? Math.round(nutritionProvenance.coverage_pct)
+    : typeof recipe?.provenance?.nutritionCoverage === 'number'
+      ? Math.round(recipe.provenance.nutritionCoverage)
+      : null
+  const isEstimated = nutritionProvenance?.estimated ?? (coveragePct !== null && coveragePct < 80)
+  const uncertainIngredients = nutritionProvenance?.uncertain_ingredients || []
+
+  if (!nutrition && coveragePct === null) return null
+
+  const calories = nutrition?.calories || nutrition?.energy || null
+  const protein = nutrition?.proteinContent || nutrition?.protein || null
+  const carbs = nutrition?.carbohydrateContent || nutrition?.carbohydrates || null
+  const fat = nutrition?.fatContent || nutrition?.fat || null
+  const fiber = nutrition?.fiberContent || nutrition?.fiber || null
+  const sugar = nutrition?.sugarContent || nutrition?.sugar || null
+  const sodium = nutrition?.sodiumContent || nutrition?.sodium || null
+
+  const hasMacros = Boolean(calories || protein || carbs || fat)
+
+  return (
+    <section className="recipe-nutrition-panel" aria-label="Nutritional facts per serving">
+      <div className="recipe-nutrition-header">
+        <div>
+          <h3>Estimated nutrition (per serving)</h3>
+          <p className="recipe-nutrition-source">
+            Estimated from USDA FoodData Central matches · Not medical or dietary advice
+          </p>
+        </div>
+        {coveragePct !== null && (
+          <span className={`recipe-nutrition-coverage ${isEstimated ? 'recipe-nutrition-coverage--estimated' : 'recipe-nutrition-coverage--good'}`}>
+            {coveragePct}% matched
+          </span>
+        )}
+      </div>
+
+      {hasMacros && (
+        <div className="recipe-nutrition-macros">
+          {calories && (
+            <div className="nutrition-macro-item">
+              <span className="nutrition-macro-value">{calories}</span>
+              <span className="nutrition-macro-label">Calories</span>
+            </div>
+          )}
+          {protein && (
+            <div className="nutrition-macro-item">
+              <span className="nutrition-macro-value">{protein}</span>
+              <span className="nutrition-macro-label">Protein</span>
+            </div>
+          )}
+          {carbs && (
+            <div className="nutrition-macro-item">
+              <span className="nutrition-macro-value">{carbs}</span>
+              <span className="nutrition-macro-label">Carbs</span>
+            </div>
+          )}
+          {fat && (
+            <div className="nutrition-macro-item">
+              <span className="nutrition-macro-value">{fat}</span>
+              <span className="nutrition-macro-label">Fat</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(fiber || sugar || sodium) && (
+        <div className="recipe-nutrition-micros">
+          {fiber && <span><strong>Fiber:</strong> {fiber}</span>}
+          {sugar && <span><strong>Sugar:</strong> {sugar}</span>}
+          {sodium && <span><strong>Sodium:</strong> {sodium}</span>}
+        </div>
+      )}
+
+      {uncertainIngredients.length > 0 && (
+        <p className="recipe-nutrition-uncertain">
+          Unmatched ingredients: {uncertainIngredients.map((u) => u.name).join(', ')}
+        </p>
+      )}
+
+      {onGoalAdaptClick && (
+        <button
+          type="button"
+          className="recipe-nutrition-adapt-btn"
+          onClick={onGoalAdaptClick}
+        >
+          Align closer to nutrition goals
+        </button>
+      )}
+    </section>
+  )
+}
+
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -351,6 +451,8 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
           {recipe.adapted_from && <p className="adaptation-lineage">Adapted from the original recipe.</p>}
         </section>
       )}
+
+      <NutritionPanel recipe={recipe} />
 
       <div className="recipe-body">
         {recipe.ingredients?.length > 0 && (

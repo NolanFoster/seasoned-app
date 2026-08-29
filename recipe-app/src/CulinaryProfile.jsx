@@ -45,6 +45,7 @@ function parseList(value) {
 
 function toFormState(profile) {
   const value = { ...EMPTY_CULINARY_PROFILE, ...(profile || {}) }
+  const nutritionGoals = value.nutrition_goals || { focus: '', targets: {} }
   return {
     ...value,
     diet_tags: Array.isArray(value.diet_tags) ? value.diet_tags : [],
@@ -57,6 +58,10 @@ function toFormState(profile) {
     cuisine_likes_text: listValue(value.cuisine_likes),
     cuisine_dislikes_text: listValue(value.cuisine_dislikes),
     exclude_ingredients_text: listValue(value.exclude_ingredients),
+    nutrition_focus: nutritionGoals.focus || '',
+    nutrition_protein_g: nutritionGoals.targets?.protein_g ?? '',
+    nutrition_sodium_mg: nutritionGoals.targets?.sodium_mg ?? '',
+    nutrition_calories_max: nutritionGoals.targets?.calories_max ?? '',
   }
 }
 
@@ -79,6 +84,17 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
 
   async function submit(event) {
     event.preventDefault()
+    const targets = {}
+    if (form.nutrition_protein_g !== '' && !isNaN(Number(form.nutrition_protein_g))) {
+      targets.protein_g = Number(form.nutrition_protein_g)
+    }
+    if (form.nutrition_sodium_mg !== '' && !isNaN(Number(form.nutrition_sodium_mg))) {
+      targets.sodium_mg = Number(form.nutrition_sodium_mg)
+    }
+    if (form.nutrition_calories_max !== '' && !isNaN(Number(form.nutrition_calories_max))) {
+      targets.calories_max = Number(form.nutrition_calories_max)
+    }
+
     await onSave({
       diet_tags: form.diet_tags,
       hard_allergens: [...form.hard_allergens, ...parseList(form.hard_allergens_text)],
@@ -90,6 +106,10 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
       default_servings: Number(form.default_servings),
       max_cook_time_min: Number(form.max_cook_time_min),
       equipment: form.equipment,
+      nutrition_goals: {
+        focus: form.nutrition_focus || null,
+        targets,
+      },
       units_pref: form.units_pref,
       exclude_ingredients: parseList(form.exclude_ingredients_text),
       notes_freeform: form.notes_freeform,
@@ -146,6 +166,30 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
               <label className="culinary-profile-field culinary-profile-field--inline">Other allergens
                 <input value={form.hard_allergens_text} onChange={(event) => setField('hard_allergens_text', event.target.value)} placeholder="Add custom allergens, comma separated" />
               </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Nutrition goals <span>(not medical advice)</span></legend>
+              <div className="culinary-profile-grid">
+                <label>Focus
+                  <select value={form.nutrition_focus} onChange={(event) => setField('nutrition_focus', event.target.value)}>
+                    <option value="">None / Balanced</option>
+                    <option value="high_protein">High protein</option>
+                    <option value="low_sodium">Low sodium</option>
+                    <option value="lower_carb">Lower carb</option>
+                    <option value="heart_healthy">Heart healthy</option>
+                  </select>
+                </label>
+                <label>Min protein (g/serving)
+                  <input type="number" min="0" max="200" value={form.nutrition_protein_g} onChange={(event) => setField('nutrition_protein_g', event.target.value)} placeholder="e.g. 30" />
+                </label>
+                <label>Max sodium (mg/serving)
+                  <input type="number" min="0" max="5000" value={form.nutrition_sodium_mg} onChange={(event) => setField('nutrition_sodium_mg', event.target.value)} placeholder="e.g. 600" />
+                </label>
+                <label>Max calories (kcal/serving)
+                  <input type="number" min="0" max="3000" value={form.nutrition_calories_max} onChange={(event) => setField('nutrition_calories_max', event.target.value)} placeholder="e.g. 650" />
+                </label>
+              </div>
             </fieldset>
 
             <div className="culinary-profile-grid">

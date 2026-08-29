@@ -307,7 +307,16 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+.day-card-nutrition-totals {
+  width: 100%;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-on-surface-variant, #9bb59f);
+  margin-top: 2px;
 }
 
 .day-name {

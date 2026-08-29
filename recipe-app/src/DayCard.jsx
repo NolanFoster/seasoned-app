@@ -66,11 +66,37 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
     setMovingMeal(null)
   }
 
+  // Compute daily estimated macro totals across all planned meals
+  const allDayMeals = MEAL_TYPES.flatMap((type) => safeMeals[type] || [])
+  let totalKcal = 0
+  let totalProteinG = 0
+  let hasNutritionData = false
+
+  for (const m of allDayMeals) {
+    const caloriesVal = parseFloat(String(m?.nutrition?.calories || m?.nutrition?.energy || '0'))
+    const proteinVal = parseFloat(String(m?.nutrition?.proteinContent || m?.nutrition?.protein || '0'))
+    if (!isNaN(caloriesVal) && caloriesVal > 0) {
+      totalKcal += caloriesVal
+      hasNutritionData = true
+    }
+    if (!isNaN(proteinVal) && proteinVal > 0) {
+      totalProteinG += proteinVal
+      hasNutritionData = true
+    }
+  }
+
   return (
     <div className={className}>
       <div className="day-card-header">
         <span className="day-name">{day}</span>
         <span className="day-date">{date}</span>
+        {hasNutritionData && (
+          <span className="day-card-nutrition-totals" title="Estimated planned totals for the day (not medical advice)">
+            {totalKcal > 0 && `${Math.round(totalKcal)} kcal`}
+            {totalKcal > 0 && totalProteinG > 0 && ' · '}
+            {totalProteinG > 0 && `${Math.round(totalProteinG)}g protein`}
+          </span>
+        )}
       </div>
 
       {MEAL_TYPES.map((mealType) => {

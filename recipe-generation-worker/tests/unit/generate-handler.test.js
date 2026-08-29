@@ -2442,4 +2442,35 @@ describe('Food-process safety enforcement', () => {
     const data = await response.json();
     expect(data.recipe.processSafetySummary).toBeUndefined();
   });
+
+  it('incorporates nutrition goals into LLaMA generation prompt', async () => {
+    mockGeneratedRecipe({
+      name: 'High-Protein Chili',
+      ingredients: ['1 lb lean ground turkey', '1 can black beans', '1 can diced tomatoes', 'chili powder'],
+      instructions: ['Brown the turkey.', 'Add beans, tomatoes, and chili powder.', 'Simmer for 20 minutes.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Turkey Chili',
+      nutritionGoals: {
+        focus: 'high_protein',
+        targets: {
+          protein_g: 35,
+          sodium_mg: 600,
+          calories_min: 400,
+          calories_max: 600
+        }
+      }
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const lastCall = processMockAI.run.mock.calls.find((call) => call[0] === '@cf/meta/llama-4-scout-17b-16e-instruct');
+    expect(lastCall).toBeDefined();
+    const promptText = lastCall[1].messages[1].content;
+    expect(promptText).toContain('align with nutrition focus: high protein');
+    expect(promptText).toContain('target at least 35g protein per serving');
+    expect(promptText).toContain('keep sodium under 600mg per serving');
+    expect(promptText).toContain('between 400 and 600 calories per serving');
+  });
 });
+
