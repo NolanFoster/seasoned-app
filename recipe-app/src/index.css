@@ -4398,3 +4398,124 @@ textarea:focus-visible {
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+/* --------------------------------------------------------------------------
+   Recipe Nutrition Panel
+   -------------------------------------------------------------------------- */
+.recipe-nutrition-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.recipe-nutrition-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.recipe-nutrition-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.recipe-nutrition-source {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.recipe-nutrition-coverage {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.recipe-nutrition-coverage--good {
+  background: rgb(var(--color-secondary-rgb) / 0.15);
+  color: var(--color-secondary);
+  border: 1px solid rgb(var(--color-secondary-rgb) / 0.3);
+}
+
+.recipe-nutrition-coverage--estimated {
+  background: rgb(var(--color-primary-rgb) / 0.15);
+  color: var(--color-primary);
+  border: 1px solid rgb(var(--color-primary-rgb) / 0.3);
+}
+
+.recipe-nutrition-macros {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.nutrition-macro-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) 4px;
+}
+
+.nutrition-macro-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.nutrition-macro-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recipe-nutrition-micros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+  padding-top: var(--spacing-xs);
+  border-top: 1px dashed var(--border);
+}
+
+.recipe-nutrition-uncertain {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: var(--spacing-xs);
+}
+
+.recipe-nutrition-adapt-btn {
+  margin-top: var(--spacing-sm);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.recipe-nutrition-adapt-btn:hover {
+  background: rgb(var(--color-primary-rgb) / 0.1);
+}
+

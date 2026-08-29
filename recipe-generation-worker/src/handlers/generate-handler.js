@@ -1068,6 +1068,28 @@ function buildLLaMAPrompt(requestData, contexts) {
   if (requestData.cuisineDislikes && requestData.cuisineDislikes.length > 0) {
     requirements.push(`avoid these cuisines: ${requestData.cuisineDislikes.join(', ')}`);
   }
+  if (requestData.nutritionGoals) {
+    const goals = requestData.nutritionGoals;
+    if (goals.focus) {
+      const focusText = goals.focus.replace(/_/g, ' ');
+      requirements.push(`align with nutrition focus: ${focusText}`);
+    }
+    if (goals.targets && typeof goals.targets === 'object') {
+      const targetParts = [];
+      if (goals.targets.protein_g) targetParts.push(`target at least ${goals.targets.protein_g}g protein per serving`);
+      if (goals.targets.sodium_mg) targetParts.push(`keep sodium under ${goals.targets.sodium_mg}mg per serving`);
+      if (goals.targets.calories_min && goals.targets.calories_max) {
+        targetParts.push(`between ${goals.targets.calories_min} and ${goals.targets.calories_max} calories per serving`);
+      } else if (goals.targets.calories_max) {
+        targetParts.push(`under ${goals.targets.calories_max} calories per serving`);
+      } else if (goals.targets.calories_min) {
+        targetParts.push(`at least ${goals.targets.calories_min} calories per serving`);
+      }
+      if (targetParts.length > 0) {
+        requirements.push(`nutrition targets: ${targetParts.join(', ')}`);
+      }
+    }
+  }
 
   if (requirements.length > 0) {
     prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;

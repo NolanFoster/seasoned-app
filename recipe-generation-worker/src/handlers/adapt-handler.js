@@ -137,6 +137,10 @@ function mockAdaptRecipe(baseRecipe, constraints) {
   if (constraints.equipment?.length) {
     adaptationNotes.push(`Use only the available equipment: ${constraints.equipment.join(', ')}.`);
   }
+  if (constraints.nutritionGoals?.focus) {
+    const focus = String(constraints.nutritionGoals.focus).replace(/_/g, ' ');
+    adaptationNotes.push(`Adjusted formulation to prioritize ${focus}.`);
+  }
   if (substitutions.length === 0) {
     adaptationNotes.push('No direct ingredient substitutions were required for the selected constraints.');
   }

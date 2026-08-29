@@ -236,3 +236,55 @@ describe('Process safety notice', () => {
     expect(screen.queryByText(/technique/i)).not.toBeInTheDocument()
   })
 })
+
+describe('NutritionPanel in RecipeCardDisplay', () => {
+  test('renders per-serving macros, coverage, and disclaimer', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'High-Protein Bowl',
+      ingredients: ['1 cup quinoa', '1 chicken breast'],
+      instructions: ['Cook and assemble.'],
+      nutrition: {
+        calories: '450',
+        proteinContent: '38g',
+        carbohydrateContent: '42g',
+        fatContent: '12g',
+        fiberContent: '6g',
+        sodiumContent: '320mg',
+      },
+      nutritionProvenance: {
+        coverage_pct: 100,
+        estimated: false,
+        uncertain_ingredients: [],
+      }
+    }} />)
+
+    expect(screen.getByText(/Estimated nutrition \(per serving\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/Estimated from USDA FoodData Central matches/i)).toBeInTheDocument()
+    expect(screen.getByText('100% matched')).toBeInTheDocument()
+    expect(screen.getByText('450')).toBeInTheDocument()
+    expect(screen.getByText('38g')).toBeInTheDocument()
+    expect(screen.getByText(/Fiber:/i)).toBeInTheDocument()
+    expect(screen.getByText(/Sodium:/i)).toBeInTheDocument()
+  })
+
+  test('displays estimated warning and uncertain ingredients when coverage is partial', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Mystery Stew',
+      ingredients: ['mystery broth', 'potatoes'],
+      instructions: ['Simmer.'],
+      nutrition: {
+        calories: '200',
+        proteinContent: '5g',
+      },
+      nutritionProvenance: {
+        coverage_pct: 50,
+        estimated: true,
+        uncertain_ingredients: [{ name: 'mystery broth', reason: 'ambiguous_quantity' }],
+      }
+    }} />)
+
+    expect(screen.getByText('50% matched')).toBeInTheDocument()
+    expect(screen.getByText(/Unmatched ingredients: mystery broth/i)).toBeInTheDocument()
+  })
+})
+
