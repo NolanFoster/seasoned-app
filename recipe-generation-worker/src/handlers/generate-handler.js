@@ -1090,6 +1090,19 @@ function buildLLaMAPrompt(requestData, contexts) {
       }
     }
   }
+  if (requestData.inferredPreferences && typeof requestData.inferredPreferences === 'object') {
+    const prefs = requestData.inferredPreferences;
+    const inferredLikes = [];
+    if (Array.isArray(prefs.top_cuisines) && prefs.top_cuisines.length > 0) {
+      inferredLikes.push(`frequently enjoyed cuisines: ${prefs.top_cuisines.slice(0, 3).map((c) => c.name).join(', ')}`);
+    }
+    if (Array.isArray(prefs.top_ingredients) && prefs.top_ingredients.length > 0) {
+      inferredLikes.push(`frequently enjoyed ingredients: ${prefs.top_ingredients.slice(0, 4).map((i) => i.name).join(', ')}`);
+    }
+    if (inferredLikes.length > 0) {
+      requirements.push(`inferred taste preferences (soft guidance, do not override user avoids/allergens): ${inferredLikes.join('; ')}`);
+    }
+  }
 
   if (requirements.length > 0) {
     prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;

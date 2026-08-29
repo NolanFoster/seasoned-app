@@ -226,6 +226,7 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     skillLevel: SKILL_LEVELS.includes(skillLevel) ? skillLevel : 'intermediate',
     excludeIngredients: constraintList(excludeIngredients),
     nutritionGoals: request.nutritionGoals ?? request.nutrition_goals ?? normalizedProfile.nutrition_goals,
+    inferredPreferences: request.inferredPreferences ?? request.inferred_preferences ?? null,
     units: request.units ?? request.units_pref ?? normalizedProfile.units_pref,
   }
 }

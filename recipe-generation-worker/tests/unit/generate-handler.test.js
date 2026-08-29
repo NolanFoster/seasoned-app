@@ -2472,5 +2472,29 @@ describe('Food-process safety enforcement', () => {
     expect(promptText).toContain('keep sodium under 600mg per serving');
     expect(promptText).toContain('between 400 and 600 calories per serving');
   });
+
+  it('incorporates inferred taste preferences into LLaMA prompt as soft guidance', async () => {
+    mockGeneratedRecipe({
+      name: 'Thai Basil Chicken',
+      ingredients: ['1 lb chicken', 'thai basil', 'soy sauce', 'garlic'],
+      instructions: ['Stir fry chicken with garlic.', 'Toss in thai basil and sauce.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Basil Chicken',
+      inferredPreferences: {
+        top_cuisines: [{ name: 'thai', score: 8.5, count: 4 }],
+        top_ingredients: [{ name: 'garlic', score: 6.2, count: 5 }],
+      }
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const lastCall = processMockAI.run.mock.calls.find((call) => call[0] === '@cf/meta/llama-4-scout-17b-16e-instruct');
+    expect(lastCall).toBeDefined();
+    const promptText = lastCall[1].messages[1].content;
+    expect(promptText).toContain('inferred taste preferences (soft guidance');
+    expect(promptText).toContain('frequently enjoyed cuisines: thai');
+    expect(promptText).toContain('frequently enjoyed ingredients: garlic');
+  });
 });
 

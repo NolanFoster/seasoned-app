@@ -14,6 +14,7 @@ import AutoFillMealPlan from './AutoFillMealPlan.jsx'
 import BulkScheduleMeals from './BulkScheduleMeals.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
+import { useCulinaryEvents } from './useCulinaryEvents.js'
 import { usePantry } from './usePantry.js'
 import PantryModal from './PantryModal.jsx'
 import RecipeEditor from './RecipeEditor.jsx'
@@ -231,6 +232,7 @@ export function buildGenerationRequest({
   dishName,
   elevate = false,
   profile = null,
+  inferredPreferences = null,
   overrides = null,
   baseIngredients = null,
   pantryItems = [],
@@ -242,6 +244,7 @@ export function buildGenerationRequest({
     elevate,
   }
   if (profile) body.culinaryProfile = profile
+  if (inferredPreferences) body.inferredPreferences = inferredPreferences
   if (overrides) {
     Object.assign(body, overrides)
     if (!overrides.ingredients?.length) delete body.ingredients
@@ -325,7 +328,13 @@ export default function App() {
   const [pantryOpen, setPantryOpen] = useState(false)
   const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
   const [adaptComposerOpen, setAdaptComposerOpen] = useState(false)
+  const preferenceLearningEnabled = useFlag('preference-learning')
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
+  const culinaryEvents = useCulinaryEvents(
+    auth.token,
+    preferenceLearningEnabled,
+    culinaryProfile.profile?.consent_flags?.learn_from_activity !== false
+  )
   const pantryEnabled = useFlag('pantry')
   const pantryPlannerEnabled = useFlag('pantry-planner')
   const pantryScanEnabled = useFlag('pantry-scan')
@@ -670,6 +679,9 @@ export default function App() {
         // Hard-allergen enforcement is safety-critical and must not depend on
         // the optional Tune/composer flag.
         profile: culinaryProfileEnabled ? culinaryProfile.profile : null,
+        inferredPreferences: preferenceLearningEnabled && culinaryProfile.profile?.consent_flags?.learn_from_activity !== false
+          ? culinaryEvents.inferredPreferences
+          : null,
         overrides,
         baseIngredients: baseRecipe?.ingredients || null,
         pantryItems: pantry.items,
@@ -705,9 +717,11 @@ export default function App() {
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
+      void culinaryEvents.recordEvent('generate_accepted', generatedRecipe)
       setRetryAction(null)
       setGeneratingName('')
     } catch (e) {
+      void culinaryEvents.recordEvent('generate_discarded', { name: dishName })
       setGeneratingName('')
       setErrorMsg(e.message)
       setStatus('error')
@@ -765,6 +779,7 @@ export default function App() {
       }
       setActiveRecipe(adaptedRecipe)
       addRecentRecipe(adaptedRecipe)
+      void culinaryEvents.recordEvent('recipe_adapted', adaptedRecipe)
       setRetryAction(null)
       setGeneratingName('')
     } catch (e) {
@@ -979,6 +994,7 @@ export default function App() {
         })
       }
       setSaveState('saved')
+      void culinaryEvents.recordEvent('recipe_saved', r)
     } catch (e) {
       setSaveState('error')
     }
@@ -1369,9 +1385,14 @@ export default function App() {
             onEdit={recipeEditingEnabled ? () => setEditorOpen(true) : undefined}
             onOpenNotes={recipeNotesEnabled ? () => setNotesOpen(true) : undefined}
             noteCount={recipeNotes.notes.length}
-            pantryItems={pantryPlanningAvailable ? pantry.items : []}
+            pantryItems={usablePantryItems}
             pantryPlannerEnabled={pantryPlanningAvailable}
             onDepletePantry={pantryPlanningAvailable ? depletePantry : undefined}
+            onCookFeedback={({ rating, tags }) => {
+              void culinaryEvents.recordEvent('recipe_cooked_completed', activeRecipe, { rating, tags })
+              if (rating) void culinaryEvents.recordEvent('feedback_rating', activeRecipe, { rating })
+              if (tags?.length) void culinaryEvents.recordEvent('feedback_tag', activeRecipe, { tags })
+            }}
           />
         )}
 

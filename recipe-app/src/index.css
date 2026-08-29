@@ -4519,3 +4519,73 @@ textarea:focus-visible {
   background: rgb(var(--color-primary-rgb) / 0.1);
 }
 
+/* --------------------------------------------------------------------------
+   Post-cook Feedback Section in CookingNavigator
+   -------------------------------------------------------------------------- */
+.cn-feedback-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.cn-feedback-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cn-star-rating {
+  display: flex;
+  gap: 8px;
+}
+
+.cn-star-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.cn-star-btn--filled {
+  color: #f1c40f;
+  transform: scale(1.1);
+}
+
+.cn-feedback-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.cn-feedback-tag {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.cn-feedback-tag--active {
+  border-color: var(--accent);
+  background: rgb(var(--color-primary-rgb) / 0.15);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+

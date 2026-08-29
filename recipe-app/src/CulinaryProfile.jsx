@@ -62,6 +62,8 @@ function toFormState(profile) {
     nutrition_protein_g: nutritionGoals.targets?.protein_g ?? '',
     nutrition_sodium_mg: nutritionGoals.targets?.sodium_mg ?? '',
     nutrition_calories_max: nutritionGoals.targets?.calories_max ?? '',
+    learn_from_activity: value.consent_flags?.learn_from_activity ?? false,
+    share_anon_evals: value.consent_flags?.share_anon_evals ?? false,
   }
 }
 
@@ -113,7 +115,10 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
       units_pref: form.units_pref,
       exclude_ingredients: parseList(form.exclude_ingredients_text),
       notes_freeform: form.notes_freeform,
-      consent_flags: form.consent_flags,
+      consent_flags: {
+        learn_from_activity: Boolean(form.learn_from_activity),
+        share_anon_evals: Boolean(form.share_anon_evals),
+      },
     })
     onClose()
   }
@@ -227,6 +232,28 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
                     {label}
                   </label>
                 ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Preference learning & privacy</legend>
+              <div className="culinary-profile-options">
+                <label className="culinary-profile-check">
+                  <input
+                    type="checkbox"
+                    checked={form.learn_from_activity}
+                    onChange={(event) => setField('learn_from_activity', event.target.checked)}
+                  />
+                  Learn tastes from saved, cooked, and rated recipes
+                </label>
+                <label className="culinary-profile-check">
+                  <input
+                    type="checkbox"
+                    checked={form.share_anon_evals}
+                    onChange={(event) => setField('share_anon_evals', event.target.checked)}
+                  />
+                  Share anonymized recipe evaluations for quality improvement
+                </label>
               </div>
             </fieldset>
 
