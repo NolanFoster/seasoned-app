@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="generated" content="2026-08-28T19:03:53.479Z">
+    <meta name="generated" content="2026-08-29T05:59:26.879Z">
 </head>
 <body>
     <div class="container">
@@ -16,7 +16,7 @@
             <div class="header-content">
                 <h1 class="title">🍳 Seasoned Recipe App</h1>
                 <p class="subtitle">Developer Documentation & API Reference</p>
-                <p class="auto-generated">🔄 Auto-generated from source code - 2026-08-28T19:03:53.479Z</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2026-08-29T05:59:26.879Z</p>
             </div>
         </header>
 
@@ -65,7 +65,7 @@
                     <h3>🔄 Auto-Update Information</h3>
                     <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
                     <pre><code>npm run docs:generate</code></pre>
-                    <p><strong>Last Generated:</strong> 2026-08-28T19:03:53.479Z</p>
+                    <p><strong>Last Generated:</strong> 2026-08-29T05:59:26.879Z</p>
                 </div>
                 
                 <div class="feature-grid">
@@ -681,7 +681,7 @@ class RecipeCrawler:
                     
                     <div class="function">
                         <h4><code>compressData()</code></h4>
-                        <p>Compress data using gzip and encode as base64</p>
+                        <p>Function compressData</p>
                     </div>
                     
                     <div class="function">
@@ -742,21 +742,17 @@ export function generateRecipeId(url) {
 }
 
 // Compress data using gzip and encode as base64
+const UNDEFINED_SENTINEL = '__SEASONED_KV_UNDEFINED_V1__';
+
 export async function compressData(data) {
   const encoder = new TextEncoder();
-  const jsonString = JSON.stringify(data);
+  const jsonString = JSON.stringify(data === undefined ? UNDEFINED_SENTINEL : data);
   const jsonBytes = encoder.encode(jsonString);
   
   // Use CompressionStream for gzip compression
   const cs = new CompressionStream('gzip');
   const writer = cs.writable.getWriter();
-  const reader = cs.readable.getReader();
-  
-  writer.write(jsonBytes);
-  writer.close();
-  
-  const chunks = [];
-  while ...</code></pre>
+  const reader = cs....</code></pre>
                 </div>
             </section>
 
