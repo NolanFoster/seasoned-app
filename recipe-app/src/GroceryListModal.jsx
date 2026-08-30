@@ -154,6 +154,67 @@ const ChevronIcon = ({ expanded }) => (
  * @param {boolean}  props.isOpen  - Whether the modal is currently visible
  * @param {function} props.onClose - Callback fired to close the modal
  */
+import { useFlag } from './flaggly.js'
+
+export function exportGroceryToMarkdown(groceryList = [], options = { buyOnly: false }) {
+  const items = options.buyOnly 
+    ? groceryList.filter((item) => inventoryStatusFor(item) === 'buy')
+    : groceryList
+
+  const grouped = groupByCategory(items)
+  let md = '# Grocery List\n\n'
+  grouped.forEach(([category, catItems]) => {
+    md += `## ${category}\n`
+    catItems.forEach((item) => {
+      const checkbox = item.completed ? '[x]' : '[ ]'
+      const qty = item.quantity ? `${item.quantity} ${item.unit || ''} `.trim() : ''
+      const statusNote = item.inventoryStatus && item.inventoryStatus !== 'buy' ? ` (${INVENTORY_STATUS_LABELS[item.inventoryStatus]})` : ''
+      md += `- ${checkbox} ${qty ? `${qty} ` : ''}${item.name}${statusNote}\n`
+    })
+    md += '\n'
+  })
+  md += '> Exported from Seasoned app\n'
+  return md.trim()
+}
+
+export function exportGroceryToCSV(groceryList = [], options = { buyOnly: false }) {
+  const items = options.buyOnly 
+    ? groceryList.filter((item) => inventoryStatusFor(item) === 'buy')
+    : groceryList
+
+  const rows = [['Category', 'Item', 'Quantity', 'Unit', 'Status', 'Completed']]
+  items.forEach((item) => {
+    rows.push([
+      `"${(item.category || DEFAULT_CUSTOM_CATEGORY).replace(/"/g, '""')}"`,
+      `"${(item.name || '').replace(/"/g, '""')}"`,
+      `"${(item.quantity ?? '').toString().replace(/"/g, '""')}"`,
+      `"${(item.unit || '').replace(/"/g, '""')}"`,
+      `"${inventoryStatusFor(item)}"`,
+      item.completed ? 'true' : 'false'
+    ])
+  })
+  return rows.map((r) => r.join(',')).join('\n')
+}
+
+export function exportGroceryToPlainText(groceryList = [], options = { buyOnly: false }) {
+  const items = options.buyOnly 
+    ? groceryList.filter((item) => inventoryStatusFor(item) === 'buy')
+    : groceryList
+
+  const grouped = groupByCategory(items)
+  let text = 'Grocery List:\n\n'
+  grouped.forEach(([category, catItems]) => {
+    text += `${category.toUpperCase()}:\n`
+    catItems.forEach((item) => {
+      const mark = item.completed ? '✓ ' : '• '
+      const qty = item.quantity ? `${item.quantity} ${item.unit || ''} `.trim() : ''
+      text += `  ${mark}${qty ? `${qty} ` : ''}${item.name}\n`
+    })
+    text += '\n'
+  })
+  return text.trim()
+}
+
 export default function GroceryListModal({
   isOpen,
   onClose,
@@ -162,12 +223,64 @@ export default function GroceryListModal({
 }) {
   const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {} } = useMealPlan()
   const safePantryItems = Array.isArray(pantryItems) ? pantryItems : []
+  const flagExport = useFlag('grocery-export-plus')
 
   const [customInput, setCustomInput] = useState('')
   const [inputError, setInputError] = useState('')
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [buyOnlyExport, setBuyOnlyExport] = useState(false)
+  const [exportNotice, setExportNotice] = useState('')
   // Track expanded state per category; defaults to true for new categories
   const [expandedCategories, setExpandedCategories] = useState({})
   const inputRef = useRef(null)
+
+  function downloadFile(content, fileName, mimeType) {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    setExportNotice(`Downloaded ${fileName}`)
+    setTimeout(() => setExportNotice(''), 3000)
+    setShowExportMenu(false)
+  }
+
+  async function handleCopyList() {
+    const text = exportGroceryToPlainText(groceryList, { buyOnly: buyOnlyExport })
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text)
+        setExportNotice('Copied to clipboard!')
+      } else {
+        setExportNotice('Clipboard not available')
+      }
+    } catch {
+      setExportNotice('Failed to copy')
+    }
+    setTimeout(() => setExportNotice(''), 3000)
+    setShowExportMenu(false)
+  }
+
+  async function handleShareList() {
+    const text = exportGroceryToPlainText(groceryList, { buyOnly: buyOnlyExport })
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Grocery List - Seasoned',
+          text,
+        })
+        setShowExportMenu(false)
+      } catch {
+        // User dismissed or share failed
+      }
+    } else {
+      handleCopyList()
+    }
+  }
 
   // Keep the familiar category grouping inside the three inventory sections.
   // Old locally persisted lists have no status and safely default to Buy.
@@ -252,15 +365,93 @@ export default function GroceryListModal({
         {/* ── Header ── */}
         <div className="grocery-modal-header">
           <h2 id="grocery-modal-title" className="grocery-modal-title">Grocery List</h2>
-          <button
-            type="button"
-            className="grocery-modal-close"
-            aria-label="Close grocery list"
-            onClick={onClose}
-          >
-            <CloseIcon />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+            {flagExport && groceryList.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="grocery-item__delete-btn"
+                  style={{ width: 'auto', padding: '4px 8px', fontSize: '13px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  aria-label="Export grocery list"
+                  onClick={() => setShowExportMenu((v) => !v)}
+                >
+                  Export ↗
+                </button>
+                {showExportMenu && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      background: '#fff',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      padding: '8px',
+                      zIndex: 100,
+                      width: '180px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #eee', paddingBottom: '6px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={buyOnlyExport}
+                        onChange={(e) => setBuyOnlyExport(e.target.checked)}
+                      />
+                      Buy items only
+                    </label>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      onClick={handleCopyList}
+                    >
+                      📋 Copy text
+                    </button>
+                    {typeof navigator !== 'undefined' && 'share' in navigator && (
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                        onClick={handleShareList}
+                      >
+                        📤 Share…
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      onClick={() => downloadFile(exportGroceryToMarkdown(groceryList, { buyOnly: buyOnlyExport }), 'grocery-list.md', 'text/markdown')}
+                    >
+                      📄 Download .md
+                    </button>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      onClick={() => downloadFile(exportGroceryToCSV(groceryList, { buyOnly: buyOnlyExport }), 'grocery-list.csv', 'text/csv')}
+                    >
+                      📊 Download .csv
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              className="grocery-modal-close"
+              aria-label="Close grocery list"
+              onClick={onClose}
+            >
+              <CloseIcon />
+            </button>
+          </div>
         </div>
+        {exportNotice && (
+          <div style={{ background: '#eaf4eb', color: '#1a5f2e', padding: '4px 12px', fontSize: '13px', textAlign: 'center' }}>
+            {exportNotice}
+          </div>
+        )}
 
         {/* ── Sticky add-item input ── */}
         <form className="grocery-modal-add" onSubmit={handleAddItem}>

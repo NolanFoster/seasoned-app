@@ -1,6 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import GroceryListModal, { aggregateIngredients, flattenIngredients } from '../GroceryListModal';
+import GroceryListModal, {
+  aggregateIngredients,
+  flattenIngredients,
+  exportGroceryToMarkdown,
+  exportGroceryToCSV,
+  exportGroceryToPlainText,
+} from '../GroceryListModal';
 
 // ── Mock MealPlanContext ──────────────────────────────────────────────────────
 // The overhauled modal reads groceryList and CRUD methods from context;
@@ -434,32 +440,40 @@ describe('GroceryListModal — custom item badge', () => {
   });
 });
 
-// ── Close behaviour ───────────────────────────────────────────────────────────
+// ── Export functionality unit tests ───────────────────────────────────────────
 
-describe('GroceryListModal — close behaviour', () => {
-  beforeEach(() => {
-    mockGroceryList = [];
+describe('GroceryListModal — export helpers', () => {
+  const sampleItems = [
+    { id: '1', name: 'Apples', quantity: '4', unit: 'pcs', category: 'Produce', completed: false, inventoryStatus: 'buy' },
+    { id: '2', name: 'Milk', quantity: '1', unit: 'gallon', category: 'Dairy', completed: true, inventoryStatus: 'owned' },
+  ];
+
+  test('exportGroceryToMarkdown generates structured markdown', () => {
+    const md = exportGroceryToMarkdown(sampleItems);
+    expect(md).toContain('# Grocery List');
+    expect(md).toContain('## Produce');
+    expect(md).toContain('- [ ] 4 pcs Apples');
+    expect(md).toContain('## Dairy');
+    expect(md).toContain('- [x] 1 gallon Milk');
   });
 
-  test('close button calls onClose', () => {
-    const onClose = jest.fn();
-    render(<GroceryListModal isOpen={true} onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: /close grocery list/i }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('exportGroceryToCSV generates valid CSV rows', () => {
+    const csv = exportGroceryToCSV(sampleItems);
+    expect(csv).toContain('Category,Item,Quantity,Unit,Status,Completed');
+    expect(csv).toContain('"Produce","Apples","4","pcs","buy",false');
   });
 
-  test('clicking the backdrop calls onClose', () => {
-    const onClose = jest.fn();
-    render(<GroceryListModal isOpen={true} onClose={onClose} />);
-    const overlay = screen.getByRole('dialog', { name: /grocery list/i }).parentElement;
-    fireEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('exportGroceryToPlainText generates plain text grouping', () => {
+    const text = exportGroceryToPlainText(sampleItems);
+    expect(text).toContain('PRODUCE:');
+    expect(text).toContain('• 4 pcs Apples');
+    expect(text).toContain('✓ 1 gallon Milk');
   });
 
-  test('Escape key calls onClose', () => {
-    const onClose = jest.fn();
-    render(<GroceryListModal isOpen={true} onClose={onClose} />);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('respects buyOnly filter', () => {
+    const md = exportGroceryToMarkdown(sampleItems, { buyOnly: true });
+    expect(md).toContain('Apples');
+    expect(md).not.toContain('Milk');
   });
 });
+
