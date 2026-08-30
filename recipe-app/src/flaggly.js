@@ -22,6 +22,7 @@ const FLAG_DEFAULTS = {
   'meal-plan-bulk-schedule': false,
   'preference-learning': true,
   'lifestyle-appetite-gentle': false,
+  'budget-constraints': true,
   'recipe-lineage': true,
 }
 

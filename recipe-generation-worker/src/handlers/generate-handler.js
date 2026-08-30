@@ -1108,6 +1108,16 @@ function buildLLaMAPrompt(requestData, contexts) {
     requirements.push('lifestyle mode active: \'appetite_gentle\' (Protein-forward, gentler meals for smaller appetite. High protein density per serving, smaller default portions, avoid extreme spice/heavy grease/deep frying, favor soft/brothy/simple textures)');
   }
 
+  if (requestData.budgetBand === 'low') {
+    requirements.push('budget constraint: \'low\' (Economical, pantry-staple focused; prioritize low-cost versatile ingredients like beans, grains, eggs, root vegetables; strictly avoid rare or expensive specialty items)');
+  } else if (requestData.budgetBand === 'medium') {
+    requirements.push('budget constraint: \'medium\' (Moderate cost, everyday standard ingredients)');
+  }
+
+  if (requestData.mealBudgetUsd && Number(requestData.mealBudgetUsd) > 0) {
+    requirements.push(`target total meal ingredient budget: ~$${Number(requestData.mealBudgetUsd).toFixed(2)} USD`);
+  }
+
   if (requirements.length > 0) {
     prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;
   }
