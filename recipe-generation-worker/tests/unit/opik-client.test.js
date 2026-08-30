@@ -231,6 +231,105 @@ describe('Opik Client - Unit Tests', () => {
     });
   });
 
+  describe('Trace Identification', () => {
+    it('should return null when no trace is provided', () => {
+      expect(client.getTraceId(null)).toBeNull();
+    });
+
+    it('should read the id from the saved trace data', () => {
+      expect(client.getTraceId({ data: { id: 'trace-abc' } })).toBe('trace-abc');
+    });
+
+    it('should fall back to an id on the trace itself', () => {
+      expect(client.getTraceId({ id: 'trace-xyz' })).toBe('trace-xyz');
+    });
+
+    it('should return null when the id is not a usable string', () => {
+      expect(client.getTraceId({ id: '' })).toBeNull();
+      expect(client.getTraceId({ id: 123 })).toBeNull();
+      expect(client.getTraceId({})).toBeNull();
+    });
+  });
+
+  describe('Feedback Scores', () => {
+    it('should skip scoring when the client is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn');
+      const recorded = await client.logTraceFeedback('trace-abc', { name: 'user_saved_recipe', value: 1 });
+      expect(recorded).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not initialized'));
+    });
+
+    it('should queue the score against the trace and flush it', async () => {
+      const keyClient = new OpikClient('test-api-key');
+      const create = vi.fn();
+      keyClient.client.traceFeedbackScoresBatchQueue = { create };
+      vi.spyOn(keyClient.client, 'flush').mockResolvedValue(undefined);
+
+      const recorded = await keyClient.logTraceFeedback('trace-abc', {
+        name: 'user_saved_recipe',
+        value: 1,
+        reason: 'User saved the AI-generated recipe',
+        categoryName: 'positive'
+      });
+
+      expect(recorded).toBe(true);
+      expect(create).toHaveBeenCalledWith({
+        id: 'trace-abc',
+        projectName: 'recipe-generation',
+        name: 'user_saved_recipe',
+        value: 1,
+        source: 'sdk',
+        reason: 'User saved the AI-generated recipe',
+        categoryName: 'positive'
+      });
+      expect(keyClient.client.flush).toHaveBeenCalled();
+    });
+
+    it('should fall back to the batch scoring API when no queue is available', async () => {
+      const keyClient = new OpikClient('test-api-key');
+      const scoreBatchOfTraces = vi.fn().mockResolvedValue(undefined);
+      keyClient.client.traceFeedbackScoresBatchQueue = null;
+      keyClient.client.api = { traces: { scoreBatchOfTraces } };
+      vi.spyOn(keyClient.client, 'flush').mockResolvedValue(undefined);
+
+      const recorded = await keyClient.logTraceFeedback('trace-abc', { name: 'user_saved_recipe', value: 1 });
+
+      expect(recorded).toBe(true);
+      expect(scoreBatchOfTraces).toHaveBeenCalledWith({
+        scores: [expect.objectContaining({ id: 'trace-abc', name: 'user_saved_recipe', value: 1, source: 'sdk' })]
+      });
+    });
+
+    it('should reject an invalid score payload', async () => {
+      const keyClient = new OpikClient('test-api-key');
+      const create = vi.fn();
+      keyClient.client.traceFeedbackScoresBatchQueue = { create };
+
+      expect(await keyClient.logTraceFeedback('', { name: 'user_saved_recipe', value: 1 })).toBe(false);
+      expect(await keyClient.logTraceFeedback('trace-abc', { name: 'user_saved_recipe' })).toBe(false);
+      expect(await keyClient.logTraceFeedback('trace-abc', { value: 1 })).toBe(false);
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('should handle scoring errors gracefully', async () => {
+      const keyClient = new OpikClient('test-api-key');
+      keyClient.client.traceFeedbackScoresBatchQueue = {
+        create: vi.fn().mockImplementation(() => {
+          throw new Error('Queue rejected the score');
+        })
+      };
+      const errorSpy = vi.spyOn(console, 'error');
+
+      const recorded = await keyClient.logTraceFeedback('trace-abc', { name: 'user_saved_recipe', value: 1 });
+
+      expect(recorded).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to log Opik feedback score'),
+        expect.objectContaining({ message: 'Queue rejected the score' })
+      );
+    });
+  });
+
   describe('Flush Operations', () => {
     it('should skip flush and warn when client is not initialized', async () => {
       const warnSpy = vi.spyOn(console, 'warn');

@@ -5,6 +5,7 @@ import { handleAdapt } from './handlers/adapt-handler.js';
 import { handleGroceryList } from './handlers/grocery-list-handler.js';
 import { handleMealPlanFill } from './handlers/meal-plan-fill-handler.js';
 import { handleAgentTurn } from './handlers/agent-handler.js';
+import { handleFeedback } from './handlers/feedback-handler.js';
 
 export default {
   async fetch(request, env) {
@@ -45,6 +46,11 @@ export default {
     // Grocery list aggregation endpoint
     if (url.pathname === '/grocery-list' && request.method === 'POST') {
       return handleGroceryList(request, env, corsHeaders);
+    }
+
+    // Generation feedback endpoint (user signals logged onto generation traces)
+    if (url.pathname === '/feedback' && request.method === 'POST') {
+      return handleFeedback(request, env, corsHeaders);
     }
 
     // Meal-plan auto-fill endpoint

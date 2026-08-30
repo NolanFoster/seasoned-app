@@ -187,6 +187,9 @@ export async function handleGenerate(request, env, corsHeaders) {
 
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
     const generatedRecipe = await generateRecipeWithAI(requestBody, env);
+    // Read the trace id off the raw generation result: the safety, elevation
+    // and quality steps below rebuild the recipe object.
+    const generationTraceId = generatedRecipe.traceId || null;
     let finalRecipe = enforceRecipeSafety(
       generatedRecipe,
       appliedConstraints.hardAllergens,
@@ -244,11 +247,18 @@ export async function handleGenerate(request, env, corsHeaders) {
       similarRecipeIds: finalRecipe.similarRecipeIds || []
     });
 
+    // The client sends this back to POST /feedback when the user saves the
+    // recipe, which scores the generation trace as positive feedback.
+    if (generationTraceId) {
+      finalRecipe.traceId = generationTraceId;
+    }
+
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
       appliedConstraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(generationTraceId && { traceId: generationTraceId }),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -325,6 +335,7 @@ export async function handleGenerate(request, env, corsHeaders) {
  */
 async function generateRecipeWithAI(requestData, env) {
   const startTime = Date.now();
+  let traceId = null;
 
   // Create Opik client with API key from environment
   const opikClient = new OpikClient(env.OPIK_API_KEY, 'recipe-generation');
@@ -425,6 +436,10 @@ async function generateRecipeWithAI(requestData, env) {
       );
 
       if (trace) {
+        // Keep the trace id so a later user signal (saving the recipe) can be
+        // scored against the trace that produced it.
+        traceId = opikClient.getTraceId(trace);
+
         // Helper function to calculate duration between timestamps
         const calculateDuration = (startTime, endTime) => {
           return new Date(endTime) - new Date(startTime);
@@ -513,7 +528,8 @@ async function generateRecipeWithAI(requestData, env) {
       generationTime: duration,
       similarRecipesFound: similarRecipes.length,
       similarRecipeIds: similarRecipes.map(({ id }) => id).filter(Boolean),
-      generationMethod: 'llama-ai'
+      generationMethod: 'llama-ai',
+      ...(traceId && { traceId })
     };
 
   } catch (error) {
