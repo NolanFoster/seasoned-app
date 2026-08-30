@@ -133,6 +133,7 @@ describe('Recipe provenance and quality bar', () => {
     expect(provenance).toHaveTextContent('@cf/meta/llama-4-scout-17b-16e-instruct')
     expect(provenance).toHaveTextContent('1 similar recipe')
     expect(provenance).toHaveTextContent('80% ingredient coverage')
+    expect(provenance).toHaveTextContent('Ratio check')
   })
 
   test('does not add AI provenance chrome to a plain clipped recipe', () => {
