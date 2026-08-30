@@ -1777,6 +1777,113 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
+/* ── Multi-Home Custody Modal ─────────────────────────────────────────── */
+.multi-home-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(var(--color-shadow-rgb) / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 16px;
+}
+.multi-home-modal-card {
+  width: 100%;
+  max-width: 600px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 0.25);
+}
+.multi-home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.multi-home-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.multi-home-header h2 {
+  font-size: var(--fs-lg);
+  margin: 2px 0 0;
+}
+.multi-home-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.multi-home-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.multi-home-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+.multi-home-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.multi-home-radio-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.multi-home-radio-card.active {
+  border-color: var(--accent);
+  background: rgb(var(--color-primary-rgb) / 0.1);
+}
+.multi-home-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.multi-home-info strong {
+  font-size: var(--fs-sm);
+}
+.multi-home-info span {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.multi-home-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.multi-home-save-btn {
+  padding: 9px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ── Grocery Delivery Arrival Reconciliation Modal ──────────────────────── */
 .arrival-reconcile-modal-overlay {
   position: fixed;
