@@ -8,7 +8,12 @@ jest.mock('../useGestureMode.js')
 // Default flag values for all tests in this file.
 // voice-control: true  — keeps existing hands-free voice tests passing.
 // gesture-support: false — gesture feature is off by default; enable per-test as needed.
-const flagOverrides = { 'voice-control': true, 'gesture-support': false, 'dictation': true }
+const flagOverrides = {
+  'voice-control': true,
+  'gesture-support': false,
+  'dictation': true,
+  'navigator-vision-assist': true,
+}
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => flagOverrides[key] ?? false,
   flaggly: {},
@@ -885,5 +890,47 @@ describe('CookingNavigator — post-cook feedback & preference learning', () => 
     })
   })
 })
+
+describe('CookingNavigator — vision-assisted cooking navigator', () => {
+  test('displays opt-in banner when visual assist flag is enabled and can be toggled', async () => {
+    renderNavigator({
+      instructions: ['Sear the chicken breasts in skillet until golden brown.', 'Serve warm.'],
+    })
+
+    expect(screen.getByText('Turn on Visual Assist')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }))
+    expect(screen.queryByText('Turn on Visual Assist')).not.toBeInTheDocument()
+
+    // Advance to Step 1 (sear step)
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    expect(screen.getByText(/Check Meat Browning & Crust/i)).toBeInTheDocument()
+    const checkBtn = screen.getByRole('button', { name: /Check with camera for/i })
+    expect(checkBtn).toBeInTheDocument()
+
+    // Mock getUserMedia
+    navigator.mediaDevices = {
+      getUserMedia: jest.fn().mockResolvedValue({
+        getTracks: () => [{ stop: jest.fn() }],
+      }),
+    }
+
+    fireEvent.click(checkBtn)
+    expect(screen.getByText(/Analyzing camera frame/i)).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByText(/On Target/i)).toBeInTheDocument()
+      expect(screen.getByText(/Food Safety Reminder:/i)).toBeInTheDocument()
+    })
+  })
+
+  test('dismisses visual assist recommendation banner when closed', () => {
+    renderNavigator()
+    const dismissBtn = screen.getByRole('button', { name: 'Dismiss visual assist recommendation' })
+    fireEvent.click(dismissBtn)
+    expect(screen.queryByText('Turn on Visual Assist')).not.toBeInTheDocument()
+  })
+})
+
 
 

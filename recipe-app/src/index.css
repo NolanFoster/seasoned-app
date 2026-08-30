@@ -1605,6 +1605,143 @@ textarea:focus-visible {
   50%       { opacity: 0.25; }
 }
 
+/* ── Vision Assist Mode ─────────────────────────────────────────────────── */
+.cn-vision-optin-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgb(var(--color-info-rgb) / 0.12);
+  border-bottom: 1px solid rgb(var(--color-info-rgb) / 0.3);
+  font-size: var(--fs-xs);
+  color: var(--text);
+}
+.cn-vision-optin-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cn-vision-optin-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cn-vision-optin-btn {
+  padding: 4px 10px;
+  background: var(--color-info);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cn-vision-optin-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.cn-vision-check-card {
+  margin: 12px 24px 16px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cn-vision-check-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cn-vision-check-badge {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.cn-vision-check-cta {
+  padding: 6px 12px;
+  background: rgb(var(--color-primary-rgb) / 0.15);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cn-vision-check-cta:hover {
+  background: rgb(var(--color-primary-rgb) / 0.25);
+}
+.cn-vision-analyzing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.cn-vision-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: cn-spin 0.8s linear infinite;
+}
+@keyframes cn-spin {
+  to { transform: rotate(360deg); }
+}
+.cn-vision-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.cn-vision-feedback-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cn-vision-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+.cn-vision-pill--on_target {
+  background: rgb(var(--color-secondary-rgb) / 0.2);
+  color: var(--clip-color);
+}
+.cn-vision-pill--under, .cn-vision-pill--over {
+  background: rgb(var(--color-warning-rgb) / 0.2);
+  color: var(--color-warning);
+}
+.cn-vision-pill--unclear {
+  background: rgb(var(--color-shadow-rgb) / 0.3);
+  color: var(--text-muted);
+}
+.cn-vision-coaching {
+  font-size: var(--fs-sm);
+  color: var(--text);
+  margin: 0;
+}
+.cn-vision-safety-warning {
+  font-size: var(--fs-xs);
+  background: rgb(var(--color-warning-rgb) / 0.1);
+  border-left: 3px solid var(--color-warning);
+  padding: 6px 10px;
+  border-radius: 2px;
+  color: var(--text);
+}
+
 /* ── Gesture mode ───────────────────────────────────────────────────────── */
 
 /* Hidden video element — always in DOM when CookingNavigator is mounted so
