@@ -1104,6 +1104,10 @@ function buildLLaMAPrompt(requestData, contexts) {
     }
   }
 
+  if (requestData.lifestyleModes && requestData.lifestyleModes.includes('appetite_gentle')) {
+    requirements.push('lifestyle mode active: \'appetite_gentle\' (Protein-forward, gentler meals for smaller appetite. High protein density per serving, smaller default portions, avoid extreme spice/heavy grease/deep frying, favor soft/brothy/simple textures)');
+  }
+
   if (requirements.length > 0) {
     prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;
   }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { EMPTY_CULINARY_PROFILE } from './useCulinaryProfile.js'
+import { useFlag } from './flaggly.js'
 
 const DIET_OPTIONS = [
   ['vegetarian', 'Vegetarian'],
@@ -62,6 +63,7 @@ function toFormState(profile) {
     nutrition_protein_g: nutritionGoals.targets?.protein_g ?? '',
     nutrition_sodium_mg: nutritionGoals.targets?.sodium_mg ?? '',
     nutrition_calories_max: nutritionGoals.targets?.calories_max ?? '',
+    lifestyle_appetite_gentle: value.lifestyle_modes?.includes('appetite_gentle') ?? false,
     learn_from_activity: value.consent_flags?.learn_from_activity ?? false,
     share_anon_evals: value.consent_flags?.share_anon_evals ?? false,
   }
@@ -73,6 +75,7 @@ function toggleValue(values, value) {
 
 export default function CulinaryProfile({ open, profile, loading, saving, error, onSave, onClose }) {
   const [form, setForm] = useState(() => toFormState(profile))
+  const flagAppetiteGentle = useFlag('lifestyle-appetite-gentle')
 
   useEffect(() => {
     if (open && profile) setForm(toFormState(profile))
@@ -115,6 +118,7 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
       units_pref: form.units_pref,
       exclude_ingredients: parseList(form.exclude_ingredients_text),
       notes_freeform: form.notes_freeform,
+      lifestyle_modes: form.lifestyle_appetite_gentle ? ['appetite_gentle'] : [],
       consent_flags: {
         learn_from_activity: Boolean(form.learn_from_activity),
         share_anon_evals: Boolean(form.share_anon_evals),
@@ -234,6 +238,27 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
                 ))}
               </div>
             </fieldset>
+
+
+            {flagAppetiteGentle && (
+              <fieldset>
+                <legend>Lifestyle modes</legend>
+                <div className="culinary-profile-options">
+                  <label className="culinary-profile-check">
+                    <input
+                      type="checkbox"
+                      checked={form.lifestyle_appetite_gentle}
+                      onChange={(event) => setField('lifestyle_appetite_gentle', event.target.checked)}
+                    />
+                    <strong>Smaller appetite / Gentler meals</strong>
+                    <p style={{ margin: '4px 0 0 24px', fontSize: '0.85em', color: '#666', lineHeight: 1.3 }}>
+                      Protein-forward, nausea-friendly textures, and smaller default portions. 
+                      <em>Not medical advice; not a substitute for clinician or RD guidance.</em>
+                    </p>
+                  </label>
+                </div>
+              </fieldset>
+            )}
 
             <fieldset>
               <legend>Preference learning & privacy</legend>

@@ -18,6 +18,7 @@ export const EMPTY_CULINARY_PROFILE = {
   exclude_ingredients: [],
   notes_freeform: '',
   consent_flags: { learn_from_activity: false, share_anon_evals: false },
+  lifestyle_modes: [],
 }
 
 function profileUrl() {
