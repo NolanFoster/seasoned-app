@@ -34,6 +34,7 @@ const FLAG_DEFAULTS = {
   'complete-meal-composer': true,
   'recipe-collections': true,
   'nutrition-overtrust-friction': true,
+  'living-projects': true,
 }
 
 let flaggly
