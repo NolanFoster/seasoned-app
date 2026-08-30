@@ -148,6 +148,7 @@ export default function DayCard({ day, date, dateString, meals, onRemoveMeal }) 
                             >
                               ⠿
                             </span>
+                            {meal.isLeftover && <span style={{ fontSize: '0.7em', padding: '0 4px', borderRadius: '4px', background: '#eaf4eb', color: '#1a5f2e', marginRight: '4px' }} title="Leftovers">🥡</span>}
                             <span
                               className="meal-item-name"
                               aria-label={`View ${meal.name}`}
