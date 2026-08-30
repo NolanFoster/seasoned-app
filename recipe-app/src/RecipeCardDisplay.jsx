@@ -24,6 +24,7 @@ const sourceBadgeMap = {
 import { estimateRecipeCost } from '../../shared/ingredient-cost-heuristics.js'
 import { composeMealSides } from '../../shared/complete-meal.js'
 import { computeTrafficLights, computeNutritionConfidence } from '../../shared/nutrition-friction.js'
+import { suggestLeftoverTransforms } from '../../shared/leftover-transforms.js'
 import { useFlag } from './flaggly.js'
 
 function appliedConstraintLabels(constraints) {
@@ -512,6 +513,33 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
                     <strong>Ingredients:</strong> {side.ingredients.join(', ')}
                   </p>
                   <p className="complete-meal-card-instruction">{side.instructions[0]}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      })()}
+
+      {useFlag('leftover-transform-cascade') && (() => {
+        const transforms = suggestLeftoverTransforms(recipe)
+        if (transforms.length === 0) return null
+        return (
+          <section className="leftover-cascade-section" aria-label="Next-day remix cascade">
+            <div className="leftover-cascade-header">
+              <h3>🔄 Transform Tomorrow</h3>
+              <span className="leftover-cascade-tagline">Intentional next-day meals from these cooked components (not "leftovers again")</span>
+            </div>
+            <div className="leftover-cascade-grid">
+              {transforms.map((t) => (
+                <div key={t.id} className="leftover-cascade-card">
+                  <div className="leftover-cascade-card-header">
+                    <strong>{t.title}</strong>
+                    <span className="leftover-cascade-pill">~{t.effortMin}m effort</span>
+                  </div>
+                  <p className="leftover-cascade-fresh">
+                    <strong>Fresh finishers needed:</strong> {t.requiresFresh.join(', ')}
+                  </p>
+                  <p className="leftover-cascade-inst">{t.instructions[0]}</p>
                 </div>
               ))}
             </div>
