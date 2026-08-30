@@ -239,6 +239,11 @@ export default function GroceryListModal({
     inputRef.current?.focus()
   }
 
+
+  function clearCheckedItems() {
+    setGroceryList(prev => prev.filter(item => !item.completed));
+  }
+
   if (!isOpen) return null
 
   return (
