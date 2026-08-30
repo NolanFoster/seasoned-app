@@ -35,6 +35,7 @@ const FLAG_DEFAULTS = {
   'recipe-collections': true,
   'nutrition-overtrust-friction': true,
   'living-projects': true,
+  'csa-produce-intake': true,
 }
 
 let flaggly

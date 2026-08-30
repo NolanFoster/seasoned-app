@@ -1652,6 +1652,131 @@ textarea:focus-visible {
   font-size: var(--fs-xs);
 }
 
+/* ── CSA / Farmers Market Produce Box Intake Modal ───────────────────────── */
+.csa-intake-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(var(--color-shadow-rgb) / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 16px;
+}
+.csa-intake-modal-card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 0.25);
+}
+.csa-intake-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.csa-intake-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.csa-intake-header h2 {
+  font-size: var(--fs-lg);
+  margin: 2px 0 0;
+}
+.csa-intake-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.csa-intake-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.csa-intake-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+.csa-intake-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+}
+.csa-intake-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.csa-intake-submit-btn {
+  padding: 9px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.csa-intake-back-btn {
+  padding: 9px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.csa-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.csa-item-card {
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.csa-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.csa-item-shelf-life {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.csa-item-storage {
+  font-size: var(--fs-xs);
+  margin: 0;
+  color: var(--text-muted);
+}
+
 /* ── Living Project Modal ──────────────────────────────────────────────── */
 .living-project-modal-overlay {
   position: fixed;
