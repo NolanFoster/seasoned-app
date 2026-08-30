@@ -17,7 +17,11 @@
  */
 
 import { OpikClient } from '../opik-client.js';
-import { classifyGroceryItems, pantryNamesMatch } from '../../../shared/pantry-planning.js';
+import {
+  classifyGroceryItems,
+  mergeDuplicateGroceryItems,
+  pantryNamesMatch
+} from '../../../shared/pantry-planning.js';
 
 /** Workers AI model id for grocery aggregation (keep in sync with env.AI.run below). */
 const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
@@ -345,8 +349,7 @@ function validateCategories(parsed) {
 
 /**
  * Merges duplicate category labels (e.g. two "Pantry Staples" blocks) into one.
- * Does not merge duplicate item names: identical quantities would need numeric
- * parsing to combine safely, so the prompt handles per-ingredient deduplication.
+ * Duplicate item names are collapsed separately, by mergeDuplicateItems below.
  *
  * @param {{ category: string, items: Array<{ name: string, quantity: string, isStaple: boolean }> }[]} categories
  * @returns {typeof categories}
@@ -363,6 +366,33 @@ function mergeDuplicateCategories(categories) {
     }
   }
   return [...byCat.values()].filter((c) => c.items.length > 0);
+}
+
+/**
+ * Collapses lines that name the same ingredient into one, across the whole
+ * list rather than per category.
+ *
+ * The prompt asks for one line per ingredient, but the 3B aggregator regularly
+ * repeats an item inside a category and mirrors whole blocks into a second
+ * aisle, which reaches the shopper as "unsalted butter" listed four times.
+ * The merge itself lives in shared/pantry-planning.js so the browser applies
+ * the same rules to a response from an older worker.
+ *
+ * @param {{ category: string, items: Array<{ name: string, quantity: string }> }[]} categories
+ * @returns {typeof categories}
+ */
+function mergeDuplicateItems(categories) {
+  const merged = mergeDuplicateGroceryItems(
+    categories.flatMap((cat) => cat.items.map((item) => ({ ...item, category: cat.category })))
+  );
+
+  const itemsByCategory = new Map(categories.map((cat) => [cat.category, []]));
+  for (const { category, ...item } of merged) {
+    itemsByCategory.get(category)?.push(item);
+  }
+  return categories
+    .map((cat) => ({ category: cat.category, items: itemsByCategory.get(cat.category) ?? [] }))
+    .filter((cat) => cat.items.length > 0);
 }
 
 /**
@@ -656,7 +686,7 @@ export async function handleGroceryList(request, env, corsHeaders) {
     }
   }
 
-  categories = filterUngroundedItems(categories, ingredientStrings);
+  categories = filterUngroundedItems(mergeDuplicateItems(categories), ingredientStrings);
 
   const durationMs = Date.now() - traceWallStart;
   if (tracingEnabled) {
