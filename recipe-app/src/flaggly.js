@@ -32,6 +32,7 @@ const FLAG_DEFAULTS = {
   'navigator-vision-assist': true,
   'multi-dish-navigator': true,
   'complete-meal-composer': true,
+  'recipe-collections': true,
 }
 
 let flaggly
