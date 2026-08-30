@@ -23,6 +23,7 @@ const sourceBadgeMap = {
 
 import { estimateRecipeCost } from '../../shared/ingredient-cost-heuristics.js'
 import { composeMealSides } from '../../shared/complete-meal.js'
+import { computeTrafficLights, computeNutritionConfidence } from '../../shared/nutrition-friction.js'
 import { useFlag } from './flaggly.js'
 
 function appliedConstraintLabels(constraints) {
@@ -327,6 +328,38 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
           )}
         </div>
       )}
+
+      {useFlag('nutrition-overtrust-friction') && (() => {
+        const lights = computeTrafficLights(nutrition)
+        const confidence = computeNutritionConfidence(nutritionProvenance)
+        return (
+          <div className="recipe-nutrition-trust-wrap" aria-label="Nutrition trust indicators">
+            <div className="recipe-nutrition-traffic-lights">
+              <span className="nutrition-traffic-title">Traffic Lights (FSA):</span>
+              <span className={`nutrition-traffic-badge nutrition-traffic--${lights.fat.level}`}>
+                Fat: {lights.fat.value}
+              </span>
+              <span className={`nutrition-traffic-badge nutrition-traffic--${lights.saturates.level}`}>
+                Sat Fat: {lights.saturates.value}
+              </span>
+              <span className={`nutrition-traffic-badge nutrition-traffic--${lights.sugars.level}`}>
+                Sugar: {lights.sugars.value}
+              </span>
+              <span className={`nutrition-traffic-badge nutrition-traffic--${lights.salt.level}`}>
+                Salt: {lights.salt.value}
+              </span>
+            </div>
+            {lights.hasRedLight && (
+              <div className="nutrition-overtrust-warning" role="alert">
+                <strong>Attention:</strong> One or more nutrients exceed daily guideline benchmarks. Review ingredient quantities carefully.
+              </div>
+            )}
+            <div className="nutrition-confidence-pill">
+              Confidence: <strong>{confidence.toUpperCase()}</strong>
+            </div>
+          </div>
+        )
+      })()}
 
       {(fiber || sugar || sodium) && (
         <div className="recipe-nutrition-micros">
