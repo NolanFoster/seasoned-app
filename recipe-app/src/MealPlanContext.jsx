@@ -794,6 +794,14 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
   }, []);
 
   /**
+   * Removes completed grocery items while preserving the generated-list
+   * metadata. This is a user edit, not a new AI generation.
+   */
+  const clearCompletedItems = useCallback(() => {
+    setGroceryListState((prev) => prev.filter((item) => !item.completed));
+  }, []);
+
+  /**
    * Clears the entire grocery list and resets lastListGeneratedAt.
    * Used when the user starts over.
    */
@@ -844,6 +852,7 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       toggleItemCompletion,
       editItem,
       deleteItem,
+      clearCompletedItems,
       clearGroceryList,
       generateGroceryListStart,
       generateGroceryListError,
@@ -858,7 +867,7 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       activeRecipe, clearActiveRecipe,
       groceryList, isGeneratingList, listGenerationError, lastListGeneratedAt,
       setGroceryList, addCustomItem, toggleItemCompletion, editItem, deleteItem,
-      clearGroceryList, generateGroceryListStart, generateGroceryListError,
+      clearCompletedItems, clearGroceryList, generateGroceryListStart, generateGroceryListError,
       setSyncIdentity, syncStatus, syncError, syncAvailable,
     ]
   );

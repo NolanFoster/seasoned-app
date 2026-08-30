@@ -141,6 +141,26 @@ describe('meal plan persistence across sessions', () => {
     await waitFor(() => expect(state.grocery?.items?.[0]?.name).toBe('Scallions'))
   })
 
+  it('clears completed grocery items through the provider and persists the remaining list', async () => {
+    const state = {}
+    mockWorker(state)
+    renderPlanner({ token: 'token-a', userId: 'user-a' })
+    await settle()
+
+    await act(async () => {
+      controls.setGroceryList([
+        { id: 'done', name: 'Done item', completed: true },
+        { id: 'keep', name: 'Keep item', completed: false },
+      ])
+    })
+    await act(async () => { controls.clearCompletedItems() })
+    expect(screen.getByTestId('grocery')).toHaveTextContent('Keep item')
+    expect(screen.getByTestId('grocery')).not.toHaveTextContent('Done item')
+    await act(async () => { jest.advanceTimersByTime(PUSH_DEBOUNCE_MS) })
+    await settle()
+    await waitFor(() => expect(state.grocery?.items?.map((item) => item.id)).toEqual(['keep']))
+  })
+
   it('coalesces a burst of edits into a single save', async () => {
     const state = {}
     mockWorker(state)

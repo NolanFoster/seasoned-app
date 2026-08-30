@@ -18,6 +18,7 @@ let mockToggleItemCompletion = jest.fn();
 let mockDeleteItem = jest.fn();
 let mockAddCustomItem = jest.fn();
 let mockEditItem = jest.fn();
+let mockClearCompletedItems = jest.fn();
 
 jest.mock('../MealPlanContext.jsx', () => ({
   useMealPlan: () => ({
@@ -28,6 +29,7 @@ jest.mock('../MealPlanContext.jsx', () => ({
     deleteItem: mockDeleteItem,
     addCustomItem: mockAddCustomItem,
     editItem: mockEditItem,
+    clearCompletedItems: mockClearCompletedItems,
   }),
 }));
 
@@ -202,6 +204,7 @@ describe('GroceryListModal — rendering', () => {
     mockDeleteItem = jest.fn();
     mockAddCustomItem = jest.fn();
     mockEditItem = jest.fn();
+    mockClearCompletedItems = jest.fn();
   });
 
   test('renders nothing when isOpen is false', () => {
@@ -355,6 +358,21 @@ describe('GroceryListModal — checklist', () => {
     const checkbox = screen.getByRole('checkbox', { name: 'All-purpose flour' });
     expect(checkbox).toBeChecked();
   });
+
+  test('shows clear checked action and delegates to context', () => {
+    mockGroceryList = [
+      { ...MOCK_GROCERY_LIST[0], completed: true },
+      { ...MOCK_GROCERY_LIST[1], completed: false },
+    ];
+    renderModal();
+    fireEvent.click(screen.getByRole('button', { name: /clear checked items/i }));
+    expect(mockClearCompletedItems).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not show clear checked action when nothing is completed', () => {
+    renderModal();
+    expect(screen.queryByRole('button', { name: /clear checked items/i })).not.toBeInTheDocument();
+  });
 });
 
 // ── Delete item ───────────────────────────────────────────────────────────────
@@ -409,6 +427,19 @@ describe('GroceryListModal — category controls', () => {
     // Pantry Staples has 2 items
     const toggleBtn = screen.getByRole('button', { name: /pantry staples/i });
     expect(toggleBtn).toHaveTextContent('2');
+  });
+
+  test('keeps same category expansion independent across pantry sections', () => {
+    mockGroceryList = [
+      { id: 'buy-produce', name: 'Apples', category: 'Produce', completed: false, inventoryStatus: 'buy' },
+      { id: 'owned-produce', name: 'Bananas', category: 'Produce', completed: false, inventoryStatus: 'owned' },
+    ];
+    render(<GroceryListModal isOpen onClose={jest.fn()} pantryPlannerEnabled />);
+    const categoryButtons = screen.getAllByRole('button', { name: /produce/i });
+    expect(categoryButtons).toHaveLength(2);
+    fireEvent.click(categoryButtons[0]);
+    expect(screen.queryByText('Apples')).not.toBeInTheDocument();
+    expect(screen.getByText('Bananas')).toBeInTheDocument();
   });
 });
 
