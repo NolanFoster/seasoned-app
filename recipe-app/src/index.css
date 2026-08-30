@@ -1605,6 +1605,53 @@ textarea:focus-visible {
   50%       { opacity: 0.25; }
 }
 
+/* ── Multi-Dish Navigator Tabs & Conflict Bar ────────────────────────── */
+.cn-dish-tabs {
+  display: flex;
+  overflow-x: auto;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
+  gap: 8px;
+}
+.cn-dish-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cn-dish-tab--active {
+  border-color: var(--accent);
+  background: rgb(var(--color-primary-rgb) / 0.15);
+  color: var(--text);
+}
+.cn-dish-tab-badge {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--border);
+  color: var(--text);
+}
+.cn-dish-tab--active .cn-dish-tab-badge {
+  background: var(--accent);
+  color: white;
+}
+.cn-equipment-conflict-bar {
+  padding: 8px 16px;
+  background: rgb(var(--color-warning-rgb) / 0.15);
+  border-bottom: 1px solid var(--color-warning);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+
 /* ── Vision Assist Mode ─────────────────────────────────────────────────── */
 .cn-vision-optin-banner {
   display: flex;
