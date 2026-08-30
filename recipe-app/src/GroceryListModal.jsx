@@ -221,7 +221,7 @@ export default function GroceryListModal({
   pantryItems = [],
   pantryPlannerEnabled = false,
 }) {
-  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {} } = useMealPlan()
+  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {}, clearCompletedItems = () => {} } = useMealPlan()
   const safePantryItems = Array.isArray(pantryItems) ? pantryItems : []
   const flagExport = useFlag('grocery-export-plus')
 
@@ -304,11 +304,13 @@ export default function GroceryListModal({
       const next = { ...prev }
       groceryList.forEach((item) => {
         const cat = item.category || DEFAULT_CUSTOM_CATEGORY
-        if (!(cat in next)) next[cat] = true
+        const status = pantryPlannerEnabled ? inventoryStatusFor(item) : 'all'
+        const key = `${status}:${cat}`
+        if (!(key in next)) next[key] = true
       })
       return next
     })
-  }, [groceryList])
+  }, [groceryList, pantryPlannerEnabled])
 
   // Escape key closes the modal
   useEffect(() => {
@@ -354,7 +356,7 @@ export default function GroceryListModal({
 
 
   function clearCheckedItems() {
-    setGroceryList(prev => prev.filter(item => !item.completed));
+    clearCompletedItems()
   }
 
   if (!isOpen) return null
@@ -458,6 +460,18 @@ export default function GroceryListModal({
           </div>
         )}
 
+        {groceryList.some((item) => item.completed) && (
+          <div className="grocery-modal-actions">
+            <button
+              type="button"
+              className="grocery-modal-clear-completed"
+              onClick={clearCheckedItems}
+            >
+              Clear checked items
+            </button>
+          </div>
+        )}
+
         {/* ── Sticky add-item input ── */}
         <form className="grocery-modal-add" onSubmit={handleAddItem}>
           <div className="grocery-modal-add__row">
@@ -505,7 +519,8 @@ export default function GroceryListModal({
                   )}
                   <ul className="grocery-list" role="list">
                     {groupByCategory(statusItems).map(([category, items]) => {
-                      const isExpanded = !!expandedCategories[category]
+                      const expansionKey = `${status || 'all'}:${category}`
+                      const isExpanded = !!expandedCategories[expansionKey]
                       return (
                         <li key={`${status}-${category}`}>
                           <div className="grocery-category-header">
@@ -513,7 +528,7 @@ export default function GroceryListModal({
                               type="button"
                               className="grocery-category-toggle"
                               aria-expanded={isExpanded}
-                              onClick={() => toggleCategoryExpanded(category)}
+                              onClick={() => toggleCategoryExpanded(expansionKey)}
                             >
                               <ChevronIcon expanded={isExpanded} />
                               {category}
