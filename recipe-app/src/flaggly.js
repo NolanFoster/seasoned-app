@@ -23,6 +23,7 @@ const FLAG_DEFAULTS = {
   'preference-learning': true,
   'lifestyle-appetite-gentle': false,
   'budget-constraints': true,
+  'kitchen-agent': true,
 }
 
 let flaggly
