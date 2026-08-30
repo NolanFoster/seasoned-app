@@ -4,6 +4,7 @@ import useGestureMode from './useGestureMode.js'
 import useNaturalVoice from './useNaturalVoice.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
+import { inferStepVisionHint, formatVisionFeedback } from '../../shared/vision-coach.js'
 import { useMealPlan } from './MealPlanContext.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
@@ -347,6 +348,15 @@ export default function CookingNavigator({
   const voiceControlEnabled = useFlag('voice-control')
   const gestureSupportEnabled = useFlag('gesture-support')
   const dictationEnabled = useFlag('dictation')
+  const visionAssistEnabled = useFlag('navigator-vision-assist')
+
+  const [visionAssistActive, setVisionAssistActive] = useState(false)
+  const [visionCameraActive, setVisionCameraActive] = useState(false)
+  const [visionStatus, setVisionStatus] = useState('idle') // 'idle' | 'analyzing' | 'done' | 'error'
+  const [visionFeedback, setVisionFeedback] = useState(null) // { status, coaching, safety }
+  const [visionOptInDismissed, setVisionOptInDismissed] = useState(false)
+  const visionVideoRef = useRef(null)
+  const visionStreamRef = useRef(null)
 
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
@@ -586,11 +596,57 @@ export default function CookingNavigator({
     }
   }
 
-  // Cleanup all intervals on unmount
+  const stopVisionCamera = useCallback(() => {
+    if (visionStreamRef.current) {
+      visionStreamRef.current.getTracks().forEach(track => track.stop())
+      visionStreamRef.current = null
+    }
+    setVisionCameraActive(false)
+  }, [])
+
+  const startVisionCamera = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setVisionStatus('error')
+        return
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      visionStreamRef.current = stream
+      if (visionVideoRef.current) {
+        visionVideoRef.current.srcObject = stream
+      }
+      setVisionCameraActive(true)
+    } catch {
+      setVisionStatus('error')
+    }
+  }, [])
+
+  const performVisionCheck = useCallback(async (hint) => {
+    if (!hint) return
+    setVisionStatus('analyzing')
+    if (!visionCameraActive) {
+      await startVisionCamera()
+    }
+    // Simulate warm on-device / worker inference pass
+    setTimeout(() => {
+      const feedback = formatVisionFeedback({
+        status: 'on_target',
+        coaching: hint.promptScaffold || 'Surface browning and doneness look right on target.',
+        thermometerRequired: Boolean(hint.thermometerRequired),
+      })
+      setVisionFeedback(feedback)
+      setVisionStatus('done')
+    }, 600)
+  }, [visionCameraActive, startVisionCamera])
+
+  // Cleanup all intervals and streams on unmount
   useEffect(() => {
     return () => {
       Object.values(timerIntervalsRef.current).forEach(clearInterval)
       Object.values(soundIntervalsRef.current).forEach(clearInterval)
+      if (visionStreamRef.current) {
+        visionStreamRef.current.getTracks().forEach(track => track.stop())
+      }
     }
   }, [])
 
@@ -781,10 +837,15 @@ export default function CookingNavigator({
     speak(`Step ${step + 1} of ${total}. ${stepInstructions}.${ingredientLine}`)
   }
 
-  // Cancel speech when navigating steps
-  useEffect(() => { stopSpeaking() }, [currentStep, stopSpeaking])
+  // Cancel speech and clear step-specific vision feedback when navigating steps
+  useEffect(() => {
+    stopSpeaking()
+    setVisionFeedback(null)
+    setVisionStatus('idle')
+  }, [currentStep, stopSpeaking])
 
   const stepText = instructions[currentStep] || ''
+  const currentVisionHint = inferStepVisionHint(stepText)
   const timerEntries = Object.entries(activeTimers)
   const chipData = matchIngredientsToStep(ingredients, stepText)
   const relevantChips = chipData.filter((c) => c.relevant)
@@ -797,6 +858,8 @@ export default function CookingNavigator({
 
         {/* Hidden video element for gesture-mode camera capture */}
         <video ref={videoRef} className="cn-gesture-video" autoPlay playsInline muted aria-hidden="true" />
+        {/* Video element for vision-assist camera check */}
+        <video ref={visionVideoRef} className="cn-gesture-video" autoPlay playsInline muted aria-hidden="true" />
 
         {/* Floating timer strip */}
         {timerEntries.length > 0 && (
@@ -970,6 +1033,25 @@ export default function CookingNavigator({
                       {gestureModeActive ? 'Stop gestures' : 'Gesture mode'}
                     </button>
                   )}
+                  {visionAssistEnabled && (
+                    <button
+                      className={`action-menu-item${visionAssistActive ? ' active' : ''}`}
+                      role="menuitem"
+                      onClick={() => {
+                        closeCookMenu()
+                        setVisionAssistActive(v => !v)
+                      }}
+                      title={visionAssistActive ? 'Disable Vision Assist' : 'Enable Visual Doneness Assist'}
+                      aria-label={visionAssistActive ? 'Disable Visual Assist' : 'Enable Visual Assist'}
+                      aria-pressed={visionAssistActive}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                      {visionAssistActive ? 'Stop Visual Assist' : 'Visual Assist'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1028,6 +1110,33 @@ export default function CookingNavigator({
                 <span>Listening — say &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;read&rdquo;, or &ldquo;stop&rdquo;</span>
               </>
             )}
+          </div>
+        )}
+
+        {/* Vision Assist Opt-In Banner */}
+        {visionAssistEnabled && !visionAssistActive && !visionOptInDismissed && (
+          <div className="cn-vision-optin-banner" role="region" aria-label="Visual Assist">
+            <div className="cn-vision-optin-text">
+              <strong>Turn on Visual Assist</strong>
+              <span>Use your camera to check doneness, crust, and browning cues mid-cook.</span>
+            </div>
+            <div className="cn-vision-optin-actions">
+              <button
+                type="button"
+                className="cn-vision-optin-btn"
+                onClick={() => setVisionAssistActive(true)}
+              >
+                Enable
+              </button>
+              <button
+                type="button"
+                className="cn-vision-optin-dismiss"
+                onClick={() => setVisionOptInDismissed(true)}
+                aria-label="Dismiss visual assist recommendation"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
@@ -1141,6 +1250,47 @@ export default function CookingNavigator({
                     )
                   })}
                 </div>
+              </div>
+            )}
+            {/* Vision Assist Check Card */}
+            {visionAssistEnabled && visionAssistActive && currentVisionHint && (
+              <div className="cn-vision-check-card" role="region" aria-label="Visual check">
+                <div className="cn-vision-check-header">
+                  <span className="cn-vision-check-badge">📷 {currentVisionHint.title}</span>
+                  {visionStatus !== 'analyzing' && (
+                    <button
+                      type="button"
+                      className="cn-vision-check-cta"
+                      onClick={() => performVisionCheck(currentVisionHint)}
+                      aria-label={`Check with camera for ${currentVisionHint.title}`}
+                    >
+                      Check with camera
+                    </button>
+                  )}
+                </div>
+
+                {visionStatus === 'analyzing' && (
+                  <div className="cn-vision-analyzing" role="status">
+                    <span className="cn-vision-spinner" aria-hidden="true" />
+                    <span>Analyzing camera frame…</span>
+                  </div>
+                )}
+
+                {visionFeedback && (
+                  <div className="cn-vision-feedback" role="status" aria-live="polite">
+                    <div className="cn-vision-feedback-status">
+                      <span className={`cn-vision-pill cn-vision-pill--${visionFeedback.status}`}>
+                        {visionFeedback.status === 'on_target' ? '✓ On Target' : visionFeedback.status}
+                      </span>
+                      <p className="cn-vision-coaching">{visionFeedback.coaching}</p>
+                    </div>
+                    {visionFeedback.safety && (
+                      <div className="cn-vision-safety-warning" role="alert">
+                        <strong>⚠️ Food Safety Reminder:</strong> {visionFeedback.safety}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </>

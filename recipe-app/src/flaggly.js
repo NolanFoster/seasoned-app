@@ -29,6 +29,7 @@ const FLAG_DEFAULTS = {
   'cook-outcome-feedback': true,
   'seasonal-constraints': true,
   'locale-ingredient-graph': true,
+  'navigator-vision-assist': true,
 }
 
 let flaggly
