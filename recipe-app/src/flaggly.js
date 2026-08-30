@@ -37,6 +37,7 @@ const FLAG_DEFAULTS = {
   'living-projects': true,
   'csa-produce-intake': true,
   'leftover-transform-cascade': true,
+  'ephemeral-kitchen-mode': true,
 }
 
 let flaggly

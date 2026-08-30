@@ -5,6 +5,7 @@ import {
   mergeCulinaryProfile,
   normalizeCulinaryProfile,
   validateCulinaryProfileInput,
+  mergeEphemeralKitchenOverlay,
 } from '../culinary-profile.js'
 
 describe('culinary profile helpers', () => {
@@ -69,4 +70,24 @@ describe('culinary profile helpers', () => {
     expect(validateCulinaryProfileInput({ budget_band: 'unlimited' })).toContain('budget_band must be low, medium, or flexible')
     expect(validateCulinaryProfileInput(null)).toEqual(['Profile must be a JSON object'])
   })
+
+  it('merges ephemeral kitchen overlay restricting equipment and unioning host allergens', () => {
+    const base = {
+      equipment: ['oven', 'stovetop', 'air_fryer', 'microwave'],
+      hard_allergens: ['peanuts'],
+    }
+    const travelOverlay = {
+      active: true,
+      label: 'Cabin Airbnb',
+      equipment: ['stovetop', 'microwave'],
+      hostAllergens: ['tree_nuts'],
+    }
+
+    const merged = mergeEphemeralKitchenOverlay(base, travelOverlay)
+    expect(merged.equipment).toEqual(['stovetop', 'microwave'])
+    expect(merged.hard_allergens).toEqual(['peanuts', 'tree_nuts'])
+    expect(merged.ephemeral_kitchen.active).toBe(true)
+    expect(merged.ephemeral_kitchen.label).toBe('Cabin Airbnb')
+  })
 })
+
