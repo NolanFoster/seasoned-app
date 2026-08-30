@@ -1777,6 +1777,121 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
+/* ── Ephemeral / Travel Kitchen Mode Modal ─────────────────────────────── */
+.travel-kitchen-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(var(--color-shadow-rgb) / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 16px;
+}
+.travel-kitchen-modal-card {
+  width: 100%;
+  max-width: 620px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 0.25);
+}
+.travel-kitchen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.travel-kitchen-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.travel-kitchen-header h2 {
+  font-size: var(--fs-lg);
+  margin: 2px 0 0;
+}
+.travel-kitchen-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.travel-kitchen-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.travel-kitchen-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+.travel-kitchen-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.travel-kitchen-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.travel-chip {
+  padding: 6px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: var(--fs-xs);
+  color: var(--text);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.travel-chip.active {
+  background: rgb(var(--color-primary-rgb) / 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.travel-kitchen-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+.travel-kitchen-save-btn {
+  padding: 9px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.travel-kitchen-clear-btn {
+  padding: 9px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
 /* ── Transformative Leftover Remix Cascades ────────────────────────────── */
 .leftover-cascade-section {
   margin: 16px 0;

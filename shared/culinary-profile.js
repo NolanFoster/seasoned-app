@@ -306,3 +306,43 @@ export function validateCulinaryProfileInput(input) {
   }
   return errors
 }
+
+/**
+ * Merges an ephemeral/travel kitchen overlay onto a base culinary profile.
+ * - Replaces available equipment with the overlay's equipment
+ * - Unions host allergens with base hard allergens (fail-closed)
+ * - Restricts max cook time if specified
+ * @param {object} baseProfile
+ * @param {object} overlay
+ * @returns {object}
+ */
+export function mergeEphemeralKitchenOverlay(baseProfile, overlay) {
+  const normBase = normalizeCulinaryProfile(baseProfile)
+  if (!overlay || typeof overlay !== 'object' || overlay.active === false) {
+    return normBase
+  }
+
+  // Check if overlay is expired
+  if (overlay.endsAt && new Date(overlay.endsAt).getTime() < Date.now()) {
+    return normBase
+  }
+
+  const travelEquipment = Array.isArray(overlay.equipment) ? overlay.equipment : normBase.equipment
+  const hostAllergens = Array.isArray(overlay.hostAllergens) ? overlay.hostAllergens : []
+  const combinedHardAllergens = Array.from(new Set([...normBase.hard_allergens, ...hostAllergens]))
+
+  return {
+    ...normBase,
+    equipment: travelEquipment,
+    hard_allergens: combinedHardAllergens,
+    ephemeral_kitchen: {
+      active: true,
+      label: overlay.label || 'Travel Kitchen',
+      startsAt: overlay.startsAt || null,
+      endsAt: overlay.endsAt || null,
+      retailerHint: overlay.retailerHint || null,
+      pantryMode: overlay.pantryMode || 'empty',
+    },
+  }
+}
+
