@@ -21,6 +21,8 @@ const sourceBadgeMap = {
   youtube: { label: 'YouTube', color: '#ff0000' },
 }
 
+import { estimateRecipeCost } from '../../shared/ingredient-cost-heuristics.js'
+
 function appliedConstraintLabels(constraints) {
   if (!constraints) return []
   const labels = []
@@ -28,6 +30,10 @@ function appliedConstraintLabels(constraints) {
   if (constraints.cuisine) labels.push(constraints.cuisine)
   if (constraints.maxCookTime) labels.push(`${constraints.maxCookTime} min max`)
   if (constraints.servings) labels.push(`${constraints.servings} servings`)
+  if (constraints.budgetBand && constraints.budgetBand !== 'flexible') {
+    labels.push(constraints.budgetBand === 'low' ? 'Budget-friendly ($)' : 'Moderate budget ($$)')
+  }
+  if (constraints.mealBudgetUsd) labels.push(`≤$${constraints.mealBudgetUsd}`)
   return labels
 }
 
@@ -419,6 +425,18 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
         {recipe.recipe_yield && (
           <span className="recipe-meta-pill"><strong>Serves</strong> {recipe.recipe_yield}</span>
         )}
+        {recipe.ingredients?.length > 0 && (() => {
+          const costInfo = estimateRecipeCost(recipe)
+          return (
+            <span 
+              className="recipe-meta-pill" 
+              title={costInfo.disclaimer}
+              style={{ cursor: 'help' }}
+            >
+              <strong>Est. Cost</strong> ${costInfo.estimatedCostPerServingUsd.toFixed(2)}/serving ({costInfo.costBand === 'low' ? '$' : costInfo.costBand === 'medium' ? '$$' : '$$$'})
+            </span>
+          )
+        })()}
         {recipe.source_url && recipe.source !== 'ai_generated' && (
           <a className="source-link" href={recipe.source_url} target="_blank" rel="noopener noreferrer">Source ↗</a>
         )}

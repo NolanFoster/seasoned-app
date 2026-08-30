@@ -114,8 +114,17 @@ function ListEditor({ label, field, singular, placeholder, rows, values, onChang
  */
 export default function RecipeEditor({ recipe, onSave, onClose }) {
   const [form, setForm] = useState(() => recipeToForm(recipe))
+  const [initialForm] = useState(() => JSON.stringify(recipeToForm(recipe)))
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+
+
+  function handleClose() {
+    if (JSON.stringify(form) !== initialForm) {
+      if (!window.confirm('You have unsaved changes. Discard them?')) return;
+    }
+    onClose();
+  }
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -140,7 +149,7 @@ export default function RecipeEditor({ recipe, onSave, onClose }) {
 
   return (
     <div className="recipe-editor-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose()
+      if (event.target === event.currentTarget) handleClose()
     }}>
       <section className="recipe-editor-sheet" role="dialog" aria-modal="true" aria-labelledby="recipe-editor-title">
         <div className="recipe-editor-header">
@@ -148,7 +157,7 @@ export default function RecipeEditor({ recipe, onSave, onClose }) {
             <h2 id="recipe-editor-title">Edit recipe</h2>
             <p>Changes are saved to this recipe for everyone who opens it.</p>
           </div>
-          <button type="button" className="recipe-editor-close" aria-label="Close editor" onClick={onClose}>×</button>
+          <button type="button" className="recipe-editor-close" aria-label="Close editor" onClick={handleClose}>×</button>
         </div>
 
         {message && <p className="recipe-editor-status" role="alert">{message}</p>}
@@ -229,7 +238,7 @@ export default function RecipeEditor({ recipe, onSave, onClose }) {
           />
 
           <div className="recipe-editor-actions">
-            <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
+            <button type="button" onClick={handleClose} disabled={saving}>Cancel</button>
             <button type="submit" className="recipe-editor-primary" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>

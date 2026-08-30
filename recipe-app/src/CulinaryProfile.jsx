@@ -64,6 +64,8 @@ function toFormState(profile) {
     nutrition_sodium_mg: nutritionGoals.targets?.sodium_mg ?? '',
     nutrition_calories_max: nutritionGoals.targets?.calories_max ?? '',
     lifestyle_appetite_gentle: value.lifestyle_modes?.includes('appetite_gentle') ?? false,
+    budget_band: value.budget_band || 'flexible',
+    meal_budget_usd: value.meal_budget_usd ?? '',
     learn_from_activity: value.consent_flags?.learn_from_activity ?? false,
     share_anon_evals: value.consent_flags?.share_anon_evals ?? false,
   }
@@ -76,6 +78,7 @@ function toggleValue(values, value) {
 export default function CulinaryProfile({ open, profile, loading, saving, error, onSave, onClose }) {
   const [form, setForm] = useState(() => toFormState(profile))
   const flagAppetiteGentle = useFlag('lifestyle-appetite-gentle')
+  const flagBudget = useFlag('budget-constraints')
 
   useEffect(() => {
     if (open && profile) setForm(toFormState(profile))
@@ -119,6 +122,8 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
       exclude_ingredients: parseList(form.exclude_ingredients_text),
       notes_freeform: form.notes_freeform,
       lifestyle_modes: form.lifestyle_appetite_gentle ? ['appetite_gentle'] : [],
+      budget_band: form.budget_band || 'flexible',
+      meal_budget_usd: form.meal_budget_usd !== '' && !isNaN(Number(form.meal_budget_usd)) ? Number(form.meal_budget_usd) : null,
       consent_flags: {
         learn_from_activity: Boolean(form.learn_from_activity),
         share_anon_evals: Boolean(form.share_anon_evals),
@@ -221,6 +226,20 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
                   <option value="metric">Metric</option>
                 </select>
               </label>
+              {flagBudget && (
+                <>
+                  <label>Budget tier
+                    <select value={form.budget_band} onChange={(event) => setField('budget_band', event.target.value)}>
+                      <option value="flexible">Flexible / Any</option>
+                      <option value="low">Budget / Pantry staples ($)</option>
+                      <option value="medium">Moderate ($$)</option>
+                    </select>
+                  </label>
+                  <label>Target meal budget ($ USD)
+                    <input type="number" min="1" max="500" step="0.5" value={form.meal_budget_usd} onChange={(event) => setField('meal_budget_usd', event.target.value)} placeholder="e.g. 15" />
+                  </label>
+                </>
+              )}
             </div>
 
             <fieldset>
