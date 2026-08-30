@@ -40,6 +40,7 @@ const FLAG_DEFAULTS = {
   'ephemeral-kitchen-mode': true,
   'ratio-integrity': true,
   'meal-atom': true,
+  'arrival-reconciliation': true,
 }
 
 let flaggly
