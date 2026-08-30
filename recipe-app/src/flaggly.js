@@ -39,6 +39,7 @@ const FLAG_DEFAULTS = {
   'leftover-transform-cascade': true,
   'ephemeral-kitchen-mode': true,
   'ratio-integrity': true,
+  'meal-atom': true,
 }
 
 let flaggly
