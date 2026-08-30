@@ -27,6 +27,7 @@ const FLAG_DEFAULTS = {
   'recipe-lineage': true,
   'kitchen-agent': true,
   'cook-outcome-feedback': true,
+  'seasonal-constraints': true,
 }
 
 let flaggly
