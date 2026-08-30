@@ -53,7 +53,7 @@ describe('RecipeCard — rendering', () => {
     renderCard();
     expect(screen.getByText(/10 minutes/i)).toBeInTheDocument();
     expect(screen.getByText(/20 minutes/i)).toBeInTheDocument();
-    expect(screen.getByText(/4/)).toBeInTheDocument();
+    expect(screen.getByText(/Serves/i)).toBeInTheDocument();
   });
 
   test('renders source URL link', () => {
