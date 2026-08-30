@@ -24,6 +24,7 @@ const FLAG_DEFAULTS = {
   'lifestyle-appetite-gentle': false,
   'budget-constraints': true,
   'grocery-export-plus': true,
+  'recipe-lineage': true,
   'kitchen-agent': true,
 }
 
