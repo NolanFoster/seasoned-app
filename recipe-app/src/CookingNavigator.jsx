@@ -4,6 +4,7 @@ import useGestureMode from './useGestureMode.js'
 import useNaturalVoice from './useNaturalVoice.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
+import { useMealPlan } from './MealPlanContext.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -335,6 +336,7 @@ export default function CookingNavigator({
     || recipe.appliedConstraints?.hard_allergens
     || []
   const total = instructions.length
+  const mealPlanContext = useMealPlan() // Might be null if outside planner
 
   const [currentStep, setCurrentStep] = useState(-1)
   const [usedIngredients, setUsedIngredients] = useState(new Set())
@@ -368,6 +370,7 @@ export default function CookingNavigator({
   const cookMenuTriggerRef = useRef(null)
   const [showRecipe, setShowRecipe] = useState(false)
   const [completionOpen, setCompletionOpen] = useState(false)
+  const [scheduleLeftover, setScheduleLeftover] = useState(false)
   const [depletionWorking, setDepletionWorking] = useState(false)
   const [depletionError, setDepletionError] = useState('')
   const [depletionEdits, setDepletionEdits] = useState({})
@@ -530,6 +533,17 @@ export default function CookingNavigator({
         rating: cookRating > 0 ? cookRating : undefined,
         tags: cookTags.length > 0 ? cookTags : undefined,
       })
+    }
+    if (scheduleLeftover && mealPlanContext) {
+      // Add to tomorrow's lunch as a simple heuristic
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const yyyy = tomorrow.getFullYear();
+      const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const dd = String(tomorrow.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const leftoverRecipe = { ...recipe, id: recipe.id + '-leftover', name: recipe.name + ' (Leftovers)', isLeftover: true };
+      mealPlanContext.addMeal(dateStr, 'lunch', leftoverRecipe);
     }
     if (updatePantry && depletionPlan.length > 0 && onDepletePantry) {
       let operations
