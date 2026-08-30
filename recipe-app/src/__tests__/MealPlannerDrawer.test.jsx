@@ -58,3 +58,31 @@ describe('normalizeApiResponse pantry gap filling', () => {
     expect(item.missingQuantity).toBeUndefined()
   })
 })
+
+describe('normalizeApiResponse duplicate items', () => {
+  it('collapses an ingredient the worker returned under two categories', () => {
+    const items = normalizeApiResponse([
+      {
+        category: 'Dairy',
+        items: [
+          { name: 'unsalted butter', quantity: '3 tablespoons' },
+          { name: 'unsalted butter', quantity: '4 tablespoons' },
+        ],
+      },
+      {
+        category: 'Pantry Staples',
+        items: [
+          { name: 'unsalted butter', quantity: '3 tablespoons' },
+          { name: 'unsalted butter', quantity: '4 tablespoons' },
+        ],
+      },
+    ])
+
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({
+      name: 'unsalted butter',
+      quantity: '7 tbsp',
+      category: 'Dairy',
+    })
+  })
+})

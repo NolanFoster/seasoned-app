@@ -4,7 +4,7 @@ import { useMealPlan } from './MealPlanContext.jsx'
 import GroceryListModal from './GroceryListModal.jsx'
 import GeneratingGroceryCard from './GeneratingGroceryCard.jsx'
 import { flattenIngredients } from './GroceryListModal.jsx'
-import { classifyGroceryItems, getExpiringPantryItems } from '../../shared/pantry-planning.js'
+import { classifyGroceryItems, getExpiringPantryItems, mergeDuplicateGroceryItems } from '../../shared/pantry-planning.js'
 import PlannerSuggestions from './PlannerSuggestions.jsx'
 
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
@@ -122,14 +122,18 @@ export function normalizeApiResponse(categories, pantryItems = [], pantryPlanner
       })
     })
   })
-  if (!pantryPlannerEnabled) return items
+  // The worker runs the same pass, but the app and the worker deploy
+  // separately: a response from an older worker still reaches the shopper with
+  // the same ingredient repeated across aisles unless the client collapses it.
+  const deduped = mergeDuplicateGroceryItems(items)
+  if (!pantryPlannerEnabled) return deduped
 
   // The worker already applies the pantry quantity and returns the remaining
   // gap as `quantity`. Reclassify against the live client snapshot, but start
   // from the original request quantity; otherwise a partial match is
   // subtracted twice (for example, 2 requested - 1 on hand becomes a 1-item
   // response that is then incorrectly marked owned by the browser).
-  const itemsForClassification = items.map((item) => ({
+  const itemsForClassification = deduped.map((item) => ({
     ...item,
     quantity: item.requestedQuantity ?? item.quantity,
   }))

@@ -263,6 +263,66 @@ describe('Grocery List Handler', () => {
     expect(data.categories[0].items).toHaveLength(2);
   });
 
+  it('merges an item the model repeated within a category, summing amounts', async () => {
+    const dupJson = JSON.stringify([{
+      category: 'Dairy',
+      items: [
+        { name: 'unsalted butter', quantity: '3 tablespoons', isStaple: false },
+        { name: 'unsalted butter', quantity: '4 tablespoons', isStaple: false }
+      ]
+    }]);
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: dupJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', {
+      ingredients: ['3 tablespoons unsalted butter', '4 tablespoons unsalted butter']
+    });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.categories).toHaveLength(1);
+    expect(data.categories[0].items).toEqual([
+      expect.objectContaining({ name: 'unsalted butter', quantity: '7 tbsp' })
+    ]);
+  });
+
+  it('drops lines the model mirrored into a second category instead of summing them', async () => {
+    // The 3B aggregator repeats a whole block under a second aisle, which
+    // reached shoppers as the same butter listed four times.
+    const mirroredJson = JSON.stringify([
+      {
+        category: 'Dairy',
+        items: [
+          { name: 'unsalted butter', quantity: '3 tablespoons', isStaple: false },
+          { name: 'Parmesan cheese', quantity: '2 tablespoons', isStaple: false }
+        ]
+      },
+      {
+        category: 'Pantry Staples',
+        items: [
+          { name: 'Parmesan cheese', quantity: '2 tablespoons', isStaple: true },
+          { name: 'unsalted butter', quantity: '3 tbsp', isStaple: true }
+        ]
+      }
+    ]);
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: mirroredJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', {
+      ingredients: ['3 tablespoons unsalted butter', '2 tablespoons Parmesan cheese']
+    });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    // Every line came from Dairy first, so Pantry Staples empties out entirely.
+    expect(data.categories).toHaveLength(1);
+    expect(data.categories[0].category).toBe('Dairy');
+    expect(data.categories[0].items.map((i) => [i.name, i.quantity])).toEqual([
+      ['unsalted butter', '3 tablespoons'],
+      ['Parmesan cheese', '2 tablespoons']
+    ]);
+  });
+
   it('drops items the model added that no ingredient line mentions', async () => {
     // The aggregator prompt has to describe foods to explain aisles, and a 3B
     // model re-emits those examples as real lines. "taco seasoning" is the one

@@ -255,6 +255,107 @@ export function findPantryMatch(groceryItem, pantryItems, { now = new Date() } =
   })[0].item
 }
 
+/** Render a grocery line's amount the way the UI shows it ("3 tablespoons"). */
+function displayQuantity(item) {
+  return `${String(item?.quantity ?? '').trim()} ${String(item?.unit ?? '').trim()}`.trim()
+}
+
+/**
+ * Stable key for "the same amount written twice": canonical when the amount
+ * parses ("3 tablespoons" and "3 tbsp" are one key), literal text otherwise.
+ */
+function quantityKey(item) {
+  const parsed = parsePantryQuantity(item?.quantity, item?.unit)
+  if (parsed.amount === null) return displayQuantity(item).toLowerCase()
+  return `${parsed.amount}|${parsed.unit || ''}`
+}
+
+/**
+ * Fold `extra`'s amount into `target`, which is already in the merged list.
+ * Amounts are summed only when both sides parse to compatible units; anything
+ * else is kept side by side ("1 can + 2 cups") so no requested amount is lost.
+ */
+function mergeQuantityInto(target, extra) {
+  const targetText = displayQuantity(target)
+  const extraText = displayQuantity(extra)
+  if (!extraText) return
+  if (!targetText) {
+    target.quantity = extra.quantity ?? ''
+    target.unit = extra.unit ?? ''
+    return
+  }
+
+  const left = parsePantryQuantity(target.quantity, target.unit)
+  const right = parsePantryQuantity(extra.quantity, extra.unit)
+  if (left.amount !== null && right.amount !== null && compatibleUnits(left.unit, right.unit)) {
+    const converted = left.unit && right.unit
+      ? convertAmount(right.amount, right.unit, left.unit)
+      : right.amount
+    if (converted !== null) {
+      target.quantity = `${formatAmount(left.amount + converted)}${left.unit ? ` ${left.unit}` : ''}`
+      target.unit = ''
+      return
+    }
+  }
+
+  // Units that cannot be summed (a can plus a cup) stay visible as both parts.
+  const parts = targetText.split(' + ')
+  if (parts.includes(extraText)) return
+  target.quantity = [...parts, extraText].join(' + ')
+  target.unit = ''
+}
+
+/**
+ * Collapse grocery lines naming the same ingredient into a single line.
+ *
+ * The aggregator prompt asks the LLM for one line per ingredient, but a small
+ * instruct model still repeats an item inside a category and mirrors the same
+ * lines under a second aisle ("unsalted butter 3 tbsp" and "4 tbsp" listed in
+ * Dairy and again in Pantry Staples). Nothing downstream can tell those from
+ * genuine lines, so collapse them here, before pantry classification.
+ *
+ * Matching is exact on the normalized name: the lenient token-overlap matcher
+ * used for pantry lookups would fold "peanut butter" into "butter". The first
+ * occurrence keeps its name, category and staple flag, so aisle order and the
+ * buy/owned classification stay as the model intended.
+ *
+ * Amounts are summed, with one exception: an identical amount arriving from a
+ * different category is a mirrored copy of a line already counted, and summing
+ * it would double the quantity the cook has to buy. Repeats within one
+ * category are still summed — there they are separate recipe lines the model
+ * failed to combine.
+ */
+export function mergeDuplicateGroceryItems(items) {
+  const merged = []
+  const byName = new Map()
+  for (const item of Array.isArray(items) ? items : []) {
+    const key = item && typeof item === 'object' && item.name
+      ? normalizeIngredientName(item.name) || String(item.name).trim().toLowerCase()
+      : ''
+    if (!key) {
+      merged.push(item)
+      continue
+    }
+
+    const categoryKey = String(item.category ?? '').trim().toLowerCase()
+    const existing = byName.get(key)
+    if (!existing) {
+      const copy = { ...item }
+      byName.set(key, { item: copy, amountSources: new Map([[quantityKey(item), categoryKey]]) })
+      merged.push(copy)
+      continue
+    }
+
+    const amountKey = quantityKey(item)
+    const seenIn = existing.amountSources.get(amountKey)
+    if (seenIn !== undefined && seenIn !== categoryKey) continue
+
+    mergeQuantityInto(existing.item, item)
+    if (seenIn === undefined) existing.amountSources.set(amountKey, categoryKey)
+  }
+  return merged
+}
+
 /**
  * Mark generated grocery lines as buy, owned, or optional_staple. Quantities
  * are reduced only when both sides provide compatible numeric units. The
