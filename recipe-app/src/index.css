@@ -1652,6 +1652,157 @@ textarea:focus-visible {
   font-size: var(--fs-xs);
 }
 
+/* ── Living Project Modal ──────────────────────────────────────────────── */
+.living-project-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(var(--color-shadow-rgb) / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 16px;
+}
+.living-project-modal-card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 0.25);
+}
+.living-project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.living-project-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.living-project-header h2 {
+  font-size: var(--fs-lg);
+  margin: 2px 0 0;
+}
+.living-project-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.living-project-body {
+  display: flex;
+  flex: 1;
+  min-height: 380px;
+  overflow: hidden;
+}
+.living-project-timeline {
+  width: 220px;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 12px;
+  overflow-y: auto;
+}
+.living-stage-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.6;
+}
+.living-stage-step--current {
+  opacity: 1;
+}
+.living-stage-step--past {
+  opacity: 0.9;
+}
+.living-stage-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.living-stage-step--current .living-stage-dot {
+  background: var(--accent);
+  color: white;
+}
+.living-stage-step--past .living-stage-dot {
+  background: var(--color-secondary, #28a745);
+  color: white;
+}
+.living-stage-info {
+  display: flex;
+  flex-direction: column;
+}
+.living-stage-info small {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.living-active-stage-card {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.living-active-stage-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.living-active-stage-header h3 {
+  margin: 4px 0 0;
+  font-size: var(--fs-lg);
+}
+.living-active-instructions ul,
+.living-condition-hints ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: var(--fs-sm);
+}
+.living-condition-hints {
+  padding: 10px 14px;
+  background: rgb(var(--color-info-rgb) / 0.1);
+  border-left: 3px solid var(--color-info);
+  border-radius: var(--radius-sm);
+}
+.living-stage-actions {
+  margin-top: auto;
+  padding-top: 10px;
+}
+.living-advance-btn {
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
 /* ── Nutrition Overtrust Friction & Traffic Lights ────────────────────── */
 .recipe-nutrition-trust-wrap {
   margin: 12px 0 8px;
