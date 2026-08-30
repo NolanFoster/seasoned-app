@@ -69,8 +69,31 @@ function aliasPhrase(value) {
   return result
 }
 
+/*
+ * Normalization is pure and runs O(items x lines) times during grocery
+ * grounding and pantry classification, so the same handful of strings is
+ * normalized over and over. Memoize it, bounded so a long-lived isolate cannot
+ * grow the cache without limit.
+ */
+const NORMALIZED_NAME_CACHE = new Map()
+const NORMALIZED_NAME_CACHE_LIMIT = 5000
+
 /** Return a stable, quantity-free ingredient name for fuzzy matching. */
 export function normalizeIngredientName(value) {
+  const cacheKey = typeof value === 'string' ? value : null
+  if (cacheKey !== null) {
+    const cached = NORMALIZED_NAME_CACHE.get(cacheKey)
+    if (cached !== undefined) return cached
+  }
+  const normalized = computeNormalizedIngredientName(value)
+  if (cacheKey !== null) {
+    if (NORMALIZED_NAME_CACHE.size >= NORMALIZED_NAME_CACHE_LIMIT) NORMALIZED_NAME_CACHE.clear()
+    NORMALIZED_NAME_CACHE.set(cacheKey, normalized)
+  }
+  return normalized
+}
+
+function computeNormalizedIngredientName(value) {
   let text = asText(value)
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')

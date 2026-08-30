@@ -37,17 +37,18 @@ def duplicate_input_text_group_count(rows: list[dict[str, Any]]) -> int:
 
 
 BASELINE_PROMPT = """You are a grocery list aggregator. Given the raw ingredient lines below, you must:
-1. Normalize ingredient names (e.g. "all-purpose flour" and "flour" are the same thing).
-2. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
-3. Sum quantities where units match: two "1 cup mayonnaise" lines must become one entry with "2 cups mayonnaise" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
-4. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
-5. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
-6. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
-   - Jarred/canned condiments (salsa, mayo, ketchup, pickles, taco seasoning) → Pantry Staples unless the line explicitly says frozen.
-   - Lemon juice, lime juice, vinegar, oils for cooking → Pantry Staples. Beverages is for drink products (juice cartons, soda, wine). Frozen is only for frozen goods or when the recipe clearly means the frozen product.
-   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source does (e.g. "fresh cilantro").
-7. Mark isStaple: true only for common household staples (salt, pepper, basic spices many homes keep, flour, sugar, baking powder/soda, soy sauce, garlic, onion, eggs, butter, common oils/vinegar).
-8. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
+1. Output only ingredients that appear in the ingredient lines. Never add an item the lines do not mention — including any food named in these instructions, which describe wording and aisles rather than things to buy.
+2. Normalize ingredient names: a line naming a variety of an ingredient and a line naming the plain ingredient are the same thing.
+3. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
+4. Sum quantities where units match: two "1 cup <ingredient>" lines must become one entry with "2 cups <ingredient>" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
+5. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
+6. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
+7. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
+   - Jarred, canned, bottled or pickled condiments and dry seasoning mixes → Pantry Staples unless the line explicitly says frozen.
+   - Bottled citrus juices, vinegars and cooking oils → Pantry Staples. Beverages is only for products bought to drink. Frozen is only for frozen goods or when the recipe clearly means the frozen product.
+   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source line does.
+8. Mark isStaple: true only for common household staples: basic seasonings and spices, baking basics, common cooking oils and vinegars, and the everyday refrigerator basics most homes keep on hand.
+9. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
 
 Ingredient lines:
 {{ingredient_lines}}
