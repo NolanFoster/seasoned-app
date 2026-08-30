@@ -871,6 +871,31 @@ describe('Generate Handler - Unit Tests', () => {
       consoleSpy.mockRestore();
     });
 
+    it('should return the generation trace id so a save can be scored as feedback', async () => {
+      const envWithOpik = {
+        ...enhancedMockEnv,
+        ...mockEnvWithOpik
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken', 'rice'] });
+      const response = await handleGenerate(request, envWithOpik, corsHeaders);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.traceId).toBe('mock-trace-id');
+      expect(data.recipe.traceId).toBe('mock-trace-id');
+    });
+
+    it('should omit the trace id when tracing is disabled', async () => {
+      const request = createPostRequest('/generate', { ingredients: ['chicken', 'rice'] });
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.traceId).toBeUndefined();
+      expect(data.recipe.traceId).toBeUndefined();
+    });
+
     it('should gracefully handle Opik tracing disabled when no API key', async () => {
       const consoleSpy = vi.spyOn(console, 'log');
 

@@ -231,6 +231,80 @@ export class OpikClient {
   }
 
   /**
+   * Resolve the id of a trace so it can be scored after the request that
+   * created it has finished. The SDK exposes the saved trace under `data`,
+   * older shapes put the id on the trace itself.
+   * @param {Object} trace - Opik trace object
+   * @returns {string|null} Trace id, or null when it cannot be resolved
+   */
+  getTraceId(trace) {
+    if (!trace) return null;
+
+    const traceId = (trace.data && trace.data.id) || trace.id || null;
+    return typeof traceId === 'string' && traceId.trim() !== '' ? traceId : null;
+  }
+
+  /**
+   * Log a feedback score against an existing trace. This is how user signals
+   * that arrive after generation finished (for example saving a generated
+   * recipe) are attached back to the trace that produced the recipe.
+   * @param {string} traceId - Id of the trace to score
+   * @param {Object} score - Score details
+   * @param {string} score.name - Feedback score name
+   * @param {number} score.value - Feedback score value
+   * @param {string} score.reason - Why the score was given (optional)
+   * @param {string} score.categoryName - Category label for the score (optional)
+   * @param {string} score.source - Score source: 'sdk', 'ui' or 'online_scoring'
+   * @returns {Promise<boolean>} True when the score was queued and flushed
+   */
+  async logTraceFeedback(traceId, { name, value, reason = null, categoryName = null, source = 'sdk' } = {}) {
+    if (!this.client) {
+      console.warn('Opik client not initialized, skipping feedback score');
+      return false;
+    }
+
+    if (typeof traceId !== 'string' || traceId.trim() === '' || typeof name !== 'string' || typeof value !== 'number') {
+      console.warn('Invalid feedback score payload, skipping', { traceId, name, value });
+      return false;
+    }
+
+    try {
+      const projectName = (this.client.config && this.client.config.projectName) || 'recipe-generation';
+      const scorePayload = {
+        id: traceId,
+        projectName,
+        name,
+        value,
+        source,
+        ...(reason && { reason }),
+        ...(categoryName && { categoryName })
+      };
+
+      const feedbackQueue = this.client.traceFeedbackScoresBatchQueue;
+      if (feedbackQueue && typeof feedbackQueue.create === 'function') {
+        feedbackQueue.create(scorePayload);
+      } else if (this.client.api?.traces?.scoreBatchOfTraces) {
+        await this.client.api.traces.scoreBatchOfTraces({ scores: [scorePayload] });
+      } else {
+        console.warn('Opik SDK exposes no feedback score API, skipping feedback score');
+        return false;
+      }
+
+      await this.flush();
+      return true;
+    } catch (error) {
+      console.error('Failed to log Opik feedback score:', {
+        message: error.message,
+        stack: error.stack,
+        traceId: traceId,
+        name: name,
+        value: value
+      });
+      return false;
+    }
+  }
+
+  /**
    * Flush the Opik client to ensure all data is sent
    */
   async flush() {

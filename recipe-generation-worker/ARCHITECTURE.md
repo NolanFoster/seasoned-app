@@ -242,6 +242,7 @@ graph TB
 | `/` | GET | Service information | None | Service details |
 | `/health` | GET | Service health check | None | Health status |
 | `/generate` | POST | Generate recipe | `{recipeName?, ingredients?, cuisine?, dietary?, servings?, mealType?, cookingMethod?, maxCookTime?}` | `{success: boolean, recipe: Recipe, environment: string}` |
+| `/feedback` | POST | Record a user signal against a generation trace | `{traceId, event, recipeId?}` | `{success: boolean, recorded: boolean, event: string}` |
 
 ## Recipe Generation Features
 

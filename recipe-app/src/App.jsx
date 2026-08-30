@@ -714,6 +714,9 @@ export default function App() {
         allergenValidation: r.allergenValidation || data.allergenValidation || null,
         processSafetySummary: r.processSafetySummary || data.processSafetySummary || null,
         processSafetyValidation: r.processSafetyValidation || null,
+        // Opik trace behind this generation, sent back as positive feedback if
+        // the user saves the recipe.
+        generationTraceId: data.traceId || r.traceId || null,
       }
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
@@ -938,6 +941,24 @@ export default function App() {
   }
 
   // --- Save ---
+  // Saving is the strongest signal that the user liked what the model produced,
+  // so it is logged back onto the generation trace as positive feedback. Fire
+  // and forget: observability must never affect the save the user asked for.
+  function reportGenerationSaveFeedback(recipe, savedId) {
+    const traceId = recipe?.generationTraceId
+    if (!traceId || !RECIPE_GENERATION_URL) return
+    if (recipe.source !== 'ai_generated' && recipe.source !== 'elevated') return
+    fetch(`${RECIPE_GENERATION_URL}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        traceId,
+        event: 'recipe_saved',
+        ...(savedId ? { recipeId: savedId } : {}),
+      }),
+    }).catch(() => {})
+  }
+
   async function doSave(r) {
     setSaveState('saving')
     const recipeUrl = r.source === 'adapted'
@@ -995,6 +1016,7 @@ export default function App() {
       }
       setSaveState('saved')
       void culinaryEvents.recordEvent('recipe_saved', r)
+      reportGenerationSaveFeedback(r, data.id || null)
     } catch (e) {
       setSaveState('error')
     }
