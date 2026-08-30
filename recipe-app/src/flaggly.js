@@ -38,6 +38,7 @@ const FLAG_DEFAULTS = {
   'csa-produce-intake': true,
   'leftover-transform-cascade': true,
   'ephemeral-kitchen-mode': true,
+  'ratio-integrity': true,
 }
 
 let flaggly

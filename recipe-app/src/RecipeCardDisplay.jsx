@@ -25,6 +25,7 @@ import { estimateRecipeCost } from '../../shared/ingredient-cost-heuristics.js'
 import { composeMealSides } from '../../shared/complete-meal.js'
 import { computeTrafficLights, computeNutritionConfidence } from '../../shared/nutrition-friction.js'
 import { suggestLeftoverTransforms } from '../../shared/leftover-transforms.js'
+import { evaluateRatioIntegrity } from '../../shared/ratio-integrity.js'
 import { useFlag } from './flaggly.js'
 
 function appliedConstraintLabels(constraints) {
@@ -250,6 +251,14 @@ export function RecipeProvenance({ recipe }) {
         <span className="recipe-provenance-item">
           <strong>Nutrition</strong> {typeof nutritionCoverage === 'number' ? `${Math.round(nutritionCoverage)}% ingredient coverage` : 'Not calculated'}
         </span>
+        {useFlag('ratio-integrity') && (() => {
+          const ratioReport = evaluateRatioIntegrity(recipe)
+          return (
+            <span className={`recipe-provenance-item recipe-provenance-item--${ratioReport.status}`}>
+              <strong>Ratio check</strong> {ratioReport.status.replace('_', ' ')}
+            </span>
+          )
+        })()}
       </div>
       <p className="recipe-provenance-disclaimer">
         Quality checks are automated signals, not a guarantee. Verify ingredients, labels, and preparation conditions.
