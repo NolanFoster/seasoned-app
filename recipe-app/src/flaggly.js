@@ -26,6 +26,7 @@ const FLAG_DEFAULTS = {
   'grocery-export-plus': true,
   'recipe-lineage': true,
   'kitchen-agent': true,
+  'cook-outcome-feedback': true,
 }
 
 let flaggly
