@@ -259,6 +259,11 @@ export function RecipeProvenance({ recipe }) {
             </span>
           )
         })()}
+        {useFlag('kitchen-physics-packs') && (
+          <span className="recipe-provenance-item">
+            <strong>Physics</strong> Density & heat adjusted
+          </span>
+        )}
       </div>
       <p className="recipe-provenance-disclaimer">
         Quality checks are automated signals, not a guarantee. Verify ingredients, labels, and preparation conditions.
