@@ -46,6 +46,7 @@ export const EQUIPMENT = Object.freeze([
 
 export const SKILL_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced'])
 export const UNITS = Object.freeze(['us', 'metric'])
+export const BUDGET_BANDS = Object.freeze(['low', 'medium', 'flexible'])
 
 export const DEFAULT_CULINARY_PROFILE = Object.freeze({
   diet_tags: Object.freeze([]),
@@ -64,6 +65,8 @@ export const DEFAULT_CULINARY_PROFILE = Object.freeze({
   notes_freeform: '',
   consent_flags: Object.freeze({ learn_from_activity: false, share_anon_evals: false }),
   lifestyle_modes: Object.freeze([]),
+  budget_band: 'flexible',
+  meal_budget_usd: null,
   appetite_gentle: Object.freeze({
     protein_bias: 'high',
     default_servings_delta: -1,
@@ -157,6 +160,8 @@ export function normalizeCulinaryProfile(input = {}, base = DEFAULT_CULINARY_PRO
     source[snake] !== undefined ? source[snake] : source[camel] !== undefined ? source[camel] : defaultValue
   const skill = pick('skill_level', 'skillLevel', fallback.skill_level)
   const units = pick('units_pref', 'unitsPref', fallback.units_pref)
+  const budgetBand = pick('budget_band', 'budgetBand', fallback.budget_band)
+  const mealBudgetUsd = pick('meal_budget_usd', 'mealBudgetUsd', fallback.meal_budget_usd)
   return {
     diet_tags: normalizeList(pick('diet_tags', 'dietTags', fallback.diet_tags)),
     hard_allergens: normalizeList(pick('hard_allergens', 'hardAllergens', fallback.hard_allergens), ALLERGEN_ALIASES),
@@ -176,6 +181,8 @@ export function normalizeCulinaryProfile(input = {}, base = DEFAULT_CULINARY_PRO
       : '',
     consent_flags: normalizeConsentFlags(pick('consent_flags', 'consentFlags', fallback.consent_flags)),
     lifestyle_modes: normalizeList(pick('lifestyle_modes', 'lifestyleModes', fallback.lifestyle_modes)),
+    budget_band: BUDGET_BANDS.includes(budgetBand) ? budgetBand : 'flexible',
+    meal_budget_usd: mealBudgetUsd !== null && mealBudgetUsd !== undefined && Number.isFinite(Number(mealBudgetUsd)) && Number(mealBudgetUsd) > 0 ? Math.round(Number(mealBudgetUsd) * 100) / 100 : null,
     appetite_gentle: pick('appetite_gentle', 'appetiteGentle', fallback.appetite_gentle),
   }
 }
@@ -222,6 +229,8 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     request.exclude_ingredients,
     normalizedProfile.exclude_ingredients,
   )
+  const budgetBand = firstDefined(request.budgetBand, request.budget_band, normalizedProfile.budget_band)
+  const mealBudgetUsd = firstDefined(request.mealBudgetUsd, request.meal_budget_usd, normalizedProfile.meal_budget_usd)
 
   return {
     dietary: constraintList(dietary),
@@ -240,6 +249,8 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     inferredPreferences: request.inferredPreferences ?? request.inferred_preferences ?? null,
     units: request.units ?? request.units_pref ?? normalizedProfile.units_pref,
     lifestyleModes: request.lifestyleModes ?? request.lifestyle_modes ?? normalizedProfile.lifestyle_modes,
+    budgetBand: BUDGET_BANDS.includes(budgetBand) ? budgetBand : 'flexible',
+    mealBudgetUsd: mealBudgetUsd !== null && mealBudgetUsd !== undefined && Number.isFinite(Number(mealBudgetUsd)) && Number(mealBudgetUsd) > 0 ? Math.round(Number(mealBudgetUsd) * 100) / 100 : null,
   }
 }
 
@@ -272,6 +283,12 @@ export function validateCulinaryProfileInput(input) {
   if (skill !== undefined && !SKILL_LEVELS.includes(skill)) errors.push('skill_level must be beginner, intermediate, or advanced')
   const units = input.units_pref ?? input.unitsPref
   if (units !== undefined && !UNITS.includes(units)) errors.push('units_pref must be us or metric')
+  const budgetBand = input.budget_band ?? input.budgetBand
+  if (budgetBand !== undefined && !BUDGET_BANDS.includes(budgetBand)) errors.push('budget_band must be low, medium, or flexible')
+  const mealBudgetUsd = input.meal_budget_usd ?? input.mealBudgetUsd
+  if (mealBudgetUsd !== undefined && mealBudgetUsd !== null && (!Number.isFinite(Number(mealBudgetUsd)) || Number(mealBudgetUsd) < 0 || Number(mealBudgetUsd) > 500)) {
+    errors.push('meal_budget_usd must be a number between 0 and 500')
+  }
   if (input.notes_freeform !== undefined && typeof input.notes_freeform !== 'string') errors.push('notes_freeform must be a string')
   if (input.nutrition_goals !== undefined && (!input.nutrition_goals || typeof input.nutrition_goals !== 'object' || Array.isArray(input.nutrition_goals))) {
     errors.push('nutrition_goals must be an object')

@@ -45,6 +45,8 @@ function initialForm(profile) {
     mealType: "",
     cookingMethod: "",
     nutritionFocus: profile?.nutrition_goals?.focus || "",
+    budgetBand: profile?.budget_band || "flexible",
+    mealBudgetUsd: profile?.meal_budget_usd ?? "",
     ingredients: "",
     excludeIngredients: listValue(profile?.exclude_ingredients).join(", "),
     usePantry: false,
@@ -113,6 +115,12 @@ export default function GenerationComposer({
       ingredients: commaSeparated(form.ingredients),
       excludeIngredients: commaSeparated(form.excludeIngredients),
     };
+    if (form.budgetBand && form.budgetBand !== "flexible") {
+      overrides.budgetBand = form.budgetBand;
+    }
+    if (form.mealBudgetUsd !== "" && !isNaN(Number(form.mealBudgetUsd))) {
+      overrides.mealBudgetUsd = Number(form.mealBudgetUsd);
+    }
     if (form.nutritionFocus) {
       overrides.nutritionGoals = { focus: form.nutritionFocus };
     }
@@ -272,6 +280,29 @@ export default function GenerationComposer({
                   </option>
                 ))}
               </select>
+            </label>
+            <label>
+              Budget constraint
+              <select
+                value={form.budgetBand}
+                onChange={(event) => setField("budgetBand", event.target.value)}
+              >
+                <option value="flexible">Flexible ($$$)</option>
+                <option value="low">Budget / Pantry staples ($)</option>
+                <option value="medium">Moderate ($$)</option>
+              </select>
+            </label>
+            <label>
+              Target budget ($ USD)
+              <input
+                type="number"
+                min="1"
+                max="500"
+                step="0.5"
+                value={form.mealBudgetUsd}
+                onChange={(event) => setField("mealBudgetUsd", event.target.value)}
+                placeholder="e.g. 15"
+              />
             </label>
           </div>
 

@@ -19,6 +19,8 @@ export const EMPTY_CULINARY_PROFILE = {
   notes_freeform: '',
   consent_flags: { learn_from_activity: false, share_anon_evals: false },
   lifestyle_modes: [],
+  budget_band: 'flexible',
+  meal_budget_usd: null,
 }
 
 function profileUrl() {
