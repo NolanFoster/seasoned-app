@@ -466,7 +466,16 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
               {recipe.adaptationNotes.map((note, index) => <li key={`${note}-${index}`}>{note}</li>)}
             </ul>
           )}
-          {recipe.adapted_from && <p className="adaptation-lineage">Adapted from the original recipe.</p>}
+          {recipe.adapted_from && (
+            <div className="adaptation-lineage" style={{ margin: '8px 0', padding: '6px 10px', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em' }}>
+              <span>🌱 <strong>Lineage:</strong> Adapted from original <em>{recipe.original_name || recipe.parent_recipe_name || 'recipe'}</em></span>
+              {recipe.adaptation_timestamp && (
+                <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
+                  Variant generated on {new Date(recipe.adaptation_timestamp).toLocaleDateString()}
+                </small>
+              )}
+            </div>
+          )}
         </section>
       )}
 
