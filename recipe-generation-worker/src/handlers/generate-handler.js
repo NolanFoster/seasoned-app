@@ -1103,9 +1103,9 @@ function buildLLaMAPrompt(requestData, contexts) {
       requirements.push(`inferred taste preferences (soft guidance, do not override user avoids/allergens): ${inferredLikes.join('; ')}`);
     }
   }
-  
+
   if (requestData.lifestyleModes && requestData.lifestyleModes.includes('appetite_gentle')) {
-    requirements.push(`lifestyle mode active: 'appetite_gentle' (Protein-forward, gentler meals for smaller appetite. High protein density per serving, smaller default portions, avoid extreme spice/heavy grease/deep frying, favor soft/brothy/simple textures)`);
+    requirements.push('lifestyle mode active: \'appetite_gentle\' (Protein-forward, gentler meals for smaller appetite. High protein density per serving, smaller default portions, avoid extreme spice/heavy grease/deep frying, favor soft/brothy/simple textures)');
   }
 
   if (requirements.length > 0) {
