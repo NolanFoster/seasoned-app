@@ -67,6 +67,11 @@ export const DEFAULT_CULINARY_PROFILE = Object.freeze({
   lifestyle_modes: Object.freeze([]),
   budget_band: 'flexible',
   meal_budget_usd: null,
+  seasonality: Object.freeze({
+    enabled: false,
+    hemisphere: 'n',
+    climate_bias: 'off'
+  }),
   appetite_gentle: Object.freeze({
     protein_bias: 'high',
     default_servings_delta: -1,
@@ -183,6 +188,7 @@ export function normalizeCulinaryProfile(input = {}, base = DEFAULT_CULINARY_PRO
     lifestyle_modes: normalizeList(pick('lifestyle_modes', 'lifestyleModes', fallback.lifestyle_modes)),
     budget_band: BUDGET_BANDS.includes(budgetBand) ? budgetBand : 'flexible',
     meal_budget_usd: mealBudgetUsd !== null && mealBudgetUsd !== undefined && Number.isFinite(Number(mealBudgetUsd)) && Number(mealBudgetUsd) > 0 ? Math.round(Number(mealBudgetUsd) * 100) / 100 : null,
+    seasonality: pick('seasonality', 'seasonality', fallback.seasonality),
     appetite_gentle: pick('appetite_gentle', 'appetiteGentle', fallback.appetite_gentle),
   }
 }
@@ -231,6 +237,7 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
   )
   const budgetBand = firstDefined(request.budgetBand, request.budget_band, normalizedProfile.budget_band)
   const mealBudgetUsd = firstDefined(request.mealBudgetUsd, request.meal_budget_usd, normalizedProfile.meal_budget_usd)
+  const seasonality = firstDefined(request.seasonality, normalizedProfile.seasonality)
 
   return {
     dietary: constraintList(dietary),
@@ -251,6 +258,7 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     lifestyleModes: request.lifestyleModes ?? request.lifestyle_modes ?? normalizedProfile.lifestyle_modes,
     budgetBand: BUDGET_BANDS.includes(budgetBand) ? budgetBand : 'flexible',
     mealBudgetUsd: mealBudgetUsd !== null && mealBudgetUsd !== undefined && Number.isFinite(Number(mealBudgetUsd)) && Number(mealBudgetUsd) > 0 ? Math.round(Number(mealBudgetUsd) * 100) / 100 : null,
+    seasonality: seasonality || { enabled: false, hemisphere: 'n', climate_bias: 'off' },
   }
 }
 

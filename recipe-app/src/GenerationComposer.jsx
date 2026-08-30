@@ -47,6 +47,7 @@ function initialForm(profile) {
     nutritionFocus: profile?.nutrition_goals?.focus || "",
     budgetBand: profile?.budget_band || "flexible",
     mealBudgetUsd: profile?.meal_budget_usd ?? "",
+    seasonality: profile?.seasonality?.enabled ? "in_season" : "any",
     ingredients: "",
     excludeIngredients: listValue(profile?.exclude_ingredients).join(", "),
     usePantry: false,
@@ -120,6 +121,9 @@ export default function GenerationComposer({
     }
     if (form.mealBudgetUsd !== "" && !isNaN(Number(form.mealBudgetUsd))) {
       overrides.mealBudgetUsd = Number(form.mealBudgetUsd);
+    }
+    if (form.seasonality === "in_season") {
+      overrides.seasonality = { enabled: true, hemisphere: profile?.seasonality?.hemisphere || "n", climate_bias: "prefer_lower_impact" };
     }
     if (form.nutritionFocus) {
       overrides.nutritionGoals = { focus: form.nutritionFocus };
@@ -300,9 +304,21 @@ export default function GenerationComposer({
                 max="500"
                 step="0.5"
                 value={form.mealBudgetUsd}
-                onChange={(event) => setField("mealBudgetUsd", event.target.value)}
+                onChange={(event) =>
+                  setField("mealBudgetUsd", event.target.value)
+                }
                 placeholder="e.g. 15"
               />
+            </label>
+            <label>
+              Seasonality
+              <select
+                value={form.seasonality}
+                onChange={(event) => setField("seasonality", event.target.value)}
+              >
+                <option value="any">Year-round / Any</option>
+                <option value="in_season">Peak In-Season & Climate-smart</option>
+              </select>
             </label>
           </div>
 
