@@ -134,6 +134,7 @@ describe('Recipe provenance and quality bar', () => {
     expect(provenance).toHaveTextContent('1 similar recipe')
     expect(provenance).toHaveTextContent('80% ingredient coverage')
     expect(provenance).toHaveTextContent('Ratio check')
+    expect(provenance).toHaveTextContent('Physics')
   })
 
   test('does not add AI provenance chrome to a plain clipped recipe', () => {

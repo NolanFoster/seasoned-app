@@ -41,6 +41,7 @@ const FLAG_DEFAULTS = {
   'ratio-integrity': true,
   'meal-atom': true,
   'arrival-reconciliation': true,
+  'kitchen-physics-packs': true,
 }
 
 let flaggly
