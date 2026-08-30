@@ -30,6 +30,7 @@ const FLAG_DEFAULTS = {
   'seasonal-constraints': true,
   'locale-ingredient-graph': true,
   'navigator-vision-assist': true,
+  'multi-dish-navigator': true,
 }
 
 let flaggly

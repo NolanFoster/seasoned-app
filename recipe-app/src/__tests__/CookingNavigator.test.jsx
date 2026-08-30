@@ -13,6 +13,7 @@ const flagOverrides = {
   'gesture-support': false,
   'dictation': true,
   'navigator-vision-assist': true,
+  'multi-dish-navigator': true,
 }
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => flagOverrides[key] ?? false,
@@ -931,6 +932,56 @@ describe('CookingNavigator — vision-assisted cooking navigator', () => {
     expect(screen.queryByText('Turn on Visual Assist')).not.toBeInTheDocument()
   })
 })
+
+describe('CookingNavigator — concurrent multi-dish orchestration', () => {
+  const dish1 = {
+    id: 'dish-1',
+    name: 'Roasted Chicken',
+    ingredients: ['1 whole chicken', 'olive oil'],
+    instructions: ['Prep chicken with oil.', 'Bake in oven at 400F for 45 minutes.'],
+  }
+  const dish2 = {
+    id: 'dish-2',
+    name: 'Baked Potatoes',
+    ingredients: ['4 russet potatoes'],
+    instructions: ['Wash and poke potatoes.', 'Bake in oven at 400F for 50 minutes.'],
+  }
+
+  test('renders tabs for multiple recipes and switches active dish progress', () => {
+    render(<CookingNavigator recipe={dish1} recipes={[dish1, dish2]} onClose={jest.fn()} />)
+
+    expect(screen.getByRole('tab', { name: /Roasted Chicken/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Baked Potatoes/i })).toBeInTheDocument()
+
+    // Dish 1 starts at Mise en Place
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByText(/Prep chicken with oil/i)).toBeInTheDocument()
+
+    // Switch tab to Dish 2
+    fireEvent.click(screen.getByRole('tab', { name: /Baked Potatoes/i }))
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByText(/Wash and poke potatoes/i)).toBeInTheDocument()
+  })
+
+  test('flags equipment conflict warning when multiple dishes require same oven concurrently', () => {
+    render(<CookingNavigator recipe={dish1} recipes={[dish1, dish2]} onClose={jest.fn()} />)
+
+    // Advance Dish 1 to Step 2 (oven step)
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+    // Switch to Dish 2 and advance to Step 2 (oven step)
+    fireEvent.click(screen.getByRole('tab', { name: /Baked Potatoes/i }))
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/Equipment Notice/i)
+    expect(screen.getByRole('alert')).toHaveTextContent(/Both "Roasted Chicken" and "Baked Potatoes" need the oven/i)
+  })
+})
+
 
 
 

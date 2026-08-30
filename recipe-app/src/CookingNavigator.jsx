@@ -5,6 +5,7 @@ import useNaturalVoice from './useNaturalVoice.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
 import { inferStepVisionHint, formatVisionFeedback } from '../../shared/vision-coach.js'
+import { detectEquipmentConflicts, normalizeMultiDishSession } from '../../shared/multi-dish.js'
 import { useMealPlan } from './MealPlanContext.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
@@ -325,21 +326,42 @@ function formatTime(secs) {
 
 export default function CookingNavigator({
   recipe,
+  recipes: multiRecipesProp,
   onClose,
   pantryItems = [],
   pantryPlannerEnabled = false,
   onDepletePantry,
   onCookFeedback,
 }) {
-  const instructions = normalizeInstructions(recipe.instructions)
-  const ingredients = normalizeIngredients(recipe.ingredients)
-  const hardAllergens = recipe.appliedConstraints?.hardAllergens
-    || recipe.appliedConstraints?.hard_allergens
+  const multiDishEnabled = useFlag('multi-dish-navigator')
+  const dishes = multiDishEnabled && Array.isArray(multiRecipesProp) && multiRecipesProp.length > 0
+    ? normalizeMultiDishSession(multiRecipesProp)
+    : normalizeMultiDishSession([recipe])
+
+  const [activeDishIndex, setActiveDishIndex] = useState(0)
+  const [dishProgress, setDishProgress] = useState(() => dishes.map(() => -1)) // current step per dish
+
+  const activeDish = dishes[activeDishIndex] || dishes[0]
+  const instructions = normalizeInstructions(activeDish.instructions)
+  const ingredients = normalizeIngredients(activeDish.ingredients)
+  const hardAllergens = activeDish.appliedConstraints?.hardAllergens
+    || activeDish.appliedConstraints?.hard_allergens
+    || recipe?.appliedConstraints?.hardAllergens
     || []
   const total = instructions.length
   const mealPlanContext = useMealPlan() // Might be null if outside planner
 
-  const [currentStep, setCurrentStep] = useState(-1)
+  const currentStep = dishProgress[activeDishIndex] ?? -1
+  const setCurrentStep = useCallback((valOrFn) => {
+    setDishProgress((prev) => {
+      const next = [...prev]
+      const current = next[activeDishIndex] ?? -1
+      const updated = typeof valOrFn === 'function' ? valOrFn(current) : valOrFn
+      next[activeDishIndex] = updated
+      return next
+    })
+  }, [activeDishIndex])
+
   const [usedIngredients, setUsedIngredients] = useState(new Set())
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
@@ -884,13 +906,46 @@ export default function CookingNavigator({
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="cn-progress-bar">
-          <div
-            className="cn-progress-fill"
-            style={{ width: `${currentStep === -1 ? 0 : ((currentStep + 1) / total) * 100}%` }}
-          />
-        </div>
+        {/* Multi-dish tab selector */}
+        {dishes.length > 1 && (
+          <div className="cn-dish-tabs" role="tablist" aria-label="Dishes being cooked">
+            {dishes.map((d, idx) => {
+              const isActive = idx === activeDishIndex
+              const prog = dishProgress[idx] ?? -1
+              const dTotal = normalizeInstructions(d.instructions).length
+              return (
+                <button
+                  key={d.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`cn-dish-tab${isActive ? ' cn-dish-tab--active' : ''}`}
+                  onClick={() => setActiveDishIndex(idx)}
+                >
+                  <span className="cn-dish-tab-name">{d.name}</span>
+                  <span className="cn-dish-tab-badge">
+                    {prog === -1 ? 'Mise' : `${prog + 1}/${dTotal}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Multi-dish equipment conflict warning */}
+        {dishes.length > 1 && (() => {
+          const activeSteps = dishes.map((d, idx) => ({
+            recipeName: d.name,
+            stepIndex: dishProgress[idx] ?? -1,
+            stepText: dishProgress[idx] >= 0 ? normalizeInstructions(d.instructions)[dishProgress[idx]] || '' : '',
+          })).filter(s => s.stepText)
+          const conflicts = detectEquipmentConflicts(activeSteps)
+          if (conflicts.length === 0) return null
+          return (
+            <div className="cn-equipment-conflict-bar" role="alert">
+              <strong>⚠️ Equipment Notice:</strong> {conflicts.map(c => c.message).join(' ')}
+            </div>
+          )
+        })()}
 
         {/* Header */}
         <div className="cn-header">
