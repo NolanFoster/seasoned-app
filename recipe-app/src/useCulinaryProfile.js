@@ -21,6 +21,7 @@ export const EMPTY_CULINARY_PROFILE = {
   lifestyle_modes: [],
   budget_band: 'flexible',
   meal_budget_usd: null,
+  seasonality: { enabled: false, hemisphere: 'n', climate_bias: 'off' },
 }
 
 function profileUrl() {

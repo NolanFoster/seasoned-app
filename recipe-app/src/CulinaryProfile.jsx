@@ -240,6 +240,20 @@ export default function CulinaryProfile({ open, profile, loading, saving, error,
                   </label>
                 </>
               )}
+              <label>Seasonality & Climate
+                <select value={form.seasonality?.enabled ? form.seasonality.hemisphere : 'off'} onChange={(event) => {
+                  const val = event.target.value
+                  if (val === 'off') {
+                    setField('seasonality', { enabled: false, hemisphere: 'n', climate_bias: 'off' })
+                  } else {
+                    setField('seasonality', { enabled: true, hemisphere: val, climate_bias: form.seasonality?.climate_bias || 'prefer_lower_impact' })
+                  }
+                }}>
+                  <option value="off">Off (Standard year-round)</option>
+                  <option value="n">Northern Hemisphere (In-Season)</option>
+                  <option value="s">Southern Hemisphere (In-Season)</option>
+                </select>
+              </label>
             </div>
 
             <fieldset>

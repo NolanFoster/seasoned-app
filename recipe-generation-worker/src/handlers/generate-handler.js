@@ -1134,6 +1134,13 @@ function buildLLaMAPrompt(requestData, contexts) {
     requirements.push(`target total meal ingredient budget: ~$${Number(requestData.mealBudgetUsd).toFixed(2)} USD`);
   }
 
+  if (requestData.seasonality && requestData.seasonality.enabled) {
+    requirements.push(`seasonality constraint: active (Prefer peak in-season produce for ${requestData.seasonality.hemisphere === 's' ? 'Southern' : 'Northern'} hemisphere; avoid premium out-of-season items)`);
+    if (requestData.seasonality.climate_bias === 'prefer_lower_impact') {
+      requirements.push('climate preference: \'prefer_lower_impact\' (Favor plant proteins, grains, and lower-emission ingredients where appropriate)');
+    }
+  }
+
   if (requirements.length > 0) {
     prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;
   }
