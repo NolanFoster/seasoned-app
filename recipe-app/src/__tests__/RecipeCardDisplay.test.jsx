@@ -288,3 +288,19 @@ describe('NutritionPanel in RecipeCardDisplay', () => {
   })
 })
 
+describe('Complete the Meal Composer in RecipeCardDisplay', () => {
+  test('renders pairing suggestions and sides when complete-meal-composer flag is on', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Chicken Parmesan',
+      ingredients: ['Chicken cutlets', 'Marinara sauce', 'Parmesan'],
+      instructions: ['Bake chicken.'],
+    }} />)
+
+    expect(screen.getByText('🍽️ Complete the Meal')).toBeInTheDocument()
+    expect(screen.getByText(/Pairings & sides tailored to this dish/i)).toBeInTheDocument()
+    expect(screen.getByText('Garlic Butter Green Beans')).toBeInTheDocument()
+    expect(screen.getByText('Herb Roasted Baby Potatoes')).toBeInTheDocument()
+  })
+})
+
+

@@ -31,6 +31,7 @@ const FLAG_DEFAULTS = {
   'locale-ingredient-graph': true,
   'navigator-vision-assist': true,
   'multi-dish-navigator': true,
+  'complete-meal-composer': true,
 }
 
 let flaggly

@@ -22,6 +22,8 @@ const sourceBadgeMap = {
 }
 
 import { estimateRecipeCost } from '../../shared/ingredient-cost-heuristics.js'
+import { composeMealSides } from '../../shared/complete-meal.js'
+import { useFlag } from './flaggly.js'
 
 function appliedConstraintLabels(constraints) {
   if (!constraints) return []
@@ -456,6 +458,33 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
           </button>
         )}
       </div>
+
+      {useFlag('complete-meal-composer') && (() => {
+        const pairedSides = composeMealSides(recipe, { hardAllergens })
+        if (pairedSides.length === 0) return null
+        return (
+          <section className="complete-meal-section" aria-label="Complete the meal recommendations">
+            <div className="complete-meal-header">
+              <h3>🍽️ Complete the Meal</h3>
+              <span className="complete-meal-tagline">Pairings & sides tailored to this dish</span>
+            </div>
+            <div className="complete-meal-grid">
+              {pairedSides.map((side) => (
+                <div key={side.id} className="complete-meal-card">
+                  <div className="complete-meal-card-title">
+                    <strong>{side.name}</strong>
+                    <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{side.prepMinutes}m</span>
+                  </div>
+                  <p className="complete-meal-card-ingredients">
+                    <strong>Ingredients:</strong> {side.ingredients.join(', ')}
+                  </p>
+                  <p className="complete-meal-card-instruction">{side.instructions[0]}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      })()}
 
       {appliedConstraintLabels(recipe.appliedConstraints).length > 0 && (
         <div className="applied-constraints" aria-label="Applied generation constraints">
