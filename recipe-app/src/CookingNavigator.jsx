@@ -564,6 +564,15 @@ export default function CookingNavigator({
       }
       setDepletionWorking(false)
     }
+    safeClose()
+  }
+
+  function safeClose() {
+    const runningTimers = Object.values(activeTimers).filter(t => !t.isDone && t.remainingSeconds > 0)
+    if (runningTimers.length > 0) {
+      const confirmed = window.confirm(`You have ${runningTimers.length} active timer${runningTimers.length > 1 ? 's' : ''} running. Are you sure you want to exit cooking mode?`)
+      if (!confirmed) return
+    }
     onClose()
   }
 
@@ -864,7 +873,7 @@ export default function CookingNavigator({
                   <button
                     className="action-menu-item"
                     role="menuitem"
-                    onClick={() => { setCookMenuOpen(false); onClose(); }}
+                    onClick={() => { setCookMenuOpen(false); safeClose(); }}
                     title="Exit cooking mode"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
