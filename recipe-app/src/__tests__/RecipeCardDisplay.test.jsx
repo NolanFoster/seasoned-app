@@ -303,4 +303,32 @@ describe('Complete the Meal Composer in RecipeCardDisplay', () => {
   })
 })
 
+describe('Nutrition Overtrust Friction in RecipeCardDisplay', () => {
+  test('renders traffic lights and attention warning for high sodium/sat-fat recipes', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Creamy Alfredo Pasta',
+      ingredients: ['Pasta', 'Heavy cream', 'Butter', 'Parmesan', 'Salt'],
+      instructions: ['Boil pasta and stir into cream sauce.'],
+      nutrition: {
+        calories: '850',
+        fatContent: '45g',
+        saturatedFatContent: '25g',
+        sodiumContent: '1200mg',
+        sugarContent: '3g',
+      },
+      nutritionProvenance: {
+        coverage_pct: 95,
+        estimated: false,
+      }
+    }} />)
+
+    expect(screen.getByText('Traffic Lights (FSA):')).toBeInTheDocument()
+    expect(screen.getByText(/Sat Fat: 25g/i)).toBeInTheDocument()
+    expect(screen.getByText(/Salt: 1200mg sodium/i)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(/One or more nutrients exceed daily guideline benchmarks/i)
+    expect(screen.getByText(/Confidence:/i)).toBeInTheDocument()
+  })
+})
+
+
 

@@ -33,6 +33,7 @@ const FLAG_DEFAULTS = {
   'multi-dish-navigator': true,
   'complete-meal-composer': true,
   'recipe-collections': true,
+  'nutrition-overtrust-friction': true,
 }
 
 let flaggly
