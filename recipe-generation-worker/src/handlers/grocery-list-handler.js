@@ -17,7 +17,7 @@
  */
 
 import { OpikClient } from '../opik-client.js';
-import { classifyGroceryItems } from '../../../shared/pantry-planning.js';
+import { classifyGroceryItems, pantryNamesMatch } from '../../../shared/pantry-planning.js';
 
 /** Workers AI model id for grocery aggregation (keep in sync with env.AI.run below). */
 const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
@@ -27,17 +27,18 @@ const GROCERY_LLM_MODEL = '@cf/meta/llama-3.2-3b-instruct';
  * `{{ingredient_lines}}` is substituted with joined request ingredients at runtime.
  */
 const GROCERY_AGGREGATOR_USER_PROMPT = `You are a grocery list aggregator. Given the raw ingredient lines below, you must:
-1. Normalize ingredient names (e.g. "all-purpose flour" and "flour" are the same thing).
-2. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
-3. Sum quantities where units match: two "1 cup mayonnaise" lines must become one entry with "2 cups mayonnaise" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
-4. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
-5. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
-6. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
-   - Jarred/canned condiments (salsa, mayo, ketchup, pickles, taco seasoning) → Pantry Staples unless the line explicitly says frozen.
-   - Lemon juice, lime juice, vinegar, oils for cooking → Pantry Staples. Beverages is for drink products (juice cartons, soda, wine). Frozen is only for frozen goods or when the recipe clearly means the frozen product.
-   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source does (e.g. "fresh cilantro").
-7. Mark isStaple: true only for common household staples (salt, pepper, basic spices many homes keep, flour, sugar, baking powder/soda, soy sauce, garlic, onion, eggs, butter, common oils/vinegar).
-8. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
+1. Output only ingredients that appear in the ingredient lines. Never add an item the lines do not mention — including any food named in these instructions, which describe wording and aisles rather than things to buy.
+2. Normalize ingredient names: a line naming a variety of an ingredient and a line naming the plain ingredient are the same thing.
+3. Deduplicate: merge identical or near-identical ingredients into ONE line per name (never list the same ingredient twice in the same category).
+4. Sum quantities where units match: two "1 cup <ingredient>" lines must become one entry with "2 cups <ingredient>" — never output chained sums like "1 cup + 1 cup" when the unit is the same. When units differ or cannot be summed, use one clear phrase (e.g. "1 can + 2 cups").
+5. Quantities must come from the ingredient lines. Do not use "not specified" or similar placeholders — if a line has no amount, use wording from that line (e.g. "as needed", "to taste") or a reasonable default from context.
+6. Use each category name at most once: exactly one JSON object per category, with every item for that aisle in its "items" array (e.g. never two separate "Pantry Staples" objects).
+7. Assign each ingredient to exactly one category. Allowed categories: Produce, Dairy, Meat & Seafood, Bakery, Pantry Staples, Frozen, Beverages, Other.
+   - Jarred, canned, bottled or pickled condiments and dry seasoning mixes → Pantry Staples unless the line explicitly says frozen.
+   - Bottled citrus juices, vinegars and cooking oils → Pantry Staples. Beverages is only for products bought to drink. Frozen is only for frozen goods or when the recipe clearly means the frozen product.
+   - Fresh produce and fresh herbs → Produce; keep the word "fresh" in the name when the source line does.
+8. Mark isStaple: true only for common household staples: basic seasonings and spices, baking basics, common cooking oils and vinegars, and the everyday refrigerator basics most homes keep on hand.
+9. Return ONLY valid JSON — no markdown fences, no explanation text before or after.
 
 Ingredient lines:
 {{ingredient_lines}}
@@ -407,6 +408,58 @@ function sanitizePantryItems(value) {
 }
 
 /**
+ * Drops items no request ingredient line supports.
+ *
+ * The aggregator prompt has to talk about foods to explain aisles and staples,
+ * and a 3B instruct model does not reliably separate those instruction
+ * examples from the data it was handed: they come back as real grocery lines
+ * ("taco seasoning" being the one users hit most). Nothing downstream can tell
+ * an invented item from a real one, so ground the list here, where the
+ * request's own ingredient lines are still in scope.
+ *
+ * Matching reuses the pantry matcher, which is deliberately lenient: a name
+ * matches when its meaningful tokens are contained in a line's, so normalized
+ * names still pass ("flour" matches "1 cup all-purpose flour", "chicken
+ * breast" matches "1 lb chicken breast, diced").
+ *
+ * @param {{ category: string, items: Array<{ name: string }> }[]} categories
+ * @param {string[]} ingredientLines - Raw ingredient strings from the request
+ * @returns {typeof categories}
+ */
+function filterUngroundedItems(categories, ingredientLines) {
+  const dropped = [];
+  const grounded = categories
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => {
+        if (ingredientLines.some((line) => pantryNamesMatch(item.name, line))) {
+          return true;
+        }
+        dropped.push(item.name);
+        return false;
+      })
+    }))
+    .filter((category) => category.items.length > 0);
+
+  if (dropped.length === 0) {
+    return categories;
+  }
+
+  // Every single item failing to match implicates the matcher, not the model.
+  // An empty list is a worse answer than an over-full one, so keep what the
+  // model returned and make the anomaly visible instead.
+  if (grounded.length === 0) {
+    console.warn(
+      `[grocery-list] Grounding matched none of ${dropped.length} item(s); keeping the unfiltered list`
+    );
+    return categories;
+  }
+
+  console.warn(`[grocery-list] Dropped ${dropped.length} ungrounded item(s): ${dropped.join(', ')}`);
+  return grounded;
+}
+
+/**
  * Apply deterministic pantry gap filling after the LLM has normalized aisle
  * categories. Keeping this pass outside the prompt means an LLM cannot
  * accidentally claim an on-hand item is still needed (or hide a missing
@@ -602,6 +655,8 @@ export async function handleGroceryList(request, env, corsHeaders) {
       );
     }
   }
+
+  categories = filterUngroundedItems(categories, ingredientStrings);
 
   const durationMs = Date.now() - traceWallStart;
   if (tracingEnabled) {

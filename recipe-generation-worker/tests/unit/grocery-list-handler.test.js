@@ -262,4 +262,77 @@ describe('Grocery List Handler', () => {
     expect(data.categories).toHaveLength(1);
     expect(data.categories[0].items).toHaveLength(2);
   });
+
+  it('drops items the model added that no ingredient line mentions', async () => {
+    // The aggregator prompt has to describe foods to explain aisles, and a 3B
+    // model re-emits those examples as real lines. "taco seasoning" is the one
+    // users reported; nothing downstream can tell it from a genuine item.
+    const withHallucination = JSON.stringify([
+      {
+        category: 'Produce',
+        items: [{ name: 'lime', quantity: '1', isStaple: false }]
+      },
+      {
+        category: 'Pantry Staples',
+        items: [
+          { name: 'taco seasoning', quantity: '1 packet', isStaple: true },
+          { name: 'mayonnaise', quantity: '1 cup', isStaple: true }
+        ]
+      }
+    ]);
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: withHallucination }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['1 lime', '2 limes'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    // The Pantry Staples block held only invented items, so it disappears too.
+    expect(data.categories).toHaveLength(1);
+    expect(data.categories[0].category).toBe('Produce');
+    expect(data.categories[0].items.map((i) => i.name)).toEqual(['lime']);
+  });
+
+  it('keeps normalized names that do not literally match their ingredient line', async () => {
+    const normalizedJson = JSON.stringify([{
+      category: 'Pantry Staples',
+      items: [
+        { name: 'flour', quantity: '1 cup', isStaple: true },
+        { name: 'chicken breast', quantity: '1 lb', isStaple: false },
+        { name: 'diced tomatoes', quantity: '2 cans', isStaple: false },
+        { name: 'taco seasoning', quantity: '1 packet', isStaple: true }
+      ]
+    }]);
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: normalizedJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', {
+      ingredients: [
+        '1 cup all-purpose flour',
+        '1 lb chicken breast, diced',
+        '2 (14 oz) cans diced tomatoes'
+      ]
+    });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.categories[0].items.map((i) => i.name)).toEqual([
+      'flour',
+      'chicken breast',
+      'diced tomatoes'
+    ]);
+  });
+
+  it('keeps the unfiltered list when no item matches any ingredient line', async () => {
+    // Nothing matching implicates the matcher rather than the model, and an
+    // empty grocery list is a worse answer than an over-full one.
+    const mockAI = { run: vi.fn().mockResolvedValue({ response: validLlmJson }) };
+    const env = { ...mockEnvWithOpik, AI: mockAI };
+    const request = createPostRequest('/grocery-list', { ingredients: ['3 ripe plantains'] });
+    const res = await handleGroceryList(request, env, corsHeaders);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.categories[0].items.map((i) => i.name)).toEqual(['lime']);
+  });
 });
