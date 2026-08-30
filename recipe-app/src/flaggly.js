@@ -25,6 +25,7 @@ const FLAG_DEFAULTS = {
   'budget-constraints': true,
   'grocery-export-plus': true,
   'recipe-lineage': true,
+  'kitchen-agent': true,
 }
 
 let flaggly

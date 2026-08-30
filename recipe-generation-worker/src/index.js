@@ -4,6 +4,7 @@ import { handleGenerate } from './handlers/generate-handler.js';
 import { handleAdapt } from './handlers/adapt-handler.js';
 import { handleGroceryList } from './handlers/grocery-list-handler.js';
 import { handleMealPlanFill } from './handlers/meal-plan-fill-handler.js';
+import { handleAgentTurn } from './handlers/agent-handler.js';
 
 export default {
   async fetch(request, env) {
@@ -49,6 +50,11 @@ export default {
     // Meal-plan auto-fill endpoint
     if (url.pathname === '/meal-plan-fill' && request.method === 'POST') {
       return handleMealPlanFill(request, env, corsHeaders);
+    }
+
+    // Conversational kitchen agent endpoint
+    if (url.pathname === '/agent/turn' && request.method === 'POST') {
+      return handleAgentTurn(request, env, corsHeaders);
     }
 
     // 404 for unknown routes
