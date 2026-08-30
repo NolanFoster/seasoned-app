@@ -42,6 +42,7 @@ const FLAG_DEFAULTS = {
   'meal-atom': true,
   'arrival-reconciliation': true,
   'kitchen-physics-packs': true,
+  'multi-home-custody': true,
 }
 
 let flaggly
