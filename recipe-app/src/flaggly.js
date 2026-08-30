@@ -28,6 +28,7 @@ const FLAG_DEFAULTS = {
   'kitchen-agent': true,
   'cook-outcome-feedback': true,
   'seasonal-constraints': true,
+  'locale-ingredient-graph': true,
 }
 
 let flaggly
