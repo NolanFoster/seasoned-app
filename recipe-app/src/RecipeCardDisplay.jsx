@@ -348,6 +348,23 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
 }
 
 
+
+export function AppetiteFriendlyTips({ constraints }) {
+  const modes = constraints?.lifestyleModes || constraints?.lifestyle_modes || []
+  if (!modes.includes('appetite_gentle')) return null
+
+  return (
+    <div className="process-safety-notice" style={{ backgroundColor: '#eaf4eb', borderLeftColor: '#7fbf91' }}>
+      <strong>Appetite-friendly tips</strong>
+      <p style={{ margin: '4px 0 0', fontSize: '0.9em' }}>
+        • Pause if full; this recipe is designed to reheat well later.<br/>
+        • Eat the protein components first if you have a smaller appetite.<br/>
+        • <em>Not medical advice.</em>
+      </p>
+    </div>
+  )
+}
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -390,6 +407,7 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
       <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
       <ProcessSafetyNotice summary={recipe.processSafetySummary} />
       <RecipeProvenance recipe={recipe} />
+      <AppetiteFriendlyTips constraints={recipe.appliedConstraints} />
 
       <div className="recipe-meta">
         {recipe.prep_time && (

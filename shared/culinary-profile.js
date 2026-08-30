@@ -63,6 +63,15 @@ export const DEFAULT_CULINARY_PROFILE = Object.freeze({
   exclude_ingredients: Object.freeze([]),
   notes_freeform: '',
   consent_flags: Object.freeze({ learn_from_activity: false, share_anon_evals: false }),
+  lifestyle_modes: Object.freeze([]),
+  appetite_gentle: Object.freeze({
+    protein_bias: 'high',
+    default_servings_delta: -1,
+    max_spice_cap: 2,
+    prefer_textures: Object.freeze(['soft', 'brothy', 'simple']),
+    avoid_patterns: Object.freeze(['deep_fried', 'very_spicy', 'heavy_cream_sauces']),
+    meal_size: 'smaller'
+  })
 })
 
 const ALLERGEN_ALIASES = Object.freeze({
@@ -166,6 +175,8 @@ export function normalizeCulinaryProfile(input = {}, base = DEFAULT_CULINARY_PRO
       ? String(pick('notes_freeform', 'notesFreeform', fallback.notes_freeform)).trim().slice(0, 500)
       : '',
     consent_flags: normalizeConsentFlags(pick('consent_flags', 'consentFlags', fallback.consent_flags)),
+    lifestyle_modes: normalizeList(pick('lifestyle_modes', 'lifestyleModes', fallback.lifestyle_modes)),
+    appetite_gentle: pick('appetite_gentle', 'appetiteGentle', fallback.appetite_gentle),
   }
 }
 
@@ -228,6 +239,7 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     nutritionGoals: request.nutritionGoals ?? request.nutrition_goals ?? normalizedProfile.nutrition_goals,
     inferredPreferences: request.inferredPreferences ?? request.inferred_preferences ?? null,
     units: request.units ?? request.units_pref ?? normalizedProfile.units_pref,
+    lifestyleModes: request.lifestyleModes ?? request.lifestyle_modes ?? normalizedProfile.lifestyle_modes,
   }
 }
 
@@ -240,7 +252,7 @@ export function validateCulinaryProfileInput(input) {
   const listFields = [
     'diet_tags', 'dietTags', 'hard_allergens', 'hardAllergens', 'soft_avoids', 'softAvoids',
     'cuisine_likes', 'cuisineLikes', 'cuisine_dislikes', 'cuisineDislikes', 'equipment',
-    'exclude_ingredients', 'excludeIngredients',
+    'exclude_ingredients', 'excludeIngredients', 'lifestyle_modes', 'lifestyleModes',
   ]
   for (const field of listFields) {
     if (input[field] !== undefined && (!Array.isArray(input[field]) || input[field].some((item) => typeof item !== 'string'))) {
