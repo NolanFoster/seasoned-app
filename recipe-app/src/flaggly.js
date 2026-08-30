@@ -36,6 +36,7 @@ const FLAG_DEFAULTS = {
   'nutrition-overtrust-friction': true,
   'living-projects': true,
   'csa-produce-intake': true,
+  'leftover-transform-cascade': true,
 }
 
 let flaggly

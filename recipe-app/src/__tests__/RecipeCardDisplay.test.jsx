@@ -330,5 +330,20 @@ describe('Nutrition Overtrust Friction in RecipeCardDisplay', () => {
   })
 })
 
+describe('Transformative Leftover Remix Cascades in RecipeCardDisplay', () => {
+  test('renders intentional next-day remix dishes for roast chicken', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Sunday Roast Chicken',
+      ingredients: ['1 whole chicken', 'rosemary', 'garlic'],
+      instructions: ['Roast in oven at 400F.'],
+    }} />)
+
+    expect(screen.getByText('🔄 Transform Tomorrow')).toBeInTheDocument()
+    expect(screen.getByText('Chicken Tinga Tacos')).toBeInTheDocument()
+    expect(screen.getAllByText(/Fresh finishers needed:/i).length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+
 
 
