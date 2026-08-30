@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { getLocalizedIngredientName } from '../../shared/ingredient-locale-graph.js'
 
 // ── Utility exports (preserved for backward-compatibility and tests) ──────────
 
@@ -559,7 +560,15 @@ export default function GroceryListModal({
                                         checked={!!item.completed}
                                         onChange={() => toggleItemCompletion(item.id)}
                                       />
-                                      <span className="grocery-item__text">{item.name}</span>
+                                      <span className="grocery-item__text">
+                                        {getLocalizedIngredientName(item.name, 'UK') !== item.name ? (
+                                          <>
+                                            {item.name} <small style={{ opacity: 0.75, fontSize: '0.85em' }}>({getLocalizedIngredientName(item.name, 'UK')})</small>
+                                          </>
+                                        ) : (
+                                          item.name
+                                        )}
+                                      </span>
                                       {item.quantity && (
                                         <span className="grocery-item__quantity">{item.quantity}</span>
                                       )}
