@@ -42,6 +42,8 @@ export default function RecipeCard({
   const recipeNotesEnabled = useFlag('recipe-notes')
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
+  const [multiCookRecipes, setMultiCookRecipes] = useState(null)
+  const [viewingSideRecipe, setViewingSideRecipe] = useState(null)
   const [cookBlocked, setCookBlocked] = useState(false)
   const [wakeLockActive, setWakeLockActive] = useState(false)
   // null | 'remix' | 'options'
@@ -440,7 +442,46 @@ export default function RecipeCard({
         </div>
       </div>
 
-      <RecipeCardDisplay recipe={recipe} onCookClick={handleCookClick} />
+      <RecipeCardDisplay
+        recipe={recipe}
+        onCookClick={handleCookClick}
+        onSelectSide={(sideRecipe) => setViewingSideRecipe(sideRecipe)}
+        onCookTogether={(allRecipes) => {
+          setMultiCookRecipes(allRecipes)
+          setIsCooking(true)
+        }}
+      />
+
+      {viewingSideRecipe && (
+        <div className="side-recipe-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="side-recipe-title">
+          <div className="side-recipe-modal-card">
+            <div className="side-recipe-modal-header">
+              <div>
+                <span className="side-recipe-badge">🍽️ Pairing Recipe</span>
+                <h2 id="side-recipe-title">{viewingSideRecipe.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="side-recipe-close-btn"
+                onClick={() => setViewingSideRecipe(null)}
+                aria-label="Close pairing recipe"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="side-recipe-modal-body">
+              <RecipeCardDisplay
+                recipe={viewingSideRecipe}
+                onCookClick={() => {
+                  setViewingSideRecipe(null)
+                  setMultiCookRecipes([recipe, viewingSideRecipe])
+                  setIsCooking(true)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {cookBlocked && (
         <div className="planner-feedback planner-feedback--process-blocked" role="alert">
@@ -454,7 +495,11 @@ export default function RecipeCard({
       {isCooking && (
         <CookingNavigator
           recipe={recipe}
-          onClose={() => setIsCooking(false)}
+          recipes={multiCookRecipes || [recipe]}
+          onClose={() => {
+            setIsCooking(false)
+            setMultiCookRecipes(null)
+          }}
           pantryItems={pantryItems}
           pantryPlannerEnabled={pantryPlannerEnabled}
           onDepletePantry={onDepletePantry}

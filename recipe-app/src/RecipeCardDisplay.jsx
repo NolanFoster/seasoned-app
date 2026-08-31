@@ -22,7 +22,7 @@ const sourceBadgeMap = {
 }
 
 import { estimateRecipeCost } from '../../shared/ingredient-cost-heuristics.js'
-import { composeMealSides } from '../../shared/complete-meal.js'
+import { composeMealSides, pairSideToRecipeObject } from '../../shared/complete-meal.js'
 import { computeTrafficLights, computeNutritionConfidence } from '../../shared/nutrition-friction.js'
 import { suggestLeftoverTransforms } from '../../shared/leftover-transforms.js'
 import { evaluateRatioIntegrity } from '../../shared/ratio-integrity.js'
@@ -427,7 +427,13 @@ export function AppetiteFriendlyTips({ constraints }) {
 //   recipe       — recipe data object
 //   onCookClick  — click handler for the Cook button (omitted in SSR)
 //   cookBtnId    — optional id attr on the Cook button (for vanilla-JS hooks)
-export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
+export default function RecipeCardDisplay({
+  recipe,
+  onCookClick,
+  cookBtnId,
+  onSelectSide,
+  onCookTogether,
+}) {
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
     return inst.text || inst.name || JSON.stringify(inst)
@@ -510,25 +516,53 @@ export default function RecipeCardDisplay({ recipe, onCookClick, cookBtnId }) {
       {useFlag('complete-meal-composer') && (() => {
         const pairedSides = composeMealSides(recipe, { hardAllergens })
         if (pairedSides.length === 0) return null
+        const allMealRecipes = [recipe, ...pairedSides.map((s) => pairSideToRecipeObject(s, recipe))]
+
         return (
           <section className="complete-meal-section" aria-label="Complete the meal recommendations">
             <div className="complete-meal-header">
-              <h3>🍽️ Complete the Meal</h3>
-              <span className="complete-meal-tagline">Pairings & sides tailored to this dish</span>
+              <div>
+                <h3>🍽️ Complete the Meal</h3>
+                <span className="complete-meal-tagline">Pairings & sides tailored to this dish</span>
+              </div>
+              {onCookTogether && (
+                <button
+                  type="button"
+                  className="complete-meal-cook-all-btn"
+                  onClick={() => onCookTogether(allMealRecipes)}
+                  title="Prep and cook hero dish and paired sides together in multi-dish Navigator"
+                >
+                  🍳 Cook Entire Meal Together ({allMealRecipes.length} Dishes)
+                </button>
+              )}
             </div>
             <div className="complete-meal-grid">
-              {pairedSides.map((side) => (
-                <div key={side.id} className="complete-meal-card">
-                  <div className="complete-meal-card-title">
-                    <strong>{side.name}</strong>
-                    <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{side.prepMinutes}m</span>
+              {pairedSides.map((side) => {
+                const sideRecipe = pairSideToRecipeObject(side, recipe)
+                return (
+                  <div key={side.id} className="complete-meal-card">
+                    <div className="complete-meal-card-title">
+                      <strong>{side.name}</strong>
+                      <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{side.prepMinutes}m</span>
+                    </div>
+                    <p className="complete-meal-card-ingredients">
+                      <strong>Ingredients:</strong> {side.ingredients.join(', ')}
+                    </p>
+                    <p className="complete-meal-card-instruction">{side.instructions[0]}</p>
+                    <div className="complete-meal-card-actions">
+                      {onSelectSide && (
+                        <button
+                          type="button"
+                          className="complete-meal-view-btn"
+                          onClick={() => onSelectSide(sideRecipe)}
+                        >
+                          View Pairing Recipe ↗
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <p className="complete-meal-card-ingredients">
-                    <strong>Ingredients:</strong> {side.ingredients.join(', ')}
-                  </p>
-                  <p className="complete-meal-card-instruction">{side.instructions[0]}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
         )

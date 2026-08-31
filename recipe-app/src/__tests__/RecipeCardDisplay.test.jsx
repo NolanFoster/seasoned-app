@@ -291,17 +291,45 @@ describe('NutritionPanel in RecipeCardDisplay', () => {
 })
 
 describe('Complete the Meal Composer in RecipeCardDisplay', () => {
-  test('renders pairing suggestions and sides when complete-meal-composer flag is on', () => {
-    render(<RecipeCardDisplay recipe={{
-      name: 'Chicken Parmesan',
-      ingredients: ['Chicken cutlets', 'Marinara sauce', 'Parmesan'],
-      instructions: ['Bake chicken.'],
-    }} />)
+  test('renders pairing suggestions, view pairing recipe buttons, and cook entire meal action', () => {
+    const onSelectSide = jest.fn()
+    const onCookTogether = jest.fn()
+    render(<RecipeCardDisplay
+      recipe={{
+        name: 'Chicken Parmesan',
+        ingredients: ['Chicken cutlets', 'Marinara sauce', 'Parmesan'],
+        instructions: ['Bake chicken.'],
+      }}
+      onSelectSide={onSelectSide}
+      onCookTogether={onCookTogether}
+    />)
 
     expect(screen.getByText('🍽️ Complete the Meal')).toBeInTheDocument()
     expect(screen.getByText(/Pairings & sides tailored to this dish/i)).toBeInTheDocument()
     expect(screen.getByText('Garlic Butter Green Beans')).toBeInTheDocument()
     expect(screen.getByText('Herb Roasted Baby Potatoes')).toBeInTheDocument()
+
+    // Test Cook Entire Meal Together
+    const cookAllBtn = screen.getByRole('button', { name: /Cook Entire Meal Together/i })
+    expect(cookAllBtn).toBeInTheDocument()
+    fireEvent.click(cookAllBtn)
+    expect(onCookTogether).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Chicken Parmesan' }),
+        expect.objectContaining({ name: 'Garlic Butter Green Beans' }),
+      ])
+    )
+
+    // Test View Pairing Recipe
+    const viewButtons = screen.getAllByRole('button', { name: /View Pairing Recipe/i })
+    expect(viewButtons.length).toBeGreaterThanOrEqual(1)
+    fireEvent.click(viewButtons[0])
+    expect(onSelectSide).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Garlic Butter Green Beans',
+        instructions: expect.any(Array),
+      })
+    )
   })
 })
 

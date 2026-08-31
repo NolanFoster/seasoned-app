@@ -76,3 +76,27 @@ export function composeMealSides(heroRecipe, options = {}) {
     timingOffsetMinutes: 0,
   }))
 }
+
+/**
+ * Transforms a paired side into a standalone Recipe object for display, editing, or multi-dish cooking.
+ * @param {object} side
+ * @param {object} [heroRecipe]
+ * @returns {object} RecipeV1-compatible object
+ */
+export function pairSideToRecipeObject(side, heroRecipe = null) {
+  if (!side) return null
+  return {
+    id: side.id || `recipe-${side.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    name: side.name,
+    description: `Complementary ${side.type?.replace('_', ' ') || 'side'} pairing${heroRecipe?.name ? ` for ${heroRecipe.name}` : ''}.`,
+    source: 'ai_generated',
+    generationMethod: 'complete-meal-composer',
+    prep_time: `PT${side.prepMinutes || 10}M`,
+    cook_time: `PT${side.prepMinutes || 10}M`,
+    recipe_yield: heroRecipe?.recipe_yield || '4 servings',
+    ingredients: side.ingredients || [],
+    instructions: side.instructions || [],
+    appliedConstraints: heroRecipe?.appliedConstraints || {},
+  }
+}
+
