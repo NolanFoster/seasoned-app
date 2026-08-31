@@ -3,6 +3,7 @@ import {
   COMPONENT_SLOTS,
   inferHeroCuisine,
   composeMealSides,
+  pairSideToRecipeObject,
 } from '../complete-meal.js'
 
 describe('complete-meal composer helpers', () => {
@@ -47,4 +48,42 @@ describe('complete-meal composer helpers', () => {
     expect(sidesWithoutDairy.some(s => s.name.includes('Garlic Mashed Potatoes'))).toBe(false)
     expect(sidesWithoutDairy.some(s => s.name.includes('Crispy Roasted Asparagus'))).toBe(true)
   })
+
+  it('transforms side pairing to a full recipe object', () => {
+    const hero = { name: 'Roast Chicken', recipe_yield: '4 servings' }
+    const side = {
+      id: 'side-italian-0',
+      name: 'Garlic Butter Green Beans',
+      type: COMPONENT_SLOTS.SIDE_VEG,
+      prepMinutes: 10,
+      ingredients: ['Green beans', 'Garlic', 'Butter'],
+      instructions: ['Sauté green beans in butter with minced garlic until tender-crisp.'],
+    }
+    const recipeObj = pairSideToRecipeObject(side, hero)
+    expect(recipeObj.name).toBe('Garlic Butter Green Beans')
+    expect(recipeObj.ingredients).toEqual(['Green beans', 'Garlic', 'Butter'])
+    expect(recipeObj.instructions).toHaveLength(1)
+    expect(recipeObj.recipe_yield).toBe('4 servings')
+    expect(recipeObj.source).toBe('ai_generated')
+  })
+
+  it('handles empty or null parameters gracefully', () => {
+    expect(composeMealSides(null)).toEqual([])
+    expect(inferHeroCuisine(null)).toBe('american')
+    expect(pairSideToRecipeObject(null)).toBeNull()
+
+    const fallbackSide = { name: 'Basic Salad' }
+    const defaultObj = pairSideToRecipeObject(fallbackSide)
+    expect(defaultObj.name).toBe('Basic Salad')
+    expect(defaultObj.prep_time).toBe('PT10M')
+    expect(defaultObj.recipe_yield).toBe('4 servings')
+  })
+
+  it('filters by requested component slots', () => {
+    const hero = { name: 'Pork Chop', ingredients: ['pork'] }
+    const saucesOnly = composeMealSides(hero, { slots: [COMPONENT_SLOTS.SAUCE] })
+    expect(saucesOnly.length).toBeGreaterThanOrEqual(1)
+    expect(saucesOnly.every(s => s.type === COMPONENT_SLOTS.SAUCE)).toBe(true)
+  })
 })
+

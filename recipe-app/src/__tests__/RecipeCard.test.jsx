@@ -320,3 +320,38 @@ describe('RecipeCard — food-process safety gates', () => {
     expect(plannerItem).toHaveAttribute('title', expect.stringMatching(/food-process safety check/i));
   });
 });
+
+describe('RecipeCard — Complete the Meal side pairing interactions', () => {
+  test('opens pairing recipe modal and enables cooking meal together in multi-dish Navigator', () => {
+    renderCard({
+      name: 'Steak Tacos',
+      ingredients: ['Flank steak', 'Tortillas', 'Cilantro'],
+      instructions: ['Sear steak and slice.'],
+    });
+
+    // Verify pairing side cards are present
+    expect(screen.getByText('🍽️ Complete the Meal')).toBeInTheDocument();
+
+    // Click View Pairing Recipe
+    const viewButtons = screen.getAllByRole('button', { name: /View Pairing Recipe/i });
+    expect(viewButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(viewButtons[0]);
+
+    // Modal opens with pairing recipe
+    expect(screen.getByText('🍽️ Pairing Recipe')).toBeInTheDocument();
+    expect(document.getElementById('side-recipe-title')).toHaveTextContent('Charred Cumin Lime Corn');
+
+    // Close pairing modal
+    fireEvent.click(screen.getByRole('button', { name: /Close pairing recipe/i }));
+    expect(screen.queryByText('🍽️ Pairing Recipe')).not.toBeInTheDocument();
+
+    // Cook entire meal together
+    const cookTogetherBtn = screen.getByRole('button', { name: /Cook Entire Meal Together/i });
+    fireEvent.click(cookTogetherBtn);
+
+    // Multi-dish CookingNavigator should be open
+    expect(screen.getByRole('dialog', { name: /Cooking navigator/i })).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: /Dishes being cooked/i })).toBeInTheDocument();
+  });
+});
+

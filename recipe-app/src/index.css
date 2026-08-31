@@ -2711,6 +2711,14 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
+.complete-meal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
 .complete-meal-header h3 {
   margin: 0;
   font-size: var(--fs-md);
@@ -2720,7 +2728,17 @@ textarea:focus-visible {
   font-size: var(--fs-xs);
   color: var(--text-muted);
   margin-top: 2px;
-  margin-bottom: 12px;
+}
+.complete-meal-cook-all-btn {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
 }
 .complete-meal-grid {
   display: grid;
@@ -2757,6 +2775,74 @@ textarea:focus-visible {
   color: var(--text-muted);
   margin: 0;
 }
+.complete-meal-card-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+.complete-meal-view-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+/* ── Side Recipe Modal ─────────────────────────────────────────────────── */
+.side-recipe-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(var(--color-shadow-rgb) / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 16px;
+}
+.side-recipe-modal-card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 0.25);
+}
+.side-recipe-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.side-recipe-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.side-recipe-modal-header h2 {
+  font-size: var(--fs-lg);
+  margin: 2px 0 0;
+}
+.side-recipe-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.side-recipe-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
 
 /* ── Vision Assist Mode ─────────────────────────────────────────────────── */
 .cn-vision-optin-banner {
