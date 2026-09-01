@@ -194,6 +194,32 @@ describe('generateRecipeHTML', () => {
     expect(html).toContain('https://example.com/original-recipe');
   });
 
+  it('should not show source link for recipes sourced from seasoned.app', () => {
+    const recipe = {
+      name: 'Adapted Recipe',
+      source: 'adapted',
+      source_url: 'https://seasoned.app/adapted/adapt-1773098213967'
+    };
+
+    const html = generateRecipeHTML(recipe);
+
+    expect(html).not.toContain('class="source-link"');
+    expect(html).not.toContain('https://seasoned.app/adapted/adapt-1773098213967');
+  });
+
+  it('should not render a cook button or cooking navigator', () => {
+    const recipe = {
+      name: 'Cookable Recipe',
+      ingredients: ['Ingredient 1'],
+      instructions: ['Step 1', 'Step 2']
+    };
+
+    const html = generateRecipeHTML(recipe);
+
+    expect(html).not.toContain('cook-btn');
+    expect(html).not.toContain('cn-overlay');
+  });
+
   it('should generate valid HTML structure', () => {
     const recipe = {
       name: 'Valid HTML Recipe',

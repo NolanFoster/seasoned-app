@@ -106,9 +106,13 @@ describe('renderRecipeCard', () => {
     expect(html).toContain('30 minutes');
   });
 
-  it('should not render cook button when there are no instructions', () => {
-    const html = renderRecipeCard({ name: 'No Steps', instructions: [] });
+  it('should not render a cook button', () => {
+    const html = renderRecipeCard({
+      name: 'With Steps',
+      instructions: ['Step one', 'Step two'],
+    });
     expect(html).not.toContain('cook-btn');
+    expect(html).not.toContain('>Cook<');
   });
 
   it('should render source badge for ai_generated recipes', () => {
@@ -138,5 +142,42 @@ describe('renderRecipeCard', () => {
     });
     expect(html).toContain('source-link');
     expect(html).toContain('https://example.com/original');
+  });
+
+  it('should hide source link for recipes sourced from seasoned.app', () => {
+    const html = renderRecipeCard({
+      name: 'Adapted',
+      source: 'adapted',
+      source_url: 'https://seasoned.app/adapted/adapt-123',
+    });
+    expect(html).not.toContain('source-link');
+    expect(html).not.toContain('https://seasoned.app/adapted/adapt-123');
+  });
+
+  it('should hide source link for recipes sourced from a seasonedapp.com subdomain', () => {
+    const html = renderRecipeCard({
+      name: 'Internal',
+      source: 'clipped',
+      source_url: 'https://www.seasonedapp.com/recipe/abc',
+    });
+    expect(html).not.toContain('source-link');
+  });
+
+  it('should show source link for lookalike hosts', () => {
+    const html = renderRecipeCard({
+      name: 'Lookalike',
+      source: 'clipped',
+      source_url: 'https://notseasoned.app/recipe/abc',
+    });
+    expect(html).toContain('source-link');
+  });
+
+  it('should show source link when the source url is unparseable', () => {
+    const html = renderRecipeCard({
+      name: 'Odd URL',
+      source: 'clipped',
+      source_url: 'example.com/original',
+    });
+    expect(html).toContain('source-link');
   });
 });
