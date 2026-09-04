@@ -40,5 +40,8 @@
   },
   "dependencies": {
     "opik": "^1.8.34"
+  },
+  "overrides": {
+    "qs": "6.16.0"
   }
 }
