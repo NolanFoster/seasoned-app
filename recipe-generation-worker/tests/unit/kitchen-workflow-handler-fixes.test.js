@@ -184,11 +184,9 @@ describe('Fix #2 — edit_plan merges all overrides and preserves hard allergens
     // The stored constraints must now carry the new dietary and maxCookTime.
     const constraints = edited.workflow.state.constraints;
     expect(constraints).toBeDefined();
-    // dietary should be included in the merged constraints
-    expect(
-      constraints.dietary === undefined ||
-        Array.isArray(constraints.dietary)
-    ).toBe(true);
+    // The submitted values must be applied before regeneration.
+    expect(constraints.dietary).toContain('vegetarian');
+    expect(constraints.maxCookTime).toBe(30);
     // Hard allergens from the original profile must still be present.
     expect(Array.isArray(constraints.hardAllergens)).toBe(true);
     expect(constraints.hardAllergens).toContain('peanuts');
@@ -320,7 +318,7 @@ describe('Fix #4 — partial meal-plan fill triggers repair interrupt, not appro
     // (if the AI stub returns fewer meals). What it must NOT do is proceed
     // to propose_plan with fewer meals than slots.
     if (started.workflow.pendingInterrupt?.type === 'approve_plan') {
-      expect(started.workflow.state.planDraft.meals.length).toBeGreaterThanOrEqual(2);
+      expect(started.workflow.state.planDraft.meals.length).toBe(2);
     }
   });
 });

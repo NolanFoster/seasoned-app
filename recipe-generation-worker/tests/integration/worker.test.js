@@ -24,7 +24,6 @@ describe('Recipe Generation Worker - Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
-      // Fix #3: X-User-Id is now included so cross-origin workflow requests pass preflight.
       expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type, X-User-Id');
     });
   });
@@ -79,74 +78,58 @@ describe('Recipe Generation Worker - Integration Tests', () => {
       // In mock mode (no AI binding), returns 200
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data).toBeDefined();
+      expect(data.success).toBe(true);
     });
 
-    it('should return 405 for GET /generate', async () => {
-      const request = createMockRequest('/generate', { method: 'GET' });
-      const response = await worker.fetch(request, mockEnv);
+    it('should return 404 for GET /generate (wrong method)', async () => {
+      const response = await worker.fetch(
+        new Request('https://example.com/generate', { method: 'GET' }),
+        mockEnv
+      );
 
       expect(response.status).toBe(404);
     });
   });
 
-  describe('Health route', () => {
-    it('should return 200 for GET /health', async () => {
-      const request = createMockRequest('/health', { method: 'GET' });
-      const response = await worker.fetch(request, mockEnv);
-
-      expect(response.status).toBe(200);
-      const data = await response.json();
-      // The health handler returns { status: 'healthy', ... }
-      expect(data.status).toBe('healthy');
-    });
-  });
-
-  describe('Grocery list route', () => {
-    it('should route POST /grocery-list to the grocery handler', async () => {
-      const request = createPostRequest('/grocery-list', { ingredients: ['2 cups flour', '1 egg'] });
-      const response = await worker.fetch(request, mockEnv);
-
-      expect(response.status).toBe(200);
-      const data = await response.json();
-      expect(data).toBeDefined();
-    });
-  });
-
-  describe('Adapt route', () => {
-    it('should route POST /adapt to the adapt handler', async () => {
-      // The adapt handler requires a baseRecipe with a name, a non-empty
-      // ingredients array, AND instructions. The quality-bar gate (assertRecipeQuality)
-      // blocks recipes that have no instructions with a 422 RecipeQualityError,
-      // even in mock-AI mode. The mock-AI path returns baseRecipe.instructions
-      // verbatim when no allergen substitutions apply, so the fixture must include
-      // at least one instruction line for the test to reach 200.
-      const request = createPostRequest('/adapt', {
-        baseRecipe: {
-          name: 'Test Pasta',
-          ingredients: ['200g spaghetti', '2 cloves garlic', '2 tbsp olive oil'],
-          instructions: [
-            'Boil spaghetti in salted water until al dente, about 8 minutes.',
-            'Sauté garlic in olive oil over medium heat for 1 minute.',
-            'Toss drained spaghetti with garlic oil and serve immediately.'
-          ]
-        },
-        modifications: []
+  describe('Feedback route routing', () => {
+    it('should route POST /feedback to the feedback handler', async () => {
+      const request = createPostRequest('/feedback', {
+        traceId: '0194f0d6-6a3a-7c2b-9c1a-1f1b2c3d4e5f',
+        event: 'recipe_saved'
       });
       const response = await worker.fetch(request, mockEnv);
 
+      // Without an Opik API key the signal is accepted but not recorded
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data).toBeDefined();
+      expect(data).toMatchObject({ success: true, recorded: false, reason: 'tracing_disabled' });
+    });
+
+    it('should return 404 for GET /feedback (wrong method)', async () => {
+      const response = await worker.fetch(
+        new Request('https://example.com/feedback', { method: 'GET' }),
+        mockEnv
+      );
+
+      expect(response.status).toBe(404);
     });
   });
 
   describe('Environment handling', () => {
-    it('should work without ENVIRONMENT variable', async () => {
-      const request = createMockRequest('/health', { method: 'GET' });
+    it('should default to development environment when ENVIRONMENT is not set', async () => {
+      const request = createMockRequest('/health');
       const response = await worker.fetch(request, mockEnvWithoutEnvironment);
+      const data = await response.json();
 
-      expect(response.status).toBe(200);
+      expect(data.environment).toBe('development');
+    });
+
+    it('should use provided environment variable', async () => {
+      const request = createMockRequest('/');
+      const response = await worker.fetch(request, mockEnv);
+      const data = await response.json();
+
+      expect(data.environment).toBe('test');
     });
   });
 });

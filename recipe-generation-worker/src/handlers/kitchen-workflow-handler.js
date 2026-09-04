@@ -231,14 +231,45 @@ function normalizeGoal(body) {
 // ---------------------------------------------------------------------------
 function mergeConstraints(profile, overrides, existing = null) {
   const profileConstraints = buildGenerationConstraints(profile || {}, {});
-  const freshConstraints = buildGenerationConstraints({}, overrides || {});
-  // When there is an existing set of constraints (edit_plan path), merge the
-  // caller's overrides into it so dietary, maxCookTime, and every other field
-  // from the new submission are preserved. Without an existing record, build
-  // from the profile+overrides combination as before.
+  const requestedOverrides = overrides && typeof overrides === 'object' ? overrides : {};
+  const freshConstraints = buildGenerationConstraints({}, requestedOverrides);
+
+  // buildGenerationConstraints supplies safe defaults for every field. When an
+  // edit is applied to an existing workflow, copying that whole object would
+  // silently reset constraints that the user did not edit (for example,
+  // changing dietary preferences would reset a custom cuisine). Only copy a
+  // canonical field when one of its accepted input aliases was explicitly sent.
+  const overrideAliases = {
+    dietary: ['dietary', 'diet_tags'],
+    hardAllergens: ['hardAllergens', 'hard_allergens'],
+    softAvoids: ['softAvoids', 'soft_avoids'],
+    cuisine: ['cuisine'],
+    equipment: ['equipment'],
+    servings: ['servings'],
+    maxCookTime: ['maxCookTime', 'max_cook_time_min'],
+    spiceLevel: ['spiceLevel', 'spice_level'],
+    skillLevel: ['skillLevel', 'skill_level'],
+    excludeIngredients: ['excludeIngredients', 'exclude_ingredients'],
+    nutritionGoals: ['nutritionGoals', 'nutrition_goals'],
+    inferredPreferences: ['inferredPreferences', 'inferred_preferences'],
+    units: ['units', 'units_pref'],
+    lifestyleModes: ['lifestyleModes', 'lifestyle_modes'],
+    budgetBand: ['budgetBand', 'budget_band'],
+    mealBudgetUsd: ['mealBudgetUsd', 'meal_budget_usd'],
+    seasonality: ['seasonality']
+  };
+
   const base = existing
-    ? { ...existing, ...freshConstraints }
-    : buildGenerationConstraints(profile || {}, overrides || {});
+    ? { ...existing }
+    : buildGenerationConstraints(profile || {}, requestedOverrides);
+  if (existing) {
+    for (const [field, aliases] of Object.entries(overrideAliases)) {
+      if (aliases.some((alias) => Object.prototype.hasOwnProperty.call(requestedOverrides, alias))) {
+        base[field] = freshConstraints[field];
+      }
+    }
+  }
+
   // An explicit empty override must never weaken a stored/profile hard block.
   base.hardAllergens = [
     ...new Set([
@@ -296,24 +327,31 @@ async function runPlanDraft(workflow, env, corsHeaders, repairNote = '') {
   try {
     const response = await handleMealPlanFill(request, env, corsHeaders);
     const data = await responseJson(response);
-    const expectedCount = workflow.state.slots.length;
+    const expectedSlots = workflow.state.slots;
+    const expectedCount = expectedSlots.length;
+    const returnedMeals = Array.isArray(data?.meals) ? data.meals : [];
+    const returnedSlots = new Set(
+      returnedMeals
+        .map((meal) => meal?.slot)
+        .filter((slot) => typeof slot === 'string')
+    );
     const mealsOk =
-      Array.isArray(data?.meals) && data.meals.length === expectedCount;
+      returnedMeals.length === expectedCount &&
+      returnedSlots.size === expectedCount &&
+      expectedSlots.every((slot) => returnedSlots.has(slot));
     if (!response.ok || !data?.success || !mealsOk) {
       const firstWarning = Array.isArray(data?.warnings) ? data.warnings[0] : null;
       // Distinguish a partial fill from a total failure for better UX messages.
+      const hasSomeMeals = returnedMeals.length > 0;
       const isPartial =
-        response.ok &&
-        data?.success === true &&
-        Array.isArray(data?.meals) &&
-        data.meals.length > 0;
+        response.ok && data?.success === true && hasSomeMeals && returnedMeals.length < expectedCount;
       return {
         ok: false,
         code: isPartial
           ? 'PARTIAL_PLAN_FILL'
           : firstWarning?.code || data?.code || 'PLAN_DRAFT_FAILED',
         message: isPartial
-          ? `Only ${data.meals.length} of ${expectedCount} requested slots were filled`
+          ? `Only ${returnedMeals.length} of ${expectedCount} requested slots were filled`
           : firstWarning?.message || data?.error || 'Could not draft a safe meal plan',
         warnings: data?.warnings || []
       };
@@ -564,7 +602,10 @@ export async function handleKitchenWorkflowStart(request, env, corsHeaders) {
   );
   if (slotResult.error) return invalid(slotResult.error, corsHeaders);
 
-  const constraints = mergeConstraints(body.culinaryProfile, body.overrides);
+  const constraints = mergeConstraints(
+    body.culinaryProfile || body.profile,
+    body.overrides || body.constraints
+  );
   const workflow = createKitchenWorkflow({
     type,
     userId: ownerId,
