@@ -196,7 +196,9 @@ describe('Fix #2 — edit_plan merges all overrides and preserves hard allergens
 
   it('does not weaken hard allergens when edit_plan provides an empty allergen array', async () => {
     const { data: started } = await startWorkflow(['2026-09-10::dinner'], {
-      culinaryProfile: { hard_allergens: ['shellfish', 'tree nuts'] }
+      // Use the canonical underscore form that buildGenerationConstraints stores internally.
+      // 'tree nuts' (space) is an alias that normalizes to 'tree_nuts' via ALLERGEN_ALIASES.
+      culinaryProfile: { hard_allergens: ['shellfish', 'tree_nuts'] }
     });
     const workflowId = started.workflowId;
 
@@ -208,7 +210,8 @@ describe('Fix #2 — edit_plan merges all overrides and preserves hard allergens
     const allergens = edited.workflow.state.constraints.hardAllergens;
     // The original profile allergens must survive even when the caller sends [].
     expect(allergens).toContain('shellfish');
-    expect(allergens).toContain('tree nuts');
+    // Canonical form is underscore-separated (ALLERGEN_ALIASES maps 'tree nuts' → 'tree_nuts').
+    expect(allergens).toContain('tree_nuts');
   });
 
   it('audit trail records plan_edit_requested with the submitted override keys', async () => {
@@ -268,16 +271,10 @@ describe('Fix #3 — CORS preflight includes X-User-Id in Access-Control-Allow-H
 // ============================================================================
 describe('Fix #4 — partial meal-plan fill triggers repair interrupt, not approval', () => {
   it('routes to repair_plan when the fill handler returns fewer meals than slots', async () => {
-    // We need two slots but the mock AI will only return one meal.
-    // Patch handleMealPlanFill to simulate a partial result.
-    const { handleMealPlanFill } = await import(
-      '../../src/handlers/meal-plan-fill-handler.js'
-    );
+    // Patch handleMealPlanFill to simulate a partial result (1 meal for 2 slots).
+    const mealFillMod = await import('../../src/handlers/meal-plan-fill-handler.js');
     const spy = vi
-      .spyOn(
-        await import('../../src/handlers/meal-plan-fill-handler.js'),
-        'handleMealPlanFill'
-      )
+      .spyOn(mealFillMod, 'handleMealPlanFill')
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -333,109 +330,25 @@ describe('Fix #4 — partial meal-plan fill triggers repair interrupt, not appro
 // ============================================================================
 describe('Fix #5 — running workflow with no interrupt is recoverable', () => {
   it('GET surfaces recoverableRunning:true when status is running and pendingInterrupt is null', async () => {
-    // Start a workflow, then manually corrupt the stored state to simulate a
-    // checkpoint that survived but lost its pendingInterrupt.
+    // Start a workflow so we have a valid workflowId/ownerId in memory.
     const { data: started } = await startWorkflow();
     const workflowId = started.workflowId;
-
-    // Manipulate the in-memory store directly via re-import so we can set a
-    // stranded running state.
-    const { getKitchenWorkflowStorageKey } = await import(
-      '../../src/handlers/kitchen-workflow-handler.js'
-    );
-    // The handler does not expose the memoryStore, but we can force a stranded
-    // state by saving a doctored workflow through the module's own storage path.
-    // Instead, we use a spy on the resume path and test the GET behavior by
-    // injecting state via a direct store write through the exported key helper.
-    //
-    // Since memoryStore is module-private, we test the recovery behavior
-    // indirectly: a workflow freshly started (status=awaiting_user) cannot be
-    // in the stranded state, so we verify the GET flag is absent there and then
-    // verify the resume->recover path works for an awaiting_user workflow
-    // downgraded to running+no-interrupt by asserting the error code is correct.
 
     // 1. Normal state: GET should NOT include recoverableRunning.
     const { data: getResult } = await getWorkflow(workflowId);
     expect(getResult.workflow.status).toBe('awaiting_user');
     expect(getResult.recoverableRunning).toBeUndefined();
 
-    // 2. Attempting to resume a stranded workflow with a wrong action returns
-    //    WORKFLOW_NOT_AWAITING_USER. We simulate this by passing action='recover'
-    //    to an awaiting_user workflow and verifying it is treated as invalid
-    //    (because the workflow is NOT stranded).
+    // 2. Attempting to resume an awaiting_user workflow with action:'recover'
+    //    (which is not a valid action for that interrupt) should be rejected
+    //    as INVALID_WORKFLOW_ACTION, proving the recover branch is separate.
     const { data: badRecover } = await resumeWorkflow(workflowId, {
       action: 'recover'
     });
-    // 'recover' on an awaiting_user interrupt is not a listed action, so it
-    // should be rejected as INVALID_WORKFLOW_ACTION.
     expect(badRecover.code).toBe('INVALID_WORKFLOW_ACTION');
   });
 
-  it('resume with action:recover on a stranded running workflow re-runs the plan draft', async () => {
-    // We need to inject a stranded workflow directly. Because memoryStore is
-    // module-private we patch the loadWorkflow path via vi.spyOn on the storage
-    // read, inserting a workflow object that has status:'running' and
-    // pendingInterrupt:null. This is the authentic stranded shape.
-    const handlerMod = await import('../../src/handlers/kitchen-workflow-handler.js');
-
-    // Start a real workflow to get a valid workflowId and ownerId in storage.
-    const { data: started } = await startWorkflow(['2026-09-10::dinner']);
-    const workflowId = started.workflowId;
-
-    // Overwrite the stored record with a stranded shape by re-saving through
-    // the save path. We can't access saveWorkflow directly, so we use the
-    // cancel endpoint to put the workflow in cancelled state, then start fresh.
-    // Instead: directly call clearKitchenWorkflowMemory and re-insert via the
-    // getKitchenWorkflowStorageKey + the fact that our test env uses memoryStore.
-    //
-    // The cleanest approach given module encapsulation: test the branch behavior
-    // by hitting resume with action:'recover' against a workflow that IS
-    // currently in status:'awaiting_user'. The code path for a stranded running
-    // workflow rejects any action != 'recover' and accepts 'recover' to re-run
-    // the plan draft. We verify: (a) non-recover action is rejected with the
-    // correct error, and (b) the recover action on an awaiting_user workflow
-    // falls through to INVALID_WORKFLOW_ACTION (proving the running+null branch
-    // is separate from the awaiting_user branch).
-
-    // (a) Try a normal action — should be INVALID_WORKFLOW_ACTION, not the
-    //     running-stranded error, confirming the awaiting_user path handles it.
-    const { data: normalAction } = await resumeWorkflow(workflowId, {
-      action: 'recover'
-    });
-    expect(normalAction.code).toBe('INVALID_WORKFLOW_ACTION');
-
-    // (b) Verify the stranded-running detection message by constructing a
-    //     minimal mock that exercises only the branch condition.
-    // We do this by spying on the internal loadWorkflow indirectly: save a raw
-    // stranded record into the memory store via the exported key helper, then
-    // clear the module store and insert the record.
-    clearKitchenWorkflowMemory();
-
-    // Insert a stranded record directly through the exported key helper and the
-    // module's own memoryStore (accessed via dynamic import introspection).
-    // Since we cannot reach the private Map, we instead insert the record via a
-    // fresh start + manual save by calling start and then checking recover
-    // behavior analytically.
-    //
-    // Analytic assertion: the code explicitly checks
-    //   if (workflow.status === 'running' && workflow.pendingInterrupt === null)
-    // and returns WORKFLOW_NOT_AWAITING_USER with recoverableRunning:true
-    // for any action != 'recover'.
-    // We trust this branch is exercised by the concurrent-race test (Fix #1)
-    // where a losing resume sees a version-incremented record and returns 409.
-    // The stranded-state behaviour is unit-tested via the module's direct export.
-    expect(typeof handlerMod.clearKitchenWorkflowMemory).toBe('function');
-    expect(typeof handlerMod.getKitchenWorkflowStorageKey).toBe('function');
-
-    // Verify the key format is deterministic — used by recovery path.
-    const key = handlerMod.getKitchenWorkflowStorageKey('fix-test-user', workflowId);
-    expect(key).toMatch(/^kitchen-workflow:v1:fix-test-user:kwf_/);
-  });
-
-  it('resume with action:recover on a genuinely stranded workflow returns 200 and re-drafts the plan', async () => {
-    // Inject a stranded workflow by writing its JSON directly into the in-memory
-    // store via the module's exported clearKitchenWorkflowMemory + key helper.
-    // We build the object ourselves and insert it through a custom KV-like env.
+  it('GET stranded-running workflow surfaces recoverableRunning:true and recoveryMessage', async () => {
     const { getKitchenWorkflowStorageKey } = await import(
       '../../src/handlers/kitchen-workflow-handler.js'
     );
@@ -472,20 +385,14 @@ describe('Fix #5 — running workflow with no interrupt is recoverable', () => {
       audit: []
     });
 
-    // Insert via a mock KV binding passed as the env.
+    // Inject via a mock KV binding passed as the env.
     const kvStore = new Map([[key, strandedRecord]]);
     const strandedEnv = {
       ...enabledEnv,
       RECIPE_STORAGE: {
         get: (k) => Promise.resolve(kvStore.get(k) ?? null),
-        put: (k, v) => {
-          kvStore.set(k, v);
-          return Promise.resolve();
-        },
-        delete: (k) => {
-          kvStore.delete(k);
-          return Promise.resolve();
-        }
+        put: (k, v) => { kvStore.set(k, v); return Promise.resolve(); },
+        delete: (k) => { kvStore.delete(k); return Promise.resolve(); }
       }
     };
 
@@ -498,8 +405,54 @@ describe('Fix #5 — running workflow with no interrupt is recoverable', () => {
     expect(getResponse.status).toBe(200);
     expect(getData.recoverableRunning).toBe(true);
     expect(getData.recoveryMessage).toContain('recover');
+  });
 
-    // Non-recover action should be rejected.
+  it('non-recover action on a stranded-running workflow returns 409 with recoverableRunning:true', async () => {
+    const { getKitchenWorkflowStorageKey } = await import(
+      '../../src/handlers/kitchen-workflow-handler.js'
+    );
+
+    const strandedWorkflowId = 'kwf_strandedtest7654321';
+    const ownerId = 'fix-test-user';
+    const key = getKitchenWorkflowStorageKey(ownerId, strandedWorkflowId);
+
+    const strandedRecord = JSON.stringify({
+      schemaVersion: 1,
+      workflowId: strandedWorkflowId,
+      type: 'week_plan',
+      userId: ownerId,
+      status: 'running',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400 * 1000 * 30).toISOString(),
+      version: 2,
+      traceId: 'trace_stranded2',
+      state: {
+        node: 'draft_plan',
+        goal: { description: 'stranded test 2' },
+        constraints: { hardAllergens: [] },
+        usePantry: false,
+        pantryIngredients: [],
+        slots: ['2026-09-10::dinner'],
+        planDraft: null,
+        groceryDraft: null,
+        repair: null,
+        checkpoints: []
+      },
+      pendingInterrupt: null,
+      audit: []
+    });
+
+    const kvStore = new Map([[key, strandedRecord]]);
+    const strandedEnv = {
+      ...enabledEnv,
+      RECIPE_STORAGE: {
+        get: (k) => Promise.resolve(kvStore.get(k) ?? null),
+        put: (k, v) => { kvStore.set(k, v); return Promise.resolve(); },
+        delete: (k) => { kvStore.delete(k); return Promise.resolve(); }
+      }
+    };
+
     const badResponse = await worker.fetch(
       createPostRequest(`/agent/workflow/${strandedWorkflowId}/resume`, {
         userId: ownerId,
@@ -511,6 +464,53 @@ describe('Fix #5 — running workflow with no interrupt is recoverable', () => {
     expect(badResponse.status).toBe(409);
     expect(badData.code).toBe('WORKFLOW_NOT_AWAITING_USER');
     expect(badData.recoverableRunning).toBe(true);
+  });
+
+  it('recover action on a stranded-running workflow re-drafts the plan and appends audit event', async () => {
+    const { getKitchenWorkflowStorageKey } = await import(
+      '../../src/handlers/kitchen-workflow-handler.js'
+    );
+
+    const strandedWorkflowId = 'kwf_strandedrecover5678';
+    const ownerId = 'fix-test-user';
+    const key = getKitchenWorkflowStorageKey(ownerId, strandedWorkflowId);
+
+    const strandedRecord = JSON.stringify({
+      schemaVersion: 1,
+      workflowId: strandedWorkflowId,
+      type: 'week_plan',
+      userId: ownerId,
+      status: 'running',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400 * 1000 * 30).toISOString(),
+      version: 2,
+      traceId: 'trace_strandedrecover',
+      state: {
+        node: 'draft_plan',
+        goal: { description: 'stranded recover test' },
+        constraints: { hardAllergens: [] },
+        usePantry: false,
+        pantryIngredients: [],
+        slots: ['2026-09-10::dinner'],
+        planDraft: null,
+        groceryDraft: null,
+        repair: null,
+        checkpoints: []
+      },
+      pendingInterrupt: null,
+      audit: []
+    });
+
+    const kvStore = new Map([[key, strandedRecord]]);
+    const strandedEnv = {
+      ...enabledEnv,
+      RECIPE_STORAGE: {
+        get: (k) => Promise.resolve(kvStore.get(k) ?? null),
+        put: (k, v) => { kvStore.set(k, v); return Promise.resolve(); },
+        delete: (k) => { kvStore.delete(k); return Promise.resolve(); }
+      }
+    };
 
     // Recover action should re-draft and return a valid workflow state.
     const recoverResponse = await worker.fetch(
@@ -523,7 +523,7 @@ describe('Fix #5 — running workflow with no interrupt is recoverable', () => {
     const recoverData = await json(recoverResponse);
     expect(recoverResponse.status).toBe(200);
     // The recovery should have produced either a propose_plan or repair_plan
-    // interrupt (depending on whether the AI model is available).
+    // interrupt (depending on whether the AI model is available in the test env).
     expect(['awaiting_user', 'failed']).toContain(recoverData.workflow.status);
     // The audit trail must contain the recovery event.
     const recoveryAudit = recoverData.workflow.audit.find(
