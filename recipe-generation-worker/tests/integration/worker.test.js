@@ -97,7 +97,8 @@ describe('Recipe Generation Worker - Integration Tests', () => {
 
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.status).toBe('ok');
+      // The health handler returns { status: 'healthy', ... }
+      expect(data.status).toBe('healthy');
     });
   });
 
@@ -114,7 +115,15 @@ describe('Recipe Generation Worker - Integration Tests', () => {
 
   describe('Adapt route', () => {
     it('should route POST /adapt to the adapt handler', async () => {
-      const request = createPostRequest('/adapt', { recipe: { name: 'Test' }, modifications: [] });
+      // The adapt handler requires a baseRecipe with a name and a non-empty
+      // ingredients array. Without AI bound, the mock-AI path returns 200.
+      const request = createPostRequest('/adapt', {
+        baseRecipe: {
+          name: 'Test Pasta',
+          ingredients: ['200g spaghetti', '2 cloves garlic', '2 tbsp olive oil']
+        },
+        modifications: []
+      });
       const response = await worker.fetch(request, mockEnv);
 
       expect(response.status).toBe(200);
