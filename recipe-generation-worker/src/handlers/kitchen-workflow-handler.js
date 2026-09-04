@@ -298,7 +298,7 @@ async function runPlanDraft(workflow, env, corsHeaders, repairNote = '') {
     const data = await responseJson(response);
     const expectedCount = workflow.state.slots.length;
     const mealsOk =
-      Array.isArray(data?.meals) && data.meals.length >= expectedCount;
+      Array.isArray(data?.meals) && data.meals.length === expectedCount;
     if (!response.ok || !data?.success || !mealsOk) {
       const firstWarning = Array.isArray(data?.warnings) ? data.warnings[0] : null;
       // Distinguish a partial fill from a total failure for better UX messages.
