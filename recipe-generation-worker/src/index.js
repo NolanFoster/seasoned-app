@@ -17,11 +17,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS headers
+    // CORS headers — Fix #3: add X-User-Id to Access-Control-Allow-Headers so
+    // cross-origin browser preflight requests pass for workflow inspection and
+    // all other routes that rely on the documented identity header.
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Headers': 'Content-Type, X-User-Id'
     };
 
     // Handle CORS preflight
@@ -91,15 +93,18 @@ export default {
     }
 
     // 404 for unknown routes
-    return new Response(JSON.stringify({
-      error: 'Not Found',
-      message: 'The requested endpoint does not exist'
-    }), {
-      status: 404,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
+    return new Response(
+      JSON.stringify({
+        error: 'Not Found',
+        message: 'The requested endpoint does not exist'
+      }),
+      {
+        status: 404,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
   }
 };
