@@ -5,6 +5,12 @@ import { handleAdapt } from './handlers/adapt-handler.js';
 import { handleGroceryList } from './handlers/grocery-list-handler.js';
 import { handleMealPlanFill } from './handlers/meal-plan-fill-handler.js';
 import { handleAgentTurn } from './handlers/agent-handler.js';
+import {
+  handleKitchenWorkflowCancel,
+  handleKitchenWorkflowGet,
+  handleKitchenWorkflowResume,
+  handleKitchenWorkflowStart
+} from './handlers/kitchen-workflow-handler.js';
 import { handleFeedback } from './handlers/feedback-handler.js';
 
 export default {
@@ -61,6 +67,27 @@ export default {
     // Conversational kitchen agent endpoint
     if (url.pathname === '/agent/turn' && request.method === 'POST') {
       return handleAgentTurn(request, env, corsHeaders);
+    }
+
+    // Flag-gated durable kitchen workflow endpoints. IDs are deliberately
+    // parsed here so /start cannot be mistaken for a persisted workflow.
+    if (url.pathname === '/agent/workflow/start' && request.method === 'POST') {
+      return handleKitchenWorkflowStart(request, env, corsHeaders);
+    }
+
+    const workflowMatch = url.pathname.match(/^\/agent\/workflow\/([^/]+)(?:\/(resume|cancel))?$/);
+    if (workflowMatch && workflowMatch[1] !== 'start') {
+      const workflowId = workflowMatch[1];
+      const action = workflowMatch[2];
+      if (!action && request.method === 'GET') {
+        return handleKitchenWorkflowGet(request, env, corsHeaders, workflowId);
+      }
+      if (action === 'resume' && request.method === 'POST') {
+        return handleKitchenWorkflowResume(request, env, corsHeaders, workflowId);
+      }
+      if (action === 'cancel' && request.method === 'POST') {
+        return handleKitchenWorkflowCancel(request, env, corsHeaders, workflowId);
+      }
     }
 
     // 404 for unknown routes
