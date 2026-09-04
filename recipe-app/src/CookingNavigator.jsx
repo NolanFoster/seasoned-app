@@ -7,6 +7,13 @@ import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
 import { inferStepVisionHint, formatVisionFeedback } from '../../shared/vision-coach.js'
 import { detectEquipmentConflicts, normalizeMultiDishSession } from '../../shared/multi-dish.js'
 import { useMealPlan } from './MealPlanContext.jsx'
+import IngredientStateBoard from './IngredientStateBoard.jsx'
+import {
+  createIngredientStateTracker,
+  applyStepTransition,
+  patchEntityState,
+  validateAction,
+} from '../../shared/ingredient-state.js'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -371,6 +378,92 @@ export default function CookingNavigator({
   const gestureSupportEnabled = useFlag('gesture-support')
   const dictationEnabled = useFlag('dictation')
   const visionAssistEnabled = useFlag('navigator-vision-assist')
+  const liveIngredientStateEnabled = useFlag('live-ingredient-state') || useFlag('live_ingredient_state_v1')
+
+  const [ingredientTrackers, setIngredientTrackers] = useState(() => {
+    return dishes.map((d) =>
+      createIngredientStateTracker({
+        recipe: d,
+        ingredients: d.ingredients,
+        steps: d.instructions,
+        equipment: extractEquipment(normalizeInstructions(d.instructions)),
+      })
+    )
+  })
+  const [isStateBoardCollapsed, setIsStateBoardCollapsed] = useState(false)
+  const currentTracker = ingredientTrackers[activeDishIndex] || ingredientTrackers[0]
+
+  useEffect(() => {
+    if (liveIngredientStateEnabled && currentStep >= 0 && currentStep < total) {
+      const stepText = instructions[currentStep] || ''
+      setIngredientTrackers((prev) => {
+        const next = [...prev]
+        const active = next[activeDishIndex]
+        if (active) {
+          next[activeDishIndex] = applyStepTransition(active, currentStep, stepText)
+        }
+        return next
+      })
+    }
+  }, [currentStep, activeDishIndex, liveIngredientStateEnabled])
+
+  const stepActionWarning = (() => {
+    if (!liveIngredientStateEnabled || currentStep < 0 || !currentTracker) return null
+    const stepText = instructions[currentStep] || ''
+    const lower = stepText.toLowerCase()
+    let action = ''
+    if (/\b(sear|seared|brown|browned)\b/.test(lower)) action = 'sear'
+    else if (/\b(plate|plated|serve|served)\b/.test(lower)) action = 'plate'
+    else if (/\b(slice|carve)\b/.test(lower)) action = 'slice'
+    else if (/\b(cook|bake|roast|fry)\b/.test(lower)) action = 'cook'
+
+    if (!action) return null
+    const res = validateAction(currentTracker, { action })
+    return res.valid ? null : res
+  })()
+
+  const handlePatchEntityState = useCallback((entityId, patch) => {
+    setIngredientTrackers((prev) => {
+      const next = [...prev]
+      const active = next[activeDishIndex]
+      if (active) {
+        next[activeDishIndex] = patchEntityState(active, entityId, patch, 'user')
+      }
+      return next
+    })
+  }, [activeDishIndex])
+
+  const handleAddStateEntity = useCallback((entity) => {
+    setIngredientTrackers((prev) => {
+      const next = [...prev]
+      const active = next[activeDishIndex]
+      if (active) {
+        next[activeDishIndex] = {
+          ...active,
+          entities: [...active.entities, entity],
+          history: [
+            ...(active.history || []),
+            {
+              stepIndex: currentStep,
+              stepText: 'user_added_entity',
+              timestamp: Date.now(),
+              changes: [
+                {
+                  entityId: entity.id,
+                  name: entity.name,
+                  type: entity.type,
+                  previousState: null,
+                  nextState: entity.state,
+                  source: 'user',
+                },
+              ],
+            },
+          ],
+        }
+      }
+      return next
+    })
+  }, [activeDishIndex, currentStep])
 
   const [visionAssistActive, setVisionAssistActive] = useState(false)
   const [visionCameraActive, setVisionCameraActive] = useState(false)
@@ -1205,6 +1298,16 @@ export default function CookingNavigator({
           summary={recipe.processSafetySummary}
           className="cn-process-notice"
         />
+        {liveIngredientStateEnabled && currentTracker && (
+          <IngredientStateBoard
+            tracker={currentTracker}
+            onPatchState={handlePatchEntityState}
+            onAddEntity={handleAddStateEntity}
+            warning={stepActionWarning}
+            isCollapsed={isStateBoardCollapsed}
+            onToggleCollapse={() => setIsStateBoardCollapsed((c) => !c)}
+          />
+        )}
         {showRecipe ? (
           <div className="cn-recipe-panel">
             <RecipeCardDisplay recipe={recipe} />

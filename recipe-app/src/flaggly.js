@@ -43,6 +43,8 @@ const FLAG_DEFAULTS = {
   'arrival-reconciliation': true,
   'kitchen-physics-packs': true,
   'multi-home-custody': true,
+  'live-ingredient-state': false,
+  'live_ingredient_state_v1': false,
 }
 
 let flaggly
