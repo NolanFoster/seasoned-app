@@ -115,12 +115,21 @@ describe('Recipe Generation Worker - Integration Tests', () => {
 
   describe('Adapt route', () => {
     it('should route POST /adapt to the adapt handler', async () => {
-      // The adapt handler requires a baseRecipe with a name and a non-empty
-      // ingredients array. Without AI bound, the mock-AI path returns 200.
+      // The adapt handler requires a baseRecipe with a name, a non-empty
+      // ingredients array, AND instructions. The quality-bar gate (assertRecipeQuality)
+      // blocks recipes that have no instructions with a 422 RecipeQualityError,
+      // even in mock-AI mode. The mock-AI path returns baseRecipe.instructions
+      // verbatim when no allergen substitutions apply, so the fixture must include
+      // at least one instruction line for the test to reach 200.
       const request = createPostRequest('/adapt', {
         baseRecipe: {
           name: 'Test Pasta',
-          ingredients: ['200g spaghetti', '2 cloves garlic', '2 tbsp olive oil']
+          ingredients: ['200g spaghetti', '2 cloves garlic', '2 tbsp olive oil'],
+          instructions: [
+            'Boil spaghetti in salted water until al dente, about 8 minutes.',
+            'Sauté garlic in olive oil over medium heat for 1 minute.',
+            'Toss drained spaghetti with garlic oil and serve immediately.'
+          ]
         },
         modifications: []
       });
