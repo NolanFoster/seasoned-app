@@ -325,7 +325,7 @@ export default function MealPlannerDrawer({
    * Transitions the footer back to the LOADING state.
    */
   function handleRegenerate() {
-    clearGroceryList()
+    // DO NOT clearGroceryList() here so the existing list is preserved during generation/save
     handleGenerate()
   }
 

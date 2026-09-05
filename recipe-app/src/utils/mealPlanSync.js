@@ -94,8 +94,18 @@ function normalizeMealPlanDocument(data) {
 }
 
 function normalizeGroceryDocument(data) {
+  const rawItems = Array.isArray(data?.items) ? data.items : [];
+  const normalizedItems = rawItems.map(item => ({
+    id: String(item?.id || Math.random().toString(36).substr(2)),
+    name: typeof item?.name === 'string' ? item.name : 'Unknown Item',
+    category: typeof item?.category === 'string' ? item.category : 'Other',
+    completed: Boolean(item?.completed),
+    quantity: typeof item?.quantity === 'number' || typeof item?.quantity === 'string' ? item.quantity : null,
+    unit: typeof item?.unit === 'string' ? item.unit : null,
+  }));
+
   return {
-    items: Array.isArray(data?.items) ? data.items : [],
+    items: normalizedItems,
     lastGeneratedAt: data?.lastGeneratedAt == null ? null : Number(data.lastGeneratedAt),
     clientUpdatedAt: Number(data?.clientUpdatedAt || 0),
   }

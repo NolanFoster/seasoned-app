@@ -182,8 +182,14 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
   const [listGenerationError, setListGenerationError] = useState(null);
   const [lastListGeneratedAt, setLastListGeneratedAt] = useState(() => initial.groceryMeta.lastGeneratedAt);
 
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | synced | error
-  const [syncError, setSyncError] = useState(null);
+  const [planSyncStatus, setPlanSyncStatus] = useState('idle');
+  const [grocerySyncStatus, setGrocerySyncStatus] = useState('idle');
+  const [planSyncError, setPlanSyncError] = useState(null);
+  const [grocerySyncError, setGrocerySyncError] = useState(null);
+
+  // Derive aggregate sync status
+  const syncStatus = [planSyncStatus, grocerySyncStatus].includes('error') ? 'error' : [planSyncStatus, grocerySyncStatus].includes('syncing') ? 'syncing' : (planSyncStatus === 'synced' || grocerySyncStatus === 'synced' ? 'synced' : 'idle');
+  const syncError = planSyncError || grocerySyncError;
 
   // Latest values, read by debounced pushes that fire after the render that
   // produced them.
@@ -235,52 +241,58 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
   const pushPlan = useCallback(async () => {
     const active = identityRef.current;
     if (!apiUrl || !active) return;
+    const requestVersion = planUpdatedAtRef.current;
     const { mealPlan: plan, upNext: staged } = planStateRef.current;
     try {
       await saveMealPlan(apiUrl, active.token, {
         mealPlan: plan,
         upNext: staged,
-        clientUpdatedAt: planUpdatedAtRef.current,
+        clientUpdatedAt: requestVersion,
       });
-      setSyncStatus('synced');
-      setSyncError(null);
+      if (identityRef.current !== active || planUpdatedAtRef.current !== requestVersion) return;
+      setPlanSyncStatus('synced');
+      setPlanSyncError(null);
     } catch (error) {
       // A 409 means another device saved something newer; that copy wins and
       // becomes what this device shows rather than being overwritten.
       if (error instanceof StaleWriteError && error.data) {
         applyPlanDocument(error.data);
         writePlanToStorage(scopeRef.current, error.data.mealPlan || {}, error.data.upNext || [], Number(error.data.clientUpdatedAt || 0));
-        setSyncStatus('synced');
-        setSyncError(null);
+        setPlanSyncStatus('synced');
+        setPlanSyncError(null);
         return;
       }
-      setSyncStatus('error');
-      setSyncError(error instanceof Error ? error.message : 'Meal plan sync failed');
+      if (identityRef.current !== active || planUpdatedAtRef.current !== requestVersion) return;
+      setPlanSyncStatus('error');
+      setPlanSyncError(error instanceof Error ? error.message : 'Meal plan sync failed');
     }
   }, [apiUrl, applyPlanDocument]);
 
   const pushGroceryList = useCallback(async () => {
     const active = identityRef.current;
     if (!apiUrl || !active) return;
+    const requestVersion = groceryUpdatedAtRef.current;
     const { items, lastGeneratedAt } = groceryStateRef.current;
     try {
       await saveGroceryList(apiUrl, active.token, {
         items,
         lastGeneratedAt,
-        clientUpdatedAt: groceryUpdatedAtRef.current,
+        clientUpdatedAt: requestVersion,
       });
-      setSyncStatus('synced');
-      setSyncError(null);
+      if (identityRef.current !== active || groceryUpdatedAtRef.current !== requestVersion) return;
+      setGrocerySyncStatus('synced');
+      setGrocerySyncError(null);
     } catch (error) {
       if (error instanceof StaleWriteError && error.data) {
         applyGroceryDocument(error.data);
         writeGroceryToStorage(scopeRef.current, error.data.items || [], error.data.lastGeneratedAt ?? null, Number(error.data.clientUpdatedAt || 0));
-        setSyncStatus('synced');
-        setSyncError(null);
+        setGrocerySyncStatus('synced');
+        setGrocerySyncError(null);
         return;
       }
-      setSyncStatus('error');
-      setSyncError(error instanceof Error ? error.message : 'Grocery list sync failed');
+      if (identityRef.current !== active || groceryUpdatedAtRef.current !== requestVersion) return;
+      setGrocerySyncStatus('error');
+      setGrocerySyncError(error instanceof Error ? error.message : 'Grocery list sync failed');
     }
   }, [apiUrl, applyGroceryDocument]);
 
@@ -343,14 +355,18 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
     });
 
     if (!apiUrl || !userId) {
-      setSyncStatus('idle');
-      setSyncError(null);
+      setPlanSyncStatus('idle');
+      setGrocerySyncStatus('idle');
+      setPlanSyncError(null);
+      setGrocerySyncError(null);
       return undefined;
     }
 
     let cancelled = false;
-    setSyncStatus('syncing');
-    setSyncError(null);
+    setPlanSyncStatus('syncing');
+    setGrocerySyncStatus('syncing');
+    setPlanSyncError(null);
+    setGrocerySyncError(null);
 
     (async () => {
       try {
@@ -393,14 +409,17 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
         }
 
         if (!cancelled) {
-          setSyncStatus((prev) => (prev === 'error' ? prev : 'synced'));
+          setPlanSyncStatus((prev) => (prev === 'error' ? prev : 'synced'));
+          setGrocerySyncStatus((prev) => (prev === 'error' ? prev : 'synced'));
         }
       } catch (error) {
         if (cancelled) return;
         // Sync is additive: a worker that is down or unreachable leaves the
         // planner working exactly as it did before, on the local copy.
-        setSyncStatus('error');
-        setSyncError(error instanceof Error ? error.message : 'Meal plan sync is unavailable');
+        setPlanSyncStatus('error');
+        setGrocerySyncStatus('error');
+        setPlanSyncError(error instanceof Error ? error.message : 'Meal plan sync is unavailable');
+        setGrocerySyncError(error instanceof Error ? error.message : 'Grocery list sync is unavailable');
       }
     })();
 
