@@ -23,23 +23,6 @@ function parseDuration(val) {
   return parts.length ? parts.join(' ') : val;
 }
 
-// Recipes that originate inside Seasoned link back to Seasoned itself, so the
-// "Source" link is self-referential and is hidden on the shared page.
-const SEASONED_HOSTS = ['seasoned.app', 'seasonedapp.com'];
-
-function isSeasonedSource(recipe) {
-  if (recipe.source === 'ai_generated') return true;
-  const url = recipe.source_url;
-  if (!url) return false;
-  let host;
-  try {
-    host = new URL(String(url)).hostname.toLowerCase();
-  } catch {
-    return false;
-  }
-  return SEASONED_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
-}
-
 const sourceBadgeMap = {
   clipped: { label: 'Clipped', color: '#5bb87a' },
   ai_generated: { label: 'AI Generated', color: '#c8a96e' },
@@ -53,7 +36,6 @@ export function renderRecipeCard(recipe) {
   });
 
   const sourceBadge = sourceBadgeMap[recipe.source];
-  const showSourceLink = Boolean(recipe.source_url) && !isSeasonedSource(recipe);
 
   const ingredientItems = (recipe.ingredients || [])
     .map((ing) => {
@@ -82,7 +64,13 @@ export function renderRecipeCard(recipe) {
     ${recipe.prep_time ? `<span class="recipe-meta-pill"><strong>Prep</strong> ${escapeHtml(parseDuration(recipe.prep_time))}</span>` : ''}
     ${recipe.cook_time ? `<span class="recipe-meta-pill"><strong>Cook</strong> ${escapeHtml(parseDuration(recipe.cook_time))}</span>` : ''}
     ${recipe.recipe_yield ? `<span class="recipe-meta-pill"><strong>Serves</strong> ${escapeHtml(String(recipe.recipe_yield))}</span>` : ''}
-    ${showSourceLink ? `<a class="source-link" href="${escapeHtml(recipe.source_url)}" target="_blank" rel="noopener noreferrer">Source ↗</a>` : ''}
+    ${recipe.source_url && recipe.source !== 'ai_generated' ? `<a class="source-link" href="${escapeHtml(recipe.source_url)}" target="_blank" rel="noopener noreferrer">Source ↗</a>` : ''}
+    ${instructions.length > 0 ? `<button id="cook-btn" class="cook-btn" title="Step-by-step cooking mode" style="margin-left:auto">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 3l14 9-14 9V3z"/>
+      </svg>
+      Cook
+    </button>` : ''}
   </div>
 
   <div class="recipe-body">
