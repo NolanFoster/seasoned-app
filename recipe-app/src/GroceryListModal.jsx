@@ -366,6 +366,8 @@ export default function GroceryListModal({
     <div className="grocery-modal-overlay" onClick={handleBackdropClick}>
       <div
         className="grocery-modal-container"
+        ref={modalRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="grocery-modal-title"
