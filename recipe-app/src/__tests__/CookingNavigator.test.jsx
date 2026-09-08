@@ -14,6 +14,8 @@ const flagOverrides = {
   'dictation': true,
   'navigator-vision-assist': true,
   'multi-dish-navigator': true,
+  'live-ingredient-state': false,
+  'live_ingredient_state_v1': false,
 }
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => flagOverrides[key] ?? false,
@@ -981,6 +983,57 @@ describe('CookingNavigator — concurrent multi-dish orchestration', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/Both "Roasted Chicken" and "Baked Potatoes" need the oven/i)
   })
 })
+
+describe('CookingNavigator — Live Ingredient State Tracking', () => {
+  beforeEach(() => {
+    flagOverrides['live-ingredient-state'] = true
+  })
+
+  afterEach(() => {
+    flagOverrides['live-ingredient-state'] = false
+  })
+
+  test('renders live ingredient state board and updates entity states across step advances', () => {
+    const recipe = {
+      name: 'Caramelized Onion Dip',
+      ingredients: ['2 large yellow onions', '100g sour cream'],
+      instructions: [
+        'Dice the onions on a cutting board.',
+        'Sauté the onions in a skillet until caramelized.',
+        'Mix with sour cream and serve.',
+      ],
+    }
+
+    renderNavigator(recipe)
+
+    // State board is visible
+    expect(screen.getByText('Live Ingredient State')).toBeInTheDocument()
+    expect(screen.getByText('yellow onions')).toBeInTheDocument()
+
+    // Start cooking (Step 1: Dice onions)
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByText('diced')).toBeInTheDocument()
+
+    // Next step (Step 2: Sauté onions until caramelized)
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(screen.getByText('caramelized')).toBeInTheDocument()
+  })
+
+  test('displays food safety alert when attempting to sear frozen ingredient', () => {
+    const frozenRecipe = {
+      name: 'Pan-seared Chicken',
+      ingredients: ['500g frozen chicken breast'],
+      instructions: ['Sear the frozen chicken in a hot skillet for 5 minutes.'],
+    }
+
+    renderNavigator(frozenRecipe)
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    expect(screen.getByText(/Food Safety Warning/i)).toBeInTheDocument()
+    expect(screen.getByText(/marked as frozen/i)).toBeInTheDocument()
+  })
+})
+
 
 
 

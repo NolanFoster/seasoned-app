@@ -17,7 +17,8 @@
     "./allergen-graph": "./allergen-graph.js",
     "./food-process-safety": "./food-process-safety.js",
     "./pantry-planning": "./pantry-planning.js",
-    "./nutrition-grounding": "./nutrition-grounding.js"
+    "./nutrition-grounding": "./nutrition-grounding.js",
+    "./ingredient-state": "./ingredient-state.js"
   },
   "scripts": {
     "test": "node test-simple.js",
