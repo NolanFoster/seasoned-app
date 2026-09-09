@@ -49,6 +49,40 @@ function allergenLabel(value) {
 }
 
 /**
+ * Classify an allergen check for layout/placement decisions without duplicating
+ * the rendering logic in <AllergenSafetyNotice>. Keep these branches in sync
+ * with that component. Returns 'blocked' | 'review' | 'info' | null.
+ */
+export function allergenNoticeSeverity(summary, hardAllergens = []) {
+  if (!summary && hardAllergens.length === 0) return null
+  const blocked = summary?.blocked || []
+  const needsReview = Boolean(
+    summary?.needs_review
+      || (summary && summary.safe === false && blocked.length === 0)
+      || (hardAllergens.length > 0 && summary?.ingredient_data_available === false)
+  )
+  if (blocked.length > 0) return 'blocked'
+  if (needsReview) return 'review'
+  return 'info'
+}
+
+/**
+ * Classify a food-process gate for layout/placement decisions without
+ * duplicating the rendering logic in <ProcessSafetyNotice>. Returns
+ * 'blocked' | 'template' | 'warning' | null.
+ */
+export function processNoticeSeverity(summary) {
+  if (!summary || !summary.checked) return null
+  const blocked = summary.blocked || []
+  const requiresTemplate = summary.requires_template || []
+  const warnings = summary.warnings || []
+  if (blocked.length > 0) return 'blocked'
+  if (requiresTemplate.length > 0) return 'template'
+  if (warnings.length > 0) return 'warning'
+  return null
+}
+
+/**
  * Explain the graph result without claiming that a recipe is medically safe.
  * The same notice is rendered in the recipe card and cooking navigator so the
  * warning remains visible when a user moves from browsing to cooking.
@@ -445,6 +479,43 @@ export default function RecipeCardDisplay({
     || recipe.appliedConstraints?.hard_allergens
     || []
 
+  // ── Layout: classify checks so the recipe can lead and the checks collapse ──
+  const allergenSeverity = allergenNoticeSeverity(allergenSummary, hardAllergens)
+  const processSeverity = processNoticeSeverity(recipe.processSafetySummary)
+  const pinAllergen = allergenSeverity === 'blocked' || allergenSeverity === 'review'
+  const pinProcess = processSeverity === 'blocked' || processSeverity === 'template'
+  const showAllergenInfo = allergenSeverity === 'info'
+  const showProcessWarning = processSeverity === 'warning'
+
+  const provenance = recipe.provenance || recipe.provenance_metadata
+  const qualityBar = recipe.qualityBar || recipe.quality_bar
+  const nutritionProvenance = recipe?.nutritionProvenance || recipe?.nutrition_provenance
+  const coveragePct = typeof nutritionProvenance?.coverage_pct === 'number'
+    ? Math.round(nutritionProvenance.coverage_pct)
+    : typeof recipe?.provenance?.nutritionCoverage === 'number'
+      ? Math.round(recipe.provenance.nutritionCoverage)
+      : null
+
+  const isAiRecipe = Boolean(
+    provenance
+      || recipe.source === 'ai_generated'
+      || recipe.source === 'adapted'
+      || recipe.generationMethod
+  )
+  const appetiteModes = recipe.appliedConstraints?.lifestyleModes
+    || recipe.appliedConstraints?.lifestyle_modes
+    || []
+  const hasAppetiteTips = appetiteModes.includes('appetite_gentle')
+  const hasAppliedConstraints = appliedConstraintLabels(recipe.appliedConstraints).length > 0
+  const hasAdaptation = Boolean(recipe.substitutions?.length > 0 || recipe.adaptationNotes?.length > 0)
+  const hasNutrition = Boolean(recipe.nutrition) || coveragePct !== null
+
+  const hasChecks = showAllergenInfo || showProcessWarning || isAiRecipe
+    || hasAppetiteTips || hasAppliedConstraints || hasAdaptation || hasNutrition
+
+  const qualityScore = qualityBar?.score ?? provenance?.qualityScore
+  const safetyFlagged = pinAllergen || pinProcess || showProcessWarning
+
   return (
     <>
       <div className="recipe-card-header">
@@ -466,10 +537,14 @@ export default function RecipeCardDisplay({
         <p className="recipe-description">{recipe.description}</p>
       )}
 
-      <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
-      <ProcessSafetyNotice summary={recipe.processSafetySummary} />
-      <RecipeProvenance recipe={recipe} />
-      <AppetiteFriendlyTips constraints={recipe.appliedConstraints} />
+      {/* Blocking / needs-review safety states stay pinned above the fold so a
+          dangerous recipe is never hidden behind the collapsed checks. */}
+      {pinAllergen && (
+        <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
+      )}
+      {pinProcess && (
+        <ProcessSafetyNotice summary={recipe.processSafetySummary} />
+      )}
 
       <div className="recipe-meta">
         {recipe.prep_time && (
@@ -484,8 +559,8 @@ export default function RecipeCardDisplay({
         {recipe.ingredients?.length > 0 && (() => {
           const costInfo = estimateRecipeCost(recipe)
           return (
-            <span 
-              className="recipe-meta-pill" 
+            <span
+              className="recipe-meta-pill"
               title={costInfo.disclaimer}
               style={{ cursor: 'help' }}
             >
@@ -512,6 +587,103 @@ export default function RecipeCardDisplay({
           </button>
         )}
       </div>
+
+      {/* The recipe itself — ingredients and instructions lead the card. */}
+      <div className="recipe-body">
+        {recipe.ingredients?.length > 0 && (
+          <div className="recipe-section">
+            <h3>Ingredients</h3>
+            <ul>
+              {recipe.ingredients.map((ing, i) => (
+                <li key={i}>{typeof ing === 'string' ? ing : ing.name || JSON.stringify(ing)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {instructions.length > 0 && (
+          <div className="recipe-section">
+            <h3>Instructions</h3>
+            <ol>
+              {instructions.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+
+      {/* Secondary checks collapse into a one-line summary so they don't crowd
+          the recipe; expand for the full details. */}
+      {hasChecks && (
+        <details className="recipe-checks">
+          <summary className="recipe-checks-summary">
+            <span className="recipe-checks-title">Details &amp; checks</span>
+            <span className="recipe-checks-chips">
+              {(allergenSummary || recipe.processSafetySummary) && (
+                <span className={`check-chip ${safetyFlagged ? 'check-chip--warn' : 'check-chip--ok'}`}>
+                  Safety {safetyFlagged ? '⚠' : '✓'}
+                </span>
+              )}
+              {typeof qualityScore === 'number' && (
+                <span className="check-chip">Quality {Math.round(Number(qualityScore))}/100</span>
+              )}
+              {hasNutrition && (
+                <span className="check-chip check-chip--ok">Nutrition ✓</span>
+              )}
+            </span>
+          </summary>
+          <div className="recipe-checks-body">
+            {showAllergenInfo && (
+              <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
+            )}
+            {showProcessWarning && (
+              <ProcessSafetyNotice summary={recipe.processSafetySummary} />
+            )}
+            <RecipeProvenance recipe={recipe} />
+            <AppetiteFriendlyTips constraints={recipe.appliedConstraints} />
+            {hasAppliedConstraints && (
+              <div className="applied-constraints" aria-label="Applied generation constraints">
+                <span className="applied-constraints-label">Personalized</span>
+                {appliedConstraintLabels(recipe.appliedConstraints).map((label) => (
+                  <span key={label} className="applied-constraint-chip">{label}</span>
+                ))}
+              </div>
+            )}
+            {hasAdaptation && (
+              <section className="adaptation-summary" aria-label="Recipe adaptation details">
+                <h3>What changed</h3>
+                {recipe.substitutions?.length > 0 && (
+                  <ul className="adaptation-substitutions">
+                    {recipe.substitutions.map((change, index) => (
+                      <li key={`${change.from || 'change'}-${index}`}>
+                        <strong>{change.from}</strong> → {change.to}
+                        {change.reason && <span>{change.reason}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {recipe.adaptationNotes?.length > 0 && (
+                  <ul className="adaptation-notes">
+                    {recipe.adaptationNotes.map((note, index) => <li key={`${note}-${index}`}>{note}</li>)}
+                  </ul>
+                )}
+                {recipe.adapted_from && (
+                  <div className="adaptation-lineage" style={{ margin: '8px 0', padding: '6px 10px', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em' }}>
+                    <span>🌱 <strong>Lineage:</strong> Adapted from original <em>{recipe.original_name || recipe.parent_recipe_name || 'recipe'}</em></span>
+                    {recipe.adaptation_timestamp && (
+                      <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
+                        Variant generated on {new Date(recipe.adaptation_timestamp).toLocaleDateString()}
+                      </small>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+            <NutritionPanel recipe={recipe} />
+          </div>
+        </details>
+      )}
 
       {useFlag('complete-meal-composer') && (() => {
         const pairedSides = composeMealSides(recipe, { hardAllergens })
@@ -594,72 +766,6 @@ export default function RecipeCardDisplay({
           </section>
         )
       })()}
-
-      {appliedConstraintLabels(recipe.appliedConstraints).length > 0 && (
-        <div className="applied-constraints" aria-label="Applied generation constraints">
-          <span className="applied-constraints-label">Personalized</span>
-          {appliedConstraintLabels(recipe.appliedConstraints).map((label) => (
-            <span key={label} className="applied-constraint-chip">{label}</span>
-          ))}
-        </div>
-      )}
-
-      {(recipe.substitutions?.length > 0 || recipe.adaptationNotes?.length > 0) && (
-        <section className="adaptation-summary" aria-label="Recipe adaptation details">
-          <h3>What changed</h3>
-          {recipe.substitutions?.length > 0 && (
-            <ul className="adaptation-substitutions">
-              {recipe.substitutions.map((change, index) => (
-                <li key={`${change.from || 'change'}-${index}`}>
-                  <strong>{change.from}</strong> → {change.to}
-                  {change.reason && <span>{change.reason}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-          {recipe.adaptationNotes?.length > 0 && (
-            <ul className="adaptation-notes">
-              {recipe.adaptationNotes.map((note, index) => <li key={`${note}-${index}`}>{note}</li>)}
-            </ul>
-          )}
-          {recipe.adapted_from && (
-            <div className="adaptation-lineage" style={{ margin: '8px 0', padding: '6px 10px', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em' }}>
-              <span>🌱 <strong>Lineage:</strong> Adapted from original <em>{recipe.original_name || recipe.parent_recipe_name || 'recipe'}</em></span>
-              {recipe.adaptation_timestamp && (
-                <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
-                  Variant generated on {new Date(recipe.adaptation_timestamp).toLocaleDateString()}
-                </small>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      <NutritionPanel recipe={recipe} />
-
-      <div className="recipe-body">
-        {recipe.ingredients?.length > 0 && (
-          <div className="recipe-section">
-            <h3>Ingredients</h3>
-            <ul>
-              {recipe.ingredients.map((ing, i) => (
-                <li key={i}>{typeof ing === 'string' ? ing : ing.name || JSON.stringify(ing)}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {instructions.length > 0 && (
-          <div className="recipe-section">
-            <h3>Instructions</h3>
-            <ol>
-              {instructions.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
     </>
   )
 }
