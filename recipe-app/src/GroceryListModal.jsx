@@ -234,6 +234,8 @@ export default function GroceryListModal({
   // Track expanded state per category; defaults to true for new categories
   const [expandedCategories, setExpandedCategories] = useState({})
   const inputRef = useRef(null)
+  const modalRef = useRef(null)
+  const previousFocusRef = useRef(null)
 
   function downloadFile(content, fileName, mimeType) {
     const blob = new Blob([content], { type: mimeType })
@@ -313,14 +315,62 @@ export default function GroceryListModal({
     })
   }, [groceryList, pantryPlannerEnabled])
 
-  // Escape key closes the modal
+  // Focus management: move focus into the modal on open, trap Tab focus
+  // inside it while open, close on Escape, and restore focus on close.
   useEffect(() => {
     if (!isOpen) return
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') onClose()
+
+    const modal = modalRef.current
+    previousFocusRef.current = document.activeElement
+
+    // Move focus to the first focusable control (or the container itself).
+    if (modal) {
+      const firstFocusable = modal.querySelector(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (firstFocusable) firstFocusable.focus()
+      else modal.focus()
     }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !modal) return
+
+      const focusables = Array.from(
+        modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.disabled && el.getAttribute('aria-hidden') !== 'true')
+
+      if (focusables.length === 0) {
+        e.preventDefault()
+        modal.focus()
+        return
+      }
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      const previous = previousFocusRef.current
+      if (previous && typeof previous.focus === 'function') {
+        previous.focus()
+      }
+    }
   }, [isOpen, onClose])
 
   function handleBackdropClick(e) {

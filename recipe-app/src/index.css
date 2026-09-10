@@ -1079,6 +1079,88 @@ textarea:focus-visible {
   margin-bottom: 6px;
 }
 
+/* ── Collapsible recipe checks (Details & checks) ───────────────── */
+.recipe-checks {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.recipe-checks summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px var(--spacing-5);
+  user-select: none;
+}
+
+.recipe-checks summary::-webkit-details-marker {
+  display: none;
+}
+
+.recipe-checks-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recipe-checks-title::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+  transition: transform 0.15s ease;
+}
+
+.recipe-checks[open] .recipe-checks-title::after {
+  transform: rotate(180deg);
+}
+
+.recipe-checks-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 112, 99, 0.25);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.check-chip--ok {
+  border-color: rgba(63, 145, 91, 0.4);
+  color: #2f7a4d;
+}
+
+.check-chip--warn {
+  border-color: rgba(190, 132, 37, 0.5);
+  color: #9a6a12;
+}
+
+.recipe-checks-body {
+  padding: 0 var(--spacing-5) var(--spacing-md);
+}
+
 /* ── GeneratingCard ── */
 .generating-card {
   background: var(--surface);

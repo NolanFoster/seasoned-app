@@ -375,5 +375,49 @@ describe('Transformative Leftover Remix Cascades in RecipeCardDisplay', () => {
 })
 
 
+describe('Recipe-first layout & collapsible checks', () => {
+  test('renders ingredients and instructions before the collapsible checks', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI rice bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: { source: 'ai_generated', generationMethod: 'llama-ai', nutritionCoverage: 80 },
+    }} />)
 
+    const ingredients = screen.getByText('Ingredients')
+    const detailsSummary = screen.getByText('Details & checks')
+    expect(ingredients.compareDocumentPosition(detailsSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 
+  test('keeps the checks collapsed by default', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI rice bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: { source: 'ai_generated', generationMethod: 'llama-ai', nutritionCoverage: 80 },
+    }} />)
+
+    const details = screen.getByText('Details & checks').closest('details')
+    expect(details).not.toHaveAttribute('open')
+  })
+
+  test('pins a blocked allergen notice outside the collapsible checks', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Peanut stir-fry',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook.'],
+      appliedConstraints: { hardAllergens: ['peanuts'] },
+      allergenSummary: { checked: true, safe: false, blocked: ['peanuts'], contains: ['peanuts'] },
+    }} />)
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Allergen conflict detected')
+    expect(alert.closest('details')).toBeNull()
+  })
+})
