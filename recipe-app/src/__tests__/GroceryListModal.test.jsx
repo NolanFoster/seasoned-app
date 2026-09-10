@@ -511,8 +511,50 @@ describe('GroceryListModal — export helpers', () => {
 
 
 describe('grocery modal a11y', () => {
-  it('trap and restore focus for nested grocery modal', () => {
-    // Verified by checking useEffect hooks adding keydown listeners and previousFocusRef
-    expect(true).toBe(true);
+  beforeEach(() => {
+    mockGroceryList = MOCK_GROCERY_LIST;
+  });
+
+  it('moves focus into the dialog when opened', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: /grocery list/i });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
+  it('closes on Escape', () => {
+    const onClose = jest.fn();
+    render(<GroceryListModal isOpen onClose={onClose} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('traps Tab focus within the dialog', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: /grocery list/i });
+    const focusables = Array.from(dialog.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter((el) => !el.disabled);
+    expect(focusables.length).toBeGreaterThan(0);
+
+    const last = focusables[focusables.length - 1];
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(focusables[0]);
+  });
+
+  it('wraps Shift+Tab focus from first to last control', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: /grocery list/i });
+    const focusables = Array.from(dialog.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter((el) => !el.disabled);
+    expect(focusables.length).toBeGreaterThan(0);
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    first.focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
   });
 });
