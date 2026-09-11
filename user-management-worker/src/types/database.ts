@@ -87,6 +87,42 @@ export interface PantryItemInput {
   tags?: string[];
 }
 
+export type PantryLedgerEventType = 'debit_cook' | 'debit_waste' | 'adjust';
+export type PantryLedgerSource = 'navigator' | 'workflow' | 'meal_log' | 'pantry';
+export type PantryLedgerLineAction = 'update' | 'remove';
+
+export interface PantryLedgerLine {
+  pantryItemId: number;
+  nameNorm: string;
+  qty: number | null;
+  unit: string | null;
+  confidence: number;
+  action: PantryLedgerLineAction;
+  remainingQuantity: number | null;
+  expectedQuantity?: number | null;
+}
+
+export interface PantryLedgerEvent {
+  id: number;
+  user_id: string;
+  type: PantryLedgerEventType;
+  recipe_id: string | null;
+  cook_session_id: string | null;
+  lines: PantryLedgerLine[];
+  source: PantryLedgerSource;
+  created_at: string;
+}
+
+export interface PantryLedgerEventInput {
+  type?: PantryLedgerEventType;
+  recipeId?: string | null;
+  recipe_id?: string | null;
+  cookSessionId?: string | null;
+  cook_session_id?: string | null;
+  source?: PantryLedgerSource;
+  lines: unknown[];
+}
+
 export interface RecipeNote {
   id: number;
   user_id: string;

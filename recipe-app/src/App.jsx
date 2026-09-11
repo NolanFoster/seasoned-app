@@ -338,6 +338,7 @@ export default function App() {
   const pantryEnabled = useFlag('pantry')
   const pantryPlannerEnabled = useFlag('pantry-planner')
   const pantryScanEnabled = useFlag('pantry-scan')
+  const pantryLedgerEnabled = useFlag('pantry_ledger_v1')
   const mealPlanAutofillEnabled = useFlag('meal-plan-autofill')
   const mealPlanBulkScheduleEnabled = useFlag('meal-plan-bulk-schedule')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
@@ -346,12 +347,17 @@ export default function App() {
   const expiringPantryItems = getExpiringPantryItems(usablePantryItems, 7)
 
   const pantryPlanningAvailable = Boolean(pantryEnabled && pantryPlannerEnabled && pantry.available)
-  const depletePantry = useCallback(async (operations) => {
+  const pantryLedgerAvailable = Boolean(pantryPlanningAvailable && pantryLedgerEnabled && pantry.ledgerAvailable)
+  const depletePantry = useCallback(async (operations, { recipeId, cookSessionId } = {}) => {
+    if (pantryLedgerAvailable) {
+      return pantry.confirmDebit({ recipeId, cookSessionId, operations, source: 'navigator' })
+    }
     for (const operation of operations) {
       if (operation.action === 'remove') await pantry.removeItem(operation.pantryItemId)
       else await pantry.updateItem(operation.pantryItemId, { quantity: operation.remainingQuantity })
     }
-  }, [pantry.removeItem, pantry.updateItem])
+    return null
+  }, [pantry.confirmDebit, pantry.removeItem, pantry.updateItem, pantryLedgerAvailable])
   const recipeEditingEnabled = useFlag('recipe-editing')
   const recipeNotesEnabled = useFlag('recipe-notes')
   const [editorOpen, setEditorOpen] = useState(false)
@@ -1409,6 +1415,7 @@ export default function App() {
             noteCount={recipeNotes.notes.length}
             pantryItems={usablePantryItems}
             pantryPlannerEnabled={pantryPlanningAvailable}
+            onProposePantry={pantryLedgerAvailable ? pantry.proposeDebit : undefined}
             onDepletePantry={pantryPlanningAvailable ? depletePantry : undefined}
             onCookFeedback={({ rating, tags }) => {
               void culinaryEvents.recordEvent('recipe_cooked_completed', activeRecipe, { rating, tags })
@@ -1457,6 +1464,7 @@ export default function App() {
           onAdd={pantry.addItem}
           onUpdate={pantry.updateItem}
           onRemove={pantry.removeItem}
+          onWaste={pantryLedgerAvailable ? pantry.recordWaste : undefined}
           scannerEnabled={pantryScanEnabled}
           onScan={pantry.scanPhoto}
           onClose={() => setPantryOpen(false)}
