@@ -30,7 +30,10 @@
     "migrate:notes:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/004_add_recipe_notes.sql",
     "migrate:mealplan:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/005_add_meal_plan_sync.sql",
     "migrate:mealplan:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/005_add_meal_plan_sync.sql",
-    "migrate:mealplan:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/005_add_meal_plan_sync.sql"
+    "migrate:mealplan:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/005_add_meal_plan_sync.sql",
+    "migrate:ledger:preview": "wrangler d1 execute user-db-preview --env preview --remote --file migrations/007_add_pantry_ledger.sql",
+    "migrate:ledger:staging": "wrangler d1 execute user-db-staging --env staging --remote --file migrations/007_add_pantry_ledger.sql",
+    "migrate:ledger:production": "wrangler d1 execute user-db-production --env production --remote --file migrations/007_add_pantry_ledger.sql"
   },
   "dependencies": {
     "hono": "^3.12.0",

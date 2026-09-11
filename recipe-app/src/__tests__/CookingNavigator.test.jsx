@@ -147,6 +147,32 @@ describe('CookingNavigator — rendering', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  test('verifies the pantry proposal before showing the confirmation controls', async () => {
+    const onProposePantry = jest.fn(() => Promise.resolve({ items: [] }))
+    const onDepletePantry = jest.fn(() => Promise.resolve())
+    renderNavigator({}, {
+      pantryPlannerEnabled: true,
+      pantryItems: [{ id: 7, name: 'milk', quantity: 1, unit: 'l' }],
+      onProposePantry,
+      onDepletePantry,
+    })
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByText('Next →'))
+    fireEvent.click(screen.getByText('Next →'))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish Cooking' }))
+
+    await waitFor(() => expect(onProposePantry).toHaveBeenCalledWith(expect.objectContaining({
+      recipeId: undefined,
+      operations: expect.arrayContaining([expect.objectContaining({ pantryItemId: 7 })]),
+    })))
+    await waitFor(() => expect(screen.getByText(/Update your pantry for the ingredients/i)).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Update pantry & finish/i }))
+    await waitFor(() => expect(onDepletePantry).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ pantryItemId: 7 })]),
+      expect.objectContaining({ cookSessionId: expect.any(String) }),
+    ))
+  })
+
   test('offers an opt-in pantry depletion review after the last step', async () => {
     const onDepletePantry = jest.fn(() => Promise.resolve())
     const { onClose } = renderNavigator({}, {

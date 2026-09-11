@@ -82,6 +82,29 @@ describe('PantryModal', () => {
     await waitFor(() => expect(baseProps.onRemove).toHaveBeenCalledWith(12))
   })
 
+  test('records expired items as waste when the ledger callback is enabled', async () => {
+    const onWaste = jest.fn(() => Promise.resolve())
+    render(<PantryModal {...baseProps} onWaste={onWaste} items={[{
+      id: 21,
+      name: 'lettuce',
+      quantity: 1,
+      unit: 'head',
+      location: 'fridge',
+      expiresOn: '2000-01-01',
+      tags: [],
+    }]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark lettuce as wasted' }))
+    await waitFor(() => expect(onWaste).toHaveBeenCalledWith({
+      lines: [expect.objectContaining({ pantryItemId: 21, action: 'remove', expectedQuantity: 1 })],
+    }))
+    expect(await screen.findByText('lettuce marked as wasted.')).toBeInTheDocument()
+
+    onWaste.mockRejectedValueOnce(new Error('offline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Mark lettuce as wasted' }))
+    expect(await screen.findByText('Could not record that waste event. The item was kept.')).toBeInTheDocument()
+  })
+
   test('adds parsed ingredients from the active recipe', async () => {
     render(<PantryModal {...baseProps} activeRecipe={{ name: 'Bean bowl', ingredients: ['1 cup rice', 'lime juice'] }} />)
 

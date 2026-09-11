@@ -6,6 +6,7 @@ import { Bindings } from './types/env';
 import { UserDatabaseService } from './services/user-database';
 import { DEFAULT_PROFILE, validateCulinaryProfileInput } from './services/culinary-profile';
 import { PantryService, validatePantryItemInput } from './services/pantry';
+import { PantryLedgerConflictError, PantryLedgerService, validatePantryLedgerEventInput } from './services/pantry-ledger';
 import { detectPantryItems, MAX_PANTRY_PHOTO_BYTES, validatePantryPhoto } from './services/pantry-scan';
 import type { PantryScanFile } from './services/pantry-scan';
 import { RecipeNotesService, validateRecipeNoteInput } from './services/recipe-notes';
@@ -72,8 +73,17 @@ function pantryScanEnabled(env: Bindings): boolean {
   return env.PANTRY_SCAN_ENABLED !== 'false';
 }
 
+function pantryLedgerEnabled(env: Bindings): boolean {
+  return env.PANTRY_LEDGER_ENABLED !== 'false';
+}
+
 function isPantryPath(path: string): boolean {
-  return path === '/me/pantry-items' || path.startsWith('/me/pantry-items/') || path === '/me/pantry-scan';
+  return path === '/me/pantry-items' || path.startsWith('/me/pantry-items/') || path === '/me/pantry-scan'
+    || path === '/me/pantry-ledger' || path.startsWith('/me/pantry-ledger/');
+}
+
+function isPantryLedgerPath(path: string): boolean {
+  return path === '/me/pantry-ledger' || path.startsWith('/me/pantry-ledger/');
 }
 
 function recipeNotesEnabled(env: Bindings): boolean {
@@ -118,6 +128,9 @@ app.use('*', async (c, next) => {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     if (c.req.path === '/me/pantry-scan' && !pantryScanEnabled(c.env)) {
+      return c.json({ success: false, message: 'Not Found' }, 404);
+    }
+    if (isPantryLedgerPath(c.req.path) && !pantryLedgerEnabled(c.env)) {
       return c.json({ success: false, message: 'Not Found' }, 404);
     }
     if (isRecipeNotesPath(c.req.path) && !recipeNotesEnabled(c.env)) {
@@ -363,6 +376,102 @@ app.delete('/me/pantry-items/:item_id', async (c) => {
     return c.json({ success: true, affectedRows });
   } catch (error) {
     console.error('Error deleting pantry item:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+// Pantry outflow is an explicit, append-only event. Proposal requests only
+// validate current ownership; confirmation batches the event append and the
+// materialized pantry updates so a partial write cannot silently lose stock.
+app.get('/me/pantry-ledger', async (c) => {
+  try {
+    const events = await new PantryLedgerService(c.env.USER_DB).listEvents(c.get('userId'), Number(c.req.query('limit') || 100));
+    return c.json({ success: true, data: events });
+  } catch (error) {
+    console.error('Error listing pantry ledger events:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/me/pantry-ledger/propose', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.event && typeof body.event === 'object'
+      ? body.event
+      : body;
+    const errors = validatePantryLedgerEventInput(input, 'debit_cook');
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry ledger proposal', errors }, 400);
+    const proposal = await new PantryLedgerService(c.env.USER_DB).propose(c.get('userId'), input);
+    return c.json({ success: true, data: proposal });
+  } catch (error) {
+    if (error instanceof PantryLedgerConflictError) return c.json({ success: false, message: error.message }, 409);
+    console.error('Error proposing pantry debit:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+
+app.post('/me/pantry-ledger/propose-debits', async (c) => {
+  const body = await c.req.json();
+  const input = body && typeof body === 'object' && !Array.isArray(body) && body.event && typeof body.event === 'object' ? body.event : body;
+  const errors = validatePantryLedgerEventInput(input, 'debit_cook');
+  if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry ledger proposal', errors }, 400);
+  try {
+    const proposal = await new PantryLedgerService(c.env.USER_DB).propose(c.get('userId'), input);
+    return c.json({ success: true, data: proposal });
+  } catch (error) {
+    if (error instanceof PantryLedgerConflictError) return c.json({ success: false, message: error.message }, 409);
+    console.error('Error proposing pantry debit:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/me/pantry-ledger/confirm', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.event && typeof body.event === 'object'
+      ? body.event
+      : body;
+    const errors = validatePantryLedgerEventInput(input, 'debit_cook');
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry ledger event', errors }, 400);
+    const result = await new PantryLedgerService(c.env.USER_DB).confirm(c.get('userId'), input);
+    return c.json({ success: true, data: result }, result.alreadyApplied ? 200 : 201);
+  } catch (error) {
+    if (error instanceof PantryLedgerConflictError) return c.json({ success: false, message: error.message }, 409);
+    console.error('Error confirming pantry debit:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+
+app.post('/me/pantry-ledger/confirm-debits', async (c) => {
+  const body = await c.req.json();
+  const input = body && typeof body === 'object' && !Array.isArray(body) && body.event && typeof body.event === 'object' ? body.event : body;
+  const errors = validatePantryLedgerEventInput(input, 'debit_cook');
+  if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry ledger event', errors }, 400);
+  try {
+    const result = await new PantryLedgerService(c.env.USER_DB).confirm(c.get('userId'), input);
+    return c.json({ success: true, data: result }, result.alreadyApplied ? 200 : 201);
+  } catch (error) {
+    if (error instanceof PantryLedgerConflictError) return c.json({ success: false, message: error.message }, 409);
+    console.error('Error confirming pantry debit:', error);
+    return c.json({ success: false, message: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/me/pantry-ledger/waste', async (c) => {
+  try {
+    const body = await c.req.json();
+    const input = body && typeof body === 'object' && !Array.isArray(body) && body.event && typeof body.event === 'object'
+      ? body.event
+      : body;
+    const errors = validatePantryLedgerEventInput(input, 'debit_waste');
+    if (errors.length > 0) return c.json({ success: false, message: 'Invalid pantry waste event', errors }, 400);
+    const result = await new PantryLedgerService(c.env.USER_DB).confirm(c.get('userId'), input);
+    return c.json({ success: true, data: result }, result.alreadyApplied ? 200 : 201);
+  } catch (error) {
+    if (error instanceof PantryLedgerConflictError) return c.json({ success: false, message: error.message }, 409);
+    console.error('Error recording pantry waste:', error);
     return c.json({ success: false, message: 'Internal server error' }, 500);
   }
 });
@@ -1149,6 +1258,11 @@ app.get('/', (c) => {
         method: 'POST',
         description: 'Identify food candidates in an ephemeral pantry photo (Bearer JWT required)'
       },
+        {
+          path: '/me/pantry-ledger',
+          method: 'GET/POST',
+          description: 'Propose, confirm, and audit consent-based pantry outflow events (Bearer JWT required)'
+        },
       {
         path: '/me/recipe-notes',
         method: 'GET|POST|PATCH|DELETE',

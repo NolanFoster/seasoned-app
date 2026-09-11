@@ -331,6 +331,7 @@ export default function CookingNavigator({
   pantryItems = [],
   pantryPlannerEnabled = false,
   onDepletePantry,
+  onProposePantry,
   onCookFeedback,
 }) {
   const multiDishEnabled = useFlag('multi-dish-navigator')
@@ -408,6 +409,11 @@ export default function CookingNavigator({
   const [depletionEdits, setDepletionEdits] = useState({})
   const [cookRating, setCookRating] = useState(0)
   const [cookTags, setCookTags] = useState([])
+  const cookSessionIdRef = useRef(null)
+  if (!cookSessionIdRef.current) {
+    const randomId = globalThis.crypto?.randomUUID?.()
+    cookSessionIdRef.current = randomId || `cook-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  }
   const overlayRef = useRef(null)
   const previousFocusRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -524,14 +530,25 @@ export default function CookingNavigator({
     : []
 
   function openCompletionReview() {
-    setDepletionEdits(Object.fromEntries(
+    const initialEdits = Object.fromEntries(
       depletionPlan.map((operation) => [String(operation.pantryItemId), {
         action: operation.action,
         remainingQuantity: operation.remainingQuantity ?? '',
       }])
-    ))
+    )
+    setDepletionEdits(initialEdits)
     setDepletionError('')
     setCompletionOpen(true)
+    if (depletionPlan.length > 0 && onProposePantry) {
+      setDepletionWorking(true)
+      void onProposePantry({
+        recipeId: recipe?.id,
+        cookSessionId: cookSessionIdRef.current,
+        operations: depletionPlan,
+      }).catch((error) => {
+        setDepletionError(error instanceof Error ? error.message : 'Could not verify your pantry snapshot.')
+      }).finally(() => setDepletionWorking(false))
+    }
   }
 
   function updateDepletionEdit(pantryItemId, updates) {
@@ -588,7 +605,16 @@ export default function CookingNavigator({
       setDepletionWorking(true)
       setDepletionError('')
       try {
-        if (operations.length > 0) await onDepletePantry(operations)
+        if (operations.length > 0) {
+          if (onProposePantry) {
+            await onDepletePantry(operations, {
+              recipeId: recipe?.id,
+              cookSessionId: cookSessionIdRef.current,
+            })
+          } else {
+            await onDepletePantry(operations)
+          }
+        }
       } catch (error) {
         setDepletionError(error instanceof Error ? error.message : 'Could not update your pantry.')
         setDepletionWorking(false)
@@ -1357,7 +1383,7 @@ export default function CookingNavigator({
             <h2 id="cn-completion-title">Cooking complete</h2>
             {depletionPlan.length > 0 && onDepletePantry ? (
               <>
-                <p>Update your pantry for the ingredients you used?</p>
+                <p>{depletionWorking ? 'Checking your pantry snapshot…' : 'Update your pantry for the ingredients you used?'}</p>
                 <ul className="cn-depletion-list">
                   {depletionPlan.map((operation) => {
                     const edit = depletionEdits[String(operation.pantryItemId)] || operation

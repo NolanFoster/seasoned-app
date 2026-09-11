@@ -34,6 +34,7 @@ export default function RecipeCard({
   pantryItems = [],
   pantryPlannerEnabled = false,
   onDepletePantry,
+  onProposePantry,
 }) {
   const elevateRecipeEnabled = useFlag('elevate-recipe')
   const recipeAdaptEnabled = useFlag('recipe-adapt')
@@ -503,6 +504,7 @@ export default function RecipeCard({
           pantryItems={pantryItems}
           pantryPlannerEnabled={pantryPlannerEnabled}
           onDepletePantry={onDepletePantry}
+          onProposePantry={onProposePantry}
         />
       )}
 
