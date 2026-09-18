@@ -18,7 +18,8 @@
     "./food-process-safety": "./food-process-safety.js",
     "./pantry-planning": "./pantry-planning.js",
     "./pantry-ledger": "./pantry-ledger.js",
-    "./nutrition-grounding": "./nutrition-grounding.js"
+    "./nutrition-grounding": "./nutrition-grounding.js",
+    "./plan-interchange": "./plan-interchange.js"
   },
   "scripts": {
     "test": "node test-simple.js",

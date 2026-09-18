@@ -1,0 +1,38 @@
+{
+  "schema": "https://seasoned.app/schemas/seasoned-week.json",
+  "version": 1,
+  "exportedAt": "2026-09-14T12:00:00.000Z",
+  "weekStart": "2026-10-05",
+  "source": { "app": "Fixture", "format": "seasoned-week.json" },
+  "meals": [
+    {
+      "id": "fixture-lemon-chicken",
+      "date": "2026-10-05",
+      "slot": "dinner",
+      "title": "Lemon chicken",
+      "servings": 2,
+      "ingredients": [
+        { "name": "chicken thighs", "quantity": "2", "unit": "pieces" },
+        { "name": "lemon", "quantity": "1", "unit": "" }
+      ],
+      "notes": "Use the zest before juicing."
+    },
+    {
+      "id": "fixture-oat-porridge",
+      "date": "2026-10-06",
+      "slot": "breakfast",
+      "title": "Oat porridge",
+      "servings": 1,
+      "ingredients": [
+        { "name": "rolled oats", "quantity": "1/2", "unit": "cup" },
+        { "name": "banana", "quantity": "1", "unit": "" }
+      ]
+    }
+  ],
+  "staged": [],
+  "grocery": {
+    "items": [
+      { "id": "fixture-lemon", "name": "lemons", "quantity": "2", "unit": "pieces", "category": "Produce" }
+    ]
+  }
+}

@@ -742,6 +742,22 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
 
   const clearActiveRecipe = useCallback(() => setActiveRecipe(null), []);
 
+  /**
+   * Replaces the planner documents after a portable week import has passed
+   * the preview and allergen gate. The parser lives in shared/ so this method
+   * only owns the state transition and normal persistence/sync behavior.
+   */
+  const replacePlan = useCallback(({ mealPlan: importedPlan = {}, upNext: importedUpNext = [], groceryList: importedGrocery = null, groceryImported = false } = {}) => {
+    setMealPlan(importedPlan && typeof importedPlan === 'object' ? importedPlan : {});
+    setUpNext(Array.isArray(importedUpNext) ? importedUpNext : []);
+    if (groceryImported && Array.isArray(importedGrocery)) {
+      setGroceryListState(importedGrocery);
+      setLastListGeneratedAt(null);
+      setIsGeneratingList(false);
+      setListGenerationError(null);
+    }
+  }, []);
+
   // ── Grocery list methods ─────────────────────────────────────────────────
 
   /**
@@ -860,6 +876,7 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       activeRecipe,
       setActiveRecipe,
       clearActiveRecipe,
+      replacePlan,
       // Grocery list state
       groceryList,
       isGeneratingList,
@@ -883,7 +900,7 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
     }),
     [
       mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal,
-      activeRecipe, clearActiveRecipe,
+      activeRecipe, clearActiveRecipe, replacePlan,
       groceryList, isGeneratingList, listGenerationError, lastListGeneratedAt,
       setGroceryList, addCustomItem, toggleItemCompletion, editItem, deleteItem,
       clearCompletedItems, clearGroceryList, generateGroceryListStart, generateGroceryListError,

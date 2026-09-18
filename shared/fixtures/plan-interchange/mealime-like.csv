@@ -1,0 +1,4 @@
+date,slot,title,servings,ingredients,notes,recipe_id,provider_note
+2026-10-05,dinner,Lemon chicken,2,"2 pieces chicken thighs; 1 lemon",Use zest before juicing,fixture-lemon-chicken,User export
+2026-10-06,breakfast,Oat porridge,1,"1/2 cup rolled oats; 1 banana",,fixture-oat-porridge,User export
+,up_next,Bean salad,2,"1 can chickpeas; 1 tbsp tahini",Keep dressing separate,fixture-bean-salad,User export
