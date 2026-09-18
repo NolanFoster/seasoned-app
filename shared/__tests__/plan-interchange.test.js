@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   PLAN_CSV_HEADERS,
   PLAN_INTERCHANGE_SCHEMA,
+  PlanInterchangeError,
+  formatPlanInterchangeReport,
   parsePlanInterchange,
   serializeCooklangWeek,
   serializeSchemaOrgWeek,
@@ -145,4 +147,67 @@ describe('constraint revalidation', () => {
 // accidental change to pretty-printing cannot make download diffs unreadable.
 it('serializes valid JSON for a file download', () => {
   expect(() => JSON.parse(serializeSeasonedWeekJson(state))).not.toThrow()
+})
+
+
+describe('defensive adapters and mapping fallbacks', () => {
+  it('explains empty, malformed, and explicitly unsupported input', () => {
+    expect(() => parsePlanInterchange(null)).toThrow(PlanInterchangeError)
+    expect(() => parsePlanInterchange('{not json}')).toThrow(/could not be parsed/)
+    expect(() => parsePlanInterchange('{}', { format: 'yaml' })).toThrow(/Unsupported plan format/)
+    expect(parsePlanInterchange('{}', { format: 'schemaorg' }).report.skipped).toEqual([])
+  })
+
+  it('normalizes aliases, nested recipes, and ingredient representations', () => {
+    const imported = parsePlanInterchange(JSON.stringify([
+      { date: '2026-10-10', slot: 'morning', title: 'Morning meal', ingredients: ['1 cup oats'] },
+      { date: '2026-10-10', slot: 'brunch', title: 'Brunch meal', ingredients: [{ ingredient: 'berries', amount: '1', unit: 'cup' }] },
+      { date: '2026-10-10', slot: 'midday', title: 'Midday meal', ingredients: [{ text: 'rice' }] },
+      { date: '2026-10-10', slot: 'noon', title: 'Noon meal', ingredients: [{ original: 'beans' }] },
+      { date: '2026-10-10', slot: 'evening', title: 'Evening meal', ingredients: ['[not json'] },
+      { date: '2026-10-10', slot: 'night', title: 'Night meal', recipe: { name: 'Nested meal', recipeIngredient: ['salt'] } },
+      { date: '2026-10-10', slot: 'dessert', title: 'Dessert meal', ingredients: [null, { name: '' }, { name: 'fruit' }] },
+    ]))
+    expect(imported.mealPlan['2026-10-10'].breakfast).toHaveLength(2)
+    expect(imported.mealPlan['2026-10-10'].lunch).toHaveLength(2)
+    expect(imported.mealPlan['2026-10-10'].dinner).toHaveLength(2)
+    expect(imported.mealPlan['2026-10-10'].snack[0].ingredients).toEqual([{ name: 'fruit', quantity: '', unit: '' }])
+  })
+
+  it('covers CSV quoting, CRLF input, unknown rows, and empty CSV failure', () => {
+    const csv = 'date,slot,title,ingredients,notes\r\n2026-10-11,dinner,"Say, hi","[{}]","Say ""hi"""\r\n'
+    const imported = parsePlanInterchange(csv)
+    expect(imported.mealPlan['2026-10-11'].dinner[0]).toMatchObject({
+      name: 'Say, hi',
+      notes: 'Say "hi"',
+      ingredients: [],
+    })
+    expect(() => parsePlanInterchange('date,slot,title')).toThrow(/header row/)
+  })
+
+  it('accepts schema.org additional properties and preserves optional sidecar semantics', () => {
+    const imported = parsePlanInterchange({
+      '@type': 'ItemList',
+      itemListElement: [{
+        item: {
+          '@type': 'Recipe',
+          name: 'Property meal',
+          additionalProperty: [
+            { name: 'date', value: '2026-10-12' },
+            { name: 'slot', value: 'lunch' },
+          ],
+        },
+      }],
+    })
+    expect(imported.mealPlan['2026-10-12'].lunch[0].name).toBe('Property meal')
+    expect(imported.groceryImported).toBe(false)
+  })
+
+  it('handles sparse export state and exposes a readable report', () => {
+    const sparse = serializeSeasonedWeek({ mealPlan: null, upNext: null, groceryList: null, weekStart: 'not-a-date' })
+    expect(sparse.weekStart).toBeUndefined()
+    expect(sparse.meals).toEqual([])
+    const imported = parsePlanInterchange(JSON.stringify(sparse))
+    expect(formatPlanInterchangeReport(imported.report)).toContain('0 mapped')
+  })
 })
