@@ -6,6 +6,7 @@ import GeneratingGroceryCard from './GeneratingGroceryCard.jsx'
 import { flattenIngredients } from './GroceryListModal.jsx'
 import { classifyGroceryItems, getExpiringPantryItems, mergeDuplicateGroceryItems } from '../../shared/pantry-planning.js'
 import PlannerSuggestions from './PlannerSuggestions.jsx'
+import PlanInterchangeModal from './PlanInterchangeModal.jsx'
 
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 
@@ -173,9 +174,12 @@ export default function MealPlannerDrawer({
   bulkScheduleEnabled = false,
   onOpenBulkSchedule,
   recentRecipes = [],
+  planMigrationEnabled = false,
+  hardAllergens = [],
 }) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
+  const [isPlanInterchangeOpen, setIsPlanInterchangeOpen] = useState(false)
   const drawerRef = useRef(null)
   const closeButtonRef = useRef(null)
   const previousFocusRef = useRef(null)
@@ -185,12 +189,12 @@ export default function MealPlannerDrawer({
   // Keep keyboard focus inside the drawer while it is modal, then restore the
   // calendar toggle (or whichever control opened it) when it closes.
   useEffect(() => {
+    if (isPlanInterchangeOpen) return undefined
     if (!isOpen) {
       const previous = previousFocusRef.current
       if (previous && document.contains(previous) && !drawerRef.current?.contains(previous)) previous.focus()
       return undefined
     }
-
     previousFocusRef.current = document.activeElement
     closeButtonRef.current?.focus()
     function getFocusable() {
@@ -219,7 +223,7 @@ export default function MealPlannerDrawer({
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, isPlanInterchangeOpen])
 
   const {
     mealPlan,
@@ -231,6 +235,7 @@ export default function MealPlannerDrawer({
     generateGroceryListError,
     setGroceryList,
     clearGroceryList,
+    replacePlan = () => {},
   } = useMealPlan()
 
   // True if the meal plan has at least one scheduled or staged recipe
@@ -442,6 +447,18 @@ export default function MealPlannerDrawer({
               <span>Schedule all</span>
             </button>
           )}
+          {planMigrationEnabled && (
+            <button
+              type="button"
+              className="drawer-plan-interchange-btn"
+              onClick={() => setIsPlanInterchangeOpen(true)}
+              aria-label="Import or export meal week"
+              title="Move a week between planners"
+            >
+              <span aria-hidden="true">↕</span>
+              <span>Move week</span>
+            </button>
+          )}
           <button
             type="button"
             ref={closeButtonRef}
@@ -464,6 +481,15 @@ export default function MealPlannerDrawer({
               )}
             </div>
           )}
+          {planMigrationEnabled && !hasMeals && (
+            <div className="plan-migration-callout" role="note">
+              <div>
+                <strong>Moving from another planner?</strong>
+                <span>Bring your week to Seasoned from a JSON, CSV, or pasted export.</span>
+              </div>
+              <button type="button" onClick={() => setIsPlanInterchangeOpen(true)}>Import a week</button>
+            </div>
+          )}
           {/* Only while the drawer is open: the panel stays mounted when closed,
               and a hidden copy of every recent recipe helps nobody. */}
           {isOpen && bulkScheduleEnabled && <PlannerSuggestions recipes={recentRecipes} />}
@@ -480,6 +506,17 @@ export default function MealPlannerDrawer({
         pantryItems={pantryPlannerEnabled ? pantryItems : []}
         pantryPlannerEnabled={pantryPlannerEnabled}
       />
+      {planMigrationEnabled && (
+        <PlanInterchangeModal
+          open={isPlanInterchangeOpen}
+          onClose={() => setIsPlanInterchangeOpen(false)}
+          mealPlan={mealPlan}
+          upNext={upNext}
+          groceryList={groceryList}
+          hardAllergens={hardAllergens}
+          onCommit={replacePlan}
+        />
+      )}
     </>
   )
 }

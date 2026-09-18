@@ -21,6 +21,7 @@ const FLAG_DEFAULTS = {
   'pantry-scan': false,
   'meal-plan-autofill': false,
   'meal-plan-bulk-schedule': false,
+  plan_migration_v1: true,
   'preference-learning': true,
   'lifestyle-appetite-gentle': false,
   'budget-constraints': true,

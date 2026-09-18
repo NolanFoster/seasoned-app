@@ -341,6 +341,7 @@ export default function App() {
   const pantryLedgerEnabled = useFlag('pantry_ledger_v1')
   const mealPlanAutofillEnabled = useFlag('meal-plan-autofill')
   const mealPlanBulkScheduleEnabled = useFlag('meal-plan-bulk-schedule')
+  const planMigrationEnabled = useFlag('plan_migration_v1')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
   const usablePantryItems = pantry.items.filter((item) => !isPantryItemExpired(item))
@@ -1091,6 +1092,8 @@ export default function App() {
           bulkScheduleEnabled={mealPlanBulkScheduleEnabled}
           onOpenBulkSchedule={() => setBulkScheduleOpen(true)}
           recentRecipes={recentRecipes}
+          planMigrationEnabled={planMigrationEnabled}
+          hardAllergens={culinaryProfileEnabled ? culinaryProfile.profile?.hard_allergens || [] : []}
         />
       )}
       {mealPlanBulkScheduleEnabled && (
