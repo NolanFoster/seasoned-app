@@ -19,7 +19,8 @@
     "./pantry-planning": "./pantry-planning.js",
     "./pantry-ledger": "./pantry-ledger.js",
     "./nutrition-grounding": "./nutrition-grounding.js",
-    "./plan-interchange": "./plan-interchange.js"
+    "./plan-interchange": "./plan-interchange.js",
+    "./flavour-reward-map": "./flavour-reward-map.js"
   },
   "scripts": {
     "test": "node test-simple.js",
