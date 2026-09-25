@@ -41,6 +41,7 @@ const FLAG_DEFAULTS = {
   'leftover-transform-cascade': true,
   'ephemeral-kitchen-mode': true,
   'ratio-integrity': true,
+  flavour_reward_map_v1: false,
   'meal-atom': true,
   'arrival-reconciliation': true,
   'kitchen-physics-packs': true,

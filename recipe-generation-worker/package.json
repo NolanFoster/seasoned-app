@@ -22,7 +22,9 @@
     "test:ui": "vitest --ui",
     "lint": "eslint src tests",
     "type-check": "tsc --noEmit",
-    "audit": "audit-ci --config audit-ci.json"
+    "audit": "audit-ci --config audit-ci.json",
+    "eval:flavour-maps": "node ../shared/scripts/verify-flavour-reward-map.js",
+    "generate:flavour-maps": "node ../shared/scripts/build-flavour-reward-map.js"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",

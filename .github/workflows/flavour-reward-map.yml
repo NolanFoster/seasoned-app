@@ -1,0 +1,51 @@
+name: Flavour Reward Map Verifier
+
+on:
+  pull_request:
+    paths:
+      - 'shared/flavour-reward-map.js'
+      - 'shared/evals/**'
+      - 'shared/scripts/**'
+      - 'shared/__tests__/flavour-reward-map.test.js'
+      - 'recipe-generation-worker/src/handlers/adapt-handler.js'
+      - 'recipe-generation-worker/src/handlers/generate-handler.js'
+      - 'recipe-generation-worker/src/quality-bar.js'
+      - 'recipe-generation-worker/package.json'
+      - 'recipe-app/src/flaggly.js'
+      - 'docs/FLAVOUR_REWARD_MAPS.md'
+      - '.github/workflows/flavour-reward-map.yml'
+  push:
+    branches: [main, staging]
+    paths:
+      - 'shared/flavour-reward-map.js'
+      - 'shared/evals/**'
+      - 'shared/scripts/**'
+      - 'shared/__tests__/flavour-reward-map.test.js'
+      - 'recipe-generation-worker/src/handlers/adapt-handler.js'
+      - 'recipe-generation-worker/src/handlers/generate-handler.js'
+      - 'recipe-generation-worker/src/quality-bar.js'
+      - 'recipe-generation-worker/package.json'
+      - 'recipe-app/src/flaggly.js'
+      - 'docs/FLAVOUR_REWARD_MAPS.md'
+      - '.github/workflows/flavour-reward-map.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify frozen culinary reward maps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rebuild synthetic fixtures and verify checked-in artifact is reproducible
+        working-directory: shared
+        run: node scripts/build-flavour-reward-map.js
+      - name: Fail if the checked-in fixture artifact is stale
+        run: git diff --exit-code -- shared/evals/flavour-reward-map-v1.json
+      - name: Verify FlavourRewardMapV1 artifact offline
+        working-directory: recipe-generation-worker
+        run: npm run eval:flavour-maps
