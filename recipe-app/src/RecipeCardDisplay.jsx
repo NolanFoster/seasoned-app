@@ -320,6 +320,11 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
       : null
   const isEstimated = nutritionProvenance?.estimated ?? (coveragePct !== null && coveragePct < 80)
   const uncertainIngredients = nutritionProvenance?.uncertain_ingredients || []
+  const groundedIngredients = nutritionProvenance?.grounded_ingredients || []
+  const filledIngredients = nutritionProvenance?.filled_ingredients || []
+  const ingredientTotal = recipe?.ingredients?.length
+    || (groundedIngredients.length + filledIngredients.length + uncertainIngredients.length)
+  const omittedIngredientCount = Math.max(0, ingredientTotal - groundedIngredients.length - filledIngredients.length)
 
   if (!nutrition && coveragePct === null) return null
 
@@ -339,7 +344,9 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
         <div>
           <h3>Estimated nutrition (per serving)</h3>
           <p className="recipe-nutrition-source">
-            Estimated from USDA FoodData Central matches · Not medical or dietary advice
+            {filledIngredients.length > 0
+              ? 'USDA FoodData Central matches + model estimates · Not medical or dietary advice'
+              : 'Estimated from USDA FoodData Central matches · Not medical or dietary advice'}
           </p>
         </div>
         {coveragePct !== null && (
@@ -348,6 +355,31 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
           </span>
         )}
       </div>
+
+      {filledIngredients.length > 0 && (
+        <p className="recipe-nutrition-fill-summary">
+          {groundedIngredients.length} of {ingredientTotal} ingredients from a food database. {filledIngredients.length} estimated. {omittedIngredientCount} omitted.
+        </p>
+      )}
+
+      {(groundedIngredients.length > 0 || filledIngredients.length > 0) && (
+        <ul className="recipe-nutrition-sources" aria-label="Nutrition ingredient sources">
+          {groundedIngredients.map((ingredient) => (
+            <li key={`grounded-${ingredient.index}-${ingredient.name}`}>
+              <span>{ingredient.name}</span>
+              <span className="recipe-nutrition-source-chip">USDA FoodData Central</span>
+            </li>
+          ))}
+          {filledIngredients.map((ingredient) => (
+            <li key={`filled-${ingredient.index}-${ingredient.name}`}>
+              <span>{ingredient.name}</span>
+              <span className="recipe-nutrition-source-chip recipe-nutrition-source-chip--estimate">
+                Model estimate · not a lab value
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {hasMacros && (
         <div className="recipe-nutrition-macros">
@@ -379,12 +411,12 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
       )}
 
       {useFlag('nutrition-overtrust-friction') && (() => {
-        const lights = computeTrafficLights(nutrition)
+        const lights = computeTrafficLights(nutrition, nutritionProvenance)
         const confidence = computeNutritionConfidence(nutritionProvenance)
         return (
           <div className="recipe-nutrition-trust-wrap" aria-label="Nutrition trust indicators">
             <div className="recipe-nutrition-traffic-lights">
-              <span className="nutrition-traffic-title">Traffic Lights (FSA):</span>
+              <span className="nutrition-traffic-title">Traffic Lights (FSA{lights.estimated ? ' · estimated inputs' : ''}):</span>
               <span className={`nutrition-traffic-badge nutrition-traffic--${lights.fat.level}`}>
                 Fat: {lights.fat.value}
               </span>

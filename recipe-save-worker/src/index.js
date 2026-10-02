@@ -3,6 +3,10 @@
 
 import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
 import { calculateNutritionalFacts, extractServingsFromYield } from '../../shared/nutrition-calculator.js';
+import {
+  getCompositionGapFillMode,
+  normalizeCompositionGapFillCacheKey
+} from '../../shared/composition-gap-fill.js';
 import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
 
 // Wrapper to automatically add worker context
@@ -18,6 +22,86 @@ const GENERATED_IMAGE_PREFIX = 'ai-generated/';
 function isNutritionGroundingEnabled(env) {
   const value = env?.NUTRITION_DB_GROUNDING_V1 ?? env?.nutrition_db_grounding_v1;
   return ['1', 'true', 'on', 'enabled'].includes(String(value ?? '').trim().toLowerCase());
+}
+
+function parseCompositionSample(response) {
+  const raw = response?.response ?? response?.output ?? response;
+  if (typeof raw === 'number') return Number.isFinite(raw) && raw >= 0 ? raw : null;
+  if (typeof raw !== 'string') return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const value = typeof parsed === 'number' ? parsed : parsed?.value;
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Construct opt-in Worker AI, KV, and review-queue ports. The module itself
+ * remains deterministic and does not make a network call until invoked.
+ */
+function createCompositionGapFillPorts(env, mode, requestId) {
+  const cache = env?.RECIPE_STORAGE;
+  if (!['on', 'shadow'].includes(mode) || typeof env?.AI?.run !== 'function'
+    || typeof cache?.get !== 'function' || typeof cache?.put !== 'function') return null;
+
+  const sampleField = async (name, form, field, { sampleCount = 5, temperature = 0.7 } = {}) => {
+    const fieldUnit = field === 'calories'
+      ? 'kcal per 100 g'
+      : field === 'sodiumContent'
+        ? 'mg per 100 g'
+        : 'g per 100 g';
+    const samples = [];
+    const count = Math.max(3, Math.min(7, Math.floor(Number(sampleCount) || 5)));
+    for (let index = 0; index < count; index += 1) {
+      const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+        messages: [
+          {
+            role: 'system',
+            content: 'Estimate exactly one food-composition field per 100 g for the named ingredient and form. Return only strict JSON with one numeric "value" property. Do not estimate any other nutrient, allergens, dietary suitability, food safety, or medical claims. Do not include prose or citations.'
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({ ingredient: name, form, field, unit: fieldUnit, sample: index + 1 })
+          }
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'single_nutrient_sample',
+            schema: {
+              type: 'object',
+              properties: { value: { type: 'number' } },
+              required: ['value'],
+              additionalProperties: false
+            }
+          }
+        },
+        max_tokens: 64,
+        temperature: Math.max(0.1, Math.min(1, Number(temperature) || 0.7))
+      });
+      const value = parseCompositionSample(response);
+      if (value !== null) samples.push(value);
+    }
+    return samples;
+  };
+
+  const reviewQueue = {
+    async enqueue(payload) {
+      const key = normalizeCompositionGapFillCacheKey(payload?.input?.name, payload?.input?.form) || 'unknown';
+      const queueKey = `composition-gap-fill-review:v1:${key}:${Date.now()}`;
+      await cache.put(queueKey, JSON.stringify(payload), { expirationTtl: 30 * 24 * 60 * 60 });
+    }
+  };
+
+  return {
+    mode,
+    sampleField,
+    cache,
+    reviewQueue,
+    logEvent: (event) => log('info', 'Composition gap-fill telemetry', event, { requestId })
+  };
 }
 
 // Parse recipe ingredients for nutrition calculation
@@ -1165,12 +1249,22 @@ export class RecipeSaver {
     const startTime = Date.now();
 
     try {
-      // Check if nutrition info already exists
+      // Preserve existing nutrition in the legacy path. When authoritative
+      // grounding is explicitly enabled, replace model-only nutrition; avoid
+      // repeating work for an already-grounded record.
       const groundingEnabled = isNutritionGroundingEnabled(this.env);
-      if (recipe.nutrition && Object.keys(recipe.nutrition).length > 0) {
-        log('info', 'Recipe already has nutrition information', { 
-          requestId, 
-          recipeId: recipe.id 
+      const compositionGapFillMode = getCompositionGapFillMode(this.env);
+      const hasNutrition = recipe.nutrition && Object.keys(recipe.nutrition).length > 0;
+      const existingProvenance = recipe.nutritionProvenance;
+      const alreadyGrounded = existingProvenance?.schemaVersion === 'NutritionGroundingV1'
+        && (compositionGapFillMode === 'off'
+          || Number.isFinite(existingProvenance.filled_count)
+          || Number.isFinite(existingProvenance.abstained_count)
+          || existingProvenance.coverage_pct === 100);
+      if (hasNutrition && (!groundingEnabled || alreadyGrounded)) {
+        log('info', 'Recipe already has nutrition information', {
+          requestId,
+          recipeId: recipe.id
         });
         return recipe;
       }
@@ -1235,12 +1329,15 @@ export class RecipeSaver {
           createUSDAFoodDataCentralProvider,
           groundRecipeNutrition
         } = await import('../../shared/nutrition-grounding.js');
+        const compositionGapFill = createCompositionGapFillPorts(this.env, compositionGapFillMode, requestId);
         nutritionResult = await groundRecipeNutrition(recipe.ingredients, {
           provider: createUSDAFoodDataCentralProvider(this.env.FDC_API_KEY, {
             dbVersion: this.env.FDC_DB_VERSION || 'live'
           }),
           servings,
-          coverageThreshold: this.env.NUTRITION_DB_COVERAGE_THRESHOLD
+          coverageThreshold: this.env.NUTRITION_DB_COVERAGE_THRESHOLD,
+          compositionGapFillFlag: compositionGapFillMode,
+          compositionGapFill
         });
         if (nutritionResult.success && nutritionResult.nutrition) {
           recipe.nutrition = nutritionResult.nutrition;
