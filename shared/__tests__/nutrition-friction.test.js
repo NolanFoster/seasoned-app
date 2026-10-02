@@ -23,6 +23,12 @@ describe('nutrition-friction helpers', () => {
     expect(lights.hasRedLight).toBe(true)
   })
 
+  it('tags traffic lights as estimated without changing their numeric classification', () => {
+    const lights = computeTrafficLights({ sodiumContent: '850mg' }, { estimated: true, filled_count: 1 })
+    expect(lights.estimated).toBe(true)
+    expect(lights.salt.level).toBe(TRAFFIC_LIGHT_LEVELS.RED)
+  })
+
   it('handles missing or partial nutrition with unknown status', () => {
     const lights = computeTrafficLights(null)
     expect(lights.fat.level).toBe(TRAFFIC_LIGHT_LEVELS.UNKNOWN)
@@ -34,6 +40,15 @@ describe('nutrition-friction helpers', () => {
     expect(computeNutritionConfidence({ coverage_pct: 75 })).toBe('medium')
     expect(computeNutritionConfidence({ coverage_pct: 40 })).toBe('low')
     expect(computeNutritionConfidence(null)).toBe('unknown')
+  })
+
+  it('caps estimate-backed high coverage at medium confidence', () => {
+    expect(computeNutritionConfidence({
+      coverage_pct: 95,
+      uncertain_ingredients: [],
+      estimated: true,
+      filled_count: 1,
+    })).toBe('medium')
   })
 
   it('evaluates friction gate requirement for red lights or low confidence', () => {

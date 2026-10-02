@@ -6,6 +6,9 @@ compatibility_date = "2024-01-01"
 workers_dev = true
 
 # Environment variables
+[ai]
+binding = "AI"
+
 [vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://images.seasonedapp.com"
@@ -14,6 +17,9 @@ FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 # Preview environment
 [env.preview]
 name = "preview-recipe-save-worker"
+[env.preview.ai]
+binding = "AI"
+
 [env.preview.vars]
 SEARCH_DB_URL = "https://preview-recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://preview-images.seasonedapp.com"
@@ -22,6 +28,9 @@ FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 # Staging environment
 [env.staging]
 name = "staging-recipe-save-worker"
+[env.staging.ai]
+binding = "AI"
+
 [env.staging.vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://images.seasonedapp.com"
@@ -50,6 +59,9 @@ class_name = "RecipeSaver"
 # Production environment
 [env.production]
 name = "recipe-save-worker"
+[env.production.ai]
+binding = "AI"
+
 [env.production.vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://images.seasonedapp.com"

@@ -19,6 +19,7 @@
     "./pantry-planning": "./pantry-planning.js",
     "./pantry-ledger": "./pantry-ledger.js",
     "./nutrition-grounding": "./nutrition-grounding.js",
+    "./composition-gap-fill": "./composition-gap-fill.js",
     "./plan-interchange": "./plan-interchange.js",
     "./flavour-reward-map": "./flavour-reward-map.js"
   },

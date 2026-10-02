@@ -5890,6 +5890,43 @@ textarea:focus-visible {
   margin-top: 2px;
 }
 
+.recipe-nutrition-fill-summary {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: var(--spacing-sm) 0;
+}
+
+.recipe-nutrition-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  list-style: none;
+  margin: var(--spacing-sm) 0;
+  padding: 0;
+}
+
+.recipe-nutrition-sources li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  font-size: 0.8rem;
+}
+
+.recipe-nutrition-source-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.recipe-nutrition-source-chip--estimate {
+  border-color: rgb(var(--color-primary-rgb) / 0.4);
+  color: var(--color-primary);
+}
+
 .recipe-nutrition-coverage {
   font-size: 0.75rem;
   font-weight: 600;

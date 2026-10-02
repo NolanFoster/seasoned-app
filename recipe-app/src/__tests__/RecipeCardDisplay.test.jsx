@@ -269,6 +269,41 @@ describe('NutritionPanel in RecipeCardDisplay', () => {
     expect(screen.getByText(/Sodium:/i)).toBeInTheDocument()
   })
 
+  test('labels model-filled ingredients separately from USDA matches and reports official coverage', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Berbere Lentils',
+      ingredients: ['1 cup lentils', '1 tsp berbere', 'water to taste'],
+      instructions: ['Simmer.'],
+      nutrition: {
+        calories: '320',
+        proteinContent: '18g',
+        carbohydrateContent: '40g',
+        fatContent: '8g',
+        sodiumContent: '820mg',
+      },
+      nutritionProvenance: {
+        coverage_pct: 33.3,
+        display_coverage_pct: 66.7,
+        estimated: true,
+        grounded_ingredients: [{ index: 0, name: 'lentils', foodCode: '123' }],
+        filled_ingredients: [{ index: 1, name: 'berbere', source: 'llm_estimate', dispersion: { sampleCount: 5 } }],
+        uncertain_ingredients: [{ index: 2, name: 'water to taste', reason: 'ambiguous_quantity' }],
+        filled_count: 1,
+      }
+    }} />)
+
+    expect(screen.getByText('33% matched')).toBeInTheDocument()
+    expect(screen.getByText(/1 of 3 ingredients from a food database\. 1 estimated\. 1 omitted\./i)).toBeInTheDocument()
+    expect(screen.getByText('USDA FoodData Central')).toBeInTheDocument()
+    expect(screen.getByText('Model estimate · not a lab value')).toBeInTheDocument()
+    expect(screen.getByText(/USDA FoodData Central matches \+ model estimates/i)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(/One or more nutrients exceed daily guideline benchmarks/i)
+    expect(screen.getByText('Traffic Lights (FSA · estimated inputs):')).toBeInTheDocument()
+    expect(screen.getByText(/Confidence:/i)).toHaveTextContent('LOW')
+    const panelCopy = screen.getByRole('region', { name: 'Nutritional facts per serving' }).textContent
+    expect(panelCopy).not.toMatch(/certified|lab-accurate|clinically|pathogen|safe for diabetics|guaranteed/i)
+  })
+
   test('displays estimated warning and uncertain ingredients when coverage is partial', () => {
     render(<RecipeCardDisplay recipe={{
       name: 'Mystery Stew',

@@ -13,6 +13,13 @@ import {
   UnitConverter,
   USDANutritionClient
 } from './nutrition-calculator.js';
+import {
+  COMPOSITION_GAP_FILL_MAX_ATTEMPTS_PER_RECIPE,
+  COMPOSITION_GAP_FILL_METHOD,
+  COMPOSITION_GAP_FILL_SOURCE,
+  fillCompositionGap,
+  getCompositionGapFillMode
+} from './composition-gap-fill.js';
 
 export const NUTRITION_GROUNDING_VERSION = 'NutritionGroundingV1';
 export const NUTRITION_GROUNDING_FLAG = 'nutrition_db_grounding_v1';
@@ -242,6 +249,40 @@ function coveragePercent(groundedCount, totalCount) {
   return totalCount === 0 ? 0 : roundNumber((groundedCount / totalCount) * 100, 1);
 }
 
+function createRecipeScopedCompositionCache(backingCache) {
+  const local = new Map();
+  return {
+    async get(key) {
+      if (local.has(key)) return local.get(key);
+      let value = null;
+      if (backingCache instanceof Map) value = backingCache.get(key) || null;
+      else if (typeof backingCache?.get === 'function') value = await backingCache.get(key, 'json');
+      if (typeof value === 'string') {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          value = null;
+        }
+      }
+      if (value) local.set(key, value);
+      return value;
+    },
+    async put(key, serializedValue, options) {
+      let value;
+      try {
+        value = JSON.parse(serializedValue);
+      } catch {
+        value = null;
+      }
+      if (value) local.set(key, value);
+      if (backingCache instanceof Map) backingCache.set(key, value);
+      else if (typeof backingCache?.put === 'function') {
+        await backingCache.put(key, serializedValue, options);
+      }
+    }
+  };
+}
+
 function uniqueValues(items) {
   return [...new Set(items.filter((item) => typeof item === 'string' && item))];
 }
@@ -256,7 +297,9 @@ export async function groundRecipeNutrition(ingredients, {
   servings = 1,
   coverageThreshold = DEFAULT_NUTRITION_COVERAGE_THRESHOLD,
   minimumConfidence = 0.8,
-  aggregator = new NutritionAggregator()
+  aggregator = new NutritionAggregator(),
+  compositionGapFill = null,
+  compositionGapFillFlag = undefined
 } = {}) {
   assertNutritionGroundingProvider(provider);
   if (!Array.isArray(ingredients) || ingredients.length === 0) {
@@ -270,6 +313,7 @@ export async function groundRecipeNutrition(ingredients, {
   const groundedNutrition = [];
   const groundedIngredients = [];
   const uncertainIngredients = [];
+  const fillableMisses = [];
 
   for (const entry of entries) {
     if (!entry.valid) {
@@ -285,37 +329,114 @@ export async function groundRecipeNutrition(ingredients, {
       continue;
     }
 
+    let candidates;
     try {
-      const candidates = await provider.resolveIngredient(entry);
-      const candidate = selectCandidate(Array.isArray(candidates) ? candidates : [candidates], confidenceFloor);
-      if (!candidate) {
-        uncertainIngredients.push({ index: entry.index, name: entry.name, reason: 'no_confident_match' });
-        continue;
-      }
-
-      const weightGrams = UnitConverter.convertToGrams(entry.quantity, entry.unit, entry.name);
-      groundedNutrition.push(scaleNutrients(candidate.nutrientsPer100g, weightGrams));
-      groundedIngredients.push({
-        index: entry.index,
-        name: entry.name,
-        foodCode: candidate.foodCode,
-        foodName: candidate.foodName,
-        confidence: candidate.confidence,
-        weightGrams: roundNumber(weightGrams, 2),
-        source: candidate.source,
-        dbVersion: candidate.dbVersion
-      });
+      candidates = await provider.resolveIngredient(entry);
     } catch {
       uncertainIngredients.push({
         index: entry.index,
         name: entry.name,
         reason: 'provider_error'
       });
+      fillableMisses.push({
+        index: entry.index,
+        name: entry.name,
+        form: String(ingredients[entry.index]?.form || ingredients[entry.index]?.preparation || 'as listed'),
+        quantity: entry.quantity,
+        unit: entry.unit,
+        missReason: 'provider_error'
+      });
+      continue;
+    }
+
+    const candidateList = (Array.isArray(candidates) ? candidates : [candidates])
+      .map((candidate) => normalizeGroundingCandidate(candidate))
+      .filter(Boolean);
+    const candidate = selectCandidate(candidateList, confidenceFloor);
+    if (!candidate) {
+      uncertainIngredients.push({ index: entry.index, name: entry.name, reason: 'no_confident_match' });
+      fillableMisses.push({
+        index: entry.index,
+        name: entry.name,
+        form: String(ingredients[entry.index]?.form || ingredients[entry.index]?.preparation || 'as listed'),
+        quantity: entry.quantity,
+        unit: entry.unit,
+        missReason: candidateList.length > 0 ? 'low_confidence' : 'unmatched'
+      });
+      continue;
+    }
+
+    let weightGrams;
+    try {
+      weightGrams = UnitConverter.convertToGrams(entry.quantity, entry.unit, entry.name);
+    } catch {
+      // A returned database hit with an unconvertible quantity is still not a
+      // composition miss. Keep the row visible rather than sampling a value.
+      uncertainIngredients.push({ index: entry.index, name: entry.name, reason: 'invalid_ingredient_quantity' });
+      continue;
+    }
+    groundedNutrition.push(scaleNutrients(candidate.nutrientsPer100g, weightGrams));
+    groundedIngredients.push({
+      index: entry.index,
+      name: entry.name,
+      foodCode: candidate.foodCode,
+      foodName: candidate.foodName,
+      confidence: candidate.confidence,
+      weightGrams: roundNumber(weightGrams, 2),
+      source: candidate.source,
+      dbVersion: candidate.dbVersion
+    });
+  }
+
+  const mode = getCompositionGapFillMode(compositionGapFillFlag ?? compositionGapFill?.mode ?? 'off');
+  const fillPorts = compositionGapFill && typeof compositionGapFill === 'object'
+    ? compositionGapFill
+    : {};
+  const filledIngredients = [];
+  let abstainedFillCount = 0;
+  let fillAttemptCount = 0;
+
+  if (mode !== 'off' && typeof fillPorts.sampleField === 'function' && fillableMisses.length > 0) {
+    const recipeScopedCache = createRecipeScopedCompositionCache(fillPorts.cache);
+    for (const miss of fillableMisses) {
+      const fillResult = await fillCompositionGap(miss, {
+        ...fillPorts,
+        cache: recipeScopedCache,
+        allowSampling: fillAttemptCount < COMPOSITION_GAP_FILL_MAX_ATTEMPTS_PER_RECIPE
+      });
+      if (fillResult.attempted) fillAttemptCount += 1;
+      if (mode === 'shadow') continue;
+      if (fillResult.status === 'admitted' && fillResult.nutrientsPer100g) {
+        const weightGrams = UnitConverter.convertToGrams(miss.quantity, miss.unit, miss.name);
+        const scaled = scaleNutrients(fillResult.nutrientsPer100g, weightGrams);
+        filledIngredients.push({
+          index: miss.index,
+          name: miss.name,
+          foodName: fillResult.foodName,
+          form: fillResult.form,
+          source: COMPOSITION_GAP_FILL_SOURCE,
+          weightGrams: roundNumber(weightGrams, 2),
+          nutrientsPer100g: fillResult.nutrientsPer100g,
+          nutrients: scaled,
+          dispersion: fillResult.dispersion,
+          invariants: fillResult.invariants,
+          provenance: fillResult.provenance
+        });
+      } else if (fillResult.status === 'abstained' && fillResult.reason !== 'recipe_attempt_limit') {
+        abstainedFillCount += 1;
+      }
     }
   }
 
-  const nutritionTotals = aggregator.aggregateNutrition(groundedNutrition);
-  const nutrition = groundedNutrition.length > 0
+  const displayedUncertainIngredients = filledIngredients.length > 0
+    ? uncertainIngredients.filter((item) => !filledIngredients.some((filled) => filled.index === item.index))
+    : uncertainIngredients;
+  const allNutrition = [
+    ...groundedNutrition,
+    ...filledIngredients.map((filled) => filled.nutrients)
+  ];
+  const nutritionTotals = aggregator.aggregateNutrition(allNutrition);
+  const nutrition = allNutrition.length > 0
     ? aggregator.formatForRecipeSchema(nutritionTotals, normalizedServings)
     : null;
   const coveragePct = coveragePercent(groundedIngredients.length, entries.length);
@@ -327,8 +448,8 @@ export async function groundRecipeNutrition(ingredients, {
     db_version: dbVersions.length === 1 ? dbVersions[0] : dbVersions.length > 1 ? 'mixed' : null,
     method: 'ingredient_search_weighted_sum',
     coverage_pct: coveragePct,
-    estimated: coveragePct < threshold,
-    uncertain_ingredients: uncertainIngredients,
+    estimated: coveragePct < threshold || filledIngredients.length > 0,
+    uncertain_ingredients: displayedUncertainIngredients,
     grounded_ingredients: groundedIngredients.map(({ index, name, foodCode, foodName, confidence }) => ({
       index,
       name,
@@ -338,14 +459,29 @@ export async function groundRecipeNutrition(ingredients, {
     }))
   };
 
+  // Shadow computes and caches estimates for evaluation, but leaves the public
+  // recipe result exactly as the authoritative-only path.
+  if (mode === 'on' && (filledIngredients.length > 0 || abstainedFillCount > 0)) {
+    provenance.filled_count = filledIngredients.length;
+    provenance.abstained_count = abstainedFillCount;
+    provenance.fill_method = COMPOSITION_GAP_FILL_METHOD;
+    provenance.display_coverage_pct = coveragePercent(
+      groundedIngredients.length + filledIngredients.length,
+      entries.length
+    );
+    if (filledIngredients.length > 0) provenance.filled_ingredients = filledIngredients;
+  }
+
+  const processedIngredients = groundedIngredients.length + filledIngredients.length;
   return {
-    success: groundedIngredients.length > 0,
+    success: processedIngredients > 0,
     nutrition,
     nutritionProvenance: provenance,
-    processedIngredients: groundedIngredients.length,
+    processedIngredients,
     totalIngredients: entries.length,
     groundedIngredients,
-    uncertainIngredients
+    uncertainIngredients: displayedUncertainIngredients,
+    ...(mode === 'on' && filledIngredients.length > 0 ? { filledIngredients } : {})
   };
 }
 
