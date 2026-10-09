@@ -57,6 +57,26 @@ describe('RecipeAdapt handler', () => {
     expect(data.recipe.adaptationNotes.length).toBeGreaterThan(0);
   });
 
+  it('returns conservative ingredient entities when the feature flag is on', async () => {
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'] },
+        constraints: { dietary: ['vegan'] }
+      }),
+      { INGREDIENT_ENTITY_V1: 'on' },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.ingredientEntities).toHaveLength(1);
+    expect(data.recipe.derivedDietaryStyles).toEqual(['vegan', 'vegetarian', 'pescatarian']);
+    expect(data.recipe.dietaryComparison).toMatchObject({
+      requestedDietary: ['vegan'],
+      status: 'verified'
+    });
+  });
+
   it('uses explicit constraints over culinary profile defaults', async () => {
     const request = createPostRequest('/adapt', {
       baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'], instructions: ['Cook rice.'] },
@@ -131,7 +151,7 @@ describe('RecipeAdapt handler', () => {
         baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'] },
         constraints: { hardAllergens: ['eggs'] }
       }),
-      { AI: { run } },
+      { AI: { run }, INGREDIENT_ENTITY_V1: 'on' },
       corsHeaders
     );
     const data = await responseBody(response);

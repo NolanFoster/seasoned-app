@@ -69,6 +69,34 @@ describe('recipe-save nutrition grounding rollout', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  test('persists entities and links a grounding hit without a second lookup', async () => {
+    const env = {
+      FDC_API_KEY: 'test-key',
+      FDC_DB_VERSION: 'FDC-test',
+      NUTRITION_DB_GROUNDING_V1: 'true',
+      INGREDIENT_ENTITY_V1: 'on'
+    };
+    const saver = new RecipeSaver({ id: { toString: () => 'test-state' } }, env);
+    const recipe = {
+      id: 'recipe-entity-grounding',
+      servings: '2 servings',
+      ingredients: [{ name: 'Roma tomatoes', quantity: 2, unit: 'cups', form: 'fresh diced' }]
+    };
+
+    const result = await saver.calculateAndAddNutrition(recipe);
+
+    expect(result.ingredientEntities).toHaveLength(1);
+    expect(result.ingredientEntities[0]).toMatchObject({
+      index: 0,
+      attributes: { name: 'roma tomatoes', quantity: 2, unit: 'cups' },
+      category: { id: 'vegetable', reviewed: true },
+      parseStatus: 'parsed',
+      groundingIndex: 0
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(new URL(global.fetch.mock.calls[0][0]).searchParams.get('query')).toBe('roma tomatoes');
+  });
+
   test('keeps the legacy path as the default', async () => {
     const env = {
       FDC_API_KEY: 'test-key'

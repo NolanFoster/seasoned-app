@@ -1,0 +1,532 @@
+[
+  {
+    "name": "artichoke",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "arugula",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "asparagus",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "avocado",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "banana",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "basil",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "beans",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "beef",
+    "category": "meat",
+    "reviewed": true
+  },
+  {
+    "name": "bell pepper",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "black pepper",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "blueberries",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "bread",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "broccoli",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "brown rice",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "butter",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "cabbage",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "canola oil",
+    "category": "fat",
+    "reviewed": true
+  },
+  {
+    "name": "carrot",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "carrots",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "cauliflower",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "celery",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "cheddar cheese",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "cheese",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "chicken",
+    "category": "poultry",
+    "reviewed": true
+  },
+  {
+    "name": "chicken breast",
+    "category": "poultry",
+    "reviewed": true
+  },
+  {
+    "name": "chickpeas",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "chili powder",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "chives",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "cilantro",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "cinnamon",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "coconut oil",
+    "category": "fat",
+    "reviewed": true
+  },
+  {
+    "name": "cod",
+    "category": "fish",
+    "reviewed": true
+  },
+  {
+    "name": "corn",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "cornmeal",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "cottage cheese",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "cucumber",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "cumin",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "duck",
+    "category": "poultry",
+    "reviewed": true
+  },
+  {
+    "name": "egg",
+    "category": "egg",
+    "reviewed": true
+  },
+  {
+    "name": "egg whites",
+    "category": "egg",
+    "reviewed": true
+  },
+  {
+    "name": "eggplant",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "eggs",
+    "category": "egg",
+    "reviewed": true
+  },
+  {
+    "name": "extra virgin olive oil",
+    "category": "fat",
+    "reviewed": true
+  },
+  {
+    "name": "fish",
+    "category": "fish",
+    "reviewed": true
+  },
+  {
+    "name": "fish sauce",
+    "category": "other",
+    "reviewed": true,
+    "dietBlocks": [
+      "vegan",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "flour",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "garlic",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "gelatin",
+    "category": "other",
+    "reviewed": true,
+    "dietBlocks": [
+      "vegan",
+      "vegetarian",
+      "pescatarian"
+    ]
+  },
+  {
+    "name": "ginger",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "grapes",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "green beans",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "ground beef",
+    "category": "meat",
+    "reviewed": true
+  },
+  {
+    "name": "honey",
+    "category": "other",
+    "reviewed": true,
+    "dietBlocks": [
+      "vegan"
+    ]
+  },
+  {
+    "name": "kale",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "kidney beans",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "lamb",
+    "category": "meat",
+    "reviewed": true
+  },
+  {
+    "name": "lemon",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "lentils",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "lettuce",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "lime",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "maple syrup",
+    "category": "sweetener",
+    "reviewed": true
+  },
+  {
+    "name": "mayonnaise",
+    "category": "other",
+    "reviewed": true,
+    "dietBlocks": [
+      "vegan"
+    ]
+  },
+  {
+    "name": "milk",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "mushrooms",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "oats",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "olive oil",
+    "category": "fat",
+    "reviewed": true
+  },
+  {
+    "name": "onion",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "onions",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "orange",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "oregano",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "parmesan cheese",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "parsley",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "pasta",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "peanut butter",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "peas",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "pork",
+    "category": "meat",
+    "reviewed": true
+  },
+  {
+    "name": "potatoes",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "quinoa",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "red pepper flakes",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "rennet",
+    "category": "other",
+    "reviewed": true,
+    "dietBlocks": [
+      "vegan",
+      "vegetarian",
+      "pescatarian"
+    ]
+  },
+  {
+    "name": "rice",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "roma tomatoes",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "salmon",
+    "category": "fish",
+    "reviewed": true
+  },
+  {
+    "name": "salt",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "sesame oil",
+    "category": "fat",
+    "reviewed": true
+  },
+  {
+    "name": "shrimp",
+    "category": "shellfish",
+    "reviewed": true
+  },
+  {
+    "name": "spinach",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "strawberries",
+    "category": "fruit",
+    "reviewed": true
+  },
+  {
+    "name": "sugar",
+    "category": "sweetener",
+    "reviewed": true
+  },
+  {
+    "name": "thyme",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "tofu",
+    "category": "legume",
+    "reviewed": true
+  },
+  {
+    "name": "tomato",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "tomatoes",
+    "category": "vegetable",
+    "reviewed": true
+  },
+  {
+    "name": "turkey",
+    "category": "poultry",
+    "reviewed": true
+  },
+  {
+    "name": "turmeric",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "vanilla extract",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "vegetable oil",
+    "category": "fat",
+    "reviewed": true
+  },
+  {
+    "name": "vinegar",
+    "category": "seasoning",
+    "reviewed": true
+  },
+  {
+    "name": "white rice",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "whole wheat flour",
+    "category": "grain",
+    "reviewed": true
+  },
+  {
+    "name": "yogurt",
+    "category": "dairy",
+    "reviewed": true
+  },
+  {
+    "name": "zucchini",
+    "category": "vegetable",
+    "reviewed": true
+  }
+]

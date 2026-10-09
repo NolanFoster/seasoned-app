@@ -1,5 +1,6 @@
 import { OpikClient } from '../opik-client.js';
 import { getRecipeFromKV } from '../../../shared/kv-storage.js';
+import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
 import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
 import {
   AllergenSafetyError,
@@ -17,6 +18,24 @@ import {
   buildQualityBar,
   withQualityMetadata
 } from '../quality-bar.js';
+
+function applyIngredientEntityFeature(recipe, env, requestBody) {
+  const context = requestBody?.geoCultural || requestBody?.geoCulturalContext;
+  const feature = withIngredientEntityFeature(recipe, env, {
+    requestedDietary: requestBody?.dietary ?? null,
+    ...(context && typeof context === 'object' && !Array.isArray(context)
+      ? { geoCultural: { ...context, cuisineString: requestBody?.cuisine || context.cuisineString || recipe.cuisine } }
+      : {}),
+    hostMap: env?.INGREDIENT_HOST_COUNTRY_MAP && typeof env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+      ? env.INGREDIENT_HOST_COUNTRY_MAP
+      : {}
+  });
+  if (feature.mode === 'shadow') {
+    // eslint-disable-next-line no-console -- Counts only; ingredient text is never logged.
+    console.info('Ingredient entity shadow telemetry', feature.telemetry);
+  }
+  return feature.recipe;
+}
 
 function normalizePantryExpiry(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -169,6 +188,7 @@ export async function handleGenerate(request, env, corsHeaders) {
         appliedConstraints,
         similarRecipeIds: []
       });
+      finalRecipe = applyIngredientEntityFeature(finalRecipe, env, requestBody);
 
       return new Response(JSON.stringify({
         success: true,
@@ -252,6 +272,7 @@ export async function handleGenerate(request, env, corsHeaders) {
     if (generationTraceId) {
       finalRecipe.traceId = generationTraceId;
     }
+    finalRecipe = applyIngredientEntityFeature(finalRecipe, env, requestBody);
 
     return new Response(JSON.stringify({
       success: true,

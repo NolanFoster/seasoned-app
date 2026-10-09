@@ -167,6 +167,32 @@ describe('Generate Handler - Unit Tests', () => {
   });
 
   describe('Recipe Generation', () => {
+    it('returns ingredient entities only when the feature flag is on', async () => {
+      const onResponse = await handleGenerate(
+        createPostRequest('/generate', { ingredients: ['rice'], dietary: ['vegan'] }),
+        { INGREDIENT_ENTITY_V1: 'on' },
+        corsHeaders
+      );
+      const onData = await onResponse.json();
+
+      expect(onResponse.status).toBe(200);
+      expect(onData.recipe.ingredientEntities).toHaveLength(3);
+      expect(onData.recipe.ingredientEntities[0]).toMatchObject({
+        modelId: 'ingredient-entity-v1',
+        parseStatus: 'parsed'
+      });
+      expect(onData.recipe.dietaryComparison.requestedDietary).toEqual(['vegan']);
+      expect(onData.recipe.derivedDietaryStyles).toEqual(['undetermined']);
+
+      const offResponse = await handleGenerate(
+        createPostRequest('/generate', { ingredients: ['rice'] }),
+        {},
+        corsHeaders
+      );
+      const offData = await offResponse.json();
+      expect(offData.recipe).not.toHaveProperty('ingredientEntities');
+    });
+
     it('should generate recipe successfully with valid ingredients', async () => {
       const requestBody = {
         ingredients: ['chicken', 'rice'],
@@ -2240,7 +2266,7 @@ describe('Allergen safety enforcement', () => {
     const response = await handleGenerate(createPostRequest('/generate', {
       recipeName: 'Satay',
       hardAllergens: ['peanut']
-    }), allergenEnv, allergenCorsHeaders);
+    }), { ...allergenEnv, INGREDIENT_ENTITY_V1: 'on' }, allergenCorsHeaders);
 
     expect(response.status).toBe(422);
     const data = await response.json();
@@ -2332,7 +2358,7 @@ describe('Food-process safety enforcement', () => {
 
     const response = await handleGenerate(createPostRequest('/generate', {
       recipeName: 'Canned green beans'
-    }), processEnv, processCorsHeaders);
+    }), { ...processEnv, INGREDIENT_ENTITY_V1: 'on' }, processCorsHeaders);
 
     expect(response.status).toBe(422);
     const data = await response.json();
