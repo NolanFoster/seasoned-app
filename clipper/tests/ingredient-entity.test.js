@@ -1,3 +1,4 @@
+import './setup-crypto-polyfill.js';
 import assert from 'node:assert/strict';
 import worker from '../src/recipe-clipper.js';
 
