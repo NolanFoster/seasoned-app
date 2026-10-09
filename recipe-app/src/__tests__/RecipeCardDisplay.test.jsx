@@ -105,6 +105,49 @@ describe('RecipeCardDisplay', () => {
     render(<RecipeCardDisplay recipe={{ ...baseRecipe, ingredients: [{ name: '2 eggs' }] }} />)
     expect(screen.getByText('2 eggs')).toBeInTheDocument()
   })
+
+
+  test('discloses derived styles, requested mismatches, and sourced context as text', () => {
+    render(<RecipeCardDisplay recipe={{
+      ...baseRecipe,
+      ingredients: ['1 cup rice', '1 tbsp fish sauce'],
+      ingredientEntities: [
+        { index: 0, attributes: { name: 'rice', quantity: 1, unit: 'cup' }, parseStatus: 'parsed' },
+        { index: 1, attributes: { name: 'fish sauce', quantity: 1, unit: 'tbsp' }, parseStatus: 'parsed' },
+      ],
+      derivedDietaryStyles: ['pescatarian'],
+      dietaryComparison: {
+        requestedDietary: ['vegan'],
+        status: 'not_verified',
+        blockingLines: [{ index: 1, name: 'fish sauce', reason: 'diet_block:vegan' }],
+      },
+      geoCultural: { region: 'South Asia', country: 'India', source: 'request_brief' },
+    }} />)
+
+    expect(screen.getByText('Requested vegan · not verified')).toBeInTheDocument()
+    expect(screen.getByText('Context: South Asia · India · from your request')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Requested vegan · not verified'))
+    expect(screen.getByText(/Needs review: fish sauce/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByText('Ingredient details')[0])
+    expect(screen.getAllByText('Quantity')[0]).toBeInTheDocument()
+    expect(screen.queryByText('Temperature')).not.toBeInTheDocument()
+  })
+
+  test('shows the most specific passing style and its other supported styles', () => {
+    render(<RecipeCardDisplay recipe={{
+      ...baseRecipe,
+      derivedDietaryStyles: ['vegan', 'vegetarian', 'pescatarian'],
+    }} />)
+
+    expect(screen.getByText('Vegan · derived from ingredients')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Vegan · derived from ingredients'))
+    expect(screen.getByText(/Also: Vegetarian, Pescatarian/)).toBeInTheDocument()
+  })
+
+  test('does not display ingredient evidence for legacy recipes without entity fields', () => {
+    render(<RecipeCardDisplay recipe={baseRecipe} />)
+    expect(screen.queryByLabelText('Ingredient evidence')).not.toBeInTheDocument()
+  })
 })
 
 describe('Recipe provenance and quality bar', () => {

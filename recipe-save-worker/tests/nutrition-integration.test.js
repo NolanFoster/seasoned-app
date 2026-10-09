@@ -10,8 +10,10 @@ vi.mock('../../shared/kv-storage.js', () => {
   };
 });
 
-vi.mock('../../shared/nutrition-calculator.js', () => {
+vi.mock('../../shared/nutrition-calculator.js', async (importOriginal) => {
+  const actual = await importOriginal();
   return {
+    ...actual,
     calculateNutritionalFacts: vi.fn().mockImplementation(async (ingredients) => ({
       calories: 200,
       protein: 10,

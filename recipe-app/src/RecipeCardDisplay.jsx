@@ -487,6 +487,116 @@ export function AppetiteFriendlyTips({ constraints }) {
   )
 }
 
+const dietStyleLabels = {
+  vegan: 'Vegan',
+  vegetarian: 'Vegetarian',
+  pescatarian: 'Pescatarian',
+  non_vegetarian: 'Non-vegetarian',
+}
+
+const provenanceSourceLabels = {
+  user_set: 'from you',
+  request_brief: 'from your request',
+  clip_host_map: 'from the source host',
+}
+
+const forbiddenProvenanceCopy = /\b(?:authentic|traditional|real|original|certified)\b/i
+
+function safeProvenanceLabel(value) {
+  if (typeof value !== 'string') return ''
+  const label = value.trim()
+  return label && !forbiddenProvenanceCopy.test(label) ? label : ''
+}
+
+function requestedDietLabel(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : []
+  return values
+    .filter((item) => typeof item === 'string')
+    .map((item) => (dietStyleLabels[item] || item.replace(/_/g, ' ')).toLocaleLowerCase('en-US'))
+    .join(', ')
+}
+
+function IngredientEntityEvidence({ recipe }) {
+  const styles = Array.isArray(recipe.derivedDietaryStyles) ? recipe.derivedDietaryStyles : []
+  const comparison = recipe.dietaryComparison || {}
+  const provenance = recipe.geoCultural
+  const passingStyles = styles.filter((style) => dietStyleLabels[style])
+  const primaryStyle = ['vegan', 'vegetarian', 'pescatarian', 'non_vegetarian']
+    .find((style) => passingStyles.includes(style))
+  const requestedLabel = requestedDietLabel(comparison.requestedDietary)
+  const contextValues = [safeProvenanceLabel(provenance?.region), safeProvenanceLabel(provenance?.country)].filter(Boolean)
+  const sourceLabel = provenanceSourceLabels[provenance?.source]
+  const showContext = provenance?.source !== 'absent' && sourceLabel && contextValues.length > 0
+
+  if (!primaryStyle && comparison.status !== 'not_verified' && !showContext) return null
+
+  return (
+    <div className="ingredient-entity-evidence" role="group" aria-label="Ingredient evidence">
+      {primaryStyle && (
+        <details className="ingredient-entity-disclosure">
+          <summary className="ingredient-entity-chip">
+            {dietStyleLabels[primaryStyle]} · derived from ingredients
+          </summary>
+          <p>
+            Derived from ingredient categories using conservative culinary rules.
+            {passingStyles.length > 1 && ` Also: ${passingStyles.filter((style) => style !== primaryStyle).map((style) => dietStyleLabels[style]).join(', ')}.`}
+          </p>
+          <p>Culinary label only; not an allergen certificate or medical advice.</p>
+        </details>
+      )}
+      {comparison.status === 'not_verified' && requestedLabel && (
+        <details className="ingredient-entity-disclosure">
+          <summary className="ingredient-entity-chip">
+            Requested {requestedLabel} · not verified
+          </summary>
+          {comparison.blockingLines?.length > 0 ? (
+            <p>Needs review: {comparison.blockingLines.map((line) => line.name).filter(Boolean).join(', ')}.</p>
+          ) : (
+            <p>Ingredient evidence does not verify the requested culinary style.</p>
+          )}
+        </details>
+      )}
+      {showContext && (
+        <span className="ingredient-entity-chip">
+          Context: {contextValues.join(' · ')} · {sourceLabel}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function IngredientEntityDisclosure({ entity }) {
+  const attributes = entity?.attributes
+  if (!attributes || typeof attributes !== 'object') return null
+  const labels = {
+    name: 'Name',
+    state: 'State',
+    quantity: 'Quantity',
+    unit: 'Unit',
+    size: 'Size',
+    temperature: 'Temperature',
+    dryFresh: 'Dry/fresh',
+  }
+  const values = Object.entries(labels)
+    .filter(([key]) => attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '')
+  if (values.length === 0) return null
+
+  return (
+    <details className="ingredient-entity-line-details">
+      <summary>Ingredient details</summary>
+      <dl>
+        {values.map(([key, label]) => (
+          <React.Fragment key={key}>
+            <dt>{label}</dt>
+            <dd>{String(attributes[key])}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+      {entity.parseStatus !== 'parsed' && <span>Some details remain unparsed.</span>}
+    </details>
+  )
+}
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -625,10 +735,17 @@ export default function RecipeCardDisplay({
         {recipe.ingredients?.length > 0 && (
           <div className="recipe-section">
             <h3>Ingredients</h3>
+            <IngredientEntityEvidence recipe={recipe} />
             <ul>
-              {recipe.ingredients.map((ing, i) => (
-                <li key={i}>{typeof ing === 'string' ? ing : ing.name || JSON.stringify(ing)}</li>
-              ))}
+              {recipe.ingredients.map((ing, i) => {
+                const entity = recipe.ingredientEntities?.find((item) => item.index === i)
+                return (
+                  <li key={i}>
+                    {typeof ing === 'string' ? ing : ing.name || JSON.stringify(ing)}
+                    <IngredientEntityDisclosure entity={entity} />
+                  </li>
+                )
+              })}
             </ul>
           </div>
         )}

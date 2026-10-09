@@ -9,10 +9,10 @@ vi.mock('../../shared/kv-storage.js', () => ({
   generateRecipeId: vi.fn().mockImplementation(async (url) => 'test-recipe-id')
 }));
 
-vi.mock('../../shared/nutrition-calculator.js', () => ({
-  calculateNutritionalFacts: vi.fn(),
-  extractServingsFromYield: vi.fn()
-}));
+vi.mock('../../shared/nutrition-calculator.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, calculateNutritionalFacts: vi.fn(), extractServingsFromYield: vi.fn() };
+});
 
 describe('Real Image Processing Implementation', () => {
   let mockEnv;

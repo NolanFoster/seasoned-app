@@ -1,4 +1,5 @@
 import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../shared/culinary-profile.js';
+import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
 import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
@@ -340,6 +341,21 @@ export async function handleAdapt(request, env, corsHeaders) {
       appliedConstraints: constraints,
       similarRecipeIds: []
     });
+    const geoContext = requestBody.geoCultural || requestBody.geoCulturalContext;
+    const entityFeature = withIngredientEntityFeature(finalRecipe, env, {
+      requestedDietary: constraints.dietary,
+      ...(geoContext && typeof geoContext === 'object' && !Array.isArray(geoContext)
+        ? { geoCultural: { ...geoContext, cuisineString: finalRecipe.cuisine || geoContext.cuisineString } }
+        : {}),
+      hostMap: env?.INGREDIENT_HOST_COUNTRY_MAP && typeof env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+        ? env.INGREDIENT_HOST_COUNTRY_MAP
+        : {}
+    });
+    finalRecipe = entityFeature.recipe;
+    if (entityFeature.mode === 'shadow') {
+      // eslint-disable-next-line no-console -- Counts only; ingredient text is never logged.
+      console.info('Ingredient entity shadow telemetry', entityFeature.telemetry);
+    }
 
     return new Response(JSON.stringify({
       success: true,

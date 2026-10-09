@@ -4,6 +4,11 @@
 import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
 import { calculateNutritionalFacts, extractServingsFromYield } from '../../shared/nutrition-calculator.js';
 import {
+  getIngredientEntityMode,
+  prepareGroundingIngredients,
+  withIngredientEntityFeature
+} from '../../shared/ingredient-entity.js';
+import {
   getCompositionGapFillMode,
   normalizeCompositionGapFillCacheKey
 } from '../../shared/composition-gap-fill.js';
@@ -522,6 +527,18 @@ export class RecipeSaver {
               (updates.ingredients && JSON.stringify(updates.ingredients) !== JSON.stringify(existingRecipe.ingredients))) {
             log('info', 'Recalculating nutrition due to missing data or ingredient changes', { requestId, recipeId });
             updatedRecipe = await this.calculateAndAddNutrition(updatedRecipe, requestId);
+          } else {
+            const feature = withIngredientEntityFeature(updatedRecipe, this.env, {
+              requestedDietary: updatedRecipe.dietaryComparison?.requestedDietary ?? updatedRecipe.requestedDietary ?? null,
+              geoCultural: updatedRecipe.geoCultural,
+              hostMap: this.env?.INGREDIENT_HOST_COUNTRY_MAP && typeof this.env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+                ? this.env.INGREDIENT_HOST_COUNTRY_MAP
+                : {}
+            });
+            updatedRecipe = feature.recipe;
+            if (feature.mode === 'shadow') {
+              log('info', 'Ingredient entity shadow telemetry', feature.telemetry, { requestId });
+            }
           }
 
           log('debug', 'Recipe updated with new data', { 
@@ -830,7 +847,10 @@ export class RecipeSaver {
       }
 
       log('debug', 'Decompressing recipe', { requestId, recipeId });
-      const recipe = await decompressData(compressedData);
+      const storedRecipe = await decompressData(compressedData);
+      const recipe = getIngredientEntityMode(this.env) === 'on'
+        ? storedRecipe
+        : withIngredientEntityFeature(storedRecipe, 'off').recipe;
       log('debug', 'Recipe decompressed', { 
         requestId, 
         recipeId, 
@@ -1240,6 +1260,18 @@ export class RecipeSaver {
   }
 
   async calculateAndAddNutrition(recipe, requestId = null) {
+    const entityFeature = withIngredientEntityFeature(recipe, this.env, {
+      requestedDietary: recipe.dietaryComparison?.requestedDietary ?? recipe.requestedDietary ?? null,
+      geoCultural: recipe.geoCultural,
+      hostMap: this.env?.INGREDIENT_HOST_COUNTRY_MAP && typeof this.env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+        ? this.env.INGREDIENT_HOST_COUNTRY_MAP
+        : {}
+    });
+    recipe = entityFeature.recipe;
+    const ingredientEntityMode = entityFeature.mode;
+    if (entityFeature.mode === 'shadow') {
+      log('info', 'Ingredient entity shadow telemetry', entityFeature.telemetry, { requestId });
+    }
     log('info', 'Starting nutrition calculation', { 
       requestId, 
       recipeId: recipe.id,
@@ -1330,7 +1362,10 @@ export class RecipeSaver {
           groundRecipeNutrition
         } = await import('../../shared/nutrition-grounding.js');
         const compositionGapFill = createCompositionGapFillPorts(this.env, compositionGapFillMode, requestId);
-        nutritionResult = await groundRecipeNutrition(recipe.ingredients, {
+        const groundingIngredients = ingredientEntityMode === 'on'
+          ? prepareGroundingIngredients(recipe.ingredients, recipe.ingredientEntities)
+          : recipe.ingredients;
+        nutritionResult = await groundRecipeNutrition(groundingIngredients, {
           provider: createUSDAFoodDataCentralProvider(this.env.FDC_API_KEY, {
             dbVersion: this.env.FDC_DB_VERSION || 'live'
           }),
@@ -1342,6 +1377,16 @@ export class RecipeSaver {
         if (nutritionResult.success && nutritionResult.nutrition) {
           recipe.nutrition = nutritionResult.nutrition;
           recipe.nutritionProvenance = nutritionResult.nutritionProvenance;
+          if (ingredientEntityMode === 'on') {
+            recipe = withIngredientEntityFeature(recipe, this.env, {
+              requestedDietary: recipe.dietaryComparison?.requestedDietary ?? recipe.requestedDietary ?? null,
+              geoCultural: recipe.geoCultural,
+              groundedIngredients: nutritionResult.groundedIngredients,
+              hostMap: this.env?.INGREDIENT_HOST_COUNTRY_MAP && typeof this.env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+                ? this.env.INGREDIENT_HOST_COUNTRY_MAP
+                : {}
+            }).recipe;
+          }
         }
       } else {
         nutritionResult = await calculateNutritionalFacts(

@@ -21,7 +21,8 @@
     "./nutrition-grounding": "./nutrition-grounding.js",
     "./composition-gap-fill": "./composition-gap-fill.js",
     "./plan-interchange": "./plan-interchange.js",
-    "./flavour-reward-map": "./flavour-reward-map.js"
+    "./flavour-reward-map": "./flavour-reward-map.js",
+    "./ingredient-entity": "./ingredient-entity.js"
   },
   "scripts": {
     "test": "node test-simple.js",

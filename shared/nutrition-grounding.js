@@ -78,7 +78,7 @@ function parseQuantity(value) {
   return finiteNumber(text);
 }
 
-function parseIngredientString(value) {
+export function parseIngredientString(value) {
   const text = normalizedName(value).replace(/^[•*-]\s*/, '').replace(/^\d+[.)]\s*/, '');
   if (!text) return null;
 

@@ -1079,6 +1079,73 @@ textarea:focus-visible {
   margin-bottom: 6px;
 }
 
+
+.ingredient-entity-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.ingredient-entity-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingredient-entity-disclosure > p {
+  margin: 5px 2px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ingredient-entity-line-details {
+  margin: 2px 0 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ingredient-entity-line-details summary {
+  width: fit-content;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.ingredient-entity-line-details dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  margin: 5px 0;
+}
+
+.ingredient-entity-line-details dt {
+  font-weight: 600;
+}
+
+.ingredient-entity-line-details dd {
+  margin: 0;
+}
+
+.ingredient-entity-line-details > span {
+  display: block;
+}
+
 /* ── Collapsible recipe checks (Details & checks) ───────────────── */
 .recipe-checks {
   border-top: 1px solid var(--border);
