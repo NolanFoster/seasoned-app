@@ -4,6 +4,8 @@ import {
   inferHeroCuisine,
   composeMealSides,
   pairSideToRecipeObject,
+  normalizeGeneratedSides,
+  completeWithCuratedSides,
 } from '../complete-meal.js'
 
 describe('complete-meal composer helpers', () => {
@@ -158,5 +160,71 @@ describe('complete-meal composer helpers', () => {
     const recipeObj = pairSideToRecipeObject(sauce)
     expect(recipeObj.cook_time).toBeUndefined()
     expect(recipeObj.prep_time).toBe(`PT${sauce.prepMinutes}M`)
+  })
+
+  describe('generated pairings', () => {
+    const hero = { name: 'Grilled Ribeye Steak', ingredients: ['2 ribeye steaks'] }
+    const rawSide = (overrides = {}) => ({
+      name: 'Blistered Shishito Peppers',
+      type: 'side_veg',
+      description: 'Smoky charred peppers.',
+      prepMinutes: 5,
+      cookMinutes: 8,
+      ingredients: ['8 oz shishito peppers', '1 tbsp neutral oil', '1/2 lime'],
+      instructions: ['Heat a skillet.', 'Blister the peppers.'],
+      ...overrides,
+    })
+
+    it('normalizes valid model output into curated-side shape', () => {
+      const [side] = normalizeGeneratedSides([rawSide({ type: 'Side Veg', prepMinutes: '7', cookMinutes: 999 })], hero)
+      expect(side).toMatchObject({
+        id: 'side-ai-blistered-shishito-peppers',
+        type: COMPONENT_SLOTS.SIDE_VEG,
+        prepMinutes: 7,
+        cookMinutes: 240,
+        cuisine: 'american',
+        generated: true,
+      })
+    })
+
+    it('rejects unknown slots, incomplete recipes, duplicates, and allergen conflicts', () => {
+      const sides = normalizeGeneratedSides([
+        null,
+        rawSide({ type: 'dessert' }),
+        rawSide({ type: 'starch', ingredients: ['rice'] }),
+        rawSide({ type: 'starch', instructions: ['Cook.'] }),
+        rawSide(),
+        rawSide({ name: 'Second Veg' }),
+        rawSide({ type: 'sauce', name: 'Peanut Sauce', ingredients: ['1/2 cup peanut butter', '1 lime', '1 tbsp honey'] }),
+      ], hero, { hardAllergens: ['peanuts'] })
+      expect(sides.map((s) => s.name)).toEqual(['Blistered Shishito Peppers'])
+      expect(normalizeGeneratedSides('nope', hero)).toEqual([])
+    })
+
+    it('defaults a missing prep time and orders sides by slot', () => {
+      const sides = normalizeGeneratedSides([
+        rawSide({ type: 'sauce', name: 'Chimichurri', prepMinutes: 0 }),
+        rawSide(),
+      ], hero)
+      expect(sides.map((s) => s.type)).toEqual([COMPONENT_SLOTS.SIDE_VEG, COMPONENT_SLOTS.SAUCE])
+      expect(sides[1].prepMinutes).toBe(5)
+    })
+
+    it('fills missing slots from the curated pairings', () => {
+      const generated = normalizeGeneratedSides([rawSide()], hero)
+      const full = completeWithCuratedSides(generated, hero)
+      expect(full.map((s) => s.name)).toEqual([
+        'Blistered Shishito Peppers',
+        'Garlic Mashed Potatoes',
+        'Creamy Peppercorn Pan Sauce',
+      ])
+      const complete = normalizeGeneratedSides([
+        rawSide(),
+        rawSide({ type: 'starch', name: 'Smashed Potatoes' }),
+        rawSide({ type: 'sauce', name: 'Chimichurri' }),
+      ], hero)
+      expect(completeWithCuratedSides(complete, hero)).toBe(complete)
+      expect(completeWithCuratedSides(null, hero)).toHaveLength(3)
+    })
   })
 })

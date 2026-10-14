@@ -609,6 +609,9 @@ export default function RecipeCardDisplay({
   cookBtnId,
   onSelectSide,
   onCookTogether,
+  pairedSides,
+  pairingsPending = false,
+  pairingsSectionRef,
 }) {
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
@@ -835,12 +838,31 @@ export default function RecipeCardDisplay({
       )}
 
       {useFlag('complete-meal-composer') && recipe.generationMethod !== 'complete-meal-composer' && (() => {
-        const pairedSides = composeMealSides(recipe, { hardAllergens })
-        if (pairedSides.length === 0) return null
-        const allMealRecipes = [recipe, ...pairedSides.map((s) => pairSideToRecipeObject(s, recipe))]
+        if (pairingsPending) {
+          return (
+            <section
+              ref={pairingsSectionRef}
+              className="complete-meal-section"
+              aria-label="Complete the meal recommendations"
+              aria-busy="true"
+            >
+              <div className="complete-meal-header">
+                <div>
+                  <h3>🍽️ Complete the Meal</h3>
+                  <span className="complete-meal-tagline" role="status">
+                    Creating a side, starch, and sauce for {recipe.name}…
+                  </span>
+                </div>
+              </div>
+            </section>
+          )
+        }
+        const sides = pairedSides?.length > 0 ? pairedSides : composeMealSides(recipe, { hardAllergens })
+        if (sides.length === 0) return null
+        const allMealRecipes = [recipe, ...sides.map((s) => pairSideToRecipeObject(s, recipe))]
 
         return (
-          <section className="complete-meal-section" aria-label="Complete the meal recommendations">
+          <section ref={pairingsSectionRef} className="complete-meal-section" aria-label="Complete the meal recommendations">
             <div className="complete-meal-header">
               <div>
                 <h3>🍽️ Complete the Meal</h3>
@@ -858,7 +880,7 @@ export default function RecipeCardDisplay({
               )}
             </div>
             <div className="complete-meal-grid">
-              {pairedSides.map((side) => {
+              {sides.map((side) => {
                 const sideRecipe = pairSideToRecipeObject(side, recipe)
                 return (
                   <div key={side.id} className="complete-meal-card">

@@ -509,7 +509,7 @@ export function inferHeroCuisine(heroRecipe) {
  * Canonical allergens (e.g. "dairy", "gluten") go through the shared allergen
  * graph, opaque ingredients fail closed, and any other term is matched as text.
  */
-function sideConflictsWithAllergens(side, hardAllergens) {
+export function sideConflictsWithAllergens(side, hardAllergens = []) {
   if (hardAllergens.length === 0) return false
   const summary = analyzeRecipeAllergens(side.ingredients, hardAllergens)
   if (summary.blocked.length > 0 || summary.may_contain_uncertain.length > 0) return true
@@ -544,6 +544,88 @@ export function composeMealSides(heroRecipe, options = {}) {
       cuisine,
       timingOffsetMinutes: 0,
     }))
+}
+
+const SLOT_VALUES = Object.values(COMPONENT_SLOTS)
+const MAX_SIDE_MINUTES = 240
+
+function cleanLines(value, maxItems) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(lineText)
+    .map((line) => String(line || '').trim())
+    .filter(Boolean)
+    .slice(0, maxItems)
+}
+
+function clampMinutes(value) {
+  const minutes = Math.round(Number(value))
+  if (!Number.isFinite(minutes) || minutes < 0) return 0
+  return Math.min(minutes, MAX_SIDE_MINUTES)
+}
+
+/**
+ * Validates model-generated pairings into the same shape as the curated sides.
+ * Keeps at most one side per slot, drops anything incomplete or unsafe for the
+ * hard allergens, and never trusts the model's own allergen claims.
+ * @param {Array<object>} rawSides
+ * @param {object} heroRecipe
+ * @param {object} [options]
+ * @param {string[]} [options.hardAllergens]
+ * @returns {Array<object>}
+ */
+export function normalizeGeneratedSides(rawSides, heroRecipe, options = {}) {
+  if (!Array.isArray(rawSides)) return []
+  const hardAllergens = options.hardAllergens || []
+  const cuisine = inferHeroCuisine(heroRecipe)
+  const bySlot = new Map()
+
+  for (const raw of rawSides) {
+    if (!raw || typeof raw !== 'object') continue
+    const type = String(raw.type || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+    const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+    if (!SLOT_VALUES.includes(type) || !name || bySlot.has(type)) continue
+
+    const side = {
+      id: `side-ai-${slugify(name)}`,
+      name,
+      type,
+      description: typeof raw.description === 'string' ? raw.description.trim() : '',
+      prepMinutes: clampMinutes(raw.prepMinutes),
+      cookMinutes: clampMinutes(raw.cookMinutes),
+      ingredients: cleanLines(raw.ingredients, 20),
+      instructions: cleanLines(raw.instructions, 12),
+      cuisine,
+      timingOffsetMinutes: 0,
+      generated: true,
+    }
+    if (side.prepMinutes === 0) side.prepMinutes = 5
+    if (side.ingredients.length < 3 || side.instructions.length < 2) continue
+    if (sideConflictsWithAllergens(side, hardAllergens)) continue
+    bySlot.set(type, side)
+  }
+
+  return SLOT_VALUES.filter((slot) => bySlot.has(slot)).map((slot) => bySlot.get(slot))
+}
+
+/**
+ * Fills any slot the generated set is missing with the curated pairing for the
+ * hero's cuisine, so a partial generation still yields a full meal.
+ * @param {Array<object>} generatedSides
+ * @param {object} heroRecipe
+ * @param {object} [options]
+ * @param {string[]} [options.hardAllergens]
+ * @returns {Array<object>}
+ */
+export function completeWithCuratedSides(generatedSides, heroRecipe, options = {}) {
+  const sides = Array.isArray(generatedSides) ? generatedSides : []
+  const filled = new Set(sides.map((side) => side.type))
+  const missing = SLOT_VALUES.filter((slot) => !filled.has(slot))
+  if (missing.length === 0) return sides
+  const curated = composeMealSides(heroRecipe, { ...options, slots: missing })
+  return SLOT_VALUES
+    .map((slot) => sides.find((side) => side.type === slot) || curated.find((side) => side.type === slot))
+    .filter(Boolean)
 }
 
 /**
