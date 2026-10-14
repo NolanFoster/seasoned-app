@@ -53,6 +53,18 @@ export async function handleRoot(request, env, corsHeaders) {
           }
         },
         response: 'JSON object with adapted recipe, substitutions, notes, and lineage metadata'
+      },
+      'POST /pairings': {
+        description: 'Generate a vegetable side, starch, and sauce tailored to a specific dish',
+        requestBody: {
+          type: 'application/json',
+          schema: {
+            heroRecipe: 'Recipe object with name, ingredients, and instructions',
+            hardAllergens: 'Optional allergens every pairing must exclude',
+            culinaryProfile: 'Optional persisted kitchen profile'
+          }
+        },
+        response: 'JSON object with sides, method (llama-ai-pairings or curated), and cuisine'
       }
     },
     usage: {

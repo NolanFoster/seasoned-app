@@ -4,6 +4,7 @@ import { useFlag } from './flaggly.js'
 import RecipeCardDisplay, { parseDuration } from './RecipeCardDisplay.jsx'
 import DaySelector from './DaySelector.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
+import usePairedSides from './usePairedSides.js'
 
 export { parseDuration }
 
@@ -41,6 +42,9 @@ export default function RecipeCard({
   const mealPlannerEnabled = useFlag('meal-planner')
   const recipeEditingEnabled = useFlag('recipe-editing')
   const recipeNotesEnabled = useFlag('recipe-notes')
+  const completeMealEnabled = useFlag('complete-meal-composer')
+  const aiPairingsEnabled = useFlag('complete-meal-ai-pairings')
+  const pairings = usePairedSides(recipe, completeMealEnabled && aiPairingsEnabled)
   const [shareCopied, setShareCopied] = useState(false)
   const [isCooking, setIsCooking] = useState(false)
   const [multiCookRecipes, setMultiCookRecipes] = useState(null)
@@ -447,6 +451,9 @@ export default function RecipeCard({
         recipe={recipe}
         onCookClick={handleCookClick}
         onSelectSide={(sideRecipe) => setViewingSideRecipe(sideRecipe)}
+        pairedSides={pairings.sides}
+        pairingsPending={pairings.pending}
+        pairingsSectionRef={pairings.sectionRef}
         onCookTogether={(allRecipes) => {
           setMultiCookRecipes(allRecipes)
           setIsCooking(true)

@@ -16,7 +16,9 @@ export default [
         URL: 'readonly',
         Request: 'readonly',
         Response: 'readonly',
-        fetch: 'readonly'
+        fetch: 'readonly',
+        crypto: 'readonly',
+        TextEncoder: 'readonly'
       }
     },
     rules: {

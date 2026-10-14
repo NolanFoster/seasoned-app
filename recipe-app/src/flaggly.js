@@ -34,6 +34,7 @@ const FLAG_DEFAULTS = {
   'navigator-vision-assist': true,
   'multi-dish-navigator': true,
   'complete-meal-composer': true,
+  'complete-meal-ai-pairings': true,
   'recipe-collections': true,
   'nutrition-overtrust-friction': true,
   'living-projects': true,

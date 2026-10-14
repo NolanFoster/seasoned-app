@@ -2,6 +2,7 @@ import { handleRoot } from './handlers/root-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
 import { handleGenerate } from './handlers/generate-handler.js';
 import { handleAdapt } from './handlers/adapt-handler.js';
+import { handlePairings } from './handlers/pairings-handler.js';
 import { handleGroceryList } from './handlers/grocery-list-handler.js';
 import { handleMealPlanFill } from './handlers/meal-plan-fill-handler.js';
 import { handleAgentTurn } from './handlers/agent-handler.js';
@@ -49,6 +50,11 @@ export default {
     // Recipe adaptation endpoint
     if (url.pathname === '/adapt' && request.method === 'POST') {
       return handleAdapt(request, env, corsHeaders);
+    }
+
+    // Complete-the-meal pairings tailored to a specific dish
+    if (url.pathname === '/pairings' && request.method === 'POST') {
+      return handlePairings(request, env, corsHeaders);
     }
 
     // Grocery list aggregation endpoint
