@@ -411,6 +411,22 @@ describe('Complete the Meal Composer in RecipeCardDisplay', () => {
   })
 })
 
+describe('Complete the Meal on a pairing recipe', () => {
+  test('does not suggest sides for a side that was itself a pairing', () => {
+    render(<RecipeCardDisplay
+      recipe={{
+        name: 'Garlic Butter Green Beans',
+        generationMethod: 'complete-meal-composer',
+        ingredients: ['1 lb green beans, trimmed', '2 tbsp unsalted butter'],
+        instructions: ['Blanch the beans.', 'Toss in butter.'],
+      }}
+      onSelectSide={jest.fn()}
+    />)
+
+    expect(screen.queryByText('🍽️ Complete the Meal')).not.toBeInTheDocument()
+  })
+})
+
 describe('Nutrition Overtrust Friction in RecipeCardDisplay', () => {
   test('renders traffic lights and attention warning for high sodium/sat-fat recipes', () => {
     render(<RecipeCardDisplay recipe={{

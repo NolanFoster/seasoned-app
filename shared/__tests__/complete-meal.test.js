@@ -85,5 +85,78 @@ describe('complete-meal composer helpers', () => {
     expect(saucesOnly.length).toBeGreaterThanOrEqual(1)
     expect(saucesOnly.every(s => s.type === COMPONENT_SLOTS.SAUCE)).toBe(true)
   })
-})
 
+  const heroesByCuisine = {
+    italian: { name: 'Spaghetti Marinara', ingredients: ['Spaghetti', 'Marinara sauce', 'Basil'] },
+    mexican: { name: 'Chicken Tacos', ingredients: ['Chicken thighs', 'Corn tortillas', 'Salsa'] },
+    american: { name: 'Grilled Ribeye Steak', ingredients: ['Ribeye steak', 'Salt'] },
+    asian: { name: 'Beef Stir Fry', ingredients: ['Flank steak', 'Soy sauce', 'Fresh ginger', 'Sesame oil'] },
+    indian: { name: 'Chicken Tikka Masala', ingredients: ['Chicken', 'Garam masala', 'Turmeric', 'Cilantro', 'Cumin'] },
+    mediterranean: { name: 'Chicken Shawarma', ingredients: ['Chicken thighs', 'Sumac', 'Pita', 'Tahini'] },
+  }
+
+  it.each(Object.entries(heroesByCuisine))('infers %s cuisine from its signature keywords', (cuisine, hero) => {
+    expect(inferHeroCuisine(hero)).toBe(cuisine)
+  })
+
+  it.each(Object.entries(heroesByCuisine))('offers a complete, cookable %s pairing for every slot', (cuisine, hero) => {
+    const sides = composeMealSides(hero)
+    expect(sides.map((s) => s.type).sort()).toEqual(Object.values(COMPONENT_SLOTS).sort())
+    for (const side of sides) {
+      expect(side.cuisine).toBe(cuisine)
+      expect(side.description.length).toBeGreaterThan(30)
+      expect(side.ingredients.length).toBeGreaterThanOrEqual(5)
+      expect(side.instructions.length).toBeGreaterThanOrEqual(4)
+      // Every ingredient carries a measurement rather than a bare name
+      for (const ing of side.ingredients) {
+        expect(ing).toMatch(/^(\d|Pinch)/)
+      }
+      expect(side.prepMinutes).toBeGreaterThan(0)
+      expect(side.cookMinutes).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('uses stable ids that survive allergen filtering', () => {
+    const hero = heroesByCuisine.american
+    const all = composeMealSides(hero)
+    const filtered = composeMealSides(hero, { hardAllergens: ['dairy'] })
+    for (const side of filtered) {
+      expect(all.find((s) => s.name === side.name).id).toBe(side.id)
+    }
+  })
+
+  it('filters canonical allergen categories through the allergen graph', () => {
+    const noDairy = composeMealSides(heroesByCuisine.american, { hardAllergens: ['dairy'] })
+    expect(noDairy.map((s) => s.name)).toEqual(['Crispy Roasted Asparagus'])
+
+    const noSoy = composeMealSides(heroesByCuisine.asian, { hardAllergens: ['soy'] })
+    expect(noSoy.map((s) => s.name)).toEqual(['Ginger Scallion Jasmine Rice'])
+
+    const noGluten = composeMealSides(heroesByCuisine.mediterranean, { hardAllergens: ['gluten'] })
+    expect(noGluten.some((s) => s.name === 'Herbed Lemon Couscous')).toBe(false)
+  })
+
+  it('carries full timings, description, and allergen summary into the recipe object', () => {
+    const hero = {
+      name: 'Grilled Ribeye Steak',
+      ingredients: ['Ribeye steak'],
+      appliedConstraints: { hardAllergens: ['eggs'] },
+    }
+    const [side] = composeMealSides(hero, { slots: [COMPONENT_SLOTS.STARCH] })
+    const recipeObj = pairSideToRecipeObject(side, hero)
+    expect(recipeObj.prep_time).toBe(`PT${side.prepMinutes}M`)
+    expect(recipeObj.cook_time).toBe(`PT${side.cookMinutes}M`)
+    expect(recipeObj.total_time).toBe(`PT${side.prepMinutes + side.cookMinutes}M`)
+    expect(recipeObj.description).toContain(side.description)
+    expect(recipeObj.description).toContain('Pairs with Grilled Ribeye Steak.')
+    expect(recipeObj.instructions).toEqual(side.instructions)
+    expect(recipeObj.allergenSummary.safe).toBe(true)
+  })
+
+  it('omits cook time for no-cook sauces', () => {
+    const [sauce] = composeMealSides(heroesByCuisine.italian, { slots: [COMPONENT_SLOTS.SAUCE] })
+    const recipeObj = pairSideToRecipeObject(sauce)
+    expect(recipeObj.cook_time).toBeUndefined()
+    expect(recipeObj.prep_time).toBe(`PT${sauce.prepMinutes}M`)
+  })
+})

@@ -834,7 +834,7 @@ export default function RecipeCardDisplay({
         </details>
       )}
 
-      {useFlag('complete-meal-composer') && (() => {
+      {useFlag('complete-meal-composer') && recipe.generationMethod !== 'complete-meal-composer' && (() => {
         const pairedSides = composeMealSides(recipe, { hardAllergens })
         if (pairedSides.length === 0) return null
         const allMealRecipes = [recipe, ...pairedSides.map((s) => pairSideToRecipeObject(s, recipe))]
@@ -864,12 +864,12 @@ export default function RecipeCardDisplay({
                   <div key={side.id} className="complete-meal-card">
                     <div className="complete-meal-card-title">
                       <strong>{side.name}</strong>
-                      <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{side.prepMinutes}m</span>
+                      <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{(side.prepMinutes || 0) + (side.cookMinutes || 0)}m</span>
                     </div>
+                    <p className="complete-meal-card-instruction">{side.description}</p>
                     <p className="complete-meal-card-ingredients">
-                      <strong>Ingredients:</strong> {side.ingredients.join(', ')}
+                      <strong>{side.ingredients.length} ingredients · {side.instructions.length} steps</strong>
                     </p>
-                    <p className="complete-meal-card-instruction">{side.instructions[0]}</p>
                     <div className="complete-meal-card-actions">
                       {onSelectSide && (
                         <button
