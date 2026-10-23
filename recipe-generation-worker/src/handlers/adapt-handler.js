@@ -1,8 +1,12 @@
 import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../shared/culinary-profile.js';
 import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
-import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
+import { ProcessSafetyError } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
+import {
+  enforceRecipeSafetyWithRemediation,
+  RecipeRemediationAbstainError
+} from '../recipe-remediation.js';
 
 const ADAPT_CONSTRAINT_FIELDS = [
   'dietary',
@@ -326,21 +330,39 @@ export async function handleAdapt(request, env, corsHeaders) {
     const adapted = env.AI
       ? await adaptWithAI(baseRecipe, constraints, env)
       : mockAdaptRecipe(baseRecipe, constraints);
-    let finalRecipe = enforceRecipeSafety(
+    let remediation = null;
+    const checked = await enforceRecipeSafetyWithRemediation(
       applyLineage(adapted, baseRecipe, constraints, adaptationMethod),
-      constraints.hardAllergens,
-      env,
-      { 'process_safety.surface': 'adapt' }
+      {
+        constraints,
+        env,
+        context: { 'process_safety.surface': 'adapt' }
+      }
     );
+    let finalRecipe = checked.recipe;
+    remediation = checked.remediation;
     finalRecipe.generationTime = Date.now() - adaptationStartedAt;
-    finalRecipe = withQualityMetadata(finalRecipe, {
+    const qualityOptions = {
       source: 'adapted',
       generationMethod: adaptationMethod,
       model: env.AI ? '@cf/meta/llama-4-scout-17b-16e-instruct' : null,
       hardAllergens: constraints.hardAllergens,
       appliedConstraints: constraints,
       similarRecipeIds: []
-    });
+    };
+    try {
+      finalRecipe = withQualityMetadata(finalRecipe, qualityOptions);
+    } catch (error) {
+      if (!(error instanceof RecipeQualityError)) throw error;
+      const repaired = await enforceRecipeSafetyWithRemediation(finalRecipe, {
+        constraints,
+        env,
+        context: { 'process_safety.surface': 'adapt' },
+        initialError: error
+      });
+      finalRecipe = withQualityMetadata(repaired.recipe, qualityOptions);
+      remediation = repaired.remediation;
+    }
     const geoContext = requestBody.geoCultural || requestBody.geoCulturalContext;
     const entityFeature = withIngredientEntityFeature(finalRecipe, env, {
       requestedDietary: constraints.dietary,
@@ -362,12 +384,33 @@ export async function handleAdapt(request, env, corsHeaders) {
       recipe: finalRecipe,
       appliedConstraints: constraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(remediation ? { remediation } : {}),
+      ...(finalRecipe.reviewRequired ? { reviewRequired: true } : {}),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    if (error instanceof RecipeRemediationAbstainError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe remediation could not clear the deterministic safety gates',
+        code: error.code,
+        attempts: error.attempts,
+        violations: error.violations,
+        remediation: {
+          modelId: 'recipe-remediation-v1',
+          status: 'abstained',
+          attempts: error.attempts,
+          violations: error.violations,
+          abstained: true
+        }
+      }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     if (error instanceof AllergenSafetyError) {
       return new Response(JSON.stringify({
         error: 'Recipe adaptation failed allergen safety validation',
