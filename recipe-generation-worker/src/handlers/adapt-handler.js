@@ -1,5 +1,6 @@
 import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../shared/culinary-profile.js';
 import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../../shared/cook-program.js';
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
 import { ProcessSafetyError } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
@@ -377,6 +378,12 @@ export async function handleAdapt(request, env, corsHeaders) {
     if (entityFeature.mode === 'shadow') {
       // eslint-disable-next-line no-console -- Counts only; ingredient text is never logged.
       console.info('Ingredient entity shadow telemetry', entityFeature.telemetry);
+    }
+    const programFeature = withCookProgramFeature(finalRecipe, env);
+    finalRecipe = programFeature.recipe;
+    if (programFeature.mode === 'shadow') {
+      // eslint-disable-next-line no-console -- Program telemetry contains counts and reason codes only.
+      console.info('Cook program shadow telemetry', programFeature.telemetry);
     }
 
     return new Response(JSON.stringify({

@@ -350,3 +350,25 @@ describe('RecipeAdapt handler', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Cook program adaptation rollout', () => {
+  it('attaches on and computes without exposing the program in shadow mode', async () => {
+    const enabled = await handleAdapt(
+      createPostRequest('/adapt', { baseRecipe, constraints: {} }),
+      { ENVIRONMENT: 'test', COOK_PROGRAM_V1: 'on' },
+      corsHeaders
+    );
+    const enabledData = await responseBody(enabled);
+    expect(enabled.status).toBe(200);
+    expect(enabledData.recipe.cookProgram).toMatchObject({ modelId: 'cook-program-v1', status: 'partial' });
+
+    const shadow = await handleAdapt(
+      createPostRequest('/adapt', { baseRecipe, constraints: {} }),
+      { ENVIRONMENT: 'test', COOK_PROGRAM_V1: 'shadow' },
+      corsHeaders
+    );
+    const shadowData = await responseBody(shadow);
+    expect(shadow.status).toBe(200);
+    expect(shadowData.recipe).not.toHaveProperty('cookProgram');
+  });
+});

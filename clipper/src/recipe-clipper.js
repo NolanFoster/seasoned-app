@@ -4,6 +4,7 @@ import {
   getRecipeFromKV
 } from '../../shared/kv-storage.js';
 import { getIngredientEntityMode, withIngredientEntityFeature } from '../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../shared/cook-program.js';
 import {
   isYouTubeUrl,
   extractRecipeFromYouTube
@@ -93,8 +94,12 @@ export default {
             const cachedRecipe = cacheMode === 'on'
               ? existingRecipe.recipe
               : withIngredientEntityFeature(existingRecipe.recipe, 'off').recipe;
+            const programFeature = withCookProgramFeature(cachedRecipe, env);
+            if (programFeature.mode === 'shadow') {
+              console.info('Cook program shadow telemetry', programFeature.telemetry);
+            }
             return new Response(JSON.stringify({
-              ...cachedRecipe,
+              ...programFeature.recipe,
               source_url: pageUrl,
               cached: true,
               fromCache: true,
@@ -131,9 +136,13 @@ export default {
               ? env.INGREDIENT_HOST_COUNTRY_MAP
               : {}
           });
-          const annotatedRecipe = entityFeature.recipe;
+          const programFeature = withCookProgramFeature(entityFeature.recipe, env);
+          const annotatedRecipe = programFeature.recipe;
           if (entityFeature.mode === 'shadow') {
             console.info('Ingredient entity shadow telemetry', entityFeature.telemetry);
+          }
+          if (programFeature.mode === 'shadow') {
+            console.info('Cook program shadow telemetry', programFeature.telemetry);
           }
           
           // Save the extracted recipe using recipe-save-worker service binding
