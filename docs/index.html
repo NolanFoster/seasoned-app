@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="generated" content="2026-10-23T17:32:54.677Z">
+    <meta name="generated" content="2026-10-30T17:59:43.641Z">
 </head>
 <body>
     <div class="container">
@@ -16,7 +16,7 @@
             <div class="header-content">
                 <h1 class="title">🍳 Seasoned Recipe App</h1>
                 <p class="subtitle">Developer Documentation & API Reference</p>
-                <p class="auto-generated">🔄 Auto-generated from source code - 2026-10-23T17:32:54.677Z</p>
+                <p class="auto-generated">🔄 Auto-generated from source code - 2026-10-30T17:59:43.641Z</p>
             </div>
         </header>
 
@@ -65,7 +65,7 @@
                     <h3>🔄 Auto-Update Information</h3>
                     <p>This documentation is automatically generated from your source code. When you update your workers, run the generation script to update the docs:</p>
                     <pre><code>npm run docs:generate</code></pre>
-                    <p><strong>Last Generated:</strong> 2026-10-23T17:32:54.677Z</p>
+                    <p><strong>Last Generated:</strong> 2026-10-30T17:59:43.641Z</p>
                 </div>
                 
                 <div class="feature-grid">
@@ -556,6 +556,7 @@ import {
   getRecipeFromKV
 } from '../../shared/kv-storage.js';
 import { getIngredientEntityMode, withIngredientEntityFeature } from '../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../shared/cook-program.js';
 import {
   isYouTubeUrl,
   extractRecipeFromYouTube
@@ -580,8 +581,7 @@ export default {
 
     try {
       // Clip recipe from URL using GPT-OSS-20B
-      if (pathname === '/clip' && request.method === 'POST') {
-        const body = await re...</code></pre>
+      if (pathname ==...</code></pre>
                 </div>
             </section>
             <section id="recipe-crawler" class="section">
