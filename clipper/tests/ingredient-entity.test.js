@@ -17,10 +17,11 @@ const html = `
   </script>
 `;
 
-async function clip(mode) {
+async function clip(mode, cookProgramMode = 'off') {
   let persistedRecipe = null;
   const env = {
     INGREDIENT_ENTITY_V1: mode,
+    COOK_PROGRAM_V1: cookProgramMode,
     RECIPE_STORAGE: { get: async () => null },
     RECIPE_SAVE_WORKER: {
       fetch: async (_path, init) => {
@@ -42,18 +43,27 @@ async function clip(mode) {
   return { response, persistedRecipe };
 }
 
-const enabled = await clip('on');
+const enabled = await clip('on', 'on');
 assert.equal(enabled.response.status, 200);
 const enabledRecipe = await enabled.response.json();
 assert.equal(enabledRecipe.ingredientEntities.length, 2);
 assert.equal(enabledRecipe.ingredientEntities[0].attributes.state, 'diced');
 assert.equal(enabled.persistedRecipe.ingredientEntities.length, 2);
+assert.equal(enabledRecipe.cookProgram.modelId, 'cook-program-v1');
+assert.equal(enabled.persistedRecipe.cookProgram.modelId, 'cook-program-v1');
 assert.equal(enabledRecipe.geoCultural.source, 'absent');
 
-const shadow = await clip('shadow');
+const shadow = await clip('shadow', 'shadow');
 assert.equal(shadow.response.status, 200);
 const shadowRecipe = await shadow.response.json();
 assert.equal(Object.hasOwn(shadowRecipe, 'ingredientEntities'), false);
 assert.equal(Object.hasOwn(shadow.persistedRecipe, 'ingredientEntities'), false);
+assert.equal(Object.hasOwn(shadowRecipe, 'cookProgram'), false);
+assert.equal(Object.hasOwn(shadow.persistedRecipe, 'cookProgram'), false);
 
-console.log('Ingredient entity clipper integration checks passed.');
+const disabled = await clip('off', 'off');
+const disabledRecipe = await disabled.response.json();
+assert.equal(Object.hasOwn(disabledRecipe, 'cookProgram'), false);
+assert.equal(Object.hasOwn(disabled.persistedRecipe, 'cookProgram'), false);
+
+console.log('Ingredient entity and cook program clipper integration checks passed.');

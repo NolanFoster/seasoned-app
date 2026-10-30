@@ -1,6 +1,7 @@
 import { OpikClient } from '../opik-client.js';
 import { getRecipeFromKV } from '../../../shared/kv-storage.js';
 import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../../shared/cook-program.js';
 import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
 import {
   AllergenSafetyError,
@@ -38,7 +39,12 @@ function applyIngredientEntityFeature(recipe, env, requestBody) {
     // eslint-disable-next-line no-console -- Counts only; ingredient text is never logged.
     console.info('Ingredient entity shadow telemetry', feature.telemetry);
   }
-  return feature.recipe;
+  const programFeature = withCookProgramFeature(feature.recipe, env);
+  if (programFeature.mode === 'shadow') {
+    // eslint-disable-next-line no-console -- Program telemetry contains counts and reason codes only.
+    console.info('Cook program shadow telemetry', programFeature.telemetry);
+  }
+  return programFeature.recipe;
 }
 
 function normalizePantryExpiry(value) {

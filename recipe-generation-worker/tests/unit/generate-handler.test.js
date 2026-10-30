@@ -2634,3 +2634,27 @@ describe('Food-process safety enforcement', () => {
   });
 });
 
+describe('Cook program generation rollout', () => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
+
+  it('attaches a cook program only when the generation flag is on', async () => {
+    const enabled = await handleGenerate(createPostRequest('/generate', { recipeName: 'Test dinner' }), {
+      ...mockEnv,
+      COOK_PROGRAM_V1: 'on'
+    }, corsHeaders);
+    const enabledData = await enabled.json();
+
+    expect(enabled.status).toBe(200);
+    expect(enabledData.recipe.cookProgram).toMatchObject({ modelId: 'cook-program-v1', status: 'partial' });
+    expect(enabledData.recipe.cookProgram.uncompiled.length).toBeGreaterThan(0);
+
+    const disabled = await handleGenerate(createPostRequest('/generate', { recipeName: 'Test dinner' }), mockEnv, corsHeaders);
+    const disabledData = await disabled.json();
+    expect(disabled.status).toBe(200);
+    expect(disabledData.recipe).not.toHaveProperty('cookProgram');
+  });
+});
