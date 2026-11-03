@@ -135,6 +135,35 @@ describe('RecipeAdapt handler', () => {
     }));
   });
 
+  it('asks the model to scale to the requested servings and stamps the new yield', async () => {
+    const run = vi.fn().mockResolvedValue({
+      response: JSON.stringify({
+        name: 'Creamy Pasta',
+        description: 'Scaled up.',
+        ingredients: ['16 oz pasta', '4 tbsp olive oil'],
+        instructions: ['Boil the pasta.', 'Toss with oil.'],
+        servings: '2 servings',
+        substitutions: [],
+        adaptationNotes: []
+      })
+    });
+
+    const response = await handleAdapt(
+      createPostRequest('/adapt', { baseRecipe, constraints: { servings: 4 } }),
+      { ENVIRONMENT: 'test', AI: { run } },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.servings).toBe('4');
+    expect(data.recipe.recipe_yield).toBe('4');
+    expect(data.recipe.adaptationNotes).toContain('Scaled from 2 servings to 4 servings.');
+    const userPrompt = run.mock.calls[0][1].messages[1].content;
+    expect(userPrompt).toContain('original recipe yields 2 servings');
+    expect(userPrompt).toContain('serves exactly 4');
+  });
+
   it('fails closed when an AI adaptation contains a hard allergen', async () => {
     const run = vi.fn().mockResolvedValue({
       response: {

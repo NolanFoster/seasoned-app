@@ -4475,7 +4475,17 @@ textarea:focus-visible {
   cursor: pointer;
   font-size: 0.82rem;
 }
-.generation-composer-check:has(input:checked) {
+button.generation-composer-check {
+  background: var(--surface2);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+button.generation-composer-check:hover {
+  border-color: var(--accent);
+}
+.generation-composer-check:has(input:checked),
+button.generation-composer-check[aria-pressed="true"] {
   border-color: var(--accent);
   background: rgb(var(--color-primary-rgb) / var(--state-focus));
 }

@@ -218,6 +218,40 @@ function applyLineage(recipe, baseRecipe, constraints, method) {
   };
 }
 
+function baseServings(baseRecipe) {
+  const raw = baseRecipe.servings ?? baseRecipe.recipe_yield ?? baseRecipe.recipeYield ?? baseRecipe.yield;
+  if (raw === undefined || raw === null || raw === '') return null;
+  return String(raw).trim() || null;
+}
+
+function servingsInstruction(baseRecipe, constraints) {
+  const target = Number(constraints.servings);
+  if (!Number.isFinite(target) || target <= 0) return '';
+  const original = baseServings(baseRecipe);
+  return `Servings: the original recipe yields ${original || 'an unspecified number of servings'}. `
+    + `Scale every ingredient quantity so the adapted recipe serves exactly ${target}, `
+    + `adjust pan sizes or batch steps in the instructions if needed, and set the servings field to "${target}".`;
+}
+
+/**
+ * The model echoes the base recipe's yield often enough that the requested
+ * servings count must be stamped on the result explicitly; the prompt above
+ * asks it to scale quantities to that same number.
+ */
+function applyRequestedServings(recipe, baseRecipe, constraints) {
+  const target = Number(constraints.servings);
+  if (!Number.isFinite(target) || target <= 0) return recipe;
+  const servings = String(target);
+  const original = baseServings(baseRecipe);
+  const notes = Array.isArray(recipe.adaptationNotes) ? [...recipe.adaptationNotes] : [];
+  const originalCount = original ? Number.parseFloat(original) : NaN;
+  if (Number.isFinite(originalCount) && originalCount !== target
+    && !notes.some((note) => /serv(ing|es)/i.test(String(note)))) {
+    notes.push(`Scaled from ${original} to ${servings} servings.`);
+  }
+  return { ...recipe, servings, recipe_yield: servings, recipeYield: servings, adaptationNotes: notes };
+}
+
 async function adaptWithAI(baseRecipe, constraints, env) {
   const systemPrompt = `You are a careful culinary adaptation expert. Rewrite an existing recipe to fit the requested constraints while preserving its recognizable dish identity, cuisine, core protein, and cooking sequence whenever possible.
 
@@ -233,6 +267,7 @@ Requested constraints:
 ${JSON.stringify(constraints)}
 
 Preserve these aspects where possible: flavor profile, cuisine, core protein, recognizable name, and overall recipe structure.
+${servingsInstruction(baseRecipe, constraints)}
 Hard allergens to exclude: ${(constraints.hardAllergens || []).join(', ') || 'none'}.
 Return substitutions as objects with from, to, and reason fields. Return adaptationNotes as concise strings.`;
 
@@ -284,7 +319,7 @@ Return substitutions as objects with from, to, and reason fields. Return adaptat
   if (!response || response.response === undefined) {
     throw new Error('Invalid response from LLaMA model for recipe adaptation');
   }
-  return normalizeAdaptedRecipe(response.response, baseRecipe);
+  return applyRequestedServings(normalizeAdaptedRecipe(response.response, baseRecipe), baseRecipe, constraints);
 }
 
 /**
@@ -462,4 +497,4 @@ export async function handleAdapt(request, env, corsHeaders) {
   }
 }
 
-export { buildConstraintOverrides, mockAdaptRecipe, normalizeAdaptedRecipe };
+export { applyRequestedServings, buildConstraintOverrides, mockAdaptRecipe, normalizeAdaptedRecipe };
