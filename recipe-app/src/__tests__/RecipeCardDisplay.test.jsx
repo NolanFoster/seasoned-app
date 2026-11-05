@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
-import RecipeCardDisplay, { parseDuration } from '../RecipeCardDisplay'
+import RecipeCardDisplay, { parseDuration, RecipeImage } from '../RecipeCardDisplay'
 
 describe('parseDuration', () => {
   test('returns null for empty/falsy values', () => {
@@ -513,5 +513,42 @@ describe('Recipe-first layout & collapsible checks', () => {
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('Allergen conflict detected')
     expect(alert.closest('details')).toBeNull()
+  })
+})
+
+describe('RecipeImage', () => {
+  let warnSpy
+  beforeEach(() => { warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {}) })
+  afterEach(() => warnSpy.mockRestore())
+
+  test('renders the image when there is one', () => {
+    render(<RecipeImage recipe={{ name: 'Soup', image: 'https://example.com/soup.png' }} />)
+    expect(screen.getByRole('img', { name: 'Soup' })).toHaveAttribute('src', 'https://example.com/soup.png')
+  })
+
+  test('renders nothing when there is no image and no error', () => {
+    const { container } = render(<RecipeImage recipe={{ name: 'Soup', image: '' }} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  test('says so when image generation failed', () => {
+    render(<RecipeImage recipe={{ name: 'Soup', image: '', imageGenerationError: 'Image generation failed' }} />)
+    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Image could not be generated')
+  })
+
+  test('drops an image that fails to load instead of showing it broken', () => {
+    render(<RecipeImage recipe={{ name: 'Soup', image: 'https://example.com/missing.png' }} />)
+    fireEvent.error(screen.getByRole('img', { name: 'Soup' }))
+    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Image unavailable')
+    expect(warnSpy).toHaveBeenCalledWith('Recipe image failed to load:', 'https://example.com/missing.png')
+  })
+
+  test('tries again when the recipe gets a new image', () => {
+    const { rerender } = render(<RecipeImage recipe={{ name: 'Soup', image: 'https://example.com/a.png' }} />)
+    fireEvent.error(screen.getByRole('img'))
+    rerender(<RecipeImage recipe={{ name: 'Soup', image: 'https://example.com/b.png' }} />)
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://example.com/b.png')
   })
 })

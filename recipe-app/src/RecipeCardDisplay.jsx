@@ -603,6 +603,39 @@ function IngredientEntityDisclosure({ entity }) {
 //   recipe       — recipe data object
 //   onCookClick  — click handler for the Cook button (omitted in SSR)
 //   cookBtnId    — optional id attr on the Cook button (for vanilla-JS hooks)
+/**
+ * Hero image. A URL that fails to load is dropped rather than left as a broken
+ * image, and a generated recipe whose image failed says so instead of
+ * silently showing nothing.
+ */
+export function RecipeImage({ recipe }) {
+  const [failedSrc, setFailedSrc] = React.useState(null)
+  const src = recipe.image || ''
+  const loadFailed = Boolean(src) && failedSrc === src
+
+  if (src && !loadFailed) {
+    return (
+      <img
+        className="recipe-image"
+        src={src}
+        alt={recipe.name}
+        onError={() => {
+          console.warn('Recipe image failed to load:', src)
+          setFailedSrc(src)
+        }}
+      />
+    )
+  }
+  if (recipe.imageGenerationError || loadFailed) {
+    return (
+      <p className="recipe-image-unavailable" role="status">
+        {recipe.imageGenerationError ? 'Image could not be generated for this recipe.' : 'Image unavailable.'}
+      </p>
+    )
+  }
+  return null
+}
+
 export default function RecipeCardDisplay({
   recipe,
   onCookClick,
@@ -674,9 +707,7 @@ export default function RecipeCardDisplay({
         </div>
       </div>
 
-      {recipe.image && (
-        <img className="recipe-image" src={recipe.image} alt={recipe.name} />
-      )}
+      <RecipeImage recipe={recipe} />
 
       {recipe.description && (
         <p className="recipe-description">{recipe.description}</p>
