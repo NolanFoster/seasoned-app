@@ -705,12 +705,14 @@ export default function App() {
       if (!data.success || !data.recipe) throw new Error(data.error || 'Generation returned no recipe')
 
       const r = data.recipe
+      if (r.imageGenerationError) console.warn('Recipe image generation failed:', r.imageGenerationError)
       const generatedRecipe = {
         id: `ai-${Date.now()}`,
         source: elevate ? 'elevated' : 'ai_generated',
         name: r.name,
         description: r.description || '',
         image: r.image_url || '',
+        imageGenerationError: r.imageGenerationError || null,
         prep_time: r.prepTime || null,
         cook_time: r.cookTime || null,
         recipe_yield: r.servings || null,

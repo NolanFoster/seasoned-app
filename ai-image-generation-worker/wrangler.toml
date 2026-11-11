@@ -8,7 +8,9 @@ compatibility_flags = ["nodejs_compat"]
 # Default configuration
 [vars]
 ENVIRONMENT = "development"
-IMAGE_DOMAIN = "https://images.seasonedapp.com"
+# Public base for generated-image URLs: this worker serves its own bucket
+# at /images/<key> (images.seasonedapp.com points at a different bucket).
+IMAGE_DOMAIN = "https://ai-image-generation-worker.nolanfoster.workers.dev/images"
 
 [observability]
 enabled = true
@@ -27,7 +29,9 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker-preview"
 [env.preview.vars]
 ENVIRONMENT = "preview"
-IMAGE_DOMAIN = "https://preview-images.seasonedapp.com"
+# Public base for generated-image URLs: this worker serves its own bucket
+# at /images/<key> (images.seasonedapp.com points at a different bucket).
+IMAGE_DOMAIN = "https://ai-image-generation-worker-preview.nolanfoster.workers.dev/images"
 
 [env.preview.observability]
 enabled = true
@@ -44,7 +48,9 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
-IMAGE_DOMAIN = "https://images.seasonedapp.com"
+# Public base for generated-image URLs: this worker serves its own bucket
+# at /images/<key> (images.seasonedapp.com points at a different bucket).
+IMAGE_DOMAIN = "https://ai-image-generation-worker-staging.nolanfoster.workers.dev/images"
 
 [env.staging.observability]
 enabled = true
@@ -61,7 +67,9 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker"
 [env.production.vars]
 ENVIRONMENT = "production"
-IMAGE_DOMAIN = "https://images.seasonedapp.com"
+# Public base for generated-image URLs: this worker serves its own bucket
+# at /images/<key> (images.seasonedapp.com points at a different bucket).
+IMAGE_DOMAIN = "https://ai-image-generation-worker.nolanfoster.workers.dev/images"
 
 [env.production.observability]
 enabled = true
@@ -78,7 +86,9 @@ bucket_name = "ai-generated-recipe-images"
 name = "ai-image-generation-worker"
 [env.development.vars]
 ENVIRONMENT = "development"
-IMAGE_DOMAIN = "https://images.seasonedapp.com"
+# Public base for generated-image URLs: this worker serves its own bucket
+# at /images/<key> (images.seasonedapp.com points at a different bucket).
+IMAGE_DOMAIN = "https://ai-image-generation-worker.nolanfoster.workers.dev/images"
 
 [env.development.observability]
 enabled = true

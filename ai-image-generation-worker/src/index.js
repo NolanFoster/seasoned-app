@@ -6,6 +6,7 @@
 import { handleGenerate } from './handlers/generate-handler.js';
 import { handleHealth } from './handlers/health-handler.js';
 import { handleRoot } from './handlers/root-handler.js';
+import { handleImage, IMAGE_ROUTE_PREFIX } from './handlers/image-handler.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -21,6 +22,10 @@ export default {
         return handleHealth(request, env);
       }
       
+      if (url.pathname.startsWith(IMAGE_ROUTE_PREFIX) && (request.method === 'GET' || request.method === 'HEAD')) {
+        return handleImage(request, env);
+      }
+
       if (url.pathname === '/generate' && request.method === 'POST') {
         return handleGenerate(request, env, ctx);
       }

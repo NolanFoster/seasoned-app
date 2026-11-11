@@ -12,6 +12,7 @@ binding = "AI"
 [vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://images.seasonedapp.com"
+AI_IMAGE_BASE_URL = "https://ai-image-generation-worker.nolanfoster.workers.dev/images"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 # Preview environment
@@ -23,6 +24,7 @@ binding = "AI"
 [env.preview.vars]
 SEARCH_DB_URL = "https://preview-recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://preview-images.seasonedapp.com"
+AI_IMAGE_BASE_URL = "https://ai-image-generation-worker-preview.nolanfoster.workers.dev/images"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 # Staging environment
@@ -34,6 +36,7 @@ binding = "AI"
 [env.staging.vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://images.seasonedapp.com"
+AI_IMAGE_BASE_URL = "https://ai-image-generation-worker-staging.nolanfoster.workers.dev/images"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 [[env.staging.kv_namespaces]]
@@ -65,6 +68,7 @@ binding = "AI"
 [env.production.vars]
 SEARCH_DB_URL = "https://recipe-search-db.nolanfoster.workers.dev"
 IMAGE_DOMAIN = "https://images.seasonedapp.com"
+AI_IMAGE_BASE_URL = "https://ai-image-generation-worker.nolanfoster.workers.dev/images"
 FDC_API_KEY = "BTC4bopPVhYCMm30a7XtTojgvd3DFQBV86dO9n0K"
 
 [[env.production.kv_namespaces]]

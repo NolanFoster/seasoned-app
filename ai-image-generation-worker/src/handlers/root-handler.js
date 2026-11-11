@@ -26,6 +26,11 @@ export async function handleRoot(request, env) {
           imageId: 'Unique identifier for the image',
           error: 'Error message if generation failed'
         }
+      },
+      images: {
+        method: 'GET',
+        path: '/images/ai-generated/<imageId>.png',
+        description: 'Serves a generated image from R2'
       }
     }
   };
