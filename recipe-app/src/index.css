@@ -1079,6 +1079,155 @@ textarea:focus-visible {
   margin-bottom: 6px;
 }
 
+
+.ingredient-entity-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.ingredient-entity-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ingredient-entity-disclosure > p {
+  margin: 5px 2px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ingredient-entity-line-details {
+  margin: 2px 0 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ingredient-entity-line-details summary {
+  width: fit-content;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.ingredient-entity-line-details dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  margin: 5px 0;
+}
+
+.ingredient-entity-line-details dt {
+  font-weight: 600;
+}
+
+.ingredient-entity-line-details dd {
+  margin: 0;
+}
+
+.ingredient-entity-line-details > span {
+  display: block;
+}
+
+/* ── Collapsible recipe checks (Details & checks) ───────────────── */
+.recipe-checks {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.recipe-checks summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px var(--spacing-5);
+  user-select: none;
+}
+
+.recipe-checks summary::-webkit-details-marker {
+  display: none;
+}
+
+.recipe-checks-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recipe-checks-title::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+  transition: transform 0.15s ease;
+}
+
+.recipe-checks[open] .recipe-checks-title::after {
+  transform: rotate(180deg);
+}
+
+.recipe-checks-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 112, 99, 0.25);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.check-chip--ok {
+  border-color: rgba(63, 145, 91, 0.4);
+  color: #2f7a4d;
+}
+
+.check-chip--warn {
+  border-color: rgba(190, 132, 37, 0.5);
+  color: #9a6a12;
+}
+
+.recipe-checks-body {
+  padding: 0 var(--spacing-5) var(--spacing-md);
+}
+
 /* ── GeneratingCard ── */
 .generating-card {
   background: var(--surface);
@@ -4326,7 +4475,17 @@ textarea:focus-visible {
   cursor: pointer;
   font-size: 0.82rem;
 }
-.generation-composer-check:has(input:checked) {
+button.generation-composer-check {
+  background: var(--surface2);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+button.generation-composer-check:hover {
+  border-color: var(--accent);
+}
+.generation-composer-check:has(input:checked),
+button.generation-composer-check[aria-pressed="true"] {
   border-color: var(--accent);
   background: rgb(var(--color-primary-rgb) / var(--state-focus));
 }
@@ -4500,7 +4659,8 @@ textarea:focus-visible {
 }
 
 .cn-allergen-notice,
-.cn-process-notice {
+.cn-process-notice,
+.cn-uncertainty-notice {
   margin: 16px 20px 0;
 }
 
@@ -5591,6 +5751,65 @@ textarea:focus-visible {
   background: rgba(168, 208, 141, 0.04);
 }
 
+/* ── Calibrated uncertainty / selective abstention ────────────────── */
+.recipe-uncertainty-banner {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgb(var(--color-tertiary-rgb) / 0.7);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgb(var(--color-tertiary-rgb) / 0.1);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.recipe-uncertainty-banner--safety {
+  border-color: rgb(var(--color-error-soft-rgb) / 0.75);
+  background: rgb(var(--color-error-container-rgb) / 0.18);
+}
+
+.recipe-uncertainty-banner--abstain {
+  border-style: dashed;
+}
+
+.recipe-uncertainty-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.recipe-uncertainty-level {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.recipe-uncertainty-banner p {
+  margin: 0.35rem 0 0;
+}
+
+.recipe-uncertainty-banner ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.recipe-uncertainty-banner li + li {
+  margin-top: 0.25rem;
+}
+
+.recipe-uncertainty-action {
+  font-weight: 600;
+}
+
+.recipe-provenance-item--abstain,
+.recipe-provenance-item--low {
+  border-color: rgba(177, 61, 61, 0.55);
+  color: #8f2f2f;
+}
 /* --------------------------------------------------------------------------
    Auto-fill meal plan modal
    -------------------------------------------------------------------------- */
@@ -5806,6 +6025,43 @@ textarea:focus-visible {
   font-size: 0.75rem;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.recipe-nutrition-fill-summary {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: var(--spacing-sm) 0;
+}
+
+.recipe-nutrition-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  list-style: none;
+  margin: var(--spacing-sm) 0;
+  padding: 0;
+}
+
+.recipe-nutrition-sources li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  font-size: 0.8rem;
+}
+
+.recipe-nutrition-source-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.recipe-nutrition-source-chip--estimate {
+  border-color: rgb(var(--color-primary-rgb) / 0.4);
+  color: var(--color-primary);
 }
 
 .recipe-nutrition-coverage {

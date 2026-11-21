@@ -36,6 +36,11 @@ const ALIASES = new Map([
 
 const STOP_WORDS = new Set(['a', 'an', 'and', 'of', 'or', 'the', 'to', 'for', 'with', 'divided', 'as', 'needed'])
 
+// These ingredients are normally tracked as kitchen supplies rather than
+// consumed inventory. A caller can opt a name back in with `trackedStaples`
+// when a household keeps measured stock (for example, a baker tracking salt).
+export const PANTRY_LEDGER_STAPLES = Object.freeze(['salt', 'water', 'ice', 'pepper'])
+
 function asText(value) {
   if (value === null || value === undefined) return ''
   if (typeof value === 'object') return String(value.name || value.ingredient || value.text || '')
@@ -79,6 +84,15 @@ const NORMALIZED_NAME_CACHE = new Map()
 const NORMALIZED_NAME_CACHE_LIMIT = 5000
 
 /** Return a stable, quantity-free ingredient name for fuzzy matching. */
+export function isPantryLedgerStaple(value, { trackedStaples = [] } = {}) {
+  const name = normalizeIngredientName(value)
+  if (!name) return false
+  const tracked = new Set((Array.isArray(trackedStaples) ? trackedStaples : [])
+    .map((item) => normalizeIngredientName(item))
+    .filter(Boolean))
+  return PANTRY_LEDGER_STAPLES.includes(name) && !tracked.has(name)
+}
+
 export function normalizeIngredientName(value) {
   const cacheKey = typeof value === 'string' ? value : null
   if (cacheKey !== null) {
@@ -447,12 +461,22 @@ export function getExpiringPantryItems(items, days = 7, { now = new Date() } = {
  * Unknown quantities are represented as remove operations because the user
  * has opted into consuming the item and cannot be given a safe numeric delta.
  */
-export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date() } = {}) {
+export function buildPantryDepletionPlan(recipe, pantryItems, {
+  now = new Date(),
+  servingsCooked = null,
+  trackedStaples = [],
+} = {}) {
   const requirements = new Map()
+  const recipeServings = Number(recipe?.servings || recipe?.recipe_yield || recipe?.yield || 0)
+  const requestedServings = Number(servingsCooked)
+  const scale = Number.isFinite(requestedServings) && requestedServings > 0 && recipeServings > 0
+    ? requestedServings / recipeServings
+    : 1
   const recipeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : []
   for (const ingredient of recipeIngredients) {
     const parsed = parsePantryIngredient(ingredient)
-    if (!parsed.name) continue
+    if (!parsed.name || isPantryLedgerStaple(parsed.name, { trackedStaples })) continue
+    if (parsed.amount !== null) parsed.amount *= scale
 
     const existing = requirements.get(parsed.name)
     if (!existing) {
@@ -503,6 +527,7 @@ export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date()
         action,
         amount,
         unit,
+        expectedQuantity: item.quantity ?? null,
       }
       if (remainingQuantity !== undefined) operation.remainingQuantity = remainingQuantity
       operationByItem.set(key, operation)

@@ -12,6 +12,9 @@ function PantryHarness() {
       <button type="button" onClick={() => void pantry.updateItem(7, { name: 'Brown rice', location: 'pantry' }).catch(() => {})}>Rename rice</button>
       <button type="button" onClick={() => void pantry.removeItem(7).catch(() => {})}>Remove rice</button>
       <button type="button" onClick={() => pantry.scanPhoto(new File(['image'], 'pantry.jpg', { type: 'image/jpeg' }))}>Scan pantry</button>
+      <button type="button" onClick={() => pantry.proposeDebit({ recipeId: 'recipe-1', cookSessionId: 'cook-1', operations: [{ pantryItemId: 7, ingredient: 'rice', action: 'update', amount: 1, unit: 'bag', expectedQuantity: 1, remainingQuantity: 0 }] })}>Propose debit</button>
+      <button type="button" onClick={() => pantry.confirmDebit({ recipeId: 'recipe-1', cookSessionId: 'cook-1', operations: [{ pantryItemId: 7, ingredient: 'rice', action: 'update', amount: 1, unit: 'bag', expectedQuantity: 1, remainingQuantity: 0 }] })}>Confirm debit</button>
+      <button type="button" onClick={() => pantry.recordWaste({ lines: [{ pantryItemId: 7, ingredient: 'rice', action: 'remove', expectedQuantity: 1 }] })}>Record waste</button>
     </div>
   )
 }
@@ -78,6 +81,28 @@ describe('usePantry', () => {
     })))
     const scanCall = global.fetch.mock.calls.find(([url]) => url.endsWith('/me/pantry-scan'))
     expect(scanCall[1].headers['Content-Type']).toBeUndefined()
+  })
+
+  test('proposes and confirms a cook debit through the append-only ledger endpoints', async () => {
+    render(<PantryHarness />)
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Propose debit' }))
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('https://test-user.example.com/me/pantry-ledger/propose', expect.objectContaining({ method: 'POST' })))
+    const proposalCall = global.fetch.mock.calls.find(([url]) => url.endsWith('/me/pantry-ledger/propose'))
+    expect(JSON.parse(proposalCall[1].body)).toMatchObject({ type: 'debit_cook', cookSessionId: 'cook-1' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm debit' }))
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('https://test-user.example.com/me/pantry-ledger/confirm', expect.objectContaining({ method: 'POST' })))
+  })
+
+  test('records explicit pantry waste through the ledger endpoint', async () => {
+    render(<PantryHarness />)
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'))
+    fireEvent.click(screen.getByRole('button', { name: 'Record waste' }))
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('https://test-user.example.com/me/pantry-ledger/waste', expect.objectContaining({ method: 'POST' })))
+    const wasteCall = global.fetch.mock.calls.find(([url]) => url.endsWith('/me/pantry-ledger/waste'))
+    expect(JSON.parse(wasteCall[1].body)).toMatchObject({ type: 'debit_waste', source: 'pantry' })
   })
 
   test('loads, adds, updates, and removes user-scoped items through the API', async () => {

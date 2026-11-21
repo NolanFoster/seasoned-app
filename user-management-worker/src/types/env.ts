@@ -12,6 +12,8 @@ export interface Env {
   PANTRY_ENABLED?: string;
   // Explicit kill switch for ephemeral pantry photo scanning.
   PANTRY_SCAN_ENABLED?: string;
+  // Explicit kill switch for the append-only pantry outflow ledger.
+  PANTRY_LEDGER_ENABLED?: string;
   // Optional Cloudflare Workers AI binding used by the pantry scan endpoint.
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   // Explicit kill switch for the additive private recipe notes API.

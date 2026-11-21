@@ -57,6 +57,26 @@ describe('RecipeAdapt handler', () => {
     expect(data.recipe.adaptationNotes.length).toBeGreaterThan(0);
   });
 
+  it('returns conservative ingredient entities when the feature flag is on', async () => {
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'] },
+        constraints: { dietary: ['vegan'] }
+      }),
+      { INGREDIENT_ENTITY_V1: 'on' },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.ingredientEntities).toHaveLength(1);
+    expect(data.recipe.derivedDietaryStyles).toEqual(['vegan', 'vegetarian', 'pescatarian']);
+    expect(data.recipe.dietaryComparison).toMatchObject({
+      requestedDietary: ['vegan'],
+      status: 'verified'
+    });
+  });
+
   it('uses explicit constraints over culinary profile defaults', async () => {
     const request = createPostRequest('/adapt', {
       baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'], instructions: ['Cook rice.'] },
@@ -115,6 +135,35 @@ describe('RecipeAdapt handler', () => {
     }));
   });
 
+  it('asks the model to scale to the requested servings and stamps the new yield', async () => {
+    const run = vi.fn().mockResolvedValue({
+      response: JSON.stringify({
+        name: 'Creamy Pasta',
+        description: 'Scaled up.',
+        ingredients: ['16 oz pasta', '4 tbsp olive oil'],
+        instructions: ['Boil the pasta.', 'Toss with oil.'],
+        servings: '2 servings',
+        substitutions: [],
+        adaptationNotes: []
+      })
+    });
+
+    const response = await handleAdapt(
+      createPostRequest('/adapt', { baseRecipe, constraints: { servings: 4 } }),
+      { ENVIRONMENT: 'test', AI: { run } },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.servings).toBe('4');
+    expect(data.recipe.recipe_yield).toBe('4');
+    expect(data.recipe.adaptationNotes).toContain('Scaled from 2 servings to 4 servings.');
+    const userPrompt = run.mock.calls[0][1].messages[1].content;
+    expect(userPrompt).toContain('original recipe yields 2 servings');
+    expect(userPrompt).toContain('serves exactly 4');
+  });
+
   it('fails closed when an AI adaptation contains a hard allergen', async () => {
     const run = vi.fn().mockResolvedValue({
       response: {
@@ -131,7 +180,7 @@ describe('RecipeAdapt handler', () => {
         baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'] },
         constraints: { hardAllergens: ['eggs'] }
       }),
-      { AI: { run } },
+      { AI: { run }, INGREDIENT_ENTITY_V1: 'on' },
       corsHeaders
     );
     const data = await responseBody(response);
@@ -199,5 +248,156 @@ describe('RecipeAdapt handler', () => {
     expect(response.status).toBe(200);
     expect(data.recipe.processSafetyValidation).toBe('PASSED');
     expect(data.processSafetySummary).toMatchObject({ checked: true, tags: [] });
+  });
+
+  it('repairs a graph-listed milk term when remediation is enabled', async () => {
+    const run = vi.fn().mockResolvedValue({
+      response: {
+        name: 'Rice Pilaf',
+        description: 'A simple rice pilaf.',
+        ingredients: ['1 tablespoon butter', '1 cup rice'],
+        instructions: ['Cook the rice until tender.'],
+        prepTime: '5 minutes',
+        cookTime: '15 minutes',
+        totalTime: '20 minutes',
+        servings: '2',
+        difficulty: 'Easy',
+        cuisine: 'Mediterranean',
+        dietary: [],
+        substitutions: [],
+        adaptationNotes: []
+      }
+    });
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'], instructions: ['Cook the rice.'] },
+        constraints: { hardAllergens: ['milk'] }
+      }),
+      { ENVIRONMENT: 'test', PROCESS_SAFETY_V1: 'true', RECIPE_REMEDIATION_V1: 'on', AI: { run } },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.ingredients[0]).toBe('1 tablespoon olive oil');
+    expect(data.recipe.remediation).toMatchObject({ status: 'repaired', attempts: 1 });
+    expect(data.remediation.status).toBe('repaired');
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a recipe-free abstention body when a process block has no legal repair', async () => {
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        baseRecipe: {
+          ...baseRecipe,
+          name: 'Shelf-stable chicken',
+          ingredients: ['1 lb chicken'],
+          instructions: ['Pressure-can chicken in jars for 90 minutes at 15 psi and store at room temperature.']
+        }
+      }),
+      { ENVIRONMENT: 'test', PROCESS_SAFETY_V1: 'true', RECIPE_REMEDIATION_V1: 'on' },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(422);
+    expect(data).toMatchObject({
+      code: 'RECIPE_REMEDIATION_ABSTAIN',
+      attempts: 0,
+      remediation: { status: 'abstained', abstained: true }
+    });
+    expect(data.violations.every((violation) => ['allergen', 'process', 'quality'].includes(violation.gate))).toBe(true);
+    expect(data).not.toHaveProperty('recipe');
+  });
+
+  it('marks a title-changing repair for review before it can be saved', async () => {
+    const run = vi.fn().mockResolvedValue({
+      response: {
+        name: 'Butter rice',
+        description: 'A simple rice dish.',
+        ingredients: ['1 tablespoon butter', '1 cup rice'],
+        instructions: ['Cook the rice until tender.'],
+        prepTime: '5 minutes',
+        cookTime: '15 minutes',
+        totalTime: '20 minutes',
+        servings: '2',
+        difficulty: 'Easy',
+        cuisine: 'Mediterranean',
+        dietary: [],
+        substitutions: [],
+        adaptationNotes: []
+      }
+    });
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'], instructions: ['Cook the rice.'] },
+        constraints: { hardAllergens: ['milk'] }
+      }),
+      { ENVIRONMENT: 'test', PROCESS_SAFETY_V1: 'true', RECIPE_REMEDIATION_V1: 'on', AI: { run } },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.name).toBe('Olive oil rice');
+    expect(data.reviewRequired).toBe(true);
+    expect(data.recipe.reviewRequired).toBe(true);
+    expect(data.remediation.reviewRequired).toBe(true);
+  });
+
+  it('preserves the existing adaptation rejection when remediation is off', async () => {
+    const run = vi.fn().mockResolvedValue({
+      response: {
+        name: 'Rice Pilaf',
+        description: 'A simple rice pilaf.',
+        ingredients: ['1 tablespoon butter', '1 cup rice'],
+        instructions: ['Cook the rice until tender.'],
+        prepTime: '5 minutes',
+        cookTime: '15 minutes',
+        totalTime: '20 minutes',
+        servings: '2',
+        difficulty: 'Easy',
+        cuisine: 'Mediterranean',
+        dietary: [],
+        substitutions: [],
+        adaptationNotes: []
+      }
+    });
+    const response = await handleAdapt(
+      createPostRequest('/adapt', {
+        baseRecipe: { ...baseRecipe, ingredients: ['1 cup rice'], instructions: ['Cook the rice.'] },
+        constraints: { hardAllergens: ['milk'] }
+      }),
+      { ENVIRONMENT: 'test', PROCESS_SAFETY_V1: 'true', AI: { run } },
+      corsHeaders
+    );
+    const data = await responseBody(response);
+
+    expect(response.status).toBe(422);
+    expect(data.code).toBe('ALLERGEN_SAFETY_BLOCK');
+    expect(data).not.toHaveProperty('remediation');
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Cook program adaptation rollout', () => {
+  it('attaches on and computes without exposing the program in shadow mode', async () => {
+    const enabled = await handleAdapt(
+      createPostRequest('/adapt', { baseRecipe, constraints: {} }),
+      { ENVIRONMENT: 'test', COOK_PROGRAM_V1: 'on' },
+      corsHeaders
+    );
+    const enabledData = await responseBody(enabled);
+    expect(enabled.status).toBe(200);
+    expect(enabledData.recipe.cookProgram).toMatchObject({ modelId: 'cook-program-v1', status: 'partial' });
+
+    const shadow = await handleAdapt(
+      createPostRequest('/adapt', { baseRecipe, constraints: {} }),
+      { ENVIRONMENT: 'test', COOK_PROGRAM_V1: 'shadow' },
+      corsHeaders
+    );
+    const shadowData = await responseBody(shadow);
+    expect(shadow.status).toBe(200);
+    expect(shadowData.recipe).not.toHaveProperty('cookProgram');
   });
 });

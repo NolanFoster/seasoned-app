@@ -1,4 +1,5 @@
 import React from 'react'
+import UncertaintyBanner from './UncertaintyBanner.jsx'
 
 export function parseDuration(val) {
   if (!val) return null
@@ -46,6 +47,40 @@ function allergenLabel(value) {
   return String(value || '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+/**
+ * Classify an allergen check for layout/placement decisions without duplicating
+ * the rendering logic in <AllergenSafetyNotice>. Keep these branches in sync
+ * with that component. Returns 'blocked' | 'review' | 'info' | null.
+ */
+export function allergenNoticeSeverity(summary, hardAllergens = []) {
+  if (!summary && hardAllergens.length === 0) return null
+  const blocked = summary?.blocked || []
+  const needsReview = Boolean(
+    summary?.needs_review
+      || (summary && summary.safe === false && blocked.length === 0)
+      || (hardAllergens.length > 0 && summary?.ingredient_data_available === false)
+  )
+  if (blocked.length > 0) return 'blocked'
+  if (needsReview) return 'review'
+  return 'info'
+}
+
+/**
+ * Classify a food-process gate for layout/placement decisions without
+ * duplicating the rendering logic in <ProcessSafetyNotice>. Returns
+ * 'blocked' | 'template' | 'warning' | null.
+ */
+export function processNoticeSeverity(summary) {
+  if (!summary || !summary.checked) return null
+  const blocked = summary.blocked || []
+  const requiresTemplate = summary.requires_template || []
+  const warnings = summary.warnings || []
+  if (blocked.length > 0) return 'blocked'
+  if (requiresTemplate.length > 0) return 'template'
+  if (warnings.length > 0) return 'warning'
+  return null
 }
 
 /**
@@ -184,6 +219,8 @@ function qualityStatusLabel(value) {
     passed: 'Checks passed',
     needs_review: 'Review recommended',
     blocked: 'Blocked',
+    abstain: 'Review required',
+    low: 'Review required',
     not_checked: 'Not checked',
   }[value] || 'Not checked'
 }
@@ -209,10 +246,22 @@ export function RecipeProvenance({ recipe }) {
   const qualityScore = qualityBar?.score ?? provenance?.qualityScore
   const similarRecipeIds = provenance?.similarRecipeIds || []
   const nutritionCoverage = provenance?.nutritionCoverage
-  const allergenCheck = qualityBar?.allergenCheck
-    || (recipe.allergenSummary?.blocked?.length > 0
-      ? 'blocked'
-      : recipe.allergenSummary?.needs_review ? 'needs_review' : recipe.allergenSummary ? 'passed' : 'not_checked')
+  const allergenUncertaintyLevel = recipe.uncertaintySummary?.dimensions?.allergen_coverage?.level
+  const allergenCheck = allergenUncertaintyLevel && allergenUncertaintyLevel !== 'high'
+    ? (allergenUncertaintyLevel === 'abstain' ? 'abstain' : 'needs_review')
+    : qualityBar?.allergenCheck
+      || (recipe.allergenSummary?.blocked?.length > 0
+        ? 'blocked'
+        : recipe.allergenSummary?.needs_review ? 'needs_review' : recipe.allergenSummary ? 'passed' : 'not_checked')
+  const effectiveQualityStatus = recipe.uncertaintySummary?.level === 'abstain'
+    ? 'needs_review'
+    : qualityBar?.status
+  const nutritionUncertaintyLevel = recipe.uncertaintySummary?.dimensions?.nutrition?.level
+  const nutritionLabel = nutritionUncertaintyLevel === 'abstain'
+    ? 'Needs verification'
+    : nutritionUncertaintyLevel && nutritionUncertaintyLevel !== 'high'
+      ? 'Estimated — review'
+      : typeof nutritionCoverage === 'number' ? `${Math.round(nutritionCoverage)}% ingredient coverage` : 'Not calculated'
   const constraintCount = Object.values(provenance?.appliedConstraints || recipe.appliedConstraints || {})
     .filter((value) => (Array.isArray(value) ? value.length > 0 : value !== undefined && value !== null && value !== '')).length
 
@@ -226,7 +275,7 @@ export function RecipeProvenance({ recipe }) {
       </div>
       <div className="recipe-provenance-grid">
         {qualityScore !== null && qualityScore !== undefined && (
-          <span className={`recipe-provenance-item recipe-provenance-item--${qualityBar?.status || 'passed'}`}>
+          <span className={`recipe-provenance-item recipe-provenance-item--${effectiveQualityStatus || 'passed'}`}>
             <strong>Quality</strong> {Math.round(Number(qualityScore))}/100
           </span>
         )}
@@ -249,7 +298,7 @@ export function RecipeProvenance({ recipe }) {
           </span>
         )}
         <span className="recipe-provenance-item">
-          <strong>Nutrition</strong> {typeof nutritionCoverage === 'number' ? `${Math.round(nutritionCoverage)}% ingredient coverage` : 'Not calculated'}
+          <strong>Nutrition</strong> {nutritionLabel}
         </span>
         {useFlag('ratio-integrity') && (() => {
           const ratioReport = evaluateRatioIntegrity(recipe)
@@ -286,6 +335,11 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
       : null
   const isEstimated = nutritionProvenance?.estimated ?? (coveragePct !== null && coveragePct < 80)
   const uncertainIngredients = nutritionProvenance?.uncertain_ingredients || []
+  const groundedIngredients = nutritionProvenance?.grounded_ingredients || []
+  const filledIngredients = nutritionProvenance?.filled_ingredients || []
+  const ingredientTotal = recipe?.ingredients?.length
+    || (groundedIngredients.length + filledIngredients.length + uncertainIngredients.length)
+  const omittedIngredientCount = Math.max(0, ingredientTotal - groundedIngredients.length - filledIngredients.length)
 
   if (!nutrition && coveragePct === null) return null
 
@@ -305,7 +359,9 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
         <div>
           <h3>Estimated nutrition (per serving)</h3>
           <p className="recipe-nutrition-source">
-            Estimated from USDA FoodData Central matches · Not medical or dietary advice
+            {filledIngredients.length > 0
+              ? 'USDA FoodData Central matches + model estimates · Not medical or dietary advice'
+              : 'Estimated from USDA FoodData Central matches · Not medical or dietary advice'}
           </p>
         </div>
         {coveragePct !== null && (
@@ -314,6 +370,31 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
           </span>
         )}
       </div>
+
+      {filledIngredients.length > 0 && (
+        <p className="recipe-nutrition-fill-summary">
+          {groundedIngredients.length} of {ingredientTotal} ingredients from a food database. {filledIngredients.length} estimated. {omittedIngredientCount} omitted.
+        </p>
+      )}
+
+      {(groundedIngredients.length > 0 || filledIngredients.length > 0) && (
+        <ul className="recipe-nutrition-sources" aria-label="Nutrition ingredient sources">
+          {groundedIngredients.map((ingredient) => (
+            <li key={`grounded-${ingredient.index}-${ingredient.name}`}>
+              <span>{ingredient.name}</span>
+              <span className="recipe-nutrition-source-chip">USDA FoodData Central</span>
+            </li>
+          ))}
+          {filledIngredients.map((ingredient) => (
+            <li key={`filled-${ingredient.index}-${ingredient.name}`}>
+              <span>{ingredient.name}</span>
+              <span className="recipe-nutrition-source-chip recipe-nutrition-source-chip--estimate">
+                Model estimate · not a lab value
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {hasMacros && (
         <div className="recipe-nutrition-macros">
@@ -345,12 +426,12 @@ export function NutritionPanel({ recipe, onGoalAdaptClick }) {
       )}
 
       {useFlag('nutrition-overtrust-friction') && (() => {
-        const lights = computeTrafficLights(nutrition)
+        const lights = computeTrafficLights(nutrition, nutritionProvenance)
         const confidence = computeNutritionConfidence(nutritionProvenance)
         return (
           <div className="recipe-nutrition-trust-wrap" aria-label="Nutrition trust indicators">
             <div className="recipe-nutrition-traffic-lights">
-              <span className="nutrition-traffic-title">Traffic Lights (FSA):</span>
+              <span className="nutrition-traffic-title">Traffic Lights (FSA{lights.estimated ? ' · estimated inputs' : ''}):</span>
               <span className={`nutrition-traffic-badge nutrition-traffic--${lights.fat.level}`}>
                 Fat: {lights.fat.value}
               </span>
@@ -421,6 +502,116 @@ export function AppetiteFriendlyTips({ constraints }) {
   )
 }
 
+const dietStyleLabels = {
+  vegan: 'Vegan',
+  vegetarian: 'Vegetarian',
+  pescatarian: 'Pescatarian',
+  non_vegetarian: 'Non-vegetarian',
+}
+
+const provenanceSourceLabels = {
+  user_set: 'from you',
+  request_brief: 'from your request',
+  clip_host_map: 'from the source host',
+}
+
+const forbiddenProvenanceCopy = /\b(?:authentic|traditional|real|original|certified)\b/i
+
+function safeProvenanceLabel(value) {
+  if (typeof value !== 'string') return ''
+  const label = value.trim()
+  return label && !forbiddenProvenanceCopy.test(label) ? label : ''
+}
+
+function requestedDietLabel(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : []
+  return values
+    .filter((item) => typeof item === 'string')
+    .map((item) => (dietStyleLabels[item] || item.replace(/_/g, ' ')).toLocaleLowerCase('en-US'))
+    .join(', ')
+}
+
+function IngredientEntityEvidence({ recipe }) {
+  const styles = Array.isArray(recipe.derivedDietaryStyles) ? recipe.derivedDietaryStyles : []
+  const comparison = recipe.dietaryComparison || {}
+  const provenance = recipe.geoCultural
+  const passingStyles = styles.filter((style) => dietStyleLabels[style])
+  const primaryStyle = ['vegan', 'vegetarian', 'pescatarian', 'non_vegetarian']
+    .find((style) => passingStyles.includes(style))
+  const requestedLabel = requestedDietLabel(comparison.requestedDietary)
+  const contextValues = [safeProvenanceLabel(provenance?.region), safeProvenanceLabel(provenance?.country)].filter(Boolean)
+  const sourceLabel = provenanceSourceLabels[provenance?.source]
+  const showContext = provenance?.source !== 'absent' && sourceLabel && contextValues.length > 0
+
+  if (!primaryStyle && comparison.status !== 'not_verified' && !showContext) return null
+
+  return (
+    <div className="ingredient-entity-evidence" role="group" aria-label="Ingredient evidence">
+      {primaryStyle && (
+        <details className="ingredient-entity-disclosure">
+          <summary className="ingredient-entity-chip">
+            {dietStyleLabels[primaryStyle]} · derived from ingredients
+          </summary>
+          <p>
+            Derived from ingredient categories using conservative culinary rules.
+            {passingStyles.length > 1 && ` Also: ${passingStyles.filter((style) => style !== primaryStyle).map((style) => dietStyleLabels[style]).join(', ')}.`}
+          </p>
+          <p>Culinary label only; not an allergen certificate or medical advice.</p>
+        </details>
+      )}
+      {comparison.status === 'not_verified' && requestedLabel && (
+        <details className="ingredient-entity-disclosure">
+          <summary className="ingredient-entity-chip">
+            Requested {requestedLabel} · not verified
+          </summary>
+          {comparison.blockingLines?.length > 0 ? (
+            <p>Needs review: {comparison.blockingLines.map((line) => line.name).filter(Boolean).join(', ')}.</p>
+          ) : (
+            <p>Ingredient evidence does not verify the requested culinary style.</p>
+          )}
+        </details>
+      )}
+      {showContext && (
+        <span className="ingredient-entity-chip">
+          Context: {contextValues.join(' · ')} · {sourceLabel}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function IngredientEntityDisclosure({ entity }) {
+  const attributes = entity?.attributes
+  if (!attributes || typeof attributes !== 'object') return null
+  const labels = {
+    name: 'Name',
+    state: 'State',
+    quantity: 'Quantity',
+    unit: 'Unit',
+    size: 'Size',
+    temperature: 'Temperature',
+    dryFresh: 'Dry/fresh',
+  }
+  const values = Object.entries(labels)
+    .filter(([key]) => attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '')
+  if (values.length === 0) return null
+
+  return (
+    <details className="ingredient-entity-line-details">
+      <summary>Ingredient details</summary>
+      <dl>
+        {values.map(([key, label]) => (
+          <React.Fragment key={key}>
+            <dt>{label}</dt>
+            <dd>{String(attributes[key])}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+      {entity.parseStatus !== 'parsed' && <span>Some details remain unparsed.</span>}
+    </details>
+  )
+}
+
 // Pure display component — no state, no browser APIs.
 // Safe to use with ReactDOMServer.renderToStaticMarkup.
 // Props:
@@ -433,6 +624,9 @@ export default function RecipeCardDisplay({
   cookBtnId,
   onSelectSide,
   onCookTogether,
+  pairedSides,
+  pairingsPending = false,
+  pairingsSectionRef,
 }) {
   const instructions = (recipe.instructions || []).map((inst) => {
     if (typeof inst === 'string') return inst
@@ -444,6 +638,43 @@ export default function RecipeCardDisplay({
   const hardAllergens = recipe.appliedConstraints?.hardAllergens
     || recipe.appliedConstraints?.hard_allergens
     || []
+
+  // ── Layout: classify checks so the recipe can lead and the checks collapse ──
+  const allergenSeverity = allergenNoticeSeverity(allergenSummary, hardAllergens)
+  const processSeverity = processNoticeSeverity(recipe.processSafetySummary)
+  const pinAllergen = allergenSeverity === 'blocked' || allergenSeverity === 'review'
+  const pinProcess = processSeverity === 'blocked' || processSeverity === 'template'
+  const showAllergenInfo = allergenSeverity === 'info'
+  const showProcessWarning = processSeverity === 'warning'
+
+  const provenance = recipe.provenance || recipe.provenance_metadata
+  const qualityBar = recipe.qualityBar || recipe.quality_bar
+  const nutritionProvenance = recipe?.nutritionProvenance || recipe?.nutrition_provenance
+  const coveragePct = typeof nutritionProvenance?.coverage_pct === 'number'
+    ? Math.round(nutritionProvenance.coverage_pct)
+    : typeof recipe?.provenance?.nutritionCoverage === 'number'
+      ? Math.round(recipe.provenance.nutritionCoverage)
+      : null
+
+  const isAiRecipe = Boolean(
+    provenance
+      || recipe.source === 'ai_generated'
+      || recipe.source === 'adapted'
+      || recipe.generationMethod
+  )
+  const appetiteModes = recipe.appliedConstraints?.lifestyleModes
+    || recipe.appliedConstraints?.lifestyle_modes
+    || []
+  const hasAppetiteTips = appetiteModes.includes('appetite_gentle')
+  const hasAppliedConstraints = appliedConstraintLabels(recipe.appliedConstraints).length > 0
+  const hasAdaptation = Boolean(recipe.substitutions?.length > 0 || recipe.adaptationNotes?.length > 0)
+  const hasNutrition = Boolean(recipe.nutrition) || coveragePct !== null
+
+  const hasChecks = showAllergenInfo || showProcessWarning || isAiRecipe
+    || hasAppetiteTips || hasAppliedConstraints || hasAdaptation || hasNutrition
+
+  const qualityScore = qualityBar?.score ?? provenance?.qualityScore
+  const safetyFlagged = pinAllergen || pinProcess || showProcessWarning
 
   return (
     <>
@@ -466,10 +697,15 @@ export default function RecipeCardDisplay({
         <p className="recipe-description">{recipe.description}</p>
       )}
 
-      <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
-      <ProcessSafetyNotice summary={recipe.processSafetySummary} />
-      <RecipeProvenance recipe={recipe} />
-      <AppetiteFriendlyTips constraints={recipe.appliedConstraints} />
+      {/* Blocking / needs-review safety states stay pinned above the fold so a
+          dangerous recipe is never hidden behind the collapsed checks. */}
+      {pinAllergen && (
+        <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
+      )}
+      {pinProcess && (
+        <ProcessSafetyNotice summary={recipe.processSafetySummary} />
+      )}
+      <UncertaintyBanner summary={recipe.uncertaintySummary} />
 
       <div className="recipe-meta">
         {recipe.prep_time && (
@@ -484,8 +720,8 @@ export default function RecipeCardDisplay({
         {recipe.ingredients?.length > 0 && (() => {
           const costInfo = estimateRecipeCost(recipe)
           return (
-            <span 
-              className="recipe-meta-pill" 
+            <span
+              className="recipe-meta-pill"
               title={costInfo.disclaimer}
               style={{ cursor: 'help' }}
             >
@@ -513,13 +749,136 @@ export default function RecipeCardDisplay({
         )}
       </div>
 
-      {useFlag('complete-meal-composer') && (() => {
-        const pairedSides = composeMealSides(recipe, { hardAllergens })
-        if (pairedSides.length === 0) return null
-        const allMealRecipes = [recipe, ...pairedSides.map((s) => pairSideToRecipeObject(s, recipe))]
+      {/* The recipe itself — ingredients and instructions lead the card. */}
+      <div className="recipe-body">
+        {recipe.ingredients?.length > 0 && (
+          <div className="recipe-section">
+            <h3>Ingredients</h3>
+            <IngredientEntityEvidence recipe={recipe} />
+            <ul>
+              {recipe.ingredients.map((ing, i) => {
+                const entity = recipe.ingredientEntities?.find((item) => item.index === i)
+                return (
+                  <li key={i}>
+                    {typeof ing === 'string' ? ing : ing.name || JSON.stringify(ing)}
+                    <IngredientEntityDisclosure entity={entity} />
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {instructions.length > 0 && (
+          <div className="recipe-section">
+            <h3>Instructions</h3>
+            <ol>
+              {instructions.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+
+      {/* Secondary checks collapse into a one-line summary so they don't crowd
+          the recipe; expand for the full details. */}
+      {hasChecks && (
+        <details className="recipe-checks">
+          <summary className="recipe-checks-summary">
+            <span className="recipe-checks-title">Details &amp; checks</span>
+            <span className="recipe-checks-chips">
+              {(allergenSummary || recipe.processSafetySummary) && (
+                <span className={`check-chip ${safetyFlagged ? 'check-chip--warn' : 'check-chip--ok'}`}>
+                  Safety {safetyFlagged ? '⚠' : '✓'}
+                </span>
+              )}
+              {typeof qualityScore === 'number' && (
+                <span className="check-chip">Quality {Math.round(Number(qualityScore))}/100</span>
+              )}
+              {hasNutrition && (
+                <span className="check-chip check-chip--ok">Nutrition ✓</span>
+              )}
+            </span>
+          </summary>
+          <div className="recipe-checks-body">
+            {showAllergenInfo && (
+              <AllergenSafetyNotice summary={allergenSummary} hardAllergens={hardAllergens} />
+            )}
+            {showProcessWarning && (
+              <ProcessSafetyNotice summary={recipe.processSafetySummary} />
+            )}
+            <RecipeProvenance recipe={recipe} />
+            <AppetiteFriendlyTips constraints={recipe.appliedConstraints} />
+            {hasAppliedConstraints && (
+              <div className="applied-constraints" aria-label="Applied generation constraints">
+                <span className="applied-constraints-label">Personalized</span>
+                {appliedConstraintLabels(recipe.appliedConstraints).map((label) => (
+                  <span key={label} className="applied-constraint-chip">{label}</span>
+                ))}
+              </div>
+            )}
+            {hasAdaptation && (
+              <section className="adaptation-summary" aria-label="Recipe adaptation details">
+                <h3>What changed</h3>
+                {recipe.substitutions?.length > 0 && (
+                  <ul className="adaptation-substitutions">
+                    {recipe.substitutions.map((change, index) => (
+                      <li key={`${change.from || 'change'}-${index}`}>
+                        <strong>{change.from}</strong> → {change.to}
+                        {change.reason && <span>{change.reason}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {recipe.adaptationNotes?.length > 0 && (
+                  <ul className="adaptation-notes">
+                    {recipe.adaptationNotes.map((note, index) => <li key={`${note}-${index}`}>{note}</li>)}
+                  </ul>
+                )}
+                {recipe.adapted_from && (
+                  <div className="adaptation-lineage" style={{ margin: '8px 0', padding: '6px 10px', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em' }}>
+                    <span>🌱 <strong>Lineage:</strong> Adapted from original <em>{recipe.original_name || recipe.parent_recipe_name || 'recipe'}</em></span>
+                    {recipe.adaptation_timestamp && (
+                      <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
+                        Variant generated on {new Date(recipe.adaptation_timestamp).toLocaleDateString()}
+                      </small>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+            <NutritionPanel recipe={recipe} />
+          </div>
+        </details>
+      )}
+
+      {useFlag('complete-meal-composer') && recipe.generationMethod !== 'complete-meal-composer' && (() => {
+        if (pairingsPending) {
+          return (
+            <section
+              ref={pairingsSectionRef}
+              className="complete-meal-section"
+              aria-label="Complete the meal recommendations"
+              aria-busy="true"
+            >
+              <div className="complete-meal-header">
+                <div>
+                  <h3>🍽️ Complete the Meal</h3>
+                  <span className="complete-meal-tagline" role="status">
+                    Creating a side, starch, and sauce for {recipe.name}…
+                  </span>
+                </div>
+              </div>
+            </section>
+          )
+        }
+        const sides = pairedSides?.length > 0 ? pairedSides : composeMealSides(recipe, { hardAllergens })
+        if (sides.length === 0) return null
+        const allMealRecipes = [recipe, ...sides.map((s) => pairSideToRecipeObject(s, recipe))]
 
         return (
-          <section className="complete-meal-section" aria-label="Complete the meal recommendations">
+          <section ref={pairingsSectionRef} className="complete-meal-section" aria-label="Complete the meal recommendations">
             <div className="complete-meal-header">
               <div>
                 <h3>🍽️ Complete the Meal</h3>
@@ -537,18 +896,18 @@ export default function RecipeCardDisplay({
               )}
             </div>
             <div className="complete-meal-grid">
-              {pairedSides.map((side) => {
+              {sides.map((side) => {
                 const sideRecipe = pairSideToRecipeObject(side, recipe)
                 return (
                   <div key={side.id} className="complete-meal-card">
                     <div className="complete-meal-card-title">
                       <strong>{side.name}</strong>
-                      <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{side.prepMinutes}m</span>
+                      <span className="complete-meal-pill">{side.type.replace('_', ' ')} · ~{(side.prepMinutes || 0) + (side.cookMinutes || 0)}m</span>
                     </div>
+                    <p className="complete-meal-card-instruction">{side.description}</p>
                     <p className="complete-meal-card-ingredients">
-                      <strong>Ingredients:</strong> {side.ingredients.join(', ')}
+                      <strong>{side.ingredients.length} ingredients · {side.instructions.length} steps</strong>
                     </p>
-                    <p className="complete-meal-card-instruction">{side.instructions[0]}</p>
                     <div className="complete-meal-card-actions">
                       {onSelectSide && (
                         <button
@@ -594,72 +953,6 @@ export default function RecipeCardDisplay({
           </section>
         )
       })()}
-
-      {appliedConstraintLabels(recipe.appliedConstraints).length > 0 && (
-        <div className="applied-constraints" aria-label="Applied generation constraints">
-          <span className="applied-constraints-label">Personalized</span>
-          {appliedConstraintLabels(recipe.appliedConstraints).map((label) => (
-            <span key={label} className="applied-constraint-chip">{label}</span>
-          ))}
-        </div>
-      )}
-
-      {(recipe.substitutions?.length > 0 || recipe.adaptationNotes?.length > 0) && (
-        <section className="adaptation-summary" aria-label="Recipe adaptation details">
-          <h3>What changed</h3>
-          {recipe.substitutions?.length > 0 && (
-            <ul className="adaptation-substitutions">
-              {recipe.substitutions.map((change, index) => (
-                <li key={`${change.from || 'change'}-${index}`}>
-                  <strong>{change.from}</strong> → {change.to}
-                  {change.reason && <span>{change.reason}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-          {recipe.adaptationNotes?.length > 0 && (
-            <ul className="adaptation-notes">
-              {recipe.adaptationNotes.map((note, index) => <li key={`${note}-${index}`}>{note}</li>)}
-            </ul>
-          )}
-          {recipe.adapted_from && (
-            <div className="adaptation-lineage" style={{ margin: '8px 0', padding: '6px 10px', background: '#f5f5f5', borderRadius: '4px', fontSize: '0.85em' }}>
-              <span>🌱 <strong>Lineage:</strong> Adapted from original <em>{recipe.original_name || recipe.parent_recipe_name || 'recipe'}</em></span>
-              {recipe.adaptation_timestamp && (
-                <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
-                  Variant generated on {new Date(recipe.adaptation_timestamp).toLocaleDateString()}
-                </small>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      <NutritionPanel recipe={recipe} />
-
-      <div className="recipe-body">
-        {recipe.ingredients?.length > 0 && (
-          <div className="recipe-section">
-            <h3>Ingredients</h3>
-            <ul>
-              {recipe.ingredients.map((ing, i) => (
-                <li key={i}>{typeof ing === 'string' ? ing : ing.name || JSON.stringify(ing)}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {instructions.length > 0 && (
-          <div className="recipe-section">
-            <h3>Instructions</h3>
-            <ol>
-              {instructions.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
     </>
   )
 }

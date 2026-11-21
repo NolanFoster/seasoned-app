@@ -113,6 +113,8 @@ export default function MealPlanner({
   bulkScheduleEnabled = false,
   onOpenBulkSchedule,
   recentRecipes = [],
+  planMigrationEnabled = false,
+  hardAllergens = [],
 }) {
   return (
     <DragProvider>
@@ -128,6 +130,8 @@ export default function MealPlanner({
         bulkScheduleEnabled={bulkScheduleEnabled}
         onOpenBulkSchedule={onOpenBulkSchedule}
         recentRecipes={recentRecipes}
+        planMigrationEnabled={planMigrationEnabled}
+        hardAllergens={hardAllergens}
       />
     </DragProvider>
   )
@@ -152,6 +156,8 @@ function MealPlannerContent({
   bulkScheduleEnabled,
   onOpenBulkSchedule,
   recentRecipes,
+  planMigrationEnabled,
+  hardAllergens,
 }) {
   const { setDragging, clearDrag } = useDragContext()
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
@@ -217,6 +223,8 @@ function MealPlannerContent({
         bulkScheduleEnabled={bulkScheduleEnabled}
         onOpenBulkSchedule={onOpenBulkSchedule}
         recentRecipes={recentRecipes}
+        planMigrationEnabled={planMigrationEnabled}
+        hardAllergens={hardAllergens}
       >
         {/* Single DragDropContext covers both UpNextCard and DayCards so recipes
             can be dragged between the staging area and any date/meal slot. */}

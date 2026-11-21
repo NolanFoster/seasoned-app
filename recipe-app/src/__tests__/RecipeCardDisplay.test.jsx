@@ -105,6 +105,49 @@ describe('RecipeCardDisplay', () => {
     render(<RecipeCardDisplay recipe={{ ...baseRecipe, ingredients: [{ name: '2 eggs' }] }} />)
     expect(screen.getByText('2 eggs')).toBeInTheDocument()
   })
+
+
+  test('discloses derived styles, requested mismatches, and sourced context as text', () => {
+    render(<RecipeCardDisplay recipe={{
+      ...baseRecipe,
+      ingredients: ['1 cup rice', '1 tbsp fish sauce'],
+      ingredientEntities: [
+        { index: 0, attributes: { name: 'rice', quantity: 1, unit: 'cup' }, parseStatus: 'parsed' },
+        { index: 1, attributes: { name: 'fish sauce', quantity: 1, unit: 'tbsp' }, parseStatus: 'parsed' },
+      ],
+      derivedDietaryStyles: ['pescatarian'],
+      dietaryComparison: {
+        requestedDietary: ['vegan'],
+        status: 'not_verified',
+        blockingLines: [{ index: 1, name: 'fish sauce', reason: 'diet_block:vegan' }],
+      },
+      geoCultural: { region: 'South Asia', country: 'India', source: 'request_brief' },
+    }} />)
+
+    expect(screen.getByText('Requested vegan · not verified')).toBeInTheDocument()
+    expect(screen.getByText('Context: South Asia · India · from your request')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Requested vegan · not verified'))
+    expect(screen.getByText(/Needs review: fish sauce/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByText('Ingredient details')[0])
+    expect(screen.getAllByText('Quantity')[0]).toBeInTheDocument()
+    expect(screen.queryByText('Temperature')).not.toBeInTheDocument()
+  })
+
+  test('shows the most specific passing style and its other supported styles', () => {
+    render(<RecipeCardDisplay recipe={{
+      ...baseRecipe,
+      derivedDietaryStyles: ['vegan', 'vegetarian', 'pescatarian'],
+    }} />)
+
+    expect(screen.getByText('Vegan · derived from ingredients')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Vegan · derived from ingredients'))
+    expect(screen.getByText(/Also: Vegetarian, Pescatarian/)).toBeInTheDocument()
+  })
+
+  test('does not display ingredient evidence for legacy recipes without entity fields', () => {
+    render(<RecipeCardDisplay recipe={baseRecipe} />)
+    expect(screen.queryByLabelText('Ingredient evidence')).not.toBeInTheDocument()
+  })
 })
 
 describe('Recipe provenance and quality bar', () => {
@@ -239,6 +282,61 @@ describe('Process safety notice', () => {
   })
 })
 
+describe('Uncertainty and abstention banner', () => {
+  const summary = {
+    checked: true,
+    level: 'abstain',
+    confidence: 0,
+    abstained: true,
+    dimensions: {
+      nutrition: { level: 'abstain', reasons: ['nutrition_not_calculated'] },
+      allergen_coverage: { level: 'abstain', reasons: ['opaque_or_precautionary_ingredient_terms'] },
+      process_safety: { level: 'high', reasons: [] },
+      authenticity: { level: 'medium', reasons: ['generated_content_not_independently_verified'] },
+    },
+  }
+
+  test('explains knowledge gaps and separates abstention from a hard block', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI blend bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup seasoning blend'],
+      instructions: ['Stir in the seasoning blend.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: { source: 'ai_generated', generationMethod: 'llama-ai' },
+      uncertaintySummary: summary,
+    }} />)
+
+    const banner = screen.getByRole('alert', { name: 'Recipe uncertainty' })
+    expect(banner).toHaveTextContent('Safety information needs review')
+    expect(banner).toHaveTextContent('Macros were not calculated')
+    expect(banner).toHaveTextContent('Some ingredient terms are ambiguous')
+    expect(screen.getByRole('region', { name: 'How this was made' }))
+      .toHaveTextContent('Review required')
+    expect(screen.getByText('Safety').closest('span')).toHaveClass('recipe-provenance-item--abstain')
+  })
+
+  test('renders a review note for non-safety uncertainty', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Estimated bowl',
+      source: 'ai_generated',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      uncertaintySummary: {
+        checked: true,
+        level: 'medium',
+        dimensions: {
+          nutrition: { level: 'medium', reasons: ['nutrition_is_estimated'] },
+          allergen_coverage: { level: 'high', reasons: [] },
+          process_safety: { level: 'high', reasons: [] },
+        },
+      },
+    }} />)
+
+    expect(screen.getByRole('note', { name: 'Recipe uncertainty' })).toHaveTextContent('Macros are estimates')
+  })
+})
 describe('NutritionPanel in RecipeCardDisplay', () => {
   test('renders per-serving macros, coverage, and disclaimer', () => {
     render(<RecipeCardDisplay recipe={{
@@ -267,6 +365,41 @@ describe('NutritionPanel in RecipeCardDisplay', () => {
     expect(screen.getByText('38g')).toBeInTheDocument()
     expect(screen.getByText(/Fiber:/i)).toBeInTheDocument()
     expect(screen.getByText(/Sodium:/i)).toBeInTheDocument()
+  })
+
+  test('labels model-filled ingredients separately from USDA matches and reports official coverage', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Berbere Lentils',
+      ingredients: ['1 cup lentils', '1 tsp berbere', 'water to taste'],
+      instructions: ['Simmer.'],
+      nutrition: {
+        calories: '320',
+        proteinContent: '18g',
+        carbohydrateContent: '40g',
+        fatContent: '8g',
+        sodiumContent: '820mg',
+      },
+      nutritionProvenance: {
+        coverage_pct: 33.3,
+        display_coverage_pct: 66.7,
+        estimated: true,
+        grounded_ingredients: [{ index: 0, name: 'lentils', foodCode: '123' }],
+        filled_ingredients: [{ index: 1, name: 'berbere', source: 'llm_estimate', dispersion: { sampleCount: 5 } }],
+        uncertain_ingredients: [{ index: 2, name: 'water to taste', reason: 'ambiguous_quantity' }],
+        filled_count: 1,
+      }
+    }} />)
+
+    expect(screen.getByText('33% matched')).toBeInTheDocument()
+    expect(screen.getByText(/1 of 3 ingredients from a food database\. 1 estimated\. 1 omitted\./i)).toBeInTheDocument()
+    expect(screen.getByText('USDA FoodData Central')).toBeInTheDocument()
+    expect(screen.getByText('Model estimate · not a lab value')).toBeInTheDocument()
+    expect(screen.getByText(/USDA FoodData Central matches \+ model estimates/i)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(/One or more nutrients exceed daily guideline benchmarks/i)
+    expect(screen.getByText('Traffic Lights (FSA · estimated inputs):')).toBeInTheDocument()
+    expect(screen.getByText(/Confidence:/i)).toHaveTextContent('LOW')
+    const panelCopy = screen.getByRole('region', { name: 'Nutritional facts per serving' }).textContent
+    expect(panelCopy).not.toMatch(/certified|lab-accurate|clinically|pathogen|safe for diabetics|guaranteed/i)
   })
 
   test('displays estimated warning and uncertain ingredients when coverage is partial', () => {
@@ -333,6 +466,22 @@ describe('Complete the Meal Composer in RecipeCardDisplay', () => {
   })
 })
 
+describe('Complete the Meal on a pairing recipe', () => {
+  test('does not suggest sides for a side that was itself a pairing', () => {
+    render(<RecipeCardDisplay
+      recipe={{
+        name: 'Garlic Butter Green Beans',
+        generationMethod: 'complete-meal-composer',
+        ingredients: ['1 lb green beans, trimmed', '2 tbsp unsalted butter'],
+        instructions: ['Blanch the beans.', 'Toss in butter.'],
+      }}
+      onSelectSide={jest.fn()}
+    />)
+
+    expect(screen.queryByText('🍽️ Complete the Meal')).not.toBeInTheDocument()
+  })
+})
+
 describe('Nutrition Overtrust Friction in RecipeCardDisplay', () => {
   test('renders traffic lights and attention warning for high sodium/sat-fat recipes', () => {
     render(<RecipeCardDisplay recipe={{
@@ -375,5 +524,49 @@ describe('Transformative Leftover Remix Cascades in RecipeCardDisplay', () => {
 })
 
 
+describe('Recipe-first layout & collapsible checks', () => {
+  test('renders ingredients and instructions before the collapsible checks', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI rice bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: { source: 'ai_generated', generationMethod: 'llama-ai', nutritionCoverage: 80 },
+    }} />)
 
+    const ingredients = screen.getByText('Ingredients')
+    const detailsSummary = screen.getByText('Details & checks')
+    expect(ingredients.compareDocumentPosition(detailsSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 
+  test('keeps the checks collapsed by default', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'AI rice bowl',
+      source: 'ai_generated',
+      generationMethod: 'llama-ai',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook the rice.'],
+      qualityBar: { status: 'passed', score: 96, allergenCheck: 'passed' },
+      provenance: { source: 'ai_generated', generationMethod: 'llama-ai', nutritionCoverage: 80 },
+    }} />)
+
+    const details = screen.getByText('Details & checks').closest('details')
+    expect(details).not.toHaveAttribute('open')
+  })
+
+  test('pins a blocked allergen notice outside the collapsible checks', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Peanut stir-fry',
+      ingredients: ['1 cup rice'],
+      instructions: ['Cook.'],
+      appliedConstraints: { hardAllergens: ['peanuts'] },
+      allergenSummary: { checked: true, safe: false, blocked: ['peanuts'], contains: ['peanuts'] },
+    }} />)
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Allergen conflict detected')
+    expect(alert.closest('details')).toBeNull()
+  })
+})

@@ -17,9 +17,13 @@ const FLAG_DEFAULTS = {
   'recipe-adapt': true,
   pantry: true,
   'pantry-planner': true,
+  pantry_ledger_v1: false,
   'pantry-scan': false,
+  'uncertainty_guards_v1': false,
+  'recipe-process-graph-v1': false,
   'meal-plan-autofill': false,
   'meal-plan-bulk-schedule': false,
+  plan_migration_v1: true,
   'preference-learning': true,
   'lifestyle-appetite-gentle': false,
   'budget-constraints': true,
@@ -32,6 +36,7 @@ const FLAG_DEFAULTS = {
   'navigator-vision-assist': true,
   'multi-dish-navigator': true,
   'complete-meal-composer': true,
+  'complete-meal-ai-pairings': true,
   'recipe-collections': true,
   'nutrition-overtrust-friction': true,
   'living-projects': true,
@@ -39,6 +44,7 @@ const FLAG_DEFAULTS = {
   'leftover-transform-cascade': true,
   'ephemeral-kitchen-mode': true,
   'ratio-integrity': true,
+  flavour_reward_map_v1: false,
   'meal-atom': true,
   'arrival-reconciliation': true,
   'kitchen-physics-packs': true,
@@ -99,7 +105,7 @@ export async function syncFlagglyUser(user) {
     const keys = state ? Object.keys(state) : []
     if (keys.length === 0) {
       console.warn(
-        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile, constraint-generate, recipe-adapt, pantry, pantry-planner, pantry-scan, meal-plan-autofill, meal-plan-bulk-schedule, lifestyle-appetite-gentle) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
+        '[flaggly] Eval succeeded but returned zero flags. In Flaggly admin, create flags with the same ids as in code (voice-control, gesture-support, dictation, elevate-recipe, meal-planner, culinary-profile, constraint-generate, recipe-adapt, pantry, pantry-planner, pantry-scan, recipe-process-graph-v1, uncertainty_guards_v1, meal-plan-autofill, meal-plan-bulk-schedule, pantry_ledger_v1, lifestyle-appetite-gentle) for app `default` / env `production`, or set VITE_FLAGGLY_APP_ID / VITE_FLAGGLY_ENV_ID if you use other names.'
       )
     } else if (import.meta.env.DEV) {
       console.info(`[flaggly] Eval OK — ${keys.length} flag(s):`, keys.join(', '))

@@ -3,6 +3,8 @@ import {
   generateRecipeId,
   getRecipeFromKV
 } from '../../shared/kv-storage.js';
+import { getIngredientEntityMode, withIngredientEntityFeature } from '../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../shared/cook-program.js';
 import {
   isYouTubeUrl,
   extractRecipeFromYouTube
@@ -88,8 +90,16 @@ export default {
           
           if (existingRecipe.success) {
             console.log('Recipe found in KV store, returning cached version');
+            const cacheMode = getIngredientEntityMode(env);
+            const cachedRecipe = cacheMode === 'on'
+              ? existingRecipe.recipe
+              : withIngredientEntityFeature(existingRecipe.recipe, 'off').recipe;
+            const programFeature = withCookProgramFeature(cachedRecipe, env);
+            if (programFeature.mode === 'shadow') {
+              console.info('Cook program shadow telemetry', programFeature.telemetry);
+            }
             return new Response(JSON.stringify({
-              ...existingRecipe.recipe,
+              ...programFeature.recipe,
               source_url: pageUrl,
               cached: true,
               fromCache: true,
@@ -114,6 +124,26 @@ export default {
               headers: corsHeaders
             });
           }
+          const host = new URL(pageUrl).hostname;
+          const entityFeature = withIngredientEntityFeature(recipe, env, {
+            requestedDietary: body.requestedDietary ?? null,
+            geoCultural: {
+              source: 'clip_host_map',
+              host,
+              cuisineString: recipe.cuisine || recipe.cuisineType || null
+            },
+            hostMap: env?.INGREDIENT_HOST_COUNTRY_MAP && typeof env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+              ? env.INGREDIENT_HOST_COUNTRY_MAP
+              : {}
+          });
+          const programFeature = withCookProgramFeature(entityFeature.recipe, env);
+          const annotatedRecipe = programFeature.recipe;
+          if (entityFeature.mode === 'shadow') {
+            console.info('Ingredient entity shadow telemetry', entityFeature.telemetry);
+          }
+          if (programFeature.mode === 'shadow') {
+            console.info('Cook program shadow telemetry', programFeature.telemetry);
+          }
           
           // Save the extracted recipe using recipe-save-worker service binding
           const recipeSaveResponse = await env.RECIPE_SAVE_WORKER.fetch('/recipe/save', {
@@ -123,7 +153,7 @@ export default {
             },
             body: JSON.stringify({
               recipe: {
-                ...recipe,
+                ...annotatedRecipe,
                 url: pageUrl
               }
             })
@@ -134,7 +164,7 @@ export default {
             if (saveResult.success) {
               console.log('Recipe saved to KV store successfully');
               return new Response(JSON.stringify({
-                ...recipe,
+                ...annotatedRecipe,
                 source_url: pageUrl,
                 cached: false,
                 recipeId: saveResult.id || recipeId,
@@ -147,7 +177,7 @@ export default {
               console.warn('Failed to save recipe to KV store:', saveResult.error);
               // Still return the recipe even if KV save failed
               return new Response(JSON.stringify({
-                ...recipe,
+                ...annotatedRecipe,
                 source_url: pageUrl,
                 cached: false,
                 savedToKV: false,
@@ -161,7 +191,7 @@ export default {
             console.error('Failed to save recipe:', recipeSaveResponse.status);
             // Still return the recipe even if save failed
             return new Response(JSON.stringify({
-              ...recipe,
+              ...annotatedRecipe,
               source_url: pageUrl,
               cached: false,
               savedToKV: false,

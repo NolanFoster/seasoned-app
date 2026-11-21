@@ -3,6 +3,15 @@
 
 import { compressData, generateRecipeId, decompressData } from '../../shared/kv-storage.js';
 import { calculateNutritionalFacts, extractServingsFromYield } from '../../shared/nutrition-calculator.js';
+import {
+  getIngredientEntityMode,
+  prepareGroundingIngredients,
+  withIngredientEntityFeature
+} from '../../shared/ingredient-entity.js';
+import {
+  getCompositionGapFillMode,
+  normalizeCompositionGapFillCacheKey
+} from '../../shared/composition-gap-fill.js';
 import { log as baseLog, generateRequestId } from '../../shared/utility-functions.js';
 
 // Wrapper to automatically add worker context
@@ -18,6 +27,86 @@ const GENERATED_IMAGE_PREFIX = 'ai-generated/';
 function isNutritionGroundingEnabled(env) {
   const value = env?.NUTRITION_DB_GROUNDING_V1 ?? env?.nutrition_db_grounding_v1;
   return ['1', 'true', 'on', 'enabled'].includes(String(value ?? '').trim().toLowerCase());
+}
+
+function parseCompositionSample(response) {
+  const raw = response?.response ?? response?.output ?? response;
+  if (typeof raw === 'number') return Number.isFinite(raw) && raw >= 0 ? raw : null;
+  if (typeof raw !== 'string') return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const value = typeof parsed === 'number' ? parsed : parsed?.value;
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Construct opt-in Worker AI, KV, and review-queue ports. The module itself
+ * remains deterministic and does not make a network call until invoked.
+ */
+function createCompositionGapFillPorts(env, mode, requestId) {
+  const cache = env?.RECIPE_STORAGE;
+  if (!['on', 'shadow'].includes(mode) || typeof env?.AI?.run !== 'function'
+    || typeof cache?.get !== 'function' || typeof cache?.put !== 'function') return null;
+
+  const sampleField = async (name, form, field, { sampleCount = 5, temperature = 0.7 } = {}) => {
+    const fieldUnit = field === 'calories'
+      ? 'kcal per 100 g'
+      : field === 'sodiumContent'
+        ? 'mg per 100 g'
+        : 'g per 100 g';
+    const samples = [];
+    const count = Math.max(3, Math.min(7, Math.floor(Number(sampleCount) || 5)));
+    for (let index = 0; index < count; index += 1) {
+      const response = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+        messages: [
+          {
+            role: 'system',
+            content: 'Estimate exactly one food-composition field per 100 g for the named ingredient and form. Return only strict JSON with one numeric "value" property. Do not estimate any other nutrient, allergens, dietary suitability, food safety, or medical claims. Do not include prose or citations.'
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({ ingredient: name, form, field, unit: fieldUnit, sample: index + 1 })
+          }
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'single_nutrient_sample',
+            schema: {
+              type: 'object',
+              properties: { value: { type: 'number' } },
+              required: ['value'],
+              additionalProperties: false
+            }
+          }
+        },
+        max_tokens: 64,
+        temperature: Math.max(0.1, Math.min(1, Number(temperature) || 0.7))
+      });
+      const value = parseCompositionSample(response);
+      if (value !== null) samples.push(value);
+    }
+    return samples;
+  };
+
+  const reviewQueue = {
+    async enqueue(payload) {
+      const key = normalizeCompositionGapFillCacheKey(payload?.input?.name, payload?.input?.form) || 'unknown';
+      const queueKey = `composition-gap-fill-review:v1:${key}:${Date.now()}`;
+      await cache.put(queueKey, JSON.stringify(payload), { expirationTtl: 30 * 24 * 60 * 60 });
+    }
+  };
+
+  return {
+    mode,
+    sampleField,
+    cache,
+    reviewQueue,
+    logEvent: (event) => log('info', 'Composition gap-fill telemetry', event, { requestId })
+  };
 }
 
 // Parse recipe ingredients for nutrition calculation
@@ -438,6 +527,18 @@ export class RecipeSaver {
               (updates.ingredients && JSON.stringify(updates.ingredients) !== JSON.stringify(existingRecipe.ingredients))) {
             log('info', 'Recalculating nutrition due to missing data or ingredient changes', { requestId, recipeId });
             updatedRecipe = await this.calculateAndAddNutrition(updatedRecipe, requestId);
+          } else {
+            const feature = withIngredientEntityFeature(updatedRecipe, this.env, {
+              requestedDietary: updatedRecipe.dietaryComparison?.requestedDietary ?? updatedRecipe.requestedDietary ?? null,
+              geoCultural: updatedRecipe.geoCultural,
+              hostMap: this.env?.INGREDIENT_HOST_COUNTRY_MAP && typeof this.env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+                ? this.env.INGREDIENT_HOST_COUNTRY_MAP
+                : {}
+            });
+            updatedRecipe = feature.recipe;
+            if (feature.mode === 'shadow') {
+              log('info', 'Ingredient entity shadow telemetry', feature.telemetry, { requestId });
+            }
           }
 
           log('debug', 'Recipe updated with new data', { 
@@ -746,7 +847,10 @@ export class RecipeSaver {
       }
 
       log('debug', 'Decompressing recipe', { requestId, recipeId });
-      const recipe = await decompressData(compressedData);
+      const storedRecipe = await decompressData(compressedData);
+      const recipe = getIngredientEntityMode(this.env) === 'on'
+        ? storedRecipe
+        : withIngredientEntityFeature(storedRecipe, 'off').recipe;
       log('debug', 'Recipe decompressed', { 
         requestId, 
         recipeId, 
@@ -1156,6 +1260,18 @@ export class RecipeSaver {
   }
 
   async calculateAndAddNutrition(recipe, requestId = null) {
+    const entityFeature = withIngredientEntityFeature(recipe, this.env, {
+      requestedDietary: recipe.dietaryComparison?.requestedDietary ?? recipe.requestedDietary ?? null,
+      geoCultural: recipe.geoCultural,
+      hostMap: this.env?.INGREDIENT_HOST_COUNTRY_MAP && typeof this.env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+        ? this.env.INGREDIENT_HOST_COUNTRY_MAP
+        : {}
+    });
+    recipe = entityFeature.recipe;
+    const ingredientEntityMode = entityFeature.mode;
+    if (entityFeature.mode === 'shadow') {
+      log('info', 'Ingredient entity shadow telemetry', entityFeature.telemetry, { requestId });
+    }
     log('info', 'Starting nutrition calculation', { 
       requestId, 
       recipeId: recipe.id,
@@ -1165,12 +1281,22 @@ export class RecipeSaver {
     const startTime = Date.now();
 
     try {
-      // Check if nutrition info already exists
+      // Preserve existing nutrition in the legacy path. When authoritative
+      // grounding is explicitly enabled, replace model-only nutrition; avoid
+      // repeating work for an already-grounded record.
       const groundingEnabled = isNutritionGroundingEnabled(this.env);
-      if (recipe.nutrition && Object.keys(recipe.nutrition).length > 0) {
-        log('info', 'Recipe already has nutrition information', { 
-          requestId, 
-          recipeId: recipe.id 
+      const compositionGapFillMode = getCompositionGapFillMode(this.env);
+      const hasNutrition = recipe.nutrition && Object.keys(recipe.nutrition).length > 0;
+      const existingProvenance = recipe.nutritionProvenance;
+      const alreadyGrounded = existingProvenance?.schemaVersion === 'NutritionGroundingV1'
+        && (compositionGapFillMode === 'off'
+          || Number.isFinite(existingProvenance.filled_count)
+          || Number.isFinite(existingProvenance.abstained_count)
+          || existingProvenance.coverage_pct === 100);
+      if (hasNutrition && (!groundingEnabled || alreadyGrounded)) {
+        log('info', 'Recipe already has nutrition information', {
+          requestId,
+          recipeId: recipe.id
         });
         return recipe;
       }
@@ -1235,16 +1361,32 @@ export class RecipeSaver {
           createUSDAFoodDataCentralProvider,
           groundRecipeNutrition
         } = await import('../../shared/nutrition-grounding.js');
-        nutritionResult = await groundRecipeNutrition(recipe.ingredients, {
+        const compositionGapFill = createCompositionGapFillPorts(this.env, compositionGapFillMode, requestId);
+        const groundingIngredients = ingredientEntityMode === 'on'
+          ? prepareGroundingIngredients(recipe.ingredients, recipe.ingredientEntities)
+          : recipe.ingredients;
+        nutritionResult = await groundRecipeNutrition(groundingIngredients, {
           provider: createUSDAFoodDataCentralProvider(this.env.FDC_API_KEY, {
             dbVersion: this.env.FDC_DB_VERSION || 'live'
           }),
           servings,
-          coverageThreshold: this.env.NUTRITION_DB_COVERAGE_THRESHOLD
+          coverageThreshold: this.env.NUTRITION_DB_COVERAGE_THRESHOLD,
+          compositionGapFillFlag: compositionGapFillMode,
+          compositionGapFill
         });
         if (nutritionResult.success && nutritionResult.nutrition) {
           recipe.nutrition = nutritionResult.nutrition;
           recipe.nutritionProvenance = nutritionResult.nutritionProvenance;
+          if (ingredientEntityMode === 'on') {
+            recipe = withIngredientEntityFeature(recipe, this.env, {
+              requestedDietary: recipe.dietaryComparison?.requestedDietary ?? recipe.requestedDietary ?? null,
+              geoCultural: recipe.geoCultural,
+              groundedIngredients: nutritionResult.groundedIngredients,
+              hostMap: this.env?.INGREDIENT_HOST_COUNTRY_MAP && typeof this.env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+                ? this.env.INGREDIENT_HOST_COUNTRY_MAP
+                : {}
+            }).recipe;
+          }
         }
       } else {
         nutritionResult = await calculateNutritionalFacts(

@@ -20,7 +20,8 @@ export const TRAFFIC_LIGHT_LEVELS = {
  * Sugars: Low <= 5g, Med > 5g and <= 22.5g, High > 22.5g
  * Salt (Sodium mg * 2.5 / 1000 = g salt): Low <= 0.3g (120mg Na), Med <= 1.5g (600mg Na), High > 1.5g (>600mg Na)
  */
-export function computeTrafficLights(nutrition) {
+export function computeTrafficLights(nutrition, provenance = {}) {
+  const estimated = provenance?.estimated === true || Number(provenance?.filled_count) > 0;
   if (!nutrition || typeof nutrition !== 'object') {
     return {
       fat: { level: TRAFFIC_LIGHT_LEVELS.UNKNOWN, label: 'Unknown', value: null },
@@ -28,6 +29,7 @@ export function computeTrafficLights(nutrition) {
       sugars: { level: TRAFFIC_LIGHT_LEVELS.UNKNOWN, label: 'Unknown', value: null },
       salt: { level: TRAFFIC_LIGHT_LEVELS.UNKNOWN, label: 'Unknown', value: null },
       hasRedLight: false,
+      estimated,
     }
   }
 
@@ -86,6 +88,7 @@ export function computeTrafficLights(nutrition) {
     sugars: { level: sugarLevel, value: sugarVal !== null ? `${sugarVal}g` : '—' },
     salt: { level: saltLevel, value: sodiumVal !== null ? `${sodiumVal}mg sodium` : '—' },
     hasRedLight,
+    estimated,
   }
 }
 
@@ -97,8 +100,9 @@ export function computeTrafficLights(nutrition) {
 export function computeNutritionConfidence(provenance) {
   if (!provenance) return 'unknown'
   const coverage = provenance.coverage_pct ?? 0
+  const includesEstimate = provenance.estimated === true || Number(provenance.filled_count) > 0
   if (coverage >= 90 && (!provenance.uncertain_ingredients || provenance.uncertain_ingredients.length === 0)) {
-    return 'high'
+    return includesEstimate ? 'medium' : 'high'
   }
   if (coverage >= 60) {
     return 'medium'
@@ -113,7 +117,7 @@ export function computeNutritionConfidence(provenance) {
  */
 export function evaluateNutritionFrictionGate(recipe) {
   if (!recipe) return { requiresGate: false, reasons: [] }
-  const lights = computeTrafficLights(recipe.nutrition)
+  const lights = computeTrafficLights(recipe.nutrition, recipe.nutritionProvenance)
   const confidence = computeNutritionConfidence(recipe.nutritionProvenance)
   const reasons = []
 

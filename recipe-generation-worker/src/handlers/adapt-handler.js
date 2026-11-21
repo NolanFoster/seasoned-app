@@ -1,7 +1,18 @@
 import { buildGenerationConstraints, normalizeCulinaryProfile } from '../../../shared/culinary-profile.js';
+import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../../shared/cook-program.js';
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
-import { ProcessSafetyError, enforceRecipeSafety } from '../process-safety.js';
+import { ProcessSafetyError } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
+import { buildRecipeUncertainty, isUncertaintyGuardsEnabled } from '../../../shared/uncertainty.js';
+import {
+  isRecipeProcessGraphEnabled,
+  withRecipeProcessGraph
+} from '../../../shared/recipe-process-graph.js';
+import {
+  enforceRecipeSafetyWithRemediation,
+  RecipeRemediationAbstainError
+} from '../recipe-remediation.js';
 
 const ADAPT_CONSTRAINT_FIELDS = [
   'dietary',
@@ -75,6 +86,42 @@ const MOCK_SUBSTITUTIONS = [
     reason: 'Adds a similar toasted finish without sesame.'
   }
 ];
+
+function buildSafetyErrorUncertainty(error) {
+  return buildRecipeUncertainty({
+    ingredients: [],
+    allergenSummary: error instanceof AllergenSafetyError ? error.summary : null,
+    processSafetySummary: error instanceof ProcessSafetyError ? error.summary : error.processSafetySummary
+  });
+}
+
+function withOptionalUncertaintyMetadata(recipe, constraints, env) {
+  if (!isUncertaintyGuardsEnabled(env)) return recipe;
+  const uncertaintySummary = buildRecipeUncertainty(recipe, {
+    hardAllergens: constraints.hardAllergens,
+    allergenSummary: recipe.allergenSummary,
+    processSafetySummary: recipe.processSafetySummary,
+    qualityBar: recipe.qualityBar
+  });
+  return {
+    ...recipe,
+    uncertaintySummary,
+    qualityBar: recipe.qualityBar
+      ? {
+        ...recipe.qualityBar,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.qualityBar,
+    provenance: recipe.provenance
+      ? {
+        ...recipe.provenance,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.provenance
+  };
+}
 
 function objectOrEmpty(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -212,6 +259,40 @@ function applyLineage(recipe, baseRecipe, constraints, method) {
   };
 }
 
+function baseServings(baseRecipe) {
+  const raw = baseRecipe.servings ?? baseRecipe.recipe_yield ?? baseRecipe.recipeYield ?? baseRecipe.yield;
+  if (raw === undefined || raw === null || raw === '') return null;
+  return String(raw).trim() || null;
+}
+
+function servingsInstruction(baseRecipe, constraints) {
+  const target = Number(constraints.servings);
+  if (!Number.isFinite(target) || target <= 0) return '';
+  const original = baseServings(baseRecipe);
+  return `Servings: the original recipe yields ${original || 'an unspecified number of servings'}. `
+    + `Scale every ingredient quantity so the adapted recipe serves exactly ${target}, `
+    + `adjust pan sizes or batch steps in the instructions if needed, and set the servings field to "${target}".`;
+}
+
+/**
+ * The model echoes the base recipe's yield often enough that the requested
+ * servings count must be stamped on the result explicitly; the prompt above
+ * asks it to scale quantities to that same number.
+ */
+function applyRequestedServings(recipe, baseRecipe, constraints) {
+  const target = Number(constraints.servings);
+  if (!Number.isFinite(target) || target <= 0) return recipe;
+  const servings = String(target);
+  const original = baseServings(baseRecipe);
+  const notes = Array.isArray(recipe.adaptationNotes) ? [...recipe.adaptationNotes] : [];
+  const originalCount = original ? Number.parseFloat(original) : NaN;
+  if (Number.isFinite(originalCount) && originalCount !== target
+    && !notes.some((note) => /serv(ing|es)/i.test(String(note)))) {
+    notes.push(`Scaled from ${original} to ${servings} servings.`);
+  }
+  return { ...recipe, servings, recipe_yield: servings, recipeYield: servings, adaptationNotes: notes };
+}
+
 async function adaptWithAI(baseRecipe, constraints, env) {
   const systemPrompt = `You are a careful culinary adaptation expert. Rewrite an existing recipe to fit the requested constraints while preserving its recognizable dish identity, cuisine, core protein, and cooking sequence whenever possible.
 
@@ -227,6 +308,7 @@ Requested constraints:
 ${JSON.stringify(constraints)}
 
 Preserve these aspects where possible: flavor profile, cuisine, core protein, recognizable name, and overall recipe structure.
+${servingsInstruction(baseRecipe, constraints)}
 Hard allergens to exclude: ${(constraints.hardAllergens || []).join(', ') || 'none'}.
 Return substitutions as objects with from, to, and reason fields. Return adaptationNotes as concise strings.`;
 
@@ -278,7 +360,7 @@ Return substitutions as objects with from, to, and reason fields. Return adaptat
   if (!response || response.response === undefined) {
     throw new Error('Invalid response from LLaMA model for recipe adaptation');
   }
-  return normalizeAdaptedRecipe(response.response, baseRecipe);
+  return applyRequestedServings(normalizeAdaptedRecipe(response.response, baseRecipe), baseRecipe, constraints);
 }
 
 /**
@@ -325,39 +407,107 @@ export async function handleAdapt(request, env, corsHeaders) {
     const adapted = env.AI
       ? await adaptWithAI(baseRecipe, constraints, env)
       : mockAdaptRecipe(baseRecipe, constraints);
-    let finalRecipe = enforceRecipeSafety(
+    let remediation = null;
+    const checked = await enforceRecipeSafetyWithRemediation(
       applyLineage(adapted, baseRecipe, constraints, adaptationMethod),
-      constraints.hardAllergens,
-      env,
-      { 'process_safety.surface': 'adapt' }
+      {
+        constraints,
+        env,
+        context: { 'process_safety.surface': 'adapt' }
+      }
     );
+    let finalRecipe = checked.recipe;
+    remediation = checked.remediation;
     finalRecipe.generationTime = Date.now() - adaptationStartedAt;
-    finalRecipe = withQualityMetadata(finalRecipe, {
+    finalRecipe = withRecipeProcessGraph(finalRecipe, {
+      enabled: isRecipeProcessGraphEnabled(env),
+      recipeId: baseRecipe.id || baseRecipe.recipeId || null
+    });
+    const qualityOptions = {
       source: 'adapted',
       generationMethod: adaptationMethod,
       model: env.AI ? '@cf/meta/llama-4-scout-17b-16e-instruct' : null,
       hardAllergens: constraints.hardAllergens,
       appliedConstraints: constraints,
       similarRecipeIds: []
+    };
+    try {
+      finalRecipe = withQualityMetadata(finalRecipe, qualityOptions);
+    } catch (error) {
+      if (!(error instanceof RecipeQualityError)) throw error;
+      const repaired = await enforceRecipeSafetyWithRemediation(finalRecipe, {
+        constraints,
+        env,
+        context: { 'process_safety.surface': 'adapt' },
+        initialError: error
+      });
+      finalRecipe = withQualityMetadata(repaired.recipe, qualityOptions);
+      remediation = repaired.remediation;
+    }
+    const geoContext = requestBody.geoCultural || requestBody.geoCulturalContext;
+    const entityFeature = withIngredientEntityFeature(finalRecipe, env, {
+      requestedDietary: constraints.dietary,
+      ...(geoContext && typeof geoContext === 'object' && !Array.isArray(geoContext)
+        ? { geoCultural: { ...geoContext, cuisineString: finalRecipe.cuisine || geoContext.cuisineString } }
+        : {}),
+      hostMap: env?.INGREDIENT_HOST_COUNTRY_MAP && typeof env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+        ? env.INGREDIENT_HOST_COUNTRY_MAP
+        : {}
     });
+    finalRecipe = entityFeature.recipe;
+    if (entityFeature.mode === 'shadow') {
+      // eslint-disable-next-line no-console -- Counts only; ingredient text is never logged.
+      console.info('Ingredient entity shadow telemetry', entityFeature.telemetry);
+    }
+    const programFeature = withCookProgramFeature(finalRecipe, env);
+    finalRecipe = programFeature.recipe;
+    if (programFeature.mode === 'shadow') {
+      // eslint-disable-next-line no-console -- Program telemetry contains counts and reason codes only.
+      console.info('Cook program shadow telemetry', programFeature.telemetry);
+    }
+
+    finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, constraints, env);
 
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
       appliedConstraints: constraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
+      ...(remediation ? { remediation } : {}),
+      ...(finalRecipe.reviewRequired ? { reviewRequired: true } : {}),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    if (error instanceof RecipeRemediationAbstainError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe remediation could not clear the deterministic safety gates',
+        code: error.code,
+        attempts: error.attempts,
+        violations: error.violations,
+        remediation: {
+          modelId: 'recipe-remediation-v1',
+          status: 'abstained',
+          attempts: error.attempts,
+          violations: error.violations,
+          abstained: true
+        }
+      }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     if (error instanceof AllergenSafetyError) {
       return new Response(JSON.stringify({
         error: 'Recipe adaptation failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary,
-        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {}),
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -368,7 +518,8 @@ export async function handleAdapt(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         error: 'Recipe adaptation failed food-process safety validation',
         code: error.code,
-        processSafetySummary: error.summary
+        processSafetySummary: error.summary,
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -396,4 +547,4 @@ export async function handleAdapt(request, env, corsHeaders) {
   }
 }
 
-export { buildConstraintOverrides, mockAdaptRecipe, normalizeAdaptedRecipe };
+export { applyRequestedServings, buildConstraintOverrides, mockAdaptRecipe, normalizeAdaptedRecipe };

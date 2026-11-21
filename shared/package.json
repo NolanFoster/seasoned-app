@@ -18,7 +18,15 @@
     "./food-process-safety": "./food-process-safety.js",
     "./pantry-planning": "./pantry-planning.js",
     "./nutrition-grounding": "./nutrition-grounding.js",
-    "./ingredient-state": "./ingredient-state.js"
+    "./ingredient-state": "./ingredient-state.js",
+    "./uncertainty": "./uncertainty.js",
+    "./recipe-process-graph": "./recipe-process-graph.js",
+    "./pantry-ledger": "./pantry-ledger.js",
+    "./composition-gap-fill": "./composition-gap-fill.js",
+    "./plan-interchange": "./plan-interchange.js",
+    "./flavour-reward-map": "./flavour-reward-map.js",
+    "./ingredient-entity": "./ingredient-entity.js",
+    "./cook-program": "./cook-program.js"
   },
   "scripts": {
     "test": "node test-simple.js",
