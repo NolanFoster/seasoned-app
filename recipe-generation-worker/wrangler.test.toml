@@ -5,6 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "test"
+RECIPE_PROCESS_GRAPH_V1 = "false"
+UNCERTAINTY_GUARDS_V1 = "false"
 OPIK_API_KEY = "test-opik-api-key-for-testing"
 
 [ai]

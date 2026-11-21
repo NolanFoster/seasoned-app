@@ -505,6 +505,23 @@ function generateStyles() {
       line-height: 1.6;
     }
 
+    /* Calibrated uncertainty notice */
+    .recipe-uncertainty-banner {
+      margin: 12px 20px;
+      padding: 12px 14px;
+      border: 1px solid rgba(232, 200, 122, 0.7);
+      border-radius: 10px;
+      color: var(--text);
+      background: rgba(232, 200, 122, 0.1);
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+    .recipe-uncertainty-banner--safety {
+      border-color: rgba(235, 126, 126, 0.75);
+      background: rgba(180, 54, 54, 0.18);
+    }
+    .recipe-uncertainty-banner p { margin: 5px 0 0; }
+
     /* Meta pills */
     .recipe-meta {
       display: flex;

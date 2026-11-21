@@ -50,6 +50,16 @@ function commaSeparated(value) {
   return String(value || '').split(',').map((item) => item.trim()).filter(Boolean)
 }
 
+function isQuickAdaptationActive(form, adaptation) {
+  if (adaptation.dietary) return form.dietary.includes(adaptation.dietary)
+  if (adaptation.nutritionFocus) return form.nutritionFocus === adaptation.nutritionFocus
+  if (adaptation.maxCookTime) return Number(form.maxCookTime) === adaptation.maxCookTime
+  if (adaptation.equipment) return form.equipment.includes(adaptation.equipment)
+  if (adaptation.spiceLevel !== undefined) return Number(form.spiceLevel) === adaptation.spiceLevel
+  if (adaptation.lifestyleModes) return (form.lifestyleModes || []).includes(adaptation.lifestyleModes)
+  return false
+}
+
 export default function AdaptComposer({ open, recipe, profile, busy, onClose, onAdapt }) {
   const [form, setForm] = useState(() => initialForm(profile))
   const firstFieldRef = useRef(null)
@@ -137,6 +147,7 @@ export default function AdaptComposer({ open, recipe, profile, busy, onClose, on
                 key={adaptation.label}
                 type="button"
                 className="generation-composer-check"
+                aria-pressed={isQuickAdaptationActive(form, adaptation)}
                 onClick={() => applyQuickAdaptation(adaptation)}
               >
                 {adaptation.label}
