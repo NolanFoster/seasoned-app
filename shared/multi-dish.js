@@ -77,5 +77,8 @@ export function normalizeMultiDishSession(recipes) {
     instructions: recipe.instructions || [],
     allergenSummary: recipe.allergenSummary || null,
     processSafetySummary: recipe.processSafetySummary || null,
+    processGraph: recipe.processGraph || null,
+    graphConfidence: recipe.graphConfidence || null,
+    appliedConstraints: recipe.appliedConstraints || null,
   }))
 }

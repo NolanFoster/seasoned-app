@@ -20,9 +20,50 @@ import {
   withQualityMetadata
 } from '../quality-bar.js';
 import {
+  isRecipeProcessGraphEnabled,
+  withRecipeProcessGraph
+} from '../../../shared/recipe-process-graph.js';
+import { buildRecipeUncertainty, isUncertaintyGuardsEnabled } from '../../../shared/uncertainty.js';
+import {
   enforceRecipeSafetyWithRemediation,
   RecipeRemediationAbstainError
 } from '../recipe-remediation.js';
+
+function buildSafetyErrorUncertainty(error) {
+  return buildRecipeUncertainty({
+    ingredients: [],
+    allergenSummary: error instanceof AllergenSafetyError ? error.summary : null,
+    processSafetySummary: error instanceof ProcessSafetyError ? error.summary : error.processSafetySummary
+  });
+}
+
+function withOptionalUncertaintyMetadata(recipe, appliedConstraints, env) {
+  if (!isUncertaintyGuardsEnabled(env)) return recipe;
+  const uncertaintySummary = buildRecipeUncertainty(recipe, {
+    hardAllergens: appliedConstraints.hardAllergens,
+    allergenSummary: recipe.allergenSummary,
+    processSafetySummary: recipe.processSafetySummary,
+    qualityBar: recipe.qualityBar
+  });
+  return {
+    ...recipe,
+    uncertaintySummary,
+    qualityBar: recipe.qualityBar
+      ? {
+        ...recipe.qualityBar,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.qualityBar,
+    provenance: recipe.provenance
+      ? {
+        ...recipe.provenance,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.provenance
+  };
+}
 
 function applyIngredientEntityFeature(recipe, env, requestBody) {
   const context = requestBody?.geoCultural || requestBody?.geoCulturalContext;
@@ -192,6 +233,11 @@ export async function handleGenerate(request, env, corsHeaders) {
         }
       }
 
+      finalRecipe = withRecipeProcessGraph(finalRecipe, {
+        enabled: isRecipeProcessGraphEnabled(env),
+        recipeId: requestBody.recipeId || requestBody.id || null
+      });
+
       finalRecipe = withQualityMetadata(finalRecipe, {
         source: requestBody.elevate === true ? 'elevated' : 'ai_generated',
         generationMethod: finalRecipe.elevationMethod || 'mock',
@@ -201,11 +247,14 @@ export async function handleGenerate(request, env, corsHeaders) {
       });
       finalRecipe = applyIngredientEntityFeature(finalRecipe, env, requestBody);
 
+      finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, appliedConstraints, env);
+
       return new Response(JSON.stringify({
         success: true,
         recipe: finalRecipe,
         appliedConstraints,
         processSafetySummary: finalRecipe.processSafetySummary || null,
+        ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
         environment: env.ENVIRONMENT || 'development'
       }), {
         status: 200,
@@ -289,6 +338,11 @@ export async function handleGenerate(request, env, corsHeaders) {
       }
     }
 
+    finalRecipe = withRecipeProcessGraph(finalRecipe, {
+      enabled: isRecipeProcessGraphEnabled(env),
+      recipeId: requestBody.recipeId || requestBody.id || null
+    });
+
     const qualityOptions = {
       source: requestBody.elevate === true ? 'elevated' : 'ai_generated',
       generationMethod: requestBody.elevate === true
@@ -320,11 +374,14 @@ export async function handleGenerate(request, env, corsHeaders) {
     }
     finalRecipe = applyIngredientEntityFeature(finalRecipe, env, requestBody);
 
+    finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, appliedConstraints, env);
+
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
       appliedConstraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
       ...(generationTraceId && { traceId: generationTraceId }),
       ...(remediation ? { remediation } : {}),
       ...(finalRecipe.reviewRequired ? { reviewRequired: true } : {}),
@@ -364,7 +421,8 @@ export async function handleGenerate(request, env, corsHeaders) {
         error: 'Recipe failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary,
-        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {}),
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: {
@@ -380,7 +438,8 @@ export async function handleGenerate(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         error: 'Recipe failed food-process safety validation',
         code: error.code,
-        processSafetySummary: error.summary
+        processSafetySummary: error.summary,
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: {
@@ -487,7 +546,13 @@ async function generateRecipeWithAI(requestData, env) {
 
     // Step 4: Generate new recipe using LLaMA with context from similar recipes
     operationData.llmStartTime = new Date().toISOString();
-    const generatedRecipe = await generateRecipeWithLLaMA(requestData, similarRecipes, env.AI, operationData);
+    const generatedRecipe = await generateRecipeWithLLaMA(
+      requestData,
+      similarRecipes,
+      env.AI,
+      operationData,
+      { emitProcessGraph: isRecipeProcessGraphEnabled(env) }
+    );
     operationData.llmEndTime = new Date().toISOString();
 
     const duration = Date.now() - startTime;
@@ -798,15 +863,60 @@ async function findSimilarRecipes(queryEmbedding, vectorStorage, env) {
  * Generate recipe using LLaMA model with context from similar recipes
  */
 
-async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, operationData) {
+async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, operationData, { emitProcessGraph = false } = {}) {
   // Build context from similar recipes
   const contexts = similarRecipes.length > 0
     ? buildRecipeContext(similarRecipes)
     : [];
 
   // Create prompt for LLaMA
-  const prompt = buildLLaMAPrompt(requestData, contexts);
+  const prompt = buildLLaMAPrompt(requestData, contexts, { emitProcessGraph });
   operationData.prompt = prompt;
+
+  // Workers AI accepts a deliberately small JSON-schema subset. Keep the
+  // model-facing graph schema compatible with that subset; the shared module
+  // performs the complete semantic validation after the response arrives.
+  const processGraphModelSchema = {
+    type: 'object',
+    required: ['schemaVersion', 'graphType', 'nodes', 'edges'],
+    properties: {
+      schemaVersion: { type: 'string', enum: ['1.0'] },
+      graphType: { type: 'string', enum: ['recipe_process'] },
+      nodes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['id', 'type'],
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string', enum: ['ingredient', 'tool', 'action', 'intermediate', 'timer'] },
+            name: { type: 'string' },
+            text: { type: 'string' },
+            state: { type: 'string' },
+            quantity: { type: 'number' },
+            unit: { type: 'string' },
+            stepIndex: { type: 'number' },
+            durationSeconds: { type: 'number' },
+            toolId: { type: 'string' },
+            equipmentId: { type: 'string' },
+            no_tool: { type: 'boolean' }
+          }
+        }
+      },
+      edges: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['from', 'to', 'type'],
+          properties: {
+            from: { type: 'string' },
+            to: { type: 'string' },
+            type: { type: 'string', enum: ['uses', 'produces', 'before', 'parallel_ok', 'heats_in', 'rests'] }
+          }
+        }
+      }
+    }
+  };
 
   // Define the recipe JSON schema for structured output
   const recipeSchema = {
@@ -874,7 +984,8 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
           type: 'string'
         },
         description: 'Helpful cooking tips and variations'
-      }
+      },
+      ...(emitProcessGraph ? { processGraph: processGraphModelSchema } : {})
     },
     required: ['name', 'description', 'ingredients', 'instructions', 'prepTime', 'cookTime', 'totalTime', 'servings', 'difficulty']
   };
@@ -1113,7 +1224,7 @@ function formatFullRecipeContext(recipeData) {
 /**
  * Build prompt for LLaMA model using the structured JSON format
  */
-function buildLLaMAPrompt(requestData, contexts) {
+function buildLLaMAPrompt(requestData, contexts, { emitProcessGraph = false } = {}) {
   let prompt = '';
 
   // Add context recipes if available
@@ -1252,6 +1363,10 @@ function buildLLaMAPrompt(requestData, contexts) {
 
   if (requirements.length > 0) {
     prompt += `\n\nSpecific requirements: ${requirements.join(', ')}.`;
+  }
+
+  if (emitProcessGraph) {
+    prompt += '\n\nAlso emit a canonical processGraph object using schemaVersion \'1.0\' and graphType \'recipe_process\'. Include ingredient, tool, action, intermediate, and timer nodes as applicable; connect them with uses, produces, before, parallel_ok, heats_in, or rests edges. Every action must have a tool reference or no_tool: true and must produce an intermediate. Use action.stepIndex and step-local ingredient uses edges so the graph can be rendered without guessing.\n';
   }
 
   // Add instructions for JSON output

@@ -4,6 +4,11 @@ import { withCookProgramFeature } from '../../../shared/cook-program.js';
 import { AllergenSafetyError } from '../../../shared/allergen-graph.js';
 import { ProcessSafetyError } from '../process-safety.js';
 import { RecipeQualityError, withQualityMetadata } from '../quality-bar.js';
+import { buildRecipeUncertainty, isUncertaintyGuardsEnabled } from '../../../shared/uncertainty.js';
+import {
+  isRecipeProcessGraphEnabled,
+  withRecipeProcessGraph
+} from '../../../shared/recipe-process-graph.js';
 import {
   enforceRecipeSafetyWithRemediation,
   RecipeRemediationAbstainError
@@ -81,6 +86,42 @@ const MOCK_SUBSTITUTIONS = [
     reason: 'Adds a similar toasted finish without sesame.'
   }
 ];
+
+function buildSafetyErrorUncertainty(error) {
+  return buildRecipeUncertainty({
+    ingredients: [],
+    allergenSummary: error instanceof AllergenSafetyError ? error.summary : null,
+    processSafetySummary: error instanceof ProcessSafetyError ? error.summary : error.processSafetySummary
+  });
+}
+
+function withOptionalUncertaintyMetadata(recipe, constraints, env) {
+  if (!isUncertaintyGuardsEnabled(env)) return recipe;
+  const uncertaintySummary = buildRecipeUncertainty(recipe, {
+    hardAllergens: constraints.hardAllergens,
+    allergenSummary: recipe.allergenSummary,
+    processSafetySummary: recipe.processSafetySummary,
+    qualityBar: recipe.qualityBar
+  });
+  return {
+    ...recipe,
+    uncertaintySummary,
+    qualityBar: recipe.qualityBar
+      ? {
+        ...recipe.qualityBar,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.qualityBar,
+    provenance: recipe.provenance
+      ? {
+        ...recipe.provenance,
+        uncertaintyLevel: uncertaintySummary.level,
+        uncertaintyReasons: uncertaintySummary.reasons
+      }
+      : recipe.provenance
+  };
+}
 
 function objectOrEmpty(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -378,6 +419,10 @@ export async function handleAdapt(request, env, corsHeaders) {
     let finalRecipe = checked.recipe;
     remediation = checked.remediation;
     finalRecipe.generationTime = Date.now() - adaptationStartedAt;
+    finalRecipe = withRecipeProcessGraph(finalRecipe, {
+      enabled: isRecipeProcessGraphEnabled(env),
+      recipeId: baseRecipe.id || baseRecipe.recipeId || null
+    });
     const qualityOptions = {
       source: 'adapted',
       generationMethod: adaptationMethod,
@@ -421,11 +466,14 @@ export async function handleAdapt(request, env, corsHeaders) {
       console.info('Cook program shadow telemetry', programFeature.telemetry);
     }
 
+    finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, constraints, env);
+
     return new Response(JSON.stringify({
       success: true,
       recipe: finalRecipe,
       appliedConstraints: constraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
+      ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
       ...(remediation ? { remediation } : {}),
       ...(finalRecipe.reviewRequired ? { reviewRequired: true } : {}),
       environment: env.ENVIRONMENT || 'development'
@@ -458,7 +506,8 @@ export async function handleAdapt(request, env, corsHeaders) {
         error: 'Recipe adaptation failed allergen safety validation',
         code: error.code,
         allergenSummary: error.summary,
-        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {})
+        ...(error.processSafetySummary ? { processSafetySummary: error.processSafetySummary } : {}),
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -469,7 +518,8 @@ export async function handleAdapt(request, env, corsHeaders) {
       return new Response(JSON.stringify({
         error: 'Recipe adaptation failed food-process safety validation',
         code: error.code,
-        processSafetySummary: error.summary
+        processSafetySummary: error.summary,
+        ...(isUncertaintyGuardsEnabled(env) ? { uncertaintySummary: buildSafetyErrorUncertainty(error) } : {})
       }), {
         status: error.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

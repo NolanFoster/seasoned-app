@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seasoned.app/schemas/recipe-process-graph-1.0.json",
+  "title": "Seasoned Recipe Process Graph",
+  "description": "Canonical DAG representation of recipe ingredients, tools, actions, intermediate states, and dependencies.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "graphType", "nodes", "edges"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "graphType": { "const": "recipe_process" },
+    "recipeId": { "type": ["string", "null"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "graphConfidence": { "enum": ["high", "medium", "low"] },
+    "metadata": { "type": "object", "additionalProperties": true },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["ingredient", "tool", "action", "intermediate", "timer"] },
+        "name": { "type": "string" },
+        "text": { "type": "string" },
+        "quantity": { "type": ["number", "null"] },
+        "quantityText": { "type": ["string", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "state": { "enum": ["raw", "prepped", "chopped", "diced", "minced", "sliced", "peeled", "marinated", "mixed", "dissolved", "heated", "browned", "boiling", "simmered", "emulsified", "seasoned", "cooked", "chilled", "rested", "served", "plated", "finished"] },
+        "allergenRefs": { "type": "array", "items": { "type": "string" } },
+        "equipmentId": { "type": "string" },
+        "toolId": { "type": "string" },
+        "stepIndex": { "type": "integer", "minimum": 0 },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["from", "to", "type"],
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["uses", "produces", "before", "parallel_ok", "heats_in", "rests"] }
+      }
+    }
+  }
+}

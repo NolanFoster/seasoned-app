@@ -4659,7 +4659,8 @@ button.generation-composer-check[aria-pressed="true"] {
 }
 
 .cn-allergen-notice,
-.cn-process-notice {
+.cn-process-notice,
+.cn-uncertainty-notice {
   margin: 16px 20px 0;
 }
 
@@ -5750,6 +5751,65 @@ button.generation-composer-check[aria-pressed="true"] {
   background: rgba(168, 208, 141, 0.04);
 }
 
+/* ── Calibrated uncertainty / selective abstention ────────────────── */
+.recipe-uncertainty-banner {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgb(var(--color-tertiary-rgb) / 0.7);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgb(var(--color-tertiary-rgb) / 0.1);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.recipe-uncertainty-banner--safety {
+  border-color: rgb(var(--color-error-soft-rgb) / 0.75);
+  background: rgb(var(--color-error-container-rgb) / 0.18);
+}
+
+.recipe-uncertainty-banner--abstain {
+  border-style: dashed;
+}
+
+.recipe-uncertainty-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.recipe-uncertainty-level {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.recipe-uncertainty-banner p {
+  margin: 0.35rem 0 0;
+}
+
+.recipe-uncertainty-banner ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.recipe-uncertainty-banner li + li {
+  margin-top: 0.25rem;
+}
+
+.recipe-uncertainty-action {
+  font-weight: 600;
+}
+
+.recipe-provenance-item--abstain,
+.recipe-provenance-item--low {
+  border-color: rgba(177, 61, 61, 0.55);
+  color: #8f2f2f;
+}
 /* --------------------------------------------------------------------------
    Auto-fill meal plan modal
    -------------------------------------------------------------------------- */

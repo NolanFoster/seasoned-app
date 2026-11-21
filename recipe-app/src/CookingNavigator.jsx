@@ -3,7 +3,9 @@ import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
 import useNaturalVoice from './useNaturalVoice.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
+import UncertaintyBanner from './UncertaintyBanner.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
+import { getNavigatorSteps } from '../../shared/recipe-process-graph.js'
 import { inferStepVisionHint, formatVisionFeedback } from '../../shared/vision-coach.js'
 import { detectEquipmentConflicts, normalizeMultiDishSession } from '../../shared/multi-dish.js'
 import { useMealPlan } from './MealPlanContext.jsx'
@@ -324,6 +326,27 @@ function formatTime(secs) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+function matchGraphIngredients(graph, graphSteps, ingredients, stepIndex, fallbackText) {
+  const graphStep = graphSteps[stepIndex]
+  if (!graphStep || !Array.isArray(graphStep.ingredientRefs) || graphStep.ingredientRefs.length === 0) {
+    return matchIngredientsToStep(ingredients, fallbackText)
+  }
+
+  const refs = new Set(graphStep.ingredientRefs)
+  const graphIngredients = graphStep.ingredients || []
+  return ingredients.map((text, index) => {
+    const relevant = graphIngredients.some((ingredient) => (
+      refs.has(ingredient.id) && (
+        ingredient.sourceIndex === index
+        || ingredient.line === text
+        || ingredient.name === text
+        || (ingredient.name && text.toLocaleLowerCase().includes(ingredient.name.toLocaleLowerCase()))
+      )
+    ))
+    return { text, relevant, index }
+  })
+}
+
 export default function CookingNavigator({
   recipe,
   recipes: multiRecipesProp,
@@ -343,8 +366,26 @@ export default function CookingNavigator({
   const [dishProgress, setDishProgress] = useState(() => dishes.map(() => -1)) // current step per dish
 
   const activeDish = dishes[activeDishIndex] || dishes[0]
-  const instructions = normalizeInstructions(activeDish.instructions)
+  const processGraphFeatureEnabled = useFlag('recipe-process-graph-v1')
   const ingredients = normalizeIngredients(activeDish.ingredients)
+  // The API emits processGraph only for the server rollout, and the client
+  // flag independently gates consumption. Legacy recipes retain the existing
+  // text matcher and never pay a migration cost in the browser.
+  const processGraphSteps = processGraphFeatureEnabled
+    && activeDish.processGraph
+    && activeDish.graphConfidence !== 'low'
+    ? getNavigatorSteps(activeDish.processGraph)
+    : []
+  const instructions = processGraphSteps.length > 0
+    ? processGraphSteps.map((step) => step.text)
+    : normalizeInstructions(activeDish.instructions)
+  const matchIngredientsForStep = (stepIndex, fallbackText) => matchGraphIngredients(
+    activeDish.processGraph,
+    processGraphSteps,
+    ingredients,
+    stepIndex,
+    fallbackText,
+  )
   const hardAllergens = activeDish.appliedConstraints?.hardAllergens
     || activeDish.appliedConstraints?.hard_allergens
     || recipe?.appliedConstraints?.hardAllergens
@@ -509,8 +550,11 @@ export default function CookingNavigator({
   }
 
   function autoMarkCurrentStepIngredients() {
-    const chips = matchIngredientsToStep(ingredients, instructions[currentStepRef.current] || '')
-    const relevantIndices = chips.reduce((acc, chip, i) => { if (chip.relevant) acc.push(i); return acc }, [])
+    const chips = matchIngredientsForStep(currentStepRef.current, instructions[currentStepRef.current] || '')
+    const relevantIndices = chips.reduce((acc, chip, index) => {
+      if (chip.relevant) acc.push(chip.index ?? index)
+      return acc
+    }, [])
     if (relevantIndices.length > 0) {
       setUsedIngredients((prev) => {
         const next = new Set(prev)
@@ -876,7 +920,7 @@ export default function CookingNavigator({
       return
     }
     const stepInstructions = instructions[step] || ''
-    const relevantIngredients = matchIngredientsToStep(ingredients, stepInstructions)
+    const relevantIngredients = matchIngredientsForStep(step, stepInstructions)
       .filter((c) => c.relevant)
       .map((c) => c.text)
     const ingredientLine = relevantIngredients.length > 0
@@ -895,9 +939,9 @@ export default function CookingNavigator({
   const stepText = instructions[currentStep] || ''
   const currentVisionHint = inferStepVisionHint(stepText)
   const timerEntries = Object.entries(activeTimers)
-  const chipData = matchIngredientsToStep(ingredients, stepText)
+  const chipData = matchIngredientsForStep(currentStep, stepText)
   const relevantChips = chipData.filter((c) => c.relevant)
-  const allChips = chipData
+  const allChips = processGraphSteps.length > 0 ? relevantChips : chipData
   const equipment = extractEquipment(instructions)
 
   return (
@@ -1231,6 +1275,7 @@ export default function CookingNavigator({
           summary={recipe.processSafetySummary}
           className="cn-process-notice"
         />
+        <UncertaintyBanner summary={recipe.uncertaintySummary} className="cn-uncertainty-notice" />
         {showRecipe ? (
           <div className="cn-recipe-panel">
             <RecipeCardDisplay recipe={recipe} />
@@ -1311,7 +1356,8 @@ export default function CookingNavigator({
                 <span className="cn-ingredients-label">Ingredients this step</span>
                 <div className="cn-ingredient-chips">
                   {allChips.map((chip, i) => {
-                    const isUsed = usedIngredients.has(i)
+                    const ingredientIndex = chip.index ?? i
+                    const isUsed = usedIngredients.has(ingredientIndex)
                     const className = [
                       'cn-ingredient-chip',
                       chip.relevant && !isUsed ? 'cn-ingredient-chip--active' : '',
@@ -1322,7 +1368,7 @@ export default function CookingNavigator({
                         key={i}
                         type="button"
                         className={className}
-                        onClick={() => handleIngredientToggle(i)}
+                        onClick={() => handleIngredientToggle(ingredientIndex)}
                         title={isUsed ? 'Mark as not used' : 'Mark as used'}
                         aria-pressed={isUsed}
                       >
