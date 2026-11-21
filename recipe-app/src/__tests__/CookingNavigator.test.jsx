@@ -1058,6 +1058,53 @@ describe('CookingNavigator — Live Ingredient State Tracking', () => {
     expect(screen.getByText(/Food Safety Warning/i)).toBeInTheDocument()
     expect(screen.getByText(/marked as frozen/i)).toBeInTheDocument()
   })
+
+  test('patches an entity state from the state board', () => {
+    const recipe = {
+      name: 'Onion Soup',
+      ingredients: ['2 yellow onions', '100ml stock'],
+      instructions: ['Dice the onions.', 'Simmer the onions in stock.'],
+    }
+
+    renderNavigator(recipe)
+
+    fireEvent.click(screen.getByText('yellow onions'))
+    fireEvent.click(screen.getByText('Apply Update'))
+
+    // patchEntityState runs through handlePatchEntityState and marks the
+    // entity as user-edited.
+    expect(screen.getByTitle('Manually edited')).toBeInTheDocument()
+  })
+
+  test('adds an entity from the state board', () => {
+    const recipe = {
+      name: 'Onion Soup',
+      ingredients: ['2 yellow onions'],
+      instructions: ['Dice the onions.'],
+    }
+
+    renderNavigator(recipe)
+
+    fireEvent.click(screen.getByTitle('Add intermediate or tool'))
+    fireEvent.change(screen.getByPlaceholderText(/e.g. pan sauce/i), { target: { value: 'pan sauce' } })
+    fireEvent.click(screen.getByText('Add Entity'))
+
+    expect(screen.getByText('pan sauce')).toBeInTheDocument()
+  })
+
+  test('collapses and expands the state board', () => {
+    const recipe = {
+      name: 'Onion Soup',
+      ingredients: ['2 yellow onions'],
+      instructions: ['Dice the onions.'],
+    }
+
+    renderNavigator(recipe)
+
+    expect(screen.getByText('Hide ▲')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Hide ▲'))
+    expect(screen.getByText('Show ▼')).toBeInTheDocument()
+  })
 })
 
 

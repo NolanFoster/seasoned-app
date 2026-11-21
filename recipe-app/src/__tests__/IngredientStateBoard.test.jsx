@@ -120,4 +120,159 @@ describe('IngredientStateBoard UI Component', () => {
     expect(screen.getByText('Show ▼')).toBeInTheDocument()
     expect(screen.queryByText('Ingredients')).not.toBeInTheDocument()
   })
+
+  it('cancels an in-progress edit without patching', () => {
+    const onPatchState = jest.fn()
+    render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        onPatchState={onPatchState}
+        onAddEntity={jest.fn()}
+      />
+    )
+    fireEvent.click(screen.getByText('yellow onion'))
+    expect(screen.getByText(/Correct state for: yellow onion/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Cancel'))
+    expect(screen.queryByText(/Correct state for:/i)).toBeNull()
+    expect(onPatchState).not.toHaveBeenCalled()
+  })
+
+  it('renders soft-gate, info, and default-severity warnings with distinct icons', () => {
+    const { rerender } = render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        warning={{ severity: 'soft_gate', warning: 'Reduce the sauce.' }}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Reduce the sauce.')
+    expect(screen.getByText('⚠️')).toBeInTheDocument()
+
+    rerender(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        warning={{ severity: 'info', warning: 'Rest the meat.' }}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Rest the meat.')
+    expect(screen.getByText('💡')).toBeInTheDocument()
+
+    rerender(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        warning={{ warning: 'No severity supplied.' }}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('No severity supplied.')
+  })
+
+  it('renders the intermediates group when intermediates exist', () => {
+    const tracker = createIngredientStateTracker({
+      ingredients: ['1 onion'],
+      processGraph: { intermediates: [{ name: 'roux', state: 'simmering' }] },
+    })
+    render(
+      <IngredientStateBoard
+        tracker={tracker}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    expect(screen.getByText('Intermediates & Mixtures')).toBeInTheDocument()
+    expect(screen.getByText('roux')).toBeInTheDocument()
+  })
+
+  it('lets the user change state, custom refinement, and location before applying', () => {
+    const onPatchState = jest.fn()
+    render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        onPatchState={onPatchState}
+        onAddEntity={jest.fn()}
+      />
+    )
+    fireEvent.click(screen.getByText('yellow onion'))
+    fireEvent.change(screen.getByLabelText('Select state'), { target: { value: 'caramelized' } })
+    fireEvent.change(screen.getByLabelText('Custom state refinement'), { target: { value: 'golden brown' } })
+    fireEvent.change(screen.getByLabelText('Select location'), { target: { value: 'pan' } })
+    fireEvent.click(screen.getByText('Apply Update'))
+    expect(onPatchState).toHaveBeenCalledWith(expect.any(String), { state: 'golden brown', location: 'pan' })
+  })
+
+  it('changes type, state, and location in the add modal', () => {
+    const onAddEntity = jest.fn()
+    render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        onPatchState={jest.fn()}
+        onAddEntity={onAddEntity}
+      />
+    )
+    fireEvent.click(screen.getByTitle('Add intermediate or tool'))
+    fireEvent.change(screen.getByPlaceholderText(/e.g. pan sauce/i), { target: { value: 'herb butter' } })
+    fireEvent.change(screen.getByRole('combobox', { name: /Type:/i }), { target: { value: 'tool' } })
+    fireEvent.change(screen.getByRole('combobox', { name: /State:/i }), { target: { value: 'dirty' } })
+    fireEvent.change(screen.getByRole('combobox', { name: /Location:/i }), { target: { value: 'fridge' } })
+    fireEvent.click(screen.getByText('Add Entity'))
+    expect(onAddEntity).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'herb butter', type: 'tool', state: 'dirty', location: 'fridge' })
+    )
+  })
+
+  it('cancels the add modal', () => {
+    render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    fireEvent.click(screen.getByTitle('Add intermediate or tool'))
+    expect(screen.getByText('Track New Kitchen Entity')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Cancel'))
+    expect(screen.queryByText('Track New Kitchen Entity')).toBeNull()
+  })
+
+  it('opens the editor from keyboard Enter and Space on a chip', () => {
+    const { unmount } = render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    let chip = screen.getByText('yellow onion').closest('[role="button"]')
+    fireEvent.keyDown(chip, { key: 'Enter' })
+    expect(screen.getByText(/Correct state for: yellow onion/i)).toBeInTheDocument()
+    unmount()
+
+    render(
+      <IngredientStateBoard
+        tracker={sampleTracker}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    chip = screen.getByText('yellow onion').closest('[role="button"]')
+    fireEvent.keyDown(chip, { key: ' ' })
+    expect(screen.getByText(/Correct state for: yellow onion/i)).toBeInTheDocument()
+  })
+
+  it('shows a user-edited badge on user-sourced entities', () => {
+    const tracker = createIngredientStateTracker({ ingredients: ['1 onion'] })
+    tracker.entities[0].source = 'user'
+    render(
+      <IngredientStateBoard
+        tracker={tracker}
+        onPatchState={jest.fn()}
+        onAddEntity={jest.fn()}
+      />
+    )
+    expect(screen.getByTitle('Manually edited')).toBeInTheDocument()
+  })
 })
