@@ -23,6 +23,8 @@ function log(level, message, data = {}, context = {}) {
 // Images there are transient, so saving a recipe copies them into the
 // permanent recipe image bucket rather than linking to them.
 const GENERATED_IMAGE_PREFIX = 'ai-generated/';
+// Where the AI image worker serves that bucket when AI_IMAGE_BASE_URL is unset.
+const DEFAULT_AI_IMAGE_BASE_URL = 'https://ai-image-generation-worker.nolanfoster.workers.dev/images';
 
 function isNutritionGroundingEnabled(env) {
   const value = env?.NUTRITION_DB_GROUNDING_V1 ?? env?.nutrition_db_grounding_v1;
@@ -1211,14 +1213,21 @@ export class RecipeSaver {
    * Key of an AI-generated image, or null when the URL is not one.
    *
    * The AI image worker writes to its own bucket under the `ai-generated/`
-   * prefix but publishes the URL on IMAGE_DOMAIN, so a URL on that host is
-   * only served by this worker's permanent bucket when it lacks the prefix.
+   * prefix and serves it from AI_IMAGE_BASE_URL (its own /images route).
+   * Older generations were published on IMAGE_DOMAIN instead, which only
+   * serves this worker's permanent bucket, so those URLs are still matched.
    */
   getGeneratedImageKey(url) {
     if (!url) return null;
-    const imageDomain = this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com';
-    const prefix = `${imageDomain}/${GENERATED_IMAGE_PREFIX}`;
-    return url.startsWith(prefix) ? url.substring(imageDomain.length + 1) : null;
+    const bases = [
+      this.env.AI_IMAGE_BASE_URL || DEFAULT_AI_IMAGE_BASE_URL,
+      this.env.IMAGE_DOMAIN || 'https://images.seasonedapp.com'
+    ];
+    for (const base of bases) {
+      const prefix = `${base}/${GENERATED_IMAGE_PREFIX}`;
+      if (url.startsWith(prefix)) return url.substring(base.length + 1);
+    }
+    return null;
   }
 
   /**

@@ -406,6 +406,39 @@ describe('AI-generated image ingestion', () => {
     expect(recipeSaver.getGeneratedImageKey(AI_URL)).toBe('ai-generated/recipe-soup-123.png');
   });
 
+  it('recognises URLs served by the AI image worker itself', () => {
+    mockEnv.AI_IMAGE_BASE_URL = 'https://ai-image-worker.test.workers.dev/images';
+    const workerUrl = 'https://ai-image-worker.test.workers.dev/images/ai-generated/recipe-soup-123.png';
+    expect(recipeSaver.needsPermanentCopy(workerUrl)).toBe(true);
+    expect(recipeSaver.getGeneratedImageKey(workerUrl)).toBe('ai-generated/recipe-soup-123.png');
+    // The legacy IMAGE_DOMAIN form is still matched.
+    expect(recipeSaver.getGeneratedImageKey(AI_URL)).toBe('ai-generated/recipe-soup-123.png');
+    // Other paths on the worker host are not generated images.
+    expect(recipeSaver.getGeneratedImageKey('https://ai-image-worker.test.workers.dev/images/other/x.png')).toBeNull();
+  });
+
+  it('defaults AI_IMAGE_BASE_URL to the production image worker', () => {
+    const prodUrl = 'https://ai-image-generation-worker.nolanfoster.workers.dev/images/ai-generated/recipe-soup-123.png';
+    expect(recipeSaver.getGeneratedImageKey(prodUrl)).toBe('ai-generated/recipe-soup-123.png');
+  });
+
+  it('copies a worker-served AI image bucket-to-bucket', async () => {
+    mockEnv.AI_IMAGE_BASE_URL = 'https://ai-image-worker.test.workers.dev/images';
+    mockEnv.AI_GENERATED_RECIPE_IMAGES.get.mockResolvedValue({
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(2048)),
+      httpMetadata: { contentType: 'image/png' }
+    });
+
+    const result = await recipeSaver.processRecipeImages(
+      { title: 'Soup', imageUrl: 'https://ai-image-worker.test.workers.dev/images/ai-generated/recipe-soup-123.png' },
+      'test-recipe-id'
+    );
+
+    expect(mockEnv.AI_GENERATED_RECIPE_IMAGES.get).toHaveBeenCalledWith('ai-generated/recipe-soup-123.png');
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.imageUrl).toMatch(/^https:\/\/test-images\.domain\.com\/test-recipe-id\/imageUrl_\d+\.png$/);
+  });
+
   it('leaves images already in the permanent bucket alone', () => {
     const ownUrl = 'https://test-images.domain.com/test-recipe-id/imageUrl_1.png';
     expect(recipeSaver.needsPermanentCopy(ownUrl)).toBe(false);
