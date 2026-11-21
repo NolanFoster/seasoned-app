@@ -8,7 +8,13 @@ jest.mock('../useGestureMode.js')
 // Default flag values for all tests in this file.
 // voice-control: true  — keeps existing hands-free voice tests passing.
 // gesture-support: false — gesture feature is off by default; enable per-test as needed.
-const flagOverrides = { 'voice-control': true, 'gesture-support': false, 'dictation': true }
+const flagOverrides = {
+  'voice-control': true,
+  'gesture-support': false,
+  'dictation': true,
+  'navigator-vision-assist': true,
+  'multi-dish-navigator': true,
+}
 jest.mock('../flaggly.js', () => ({
   useFlag: (key) => flagOverrides[key] ?? false,
   flaggly: {},
@@ -139,6 +145,32 @@ describe('CookingNavigator — rendering', () => {
     openOptionsMenu()
     fireEvent.click(screen.getByTitle('Exit cooking mode'))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  test('verifies the pantry proposal before showing the confirmation controls', async () => {
+    const onProposePantry = jest.fn(() => Promise.resolve({ items: [] }))
+    const onDepletePantry = jest.fn(() => Promise.resolve())
+    renderNavigator({}, {
+      pantryPlannerEnabled: true,
+      pantryItems: [{ id: 7, name: 'milk', quantity: 1, unit: 'l' }],
+      onProposePantry,
+      onDepletePantry,
+    })
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByText('Next →'))
+    fireEvent.click(screen.getByText('Next →'))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish Cooking' }))
+
+    await waitFor(() => expect(onProposePantry).toHaveBeenCalledWith(expect.objectContaining({
+      recipeId: undefined,
+      operations: expect.arrayContaining([expect.objectContaining({ pantryItemId: 7 })]),
+    })))
+    await waitFor(() => expect(screen.getByText(/Update your pantry for the ingredients/i)).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Update pantry & finish/i }))
+    await waitFor(() => expect(onDepletePantry).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ pantryItemId: 7 })]),
+      expect.objectContaining({ cookSessionId: expect.any(String) }),
+    ))
   })
 
   test('offers an opt-in pantry depletion review after the last step', async () => {
@@ -756,3 +788,226 @@ describe('CookingNavigator — accessibility baseline', () => {
     expect(screen.getByRole('button', { name: 'Start 5 minutes timer' })).toBeInTheDocument()
   })
 })
+
+// ── Read aloud — natural voice ────────────────────────────────────────────────
+
+function mockSpeechSynthesis(voiceNames = ['Zarvox', 'Samantha', 'Ava (Natural)']) {
+  const spoken = []
+  const voices = voiceNames.map((name) => ({
+    name, voiceURI: name, lang: 'en-US', localService: true, default: false,
+  }))
+  const synth = {
+    speaking: false,
+    getVoices: () => voices,
+    speak: jest.fn((u) => { spoken.push(u); synth.speaking = true; u.onstart?.() }),
+    cancel: jest.fn(() => { synth.speaking = false }),
+    resume: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  }
+  window.speechSynthesis = synth
+  window.SpeechSynthesisUtterance = function (text) {
+    this.text = text
+    this.onstart = null
+    this.onend = null
+    this.onerror = null
+  }
+  return { synth, spoken, voices }
+}
+
+describe('CookingNavigator — read aloud', () => {
+  afterEach(() => {
+    delete window.speechSynthesis
+    delete window.SpeechSynthesisUtterance
+    localStorage.removeItem('cn-voice-uri')
+  })
+
+  test('reads the step with the most natural voice available', () => {
+    const { spoken } = mockSpeechSynthesis()
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+
+    expect(spoken).toHaveLength(1)
+    expect(spoken[0].voice.name).toBe('Ava (Natural)')
+  })
+
+  test('speaks measurements the way a cook says them', () => {
+    const { spoken } = mockSpeechSynthesis()
+    renderNavigator({ instructions: ['Add 2 tbsp oil and bake at 350°F.'] })
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+
+    expect(spoken[0].text).toContain('2 tablespoons oil')
+    expect(spoken[0].text).toContain('350 degrees Fahrenheit')
+  })
+
+  test('lets the user pick a voice and remembers the choice', () => {
+    const { spoken } = mockSpeechSynthesis()
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    const select = screen.getByLabelText('Voice')
+    expect(select.value).toBe('Ava (Natural)')
+    // Novelty voices are never offered.
+    expect(screen.queryByRole('option', { name: 'Zarvox' })).not.toBeInTheDocument()
+
+    fireEvent.change(select, { target: { value: 'Samantha' } })
+    expect(localStorage.getItem('cn-voice-uri')).toBe('Samantha')
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+    expect(spoken[spoken.length - 1].voice.name).toBe('Samantha')
+  })
+
+  test('stops speaking when the step changes', () => {
+    const { synth } = mockSpeechSynthesis()
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Read step aloud' }))
+    synth.cancel.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(synth.cancel).toHaveBeenCalled()
+  })
+
+  test('hides read-aloud controls when speech synthesis is unavailable', () => {
+    delete window.speechSynthesis
+    delete window.SpeechSynthesisUtterance
+    renderNavigator()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    openOptionsMenu()
+    expect(screen.queryByRole('menuitem', { name: 'Read step aloud' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Voice')).not.toBeInTheDocument()
+  })
+})
+
+describe('CookingNavigator — post-cook feedback & preference learning', () => {
+  test('allows rating and selecting feedback tags upon finishing cooking', () => {
+    const onCookFeedback = jest.fn()
+    renderNavigator({}, { onCookFeedback })
+
+    // Step through to finish
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+    // Click Finish Cooking to open completion modal sheet
+    fireEvent.click(screen.getByRole('button', { name: 'Finish Cooking' }))
+
+    expect(screen.getByText('Cooking complete')).toBeInTheDocument()
+    expect(screen.getByText('How did it turn out?')).toBeInTheDocument()
+
+    // Rate 5 stars
+    fireEvent.click(screen.getByLabelText('5 stars'))
+    // Select a tag
+    fireEvent.click(screen.getByText('Loved flavor'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Finish cooking' }))
+    expect(onCookFeedback).toHaveBeenCalledWith({
+      rating: 5,
+      tags: ['loved_flavor'],
+    })
+  })
+})
+
+describe('CookingNavigator — vision-assisted cooking navigator', () => {
+  test('displays opt-in banner when visual assist flag is enabled and can be toggled', async () => {
+    renderNavigator({
+      instructions: ['Sear the chicken breasts in skillet until golden brown.', 'Serve warm.'],
+    })
+
+    expect(screen.getByText('Turn on Visual Assist')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }))
+    expect(screen.queryByText('Turn on Visual Assist')).not.toBeInTheDocument()
+
+    // Advance to Step 1 (sear step)
+    fireEvent.click(screen.getByText('Start Cooking →'))
+
+    expect(screen.getByText(/Check Meat Browning & Crust/i)).toBeInTheDocument()
+    const checkBtn = screen.getByRole('button', { name: /Check with camera for/i })
+    expect(checkBtn).toBeInTheDocument()
+
+    // Mock getUserMedia
+    navigator.mediaDevices = {
+      getUserMedia: jest.fn().mockResolvedValue({
+        getTracks: () => [{ stop: jest.fn() }],
+      }),
+    }
+
+    fireEvent.click(checkBtn)
+    expect(screen.getByText(/Analyzing camera frame/i)).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByText(/On Target/i)).toBeInTheDocument()
+      expect(screen.getByText(/Food Safety Reminder:/i)).toBeInTheDocument()
+    })
+  })
+
+  test('dismisses visual assist recommendation banner when closed', () => {
+    renderNavigator()
+    const dismissBtn = screen.getByRole('button', { name: 'Dismiss visual assist recommendation' })
+    fireEvent.click(dismissBtn)
+    expect(screen.queryByText('Turn on Visual Assist')).not.toBeInTheDocument()
+  })
+})
+
+describe('CookingNavigator — concurrent multi-dish orchestration', () => {
+  const dish1 = {
+    id: 'dish-1',
+    name: 'Roasted Chicken',
+    ingredients: ['1 whole chicken', 'olive oil'],
+    instructions: ['Prep chicken with oil.', 'Bake in oven at 400F for 45 minutes.'],
+  }
+  const dish2 = {
+    id: 'dish-2',
+    name: 'Baked Potatoes',
+    ingredients: ['4 russet potatoes'],
+    instructions: ['Wash and poke potatoes.', 'Bake in oven at 400F for 50 minutes.'],
+  }
+
+  test('renders tabs for multiple recipes and switches active dish progress', () => {
+    render(<CookingNavigator recipe={dish1} recipes={[dish1, dish2]} onClose={jest.fn()} />)
+
+    expect(screen.getByRole('tab', { name: /Roasted Chicken/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Baked Potatoes/i })).toBeInTheDocument()
+
+    // Dish 1 starts at Mise en Place
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByText(/Prep chicken with oil/i)).toBeInTheDocument()
+
+    // Switch tab to Dish 2
+    fireEvent.click(screen.getByRole('tab', { name: /Baked Potatoes/i }))
+    expect(screen.getByText('Mise en Place')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    expect(screen.getByText(/Wash and poke potatoes/i)).toBeInTheDocument()
+  })
+
+  test('flags equipment conflict warning when multiple dishes require same oven concurrently', () => {
+    render(<CookingNavigator recipe={dish1} recipes={[dish1, dish2]} onClose={jest.fn()} />)
+
+    // Advance Dish 1 to Step 2 (oven step)
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+    // Switch to Dish 2 and advance to Step 2 (oven step)
+    fireEvent.click(screen.getByRole('tab', { name: /Baked Potatoes/i }))
+    fireEvent.click(screen.getByText('Start Cooking →'))
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/Equipment Notice/i)
+    expect(screen.getByRole('alert')).toHaveTextContent(/Both "Roasted Chicken" and "Baked Potatoes" need the oven/i)
+  })
+})
+
+
+
+

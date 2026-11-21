@@ -94,6 +94,44 @@ Example update:
 
 The API is controlled by the `CULINARY_PROFILE_ENABLED` Worker variable. Set it to `false` to return 404 while retaining the additive schema. Configure `JWT_SECRET` as a Worker secret with the same value as Auth Worker (never commit it).
 
+### Meal plan and grocery list
+
+The meal planner and its grocery list are stored per user so a plan survives a sign-out, a
+reinstalled PWA, cleared site data, or a sign-in from another device. Like the culinary
+profile these routes require the Bearer JWT issued by the Auth Worker, and the JWT subject
+is the only key — a caller cannot read or write another person's plan.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/me/meal-plan` | Read the authenticated user's plan (empty plan before the first save) |
+| `PUT` | `/me/meal-plan` | Replace the plan and the Up Next staging list |
+| `GET` | `/me/grocery-list` | Read the authenticated user's grocery list |
+| `PUT` | `/me/grocery-list` | Replace the grocery list and its last-generated timestamp |
+
+Both `PUT`s take `clientUpdatedAt`, the epoch-millisecond time of the edit as the client saw
+it. A save whose timestamp predates the stored one is refused with `409` and the newer stored
+document, so a stale tab reconnecting after hours offline cannot roll back an edit made on
+another device; the client adopts what comes back. Snake_case aliases (`meal_plan`, `up_next`,
+`client_updated_at`, `last_generated_at`) are accepted, and the payload may be sent bare or
+wrapped in `plan` / `list`.
+
+Example save:
+
+```json
+{
+  "mealPlan": {
+    "2026-03-02": { "breakfast": [], "lunch": [], "dinner": [{ "id": "r1", "name": "Miso Soup" }], "snack": [] }
+  },
+  "upNext": [{ "id": "r2", "name": "Ramen" }],
+  "clientUpdatedAt": 1772409600000
+}
+```
+
+Limits: 400 days, 50 recipes per meal slot, 200 staged recipes, 500 grocery items, 512 KB of
+plan JSON and 256 KB of grocery JSON per account. The API is controlled by the
+`MEAL_PLAN_SYNC_ENABLED` Worker variable; set it to `false` to return 404 while retaining the
+additive schema.
+
 ### Login History
 
 | Method | Endpoint | Description |
@@ -403,6 +441,20 @@ The migration is additive. Do not run `schema.sql` against a populated database 
 legacy setup script contains destructive `DROP TABLE` statements. Configure the same
 `PASSKEY_SERVICE_TOKEN` secret on the auth and user-management workers for each deployed
 environment.
+
+### Meal plan database migration
+
+Per-user meal plan and grocery list storage is added by `migrations/005_add_meal_plan_sync.sql`.
+Apply it to each D1 environment **before** deploying the updated worker, otherwise the sync
+routes answer 500 while the app keeps working from its local copy:
+
+```sh
+cd user-management-worker
+npm run migrate:mealplan:preview   # or :staging / :production
+```
+
+The migration is additive: it creates `meal_plans` and `grocery_lists` and touches no existing
+table.
 
 ### Passkey storage and internal access
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { getLocalizedIngredientName } from '../../shared/ingredient-locale-graph.js'
 
 // ── Utility exports (preserved for backward-compatibility and tests) ──────────
 
@@ -154,20 +155,135 @@ const ChevronIcon = ({ expanded }) => (
  * @param {boolean}  props.isOpen  - Whether the modal is currently visible
  * @param {function} props.onClose - Callback fired to close the modal
  */
+import { useFlag } from './flaggly.js'
+
+export function exportGroceryToMarkdown(groceryList = [], options = { buyOnly: false }) {
+  const items = options.buyOnly 
+    ? groceryList.filter((item) => inventoryStatusFor(item) === 'buy')
+    : groceryList
+
+  const grouped = groupByCategory(items)
+  let md = '# Grocery List\n\n'
+  grouped.forEach(([category, catItems]) => {
+    md += `## ${category}\n`
+    catItems.forEach((item) => {
+      const checkbox = item.completed ? '[x]' : '[ ]'
+      const qty = item.quantity ? `${item.quantity} ${item.unit || ''} `.trim() : ''
+      const statusNote = item.inventoryStatus && item.inventoryStatus !== 'buy' ? ` (${INVENTORY_STATUS_LABELS[item.inventoryStatus]})` : ''
+      md += `- ${checkbox} ${qty ? `${qty} ` : ''}${item.name}${statusNote}\n`
+    })
+    md += '\n'
+  })
+  md += '> Exported from Seasoned app\n'
+  return md.trim()
+}
+
+export function exportGroceryToCSV(groceryList = [], options = { buyOnly: false }) {
+  const items = options.buyOnly 
+    ? groceryList.filter((item) => inventoryStatusFor(item) === 'buy')
+    : groceryList
+
+  const rows = [['Category', 'Item', 'Quantity', 'Unit', 'Status', 'Completed']]
+  items.forEach((item) => {
+    rows.push([
+      `"${(item.category || DEFAULT_CUSTOM_CATEGORY).replace(/"/g, '""')}"`,
+      `"${(item.name || '').replace(/"/g, '""')}"`,
+      `"${(item.quantity ?? '').toString().replace(/"/g, '""')}"`,
+      `"${(item.unit || '').replace(/"/g, '""')}"`,
+      `"${inventoryStatusFor(item)}"`,
+      item.completed ? 'true' : 'false'
+    ])
+  })
+  return rows.map((r) => r.join(',')).join('\n')
+}
+
+export function exportGroceryToPlainText(groceryList = [], options = { buyOnly: false }) {
+  const items = options.buyOnly 
+    ? groceryList.filter((item) => inventoryStatusFor(item) === 'buy')
+    : groceryList
+
+  const grouped = groupByCategory(items)
+  let text = 'Grocery List:\n\n'
+  grouped.forEach(([category, catItems]) => {
+    text += `${category.toUpperCase()}:\n`
+    catItems.forEach((item) => {
+      const mark = item.completed ? '✓ ' : '• '
+      const qty = item.quantity ? `${item.quantity} ${item.unit || ''} `.trim() : ''
+      text += `  ${mark}${qty ? `${qty} ` : ''}${item.name}\n`
+    })
+    text += '\n'
+  })
+  return text.trim()
+}
+
 export default function GroceryListModal({
   isOpen,
   onClose,
   pantryItems = [],
   pantryPlannerEnabled = false,
 }) {
-  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {} } = useMealPlan()
+  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {}, clearCompletedItems = () => {} } = useMealPlan()
   const safePantryItems = Array.isArray(pantryItems) ? pantryItems : []
+  const flagExport = useFlag('grocery-export-plus')
 
   const [customInput, setCustomInput] = useState('')
   const [inputError, setInputError] = useState('')
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [buyOnlyExport, setBuyOnlyExport] = useState(false)
+  const [exportNotice, setExportNotice] = useState('')
   // Track expanded state per category; defaults to true for new categories
   const [expandedCategories, setExpandedCategories] = useState({})
   const inputRef = useRef(null)
+  const modalRef = useRef(null)
+  const previousFocusRef = useRef(null)
+
+  function downloadFile(content, fileName, mimeType) {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    setExportNotice(`Downloaded ${fileName}`)
+    setTimeout(() => setExportNotice(''), 3000)
+    setShowExportMenu(false)
+  }
+
+  async function handleCopyList() {
+    const text = exportGroceryToPlainText(groceryList, { buyOnly: buyOnlyExport })
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text)
+        setExportNotice('Copied to clipboard!')
+      } else {
+        setExportNotice('Clipboard not available')
+      }
+    } catch {
+      setExportNotice('Failed to copy')
+    }
+    setTimeout(() => setExportNotice(''), 3000)
+    setShowExportMenu(false)
+  }
+
+  async function handleShareList() {
+    const text = exportGroceryToPlainText(groceryList, { buyOnly: buyOnlyExport })
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Grocery List - Seasoned',
+          text,
+        })
+        setShowExportMenu(false)
+      } catch {
+        // User dismissed or share failed
+      }
+    } else {
+      handleCopyList()
+    }
+  }
 
   // Keep the familiar category grouping inside the three inventory sections.
   // Old locally persisted lists have no status and safely default to Buy.
@@ -191,20 +307,70 @@ export default function GroceryListModal({
       const next = { ...prev }
       groceryList.forEach((item) => {
         const cat = item.category || DEFAULT_CUSTOM_CATEGORY
-        if (!(cat in next)) next[cat] = true
+        const status = pantryPlannerEnabled ? inventoryStatusFor(item) : 'all'
+        const key = `${status}:${cat}`
+        if (!(key in next)) next[key] = true
       })
       return next
     })
-  }, [groceryList])
+  }, [groceryList, pantryPlannerEnabled])
 
-  // Escape key closes the modal
+  // Focus management: move focus into the modal on open, trap Tab focus
+  // inside it while open, close on Escape, and restore focus on close.
   useEffect(() => {
     if (!isOpen) return
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') onClose()
+
+    const modal = modalRef.current
+    previousFocusRef.current = document.activeElement
+
+    // Move focus to the first focusable control (or the container itself).
+    if (modal) {
+      const firstFocusable = modal.querySelector(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (firstFocusable) firstFocusable.focus()
+      else modal.focus()
     }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !modal) return
+
+      const focusables = Array.from(
+        modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.disabled && el.getAttribute('aria-hidden') !== 'true')
+
+      if (focusables.length === 0) {
+        e.preventDefault()
+        modal.focus()
+        return
+      }
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      const previous = previousFocusRef.current
+      if (previous && typeof previous.focus === 'function') {
+        previous.focus()
+      }
+    }
   }, [isOpen, onClose])
 
   function handleBackdropClick(e) {
@@ -239,12 +405,19 @@ export default function GroceryListModal({
     inputRef.current?.focus()
   }
 
+
+  function clearCheckedItems() {
+    clearCompletedItems()
+  }
+
   if (!isOpen) return null
 
   return (
     <div className="grocery-modal-overlay" onClick={handleBackdropClick}>
       <div
         className="grocery-modal-container"
+        ref={modalRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="grocery-modal-title"
@@ -252,15 +425,105 @@ export default function GroceryListModal({
         {/* ── Header ── */}
         <div className="grocery-modal-header">
           <h2 id="grocery-modal-title" className="grocery-modal-title">Grocery List</h2>
-          <button
-            type="button"
-            className="grocery-modal-close"
-            aria-label="Close grocery list"
-            onClick={onClose}
-          >
-            <CloseIcon />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+            {flagExport && groceryList.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="grocery-item__delete-btn"
+                  style={{ width: 'auto', padding: '4px 8px', fontSize: '13px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  aria-label="Export grocery list"
+                  onClick={() => setShowExportMenu((v) => !v)}
+                >
+                  Export ↗
+                </button>
+                {showExportMenu && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      background: '#fff',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      padding: '8px',
+                      zIndex: 100,
+                      width: '180px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #eee', paddingBottom: '6px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={buyOnlyExport}
+                        onChange={(e) => setBuyOnlyExport(e.target.checked)}
+                      />
+                      Buy items only
+                    </label>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      onClick={handleCopyList}
+                    >
+                      📋 Copy text
+                    </button>
+                    {typeof navigator !== 'undefined' && 'share' in navigator && (
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                        onClick={handleShareList}
+                      >
+                        📤 Share…
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      onClick={() => downloadFile(exportGroceryToMarkdown(groceryList, { buyOnly: buyOnlyExport }), 'grocery-list.md', 'text/markdown')}
+                    >
+                      📄 Download .md
+                    </button>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      onClick={() => downloadFile(exportGroceryToCSV(groceryList, { buyOnly: buyOnlyExport }), 'grocery-list.csv', 'text/csv')}
+                    >
+                      📊 Download .csv
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              className="grocery-modal-close"
+              aria-label="Close grocery list"
+              onClick={onClose}
+            >
+              <CloseIcon />
+            </button>
+          </div>
         </div>
+        {exportNotice && (
+          <div style={{ background: '#eaf4eb', color: '#1a5f2e', padding: '4px 12px', fontSize: '13px', textAlign: 'center' }}>
+            {exportNotice}
+          </div>
+        )}
+
+        {groceryList.some((item) => item.completed) && (
+          <div className="grocery-modal-actions">
+            <button
+              type="button"
+              className="grocery-modal-clear-completed"
+              onClick={clearCheckedItems}
+            >
+              Clear checked items
+            </button>
+          </div>
+        )}
 
         {/* ── Sticky add-item input ── */}
         <form className="grocery-modal-add" onSubmit={handleAddItem}>
@@ -309,7 +572,8 @@ export default function GroceryListModal({
                   )}
                   <ul className="grocery-list" role="list">
                     {groupByCategory(statusItems).map(([category, items]) => {
-                      const isExpanded = !!expandedCategories[category]
+                      const expansionKey = `${status || 'all'}:${category}`
+                      const isExpanded = !!expandedCategories[expansionKey]
                       return (
                         <li key={`${status}-${category}`}>
                           <div className="grocery-category-header">
@@ -317,7 +581,7 @@ export default function GroceryListModal({
                               type="button"
                               className="grocery-category-toggle"
                               aria-expanded={isExpanded}
-                              onClick={() => toggleCategoryExpanded(category)}
+                              onClick={() => toggleCategoryExpanded(expansionKey)}
                             >
                               <ChevronIcon expanded={isExpanded} />
                               {category}
@@ -348,7 +612,15 @@ export default function GroceryListModal({
                                         checked={!!item.completed}
                                         onChange={() => toggleItemCompletion(item.id)}
                                       />
-                                      <span className="grocery-item__text">{item.name}</span>
+                                      <span className="grocery-item__text">
+                                        {getLocalizedIngredientName(item.name, 'UK') !== item.name ? (
+                                          <>
+                                            {item.name} <small style={{ opacity: 0.75, fontSize: '0.85em' }}>({getLocalizedIngredientName(item.name, 'UK')})</small>
+                                          </>
+                                        ) : (
+                                          item.name
+                                        )}
+                                      </span>
                                       {item.quantity && (
                                         <span className="grocery-item__quantity">{item.quantity}</span>
                                       )}

@@ -102,6 +102,7 @@ export default function PantryModal({
   onAdd,
   onUpdate,
   onRemove,
+  onWaste,
   scannerEnabled = false,
   onScan,
   onClose,
@@ -188,6 +189,29 @@ export default function PantryModal({
       await onRemove(item.id)
     } catch {
       setMessage('Could not sync the removal. The item was restored.')
+    }
+  }
+
+  async function handleWaste(item) {
+    if (!onWaste) return
+    setWorking(true)
+    setMessage('')
+    try {
+      await onWaste({
+        lines: [{
+          pantryItemId: item.id,
+          ingredient: item.name,
+          action: 'remove',
+          amount: null,
+          expectedQuantity: item.quantity,
+          unit: item.unit,
+        }],
+      })
+      setMessage(`${item.name} marked as wasted.`)
+    } catch {
+      setMessage('Could not record that waste event. The item was kept.')
+    } finally {
+      setWorking(false)
     }
   }
 
@@ -281,7 +305,10 @@ export default function PantryModal({
                       </div>
                       <div className="pantry-item-actions">
                         <button type="button" onClick={() => beginEdit(item)} aria-label={`Edit ${item.name}`}>Edit</button>
-                        <button type="button" onClick={() => handleRemove(item)} aria-label={`Remove ${item.name}`}>Remove</button>
+                        {state === 'expired' && onWaste && (
+                          <button type="button" onClick={() => handleWaste(item)} disabled={working} aria-label={`Mark ${item.name} as wasted`}>Mark wasted</button>
+                        )}
+                        <button type="button" onClick={() => handleRemove(item)} disabled={working} aria-label={`Remove ${item.name}`}>Remove</button>
                       </div>
                     </li>
                   )

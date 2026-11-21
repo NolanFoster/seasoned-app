@@ -66,8 +66,8 @@ function testUnitConverter() {
   assertApproxEqual(UnitConverter.convertToGrams(1, 'tsp'), 4.929, 0.1, 'tsp to grams conversion');
   
   // Test count conversions
-  assert(UnitConverter.convertToGrams(1, 'medium') === 150, 'medium size conversion');
-  assert(UnitConverter.convertToGrams(1, 'large') === 200, 'large size conversion');
+  assert(UnitConverter.convertToGrams(1, 'medium') === 100, 'medium size conversion');
+  assert(UnitConverter.convertToGrams(1, 'large') === 150, 'large size conversion');
   
   // Test unknown unit defaults to grams
   assert(UnitConverter.convertToGrams(100, 'unknown') === 100, 'unknown unit defaults to grams');

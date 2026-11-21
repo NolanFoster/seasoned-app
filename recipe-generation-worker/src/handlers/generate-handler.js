@@ -1,5 +1,7 @@
 import { OpikClient } from '../opik-client.js';
 import { getRecipeFromKV } from '../../../shared/kv-storage.js';
+import { withIngredientEntityFeature } from '../../../shared/ingredient-entity.js';
+import { withCookProgramFeature } from '../../../shared/cook-program.js';
 import { buildGenerationConstraints } from '../../../shared/culinary-profile.js';
 import {
   AllergenSafetyError,
@@ -22,6 +24,10 @@ import {
   withRecipeProcessGraph
 } from '../../../shared/recipe-process-graph.js';
 import { buildRecipeUncertainty, isUncertaintyGuardsEnabled } from '../../../shared/uncertainty.js';
+import {
+  enforceRecipeSafetyWithRemediation,
+  RecipeRemediationAbstainError
+} from '../recipe-remediation.js';
 
 function buildSafetyErrorUncertainty(error) {
   return buildRecipeUncertainty({
@@ -59,6 +65,29 @@ function withOptionalUncertaintyMetadata(recipe, appliedConstraints, env) {
   };
 }
 
+function applyIngredientEntityFeature(recipe, env, requestBody) {
+  const context = requestBody?.geoCultural || requestBody?.geoCulturalContext;
+  const feature = withIngredientEntityFeature(recipe, env, {
+    requestedDietary: requestBody?.dietary ?? null,
+    ...(context && typeof context === 'object' && !Array.isArray(context)
+      ? { geoCultural: { ...context, cuisineString: requestBody?.cuisine || context.cuisineString || recipe.cuisine } }
+      : {}),
+    hostMap: env?.INGREDIENT_HOST_COUNTRY_MAP && typeof env.INGREDIENT_HOST_COUNTRY_MAP === 'object'
+      ? env.INGREDIENT_HOST_COUNTRY_MAP
+      : {}
+  });
+  if (feature.mode === 'shadow') {
+    // eslint-disable-next-line no-console -- Counts only; ingredient text is never logged.
+    console.info('Ingredient entity shadow telemetry', feature.telemetry);
+  }
+  const programFeature = withCookProgramFeature(feature.recipe, env);
+  if (programFeature.mode === 'shadow') {
+    // eslint-disable-next-line no-console -- Program telemetry contains counts and reason codes only.
+    console.info('Cook program shadow telemetry', programFeature.telemetry);
+  }
+  return programFeature.recipe;
+}
+
 function normalizePantryExpiry(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const parsed = new Date(`${value}T00:00:00.000Z`);
@@ -69,6 +98,7 @@ function normalizePantryExpiry(value) {
  * Recipe generation endpoint handler - processes recipe generation requests
  */
 export async function handleGenerate(request, env, corsHeaders) {
+  let remediation = null;
   try {
     // Parse the request body
     const contentType = request.headers.get('content-type') || '';
@@ -215,6 +245,7 @@ export async function handleGenerate(request, env, corsHeaders) {
         appliedConstraints,
         similarRecipeIds: []
       });
+      finalRecipe = applyIngredientEntityFeature(finalRecipe, env, requestBody);
 
       finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, appliedConstraints, env);
 
@@ -235,13 +266,38 @@ export async function handleGenerate(request, env, corsHeaders) {
     }
 
     // Generate recipe using AI (Opik if available, otherwise LLaMA)
-    const generatedRecipe = await generateRecipeWithAI(requestBody, env);
-    let finalRecipe = enforceRecipeSafety(
-      generatedRecipe,
-      appliedConstraints.hardAllergens,
-      env,
-      { 'process_safety.surface': 'generate' }
-    );
+    let generatedRecipe;
+    try {
+      generatedRecipe = await generateRecipeWithAI(requestBody, env);
+    } catch (error) {
+      // The AI generation boundary keeps a failed quality draft private on the
+      // Error object so the opt-in remediation path can inspect it. The off
+      // path still rethrows the exact original error and response.
+      if (!(error instanceof RecipeQualityError) || !error.draftRecipe) throw error;
+      const repaired = await enforceRecipeSafetyWithRemediation(error.draftRecipe, {
+        constraints: appliedConstraints,
+        env,
+        context: { 'process_safety.surface': 'generate' },
+        initialError: error
+      });
+      generatedRecipe = repaired.recipe;
+      remediation = repaired.remediation;
+    }
+    // Read the trace id off the raw generation result: the safety, elevation
+    // and quality steps below rebuild the recipe object.
+    const generationTraceId = generatedRecipe.traceId || null;
+    let finalRecipe;
+    if (remediation) {
+      finalRecipe = generatedRecipe;
+    } else {
+      const checked = await enforceRecipeSafetyWithRemediation(generatedRecipe, {
+        constraints: appliedConstraints,
+        env,
+        context: { 'process_safety.surface': 'generate' }
+      });
+      finalRecipe = checked.recipe;
+      remediation = checked.remediation;
+    }
     finalRecipe.appliedConstraints = appliedConstraints;
 
     // Check if elevation is requested
@@ -287,7 +343,7 @@ export async function handleGenerate(request, env, corsHeaders) {
       recipeId: requestBody.recipeId || requestBody.id || null
     });
 
-    finalRecipe = withQualityMetadata(finalRecipe, {
+    const qualityOptions = {
       source: requestBody.elevate === true ? 'elevated' : 'ai_generated',
       generationMethod: requestBody.elevate === true
         ? (finalRecipe.elevationMethod || 'llama-ai-elevate')
@@ -296,7 +352,27 @@ export async function handleGenerate(request, env, corsHeaders) {
       hardAllergens: appliedConstraints.hardAllergens,
       appliedConstraints,
       similarRecipeIds: finalRecipe.similarRecipeIds || []
-    });
+    };
+    try {
+      finalRecipe = withQualityMetadata(finalRecipe, qualityOptions);
+    } catch (error) {
+      if (!(error instanceof RecipeQualityError)) throw error;
+      const repaired = await enforceRecipeSafetyWithRemediation(finalRecipe, {
+        constraints: appliedConstraints,
+        env,
+        context: { 'process_safety.surface': 'generate' },
+        initialError: error
+      });
+      finalRecipe = withQualityMetadata(repaired.recipe, qualityOptions);
+      remediation = repaired.remediation;
+    }
+
+    // The client sends this back to POST /feedback when the user saves the
+    // recipe, which scores the generation trace as positive feedback.
+    if (generationTraceId) {
+      finalRecipe.traceId = generationTraceId;
+    }
+    finalRecipe = applyIngredientEntityFeature(finalRecipe, env, requestBody);
 
     finalRecipe = withOptionalUncertaintyMetadata(finalRecipe, appliedConstraints, env);
 
@@ -306,6 +382,9 @@ export async function handleGenerate(request, env, corsHeaders) {
       appliedConstraints,
       processSafetySummary: finalRecipe.processSafetySummary || null,
       ...(finalRecipe.uncertaintySummary ? { uncertaintySummary: finalRecipe.uncertaintySummary } : {}),
+      ...(generationTraceId && { traceId: generationTraceId }),
+      ...(remediation ? { remediation } : {}),
+      ...(finalRecipe.reviewRequired ? { reviewRequired: true } : {}),
       environment: env.ENVIRONMENT || 'development'
     }), {
       status: 200,
@@ -315,6 +394,25 @@ export async function handleGenerate(request, env, corsHeaders) {
       }
     });
   } catch (error) {
+    if (error instanceof RecipeRemediationAbstainError) {
+      return new Response(JSON.stringify({
+        error: 'Recipe remediation could not clear the deterministic safety gates',
+        code: error.code,
+        attempts: error.attempts,
+        violations: error.violations,
+        remediation: {
+          modelId: 'recipe-remediation-v1',
+          status: 'abstained',
+          attempts: error.attempts,
+          violations: error.violations,
+          abstained: true
+        }
+      }), {
+        status: error.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Allergen failures are client-actionable and must not expose the unsafe recipe.
     // When a process hazard fired in the same request, both summaries are
     // returned together; allergens remain the primary reason.
@@ -384,6 +482,7 @@ export async function handleGenerate(request, env, corsHeaders) {
  */
 async function generateRecipeWithAI(requestData, env) {
   const startTime = Date.now();
+  let traceId = null;
 
   // Create Opik client with API key from environment
   const opikClient = new OpikClient(env.OPIK_API_KEY, 'recipe-generation');
@@ -459,14 +558,38 @@ async function generateRecipeWithAI(requestData, env) {
     const duration = Date.now() - startTime;
     // Recipe generation completed in ${duration}ms
     // Empty AI responses are blocked before they can cross the API boundary.
-    assertRecipeQuality(generatedRecipe);
+    try {
+      assertRecipeQuality(generatedRecipe);
+    } catch (error) {
+      if (error instanceof RecipeQualityError) error.draftRecipe = generatedRecipe;
+      throw error;
+    }
     const qualityBar = buildQualityBar({ ...generatedRecipe, generationTime: duration, similarRecipesFound: similarRecipes.length }, {
       generationMethod: 'llama-ai',
       hardAllergens: requestData.hardAllergens || []
     });
 
-    // Create Opik trace and spans with complete data
-    if (env.OPIK_API_KEY && opikClient.isHealthy()) {
+    // Do not place a draft that failed a deterministic gate into an Opik trace.
+    // The remediation loop and gate summaries may contain line-level safety
+    // findings, so unsafe recipe text must remain inside the request handler.
+    let deterministicGateBlocked = false;
+    try {
+      enforceRecipeSafety(
+        generatedRecipe,
+        requestData.hardAllergens || [],
+        env,
+        { 'process_safety.surface': 'generate_pre_trace' }
+      );
+    } catch (error) {
+      if (error instanceof AllergenSafetyError || error instanceof ProcessSafetyError) {
+        deterministicGateBlocked = true;
+      } else {
+        throw error;
+      }
+    }
+
+    // Create Opik trace and spans with complete data only for drafts that pass.
+    if (env.OPIK_API_KEY && opikClient.isHealthy() && !deterministicGateBlocked) {
       // Creating Opik trace with complete operation data
 
       // Create main trace with actual timing
@@ -490,6 +613,10 @@ async function generateRecipeWithAI(requestData, env) {
       );
 
       if (trace) {
+        // Keep the trace id so a later user signal (saving the recipe) can be
+        // scored against the trace that produced it.
+        traceId = opikClient.getTraceId(trace);
+
         // Helper function to calculate duration between timestamps
         const calculateDuration = (startTime, endTime) => {
           return new Date(endTime) - new Date(startTime);
@@ -578,7 +705,8 @@ async function generateRecipeWithAI(requestData, env) {
       generationTime: duration,
       similarRecipesFound: similarRecipes.length,
       similarRecipeIds: similarRecipes.map(({ id }) => id).filter(Boolean),
-      generationMethod: 'llama-ai'
+      generationMethod: 'llama-ai',
+      ...(traceId && { traceId })
     };
 
   } catch (error) {
@@ -912,14 +1040,13 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   operationData.llmResponse = response.response;
 
   // Debug: Print raw LLM response
-  console.log('Raw LLM response:', JSON.stringify(response.response, null, 2));
 
   // Parse the JSON response and flatten any nested structure
   let structuredRecipe = response.response;
 
   // Validate that the response is an object
   if (!structuredRecipe || typeof structuredRecipe !== 'object') {
-    console.error('Invalid AI response for recipe generation:', structuredRecipe);
+    console.error('Invalid AI response for recipe generation', JSON.stringify({ responseType: typeof structuredRecipe }));
     throw new Error(`AI returned invalid response type: ${typeof structuredRecipe}. Expected object.`);
   }
 
@@ -930,7 +1057,7 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
 
   // Ensure we still have a valid object after flattening
   if (!structuredRecipe || typeof structuredRecipe !== 'object') {
-    console.error('Invalid recipe object after flattening:', structuredRecipe);
+    console.error('Invalid recipe object after flattening', JSON.stringify({ responseType: typeof structuredRecipe }));
     throw new Error('Recipe generation failed: Invalid recipe structure returned by AI');
   }
 
@@ -997,7 +1124,7 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
 
   // Ensure ingredients and instructions are arrays (handle object responses)
   if (structuredRecipe.ingredients && typeof structuredRecipe.ingredients === 'object' && !Array.isArray(structuredRecipe.ingredients)) {
-    console.warn('Converting ingredients object to array:', structuredRecipe.ingredients);
+    console.warn('Converting ingredients object to array', JSON.stringify({ entryCount: Object.keys(structuredRecipe.ingredients).length }));
     // Convert object to array format: "ingredient name: quantity"
     structuredRecipe.ingredients = Object.entries(structuredRecipe.ingredients)
       .map(([name, quantity]) => `${name}: ${quantity}`)
@@ -1007,10 +1134,8 @@ async function generateRecipeWithLLaMA(requestData, similarRecipes, aiBinding, o
   }
 
   // Debug: Print processed ingredients
-  console.log('Processed ingredients:', JSON.stringify(structuredRecipe.ingredients, null, 2));
-
   if (structuredRecipe.instructions && typeof structuredRecipe.instructions === 'object' && !Array.isArray(structuredRecipe.instructions)) {
-    console.warn('Converting instructions object to array:', structuredRecipe.instructions);
+    console.warn('Converting instructions object to array', JSON.stringify({ entryCount: Object.keys(structuredRecipe.instructions).length }));
     structuredRecipe.instructions = Object.values(structuredRecipe.instructions).filter(item => typeof item === 'string');
   } else if (!Array.isArray(structuredRecipe.instructions)) {
     structuredRecipe.instructions = [];
@@ -1178,6 +1303,62 @@ function buildLLaMAPrompt(requestData, contexts, { emitProcessGraph = false } = 
   }
   if (requestData.cuisineDislikes && requestData.cuisineDislikes.length > 0) {
     requirements.push(`avoid these cuisines: ${requestData.cuisineDislikes.join(', ')}`);
+  }
+  if (requestData.nutritionGoals) {
+    const goals = requestData.nutritionGoals;
+    if (goals.focus) {
+      const focusText = goals.focus.replace(/_/g, ' ');
+      requirements.push(`align with nutrition focus: ${focusText}`);
+    }
+    if (goals.targets && typeof goals.targets === 'object') {
+      const targetParts = [];
+      if (goals.targets.protein_g) targetParts.push(`target at least ${goals.targets.protein_g}g protein per serving`);
+      if (goals.targets.sodium_mg) targetParts.push(`keep sodium under ${goals.targets.sodium_mg}mg per serving`);
+      if (goals.targets.calories_min && goals.targets.calories_max) {
+        targetParts.push(`between ${goals.targets.calories_min} and ${goals.targets.calories_max} calories per serving`);
+      } else if (goals.targets.calories_max) {
+        targetParts.push(`under ${goals.targets.calories_max} calories per serving`);
+      } else if (goals.targets.calories_min) {
+        targetParts.push(`at least ${goals.targets.calories_min} calories per serving`);
+      }
+      if (targetParts.length > 0) {
+        requirements.push(`nutrition targets: ${targetParts.join(', ')}`);
+      }
+    }
+  }
+  if (requestData.inferredPreferences && typeof requestData.inferredPreferences === 'object') {
+    const prefs = requestData.inferredPreferences;
+    const inferredLikes = [];
+    if (Array.isArray(prefs.top_cuisines) && prefs.top_cuisines.length > 0) {
+      inferredLikes.push(`frequently enjoyed cuisines: ${prefs.top_cuisines.slice(0, 3).map((c) => c.name).join(', ')}`);
+    }
+    if (Array.isArray(prefs.top_ingredients) && prefs.top_ingredients.length > 0) {
+      inferredLikes.push(`frequently enjoyed ingredients: ${prefs.top_ingredients.slice(0, 4).map((i) => i.name).join(', ')}`);
+    }
+    if (inferredLikes.length > 0) {
+      requirements.push(`inferred taste preferences (soft guidance, do not override user avoids/allergens): ${inferredLikes.join('; ')}`);
+    }
+  }
+
+  if (requestData.lifestyleModes && requestData.lifestyleModes.includes('appetite_gentle')) {
+    requirements.push('lifestyle mode active: \'appetite_gentle\' (Protein-forward, gentler meals for smaller appetite. High protein density per serving, smaller default portions, avoid extreme spice/heavy grease/deep frying, favor soft/brothy/simple textures)');
+  }
+
+  if (requestData.budgetBand === 'low') {
+    requirements.push('budget constraint: \'low\' (Economical, pantry-staple focused; prioritize low-cost versatile ingredients like beans, grains, eggs, root vegetables; strictly avoid rare or expensive specialty items)');
+  } else if (requestData.budgetBand === 'medium') {
+    requirements.push('budget constraint: \'medium\' (Moderate cost, everyday standard ingredients)');
+  }
+
+  if (requestData.mealBudgetUsd && Number(requestData.mealBudgetUsd) > 0) {
+    requirements.push(`target total meal ingredient budget: ~$${Number(requestData.mealBudgetUsd).toFixed(2)} USD`);
+  }
+
+  if (requestData.seasonality && requestData.seasonality.enabled) {
+    requirements.push(`seasonality constraint: active (Prefer peak in-season produce for ${requestData.seasonality.hemisphere === 's' ? 'Southern' : 'Northern'} hemisphere; avoid premium out-of-season items)`);
+    if (requestData.seasonality.climate_bias === 'prefer_lower_impact') {
+      requirements.push('climate preference: \'prefer_lower_impact\' (Favor plant proteins, grains, and lower-emission ingredients where appropriate)');
+    }
   }
 
   if (requirements.length > 0) {
@@ -1482,7 +1663,7 @@ Please provide the elevated version following the same JSON structure, with enha
 
   // Validate that the response is an object
   if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
-    console.error('Invalid AI response for recipe elevation:', elevatedRecipe);
+    console.error('Invalid AI response for recipe elevation', JSON.stringify({ responseType: typeof elevatedRecipe }));
     throw new Error(`AI returned invalid response type: ${typeof elevatedRecipe}. Expected object.`);
   }
 
@@ -1493,7 +1674,7 @@ Please provide the elevated version following the same JSON structure, with enha
 
   // Ensure we still have a valid object after flattening
   if (!elevatedRecipe || typeof elevatedRecipe !== 'object') {
-    console.error('Invalid recipe object after flattening:', elevatedRecipe);
+    console.error('Invalid recipe object after flattening', JSON.stringify({ responseType: typeof elevatedRecipe }));
     throw new Error('Recipe elevation failed: Invalid recipe structure returned by AI');
   }
 
@@ -1535,14 +1716,14 @@ Please provide the elevated version following the same JSON structure, with enha
 
   // Ensure ingredients and instructions are arrays (handle object responses)
   if (elevatedRecipe.ingredients && typeof elevatedRecipe.ingredients === 'object' && !Array.isArray(elevatedRecipe.ingredients)) {
-    console.warn('Converting ingredients object to array:', elevatedRecipe.ingredients);
+    console.warn('Converting ingredients object to array', JSON.stringify({ entryCount: Object.keys(elevatedRecipe.ingredients).length }));
     // Convert object to array format: "ingredient name: quantity"
     elevatedRecipe.ingredients = Object.entries(elevatedRecipe.ingredients)
       .map(([name, quantity]) => `${name}: ${quantity}`)
       .filter(item => typeof item === 'string');
   }
   if (elevatedRecipe.instructions && typeof elevatedRecipe.instructions === 'object' && !Array.isArray(elevatedRecipe.instructions)) {
-    console.warn('Converting instructions object to array:', elevatedRecipe.instructions);
+    console.warn('Converting instructions object to array', JSON.stringify({ entryCount: Object.keys(elevatedRecipe.instructions).length }));
     elevatedRecipe.instructions = Object.values(elevatedRecipe.instructions).filter(item => typeof item === 'string');
   }
 

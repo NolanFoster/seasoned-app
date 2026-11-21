@@ -24,7 +24,7 @@ describe('Recipe Generation Worker - Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
-      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
+      expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type, X-User-Id');
     });
   });
 
@@ -84,6 +84,30 @@ describe('Recipe Generation Worker - Integration Tests', () => {
     it('should return 404 for GET /generate (wrong method)', async () => {
       const response = await worker.fetch(
         new Request('https://example.com/generate', { method: 'GET' }),
+        mockEnv
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('Feedback route routing', () => {
+    it('should route POST /feedback to the feedback handler', async () => {
+      const request = createPostRequest('/feedback', {
+        traceId: '0194f0d6-6a3a-7c2b-9c1a-1f1b2c3d4e5f',
+        event: 'recipe_saved'
+      });
+      const response = await worker.fetch(request, mockEnv);
+
+      // Without an Opik API key the signal is accepted but not recorded
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toMatchObject({ success: true, recorded: false, reason: 'tracing_disabled' });
+    });
+
+    it('should return 404 for GET /feedback (wrong method)', async () => {
+      const response = await worker.fetch(
+        new Request('https://example.com/feedback', { method: 'GET' }),
         mockEnv
       );
 

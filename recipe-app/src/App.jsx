@@ -10,8 +10,11 @@ import { useMealPlan } from './MealPlanContext.jsx'
 import { syncFlagglyUser, useFlag } from './flaggly.js'
 import CulinaryProfile from './CulinaryProfile.jsx'
 import GenerationComposer from './GenerationComposer.jsx'
+import AutoFillMealPlan from './AutoFillMealPlan.jsx'
+import BulkScheduleMeals from './BulkScheduleMeals.jsx'
 import AdaptComposer from './AdaptComposer.jsx'
 import { useCulinaryProfile } from './useCulinaryProfile.js'
+import { useCulinaryEvents } from './useCulinaryEvents.js'
 import { usePantry } from './usePantry.js'
 import PantryModal from './PantryModal.jsx'
 import RecipeEditor from './RecipeEditor.jsx'
@@ -230,6 +233,7 @@ export function buildGenerationRequest({
   dishName,
   elevate = false,
   profile = null,
+  inferredPreferences = null,
   overrides = null,
   baseIngredients = null,
   pantryItems = [],
@@ -241,6 +245,7 @@ export function buildGenerationRequest({
     elevate,
   }
   if (profile) body.culinaryProfile = profile
+  if (inferredPreferences) body.inferredPreferences = inferredPreferences
   if (overrides) {
     Object.assign(body, overrides)
     if (!overrides.ingredients?.length) delete body.ingredients
@@ -326,7 +331,7 @@ export function annotateRecipeForProfile(recipe, profile, uncertaintyEnabled = f
 
 export default function App() {
   const auth = useAuth()
-  const { activeRecipe, setActiveRecipe, clearActiveRecipe } = useMealPlan()
+  const { activeRecipe, setActiveRecipe, clearActiveRecipe, setSyncIdentity } = useMealPlan()
   const mealPlannerEnabled = useFlag('meal-planner')
   const culinaryProfileEnabled = useFlag('culinary-profile')
   const constraintGenerateEnabled = useFlag('constraint-generate')
@@ -336,22 +341,37 @@ export default function App() {
   const [pantryOpen, setPantryOpen] = useState(false)
   const [generationComposerOpen, setGenerationComposerOpen] = useState(false)
   const [adaptComposerOpen, setAdaptComposerOpen] = useState(false)
+  const preferenceLearningEnabled = useFlag('preference-learning')
   const culinaryProfile = useCulinaryProfile(auth.token, culinaryProfileEnabled)
+  const culinaryEvents = useCulinaryEvents(
+    auth.token,
+    preferenceLearningEnabled,
+    culinaryProfile.profile?.consent_flags?.learn_from_activity !== false
+  )
   const pantryEnabled = useFlag('pantry')
   const pantryPlannerEnabled = useFlag('pantry-planner')
   const pantryScanEnabled = useFlag('pantry-scan')
+  const pantryLedgerEnabled = useFlag('pantry_ledger_v1')
+  const mealPlanAutofillEnabled = useFlag('meal-plan-autofill')
+  const mealPlanBulkScheduleEnabled = useFlag('meal-plan-bulk-schedule')
+  const planMigrationEnabled = useFlag('plan_migration_v1')
   const pantryUserId = auth.user?.id || auth.user?.user_id || auth.user?.email || ''
   const pantry = usePantry(auth.token, pantryUserId, pantryEnabled)
   const usablePantryItems = pantry.items.filter((item) => !isPantryItemExpired(item))
   const expiringPantryItems = getExpiringPantryItems(usablePantryItems, 7)
 
   const pantryPlanningAvailable = Boolean(pantryEnabled && pantryPlannerEnabled && pantry.available)
-  const depletePantry = useCallback(async (operations) => {
+  const pantryLedgerAvailable = Boolean(pantryPlanningAvailable && pantryLedgerEnabled && pantry.ledgerAvailable)
+  const depletePantry = useCallback(async (operations, { recipeId, cookSessionId } = {}) => {
+    if (pantryLedgerAvailable) {
+      return pantry.confirmDebit({ recipeId, cookSessionId, operations, source: 'navigator' })
+    }
     for (const operation of operations) {
       if (operation.action === 'remove') await pantry.removeItem(operation.pantryItemId)
       else await pantry.updateItem(operation.pantryItemId, { quantity: operation.remainingQuantity })
     }
-  }, [pantry.removeItem, pantry.updateItem])
+    return null
+  }, [pantry.confirmDebit, pantry.removeItem, pantry.updateItem, pantryLedgerAvailable])
   const recipeEditingEnabled = useFlag('recipe-editing')
   const recipeNotesEnabled = useFlag('recipe-notes')
   const [editorOpen, setEditorOpen] = useState(false)
@@ -369,7 +389,17 @@ export default function App() {
     if (auth.loading) return
     void syncFlagglyUser(auth.user ?? null)
   }, [auth.loading, auth.user])
+
+  // Hand the planner the signed-in account so the plan and grocery list are
+  // stored server side rather than only in this browser. Signing out hands back
+  // null, which returns the planner to its local guest copy.
+  useEffect(() => {
+    if (auth.loading) return
+    setSyncIdentity?.(auth.token && pantryUserId ? { token: auth.token, userId: pantryUserId } : null)
+  }, [auth.loading, auth.token, pantryUserId, setSyncIdentity])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [autofillOpen, setAutofillOpen] = useState(false)
+  const [bulkScheduleOpen, setBulkScheduleOpen] = useState(false)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | searching | clipping | generating | elevating | adapting | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -670,6 +700,9 @@ export default function App() {
         // Hard-allergen enforcement is safety-critical and must not depend on
         // the optional Tune/composer flag.
         profile: culinaryProfileEnabled ? culinaryProfile.profile : null,
+        inferredPreferences: preferenceLearningEnabled && culinaryProfile.profile?.consent_flags?.learn_from_activity !== false
+          ? culinaryEvents.inferredPreferences
+          : null,
         overrides,
         baseIngredients: baseRecipe?.ingredients || null,
         pantryItems: pantry.items,
@@ -706,15 +739,20 @@ export default function App() {
         qualityBar: r.qualityBar || null,
         provenance: r.provenance || null,
         nutrition: r.nutrition || null,
+        // Opik trace behind this generation, sent back as positive feedback if
+        // the user saves the recipe.
+        generationTraceId: data.traceId || r.traceId || null,
       }
       const generatedRecipe = uncertaintyGuardsEnabled
         ? annotateRecipeForProfile(generatedRecipeData, culinaryProfile.profile, true)
         : generatedRecipeData
       setActiveRecipe(generatedRecipe)
       addRecentRecipe(generatedRecipe)
+      void culinaryEvents.recordEvent('generate_accepted', generatedRecipe)
       setRetryAction(null)
       setGeneratingName('')
     } catch (e) {
+      void culinaryEvents.recordEvent('generate_discarded', { name: dishName })
       setGeneratingName('')
       setErrorMsg(e.message)
       setStatus('error')
@@ -779,6 +817,7 @@ export default function App() {
         : adaptedRecipeData
       setActiveRecipe(adaptedRecipe)
       addRecentRecipe(adaptedRecipe)
+      void culinaryEvents.recordEvent('recipe_adapted', adaptedRecipe)
       setRetryAction(null)
       setGeneratingName('')
     } catch (e) {
@@ -937,6 +976,24 @@ export default function App() {
   }
 
   // --- Save ---
+  // Saving is the strongest signal that the user liked what the model produced,
+  // so it is logged back onto the generation trace as positive feedback. Fire
+  // and forget: observability must never affect the save the user asked for.
+  function reportGenerationSaveFeedback(recipe, savedId) {
+    const traceId = recipe?.generationTraceId
+    if (!traceId || !RECIPE_GENERATION_URL) return
+    if (recipe.source !== 'ai_generated' && recipe.source !== 'elevated') return
+    fetch(`${RECIPE_GENERATION_URL}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        traceId,
+        event: 'recipe_saved',
+        ...(savedId ? { recipeId: savedId } : {}),
+      }),
+    }).catch(() => {})
+  }
+
   async function doSave(r) {
     setSaveState('saving')
     const recipeUrl = r.source === 'adapted'
@@ -997,6 +1054,8 @@ export default function App() {
         })
       }
       setSaveState('saved')
+      void culinaryEvents.recordEvent('recipe_saved', r)
+      reportGenerationSaveFeedback(r, data.id || null)
     } catch (e) {
       setSaveState('error')
     }
@@ -1060,6 +1119,29 @@ export default function App() {
           pantryItems={pantryPlanningAvailable ? pantry.items : []}
           pantryPlannerEnabled={pantryPlanningAvailable}
           onOpenPantry={pantryPlanningAvailable ? () => { setIsDrawerOpen(false); setPantryOpen(true) } : undefined}
+          autofillEnabled={mealPlanAutofillEnabled}
+          onOpenAutofill={() => setAutofillOpen(true)}
+          bulkScheduleEnabled={mealPlanBulkScheduleEnabled}
+          onOpenBulkSchedule={() => setBulkScheduleOpen(true)}
+          recentRecipes={recentRecipes}
+          planMigrationEnabled={planMigrationEnabled}
+          hardAllergens={culinaryProfileEnabled ? culinaryProfile.profile?.hard_allergens || [] : []}
+        />
+      )}
+      {mealPlanBulkScheduleEnabled && (
+        <BulkScheduleMeals
+          open={bulkScheduleOpen}
+          onClose={() => setBulkScheduleOpen(false)}
+        />
+      )}
+      {mealPlanAutofillEnabled && (
+        <AutoFillMealPlan
+          open={autofillOpen}
+          onClose={() => setAutofillOpen(false)}
+          profile={culinaryProfileEnabled ? culinaryProfile.profile : null}
+          usePantry={pantryPlanningAvailable}
+          pantryIngredients={pantryPlanningAvailable ? usablePantryItems : []}
+          prioritizeExpiring={false}
         />
       )}
       <UserMenu
@@ -1366,9 +1448,15 @@ export default function App() {
             onEdit={recipeEditingEnabled ? () => setEditorOpen(true) : undefined}
             onOpenNotes={recipeNotesEnabled ? () => setNotesOpen(true) : undefined}
             noteCount={recipeNotes.notes.length}
-            pantryItems={pantryPlanningAvailable ? pantry.items : []}
+            pantryItems={usablePantryItems}
             pantryPlannerEnabled={pantryPlanningAvailable}
+            onProposePantry={pantryLedgerAvailable ? pantry.proposeDebit : undefined}
             onDepletePantry={pantryPlanningAvailable ? depletePantry : undefined}
+            onCookFeedback={({ rating, tags }) => {
+              void culinaryEvents.recordEvent('recipe_cooked_completed', activeRecipe, { rating, tags })
+              if (rating) void culinaryEvents.recordEvent('feedback_rating', activeRecipe, { rating })
+              if (tags?.length) void culinaryEvents.recordEvent('feedback_tag', activeRecipe, { tags })
+            }}
           />
         )}
 
@@ -1411,6 +1499,7 @@ export default function App() {
           onAdd={pantry.addItem}
           onUpdate={pantry.updateItem}
           onRemove={pantry.removeItem}
+          onWaste={pantryLedgerAvailable ? pantry.recordWaste : undefined}
           scannerEnabled={pantryScanEnabled}
           onScan={pantry.scanPhoto}
           onClose={() => setPantryOpen(false)}

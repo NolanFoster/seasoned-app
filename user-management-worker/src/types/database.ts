@@ -87,6 +87,42 @@ export interface PantryItemInput {
   tags?: string[];
 }
 
+export type PantryLedgerEventType = 'debit_cook' | 'debit_waste' | 'adjust';
+export type PantryLedgerSource = 'navigator' | 'workflow' | 'meal_log' | 'pantry';
+export type PantryLedgerLineAction = 'update' | 'remove';
+
+export interface PantryLedgerLine {
+  pantryItemId: number;
+  nameNorm: string;
+  qty: number | null;
+  unit: string | null;
+  confidence: number;
+  action: PantryLedgerLineAction;
+  remainingQuantity: number | null;
+  expectedQuantity?: number | null;
+}
+
+export interface PantryLedgerEvent {
+  id: number;
+  user_id: string;
+  type: PantryLedgerEventType;
+  recipe_id: string | null;
+  cook_session_id: string | null;
+  lines: PantryLedgerLine[];
+  source: PantryLedgerSource;
+  created_at: string;
+}
+
+export interface PantryLedgerEventInput {
+  type?: PantryLedgerEventType;
+  recipeId?: string | null;
+  recipe_id?: string | null;
+  cookSessionId?: string | null;
+  cook_session_id?: string | null;
+  source?: PantryLedgerSource;
+  lines: unknown[];
+}
+
 export interface RecipeNote {
   id: number;
   user_id: string;
@@ -244,3 +280,61 @@ export interface PaginatedResult<T> {
   limit: number;
   hasMore: boolean;
 }
+
+export type CulinaryEventType =
+  | 'recipe_saved'
+  | 'recipe_cooked_started'
+  | 'recipe_cooked_completed'
+  | 'recipe_elevated'
+  | 'recipe_adapted'
+  | 'planner_added'
+  | 'feedback_rating'
+  | 'feedback_tag'
+  | 'generate_accepted'
+  | 'generate_discarded';
+
+export interface CulinaryEventFeatures {
+  cuisines?: string[];
+  diet_tags?: string[];
+  cooking_methods?: string[];
+  key_ingredients?: string[];
+  prep_time_min?: number;
+  cook_time_min?: number;
+  rating?: number;
+  tags?: string[];
+  notes?: string;
+  source?: string;
+  [key: string]: unknown;
+}
+
+export interface CulinaryEvent {
+  id: number;
+  user_id: string;
+  event_type: CulinaryEventType;
+  recipe_id: string | null;
+  recipe_name: string | null;
+  features: CulinaryEventFeatures;
+  created_at: string;
+}
+
+export interface CreateCulinaryEventInput {
+  event_type: CulinaryEventType;
+  recipe_id?: string | null;
+  recipe_name?: string | null;
+  features?: CulinaryEventFeatures;
+}
+
+export interface InferredPreferences {
+  top_cuisines: { name: string; score: number; count: number }[];
+  top_ingredients: { name: string; score: number; count: number }[];
+  top_cooking_methods: { name: string; score: number; count: number }[];
+  avg_prep_time_min: number | null;
+  avg_cook_time_min: number | null;
+  feedback_summary: {
+    average_rating: number | null;
+    tags_count: Record<string, number>;
+  };
+  total_events: number;
+  recent_events_count: number;
+}
+

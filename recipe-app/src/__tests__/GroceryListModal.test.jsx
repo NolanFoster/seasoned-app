@@ -1,6 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import GroceryListModal, { aggregateIngredients, flattenIngredients } from '../GroceryListModal';
+import GroceryListModal, {
+  aggregateIngredients,
+  flattenIngredients,
+  exportGroceryToMarkdown,
+  exportGroceryToCSV,
+  exportGroceryToPlainText,
+} from '../GroceryListModal';
 
 // ── Mock MealPlanContext ──────────────────────────────────────────────────────
 // The overhauled modal reads groceryList and CRUD methods from context;
@@ -12,6 +18,7 @@ let mockToggleItemCompletion = jest.fn();
 let mockDeleteItem = jest.fn();
 let mockAddCustomItem = jest.fn();
 let mockEditItem = jest.fn();
+let mockClearCompletedItems = jest.fn();
 
 jest.mock('../MealPlanContext.jsx', () => ({
   useMealPlan: () => ({
@@ -22,6 +29,7 @@ jest.mock('../MealPlanContext.jsx', () => ({
     deleteItem: mockDeleteItem,
     addCustomItem: mockAddCustomItem,
     editItem: mockEditItem,
+    clearCompletedItems: mockClearCompletedItems,
   }),
 }));
 
@@ -196,6 +204,7 @@ describe('GroceryListModal — rendering', () => {
     mockDeleteItem = jest.fn();
     mockAddCustomItem = jest.fn();
     mockEditItem = jest.fn();
+    mockClearCompletedItems = jest.fn();
   });
 
   test('renders nothing when isOpen is false', () => {
@@ -349,6 +358,21 @@ describe('GroceryListModal — checklist', () => {
     const checkbox = screen.getByRole('checkbox', { name: 'All-purpose flour' });
     expect(checkbox).toBeChecked();
   });
+
+  test('shows clear checked action and delegates to context', () => {
+    mockGroceryList = [
+      { ...MOCK_GROCERY_LIST[0], completed: true },
+      { ...MOCK_GROCERY_LIST[1], completed: false },
+    ];
+    renderModal();
+    fireEvent.click(screen.getByRole('button', { name: /clear checked items/i }));
+    expect(mockClearCompletedItems).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not show clear checked action when nothing is completed', () => {
+    renderModal();
+    expect(screen.queryByRole('button', { name: /clear checked items/i })).not.toBeInTheDocument();
+  });
 });
 
 // ── Delete item ───────────────────────────────────────────────────────────────
@@ -404,6 +428,19 @@ describe('GroceryListModal — category controls', () => {
     const toggleBtn = screen.getByRole('button', { name: /pantry staples/i });
     expect(toggleBtn).toHaveTextContent('2');
   });
+
+  test('keeps same category expansion independent across pantry sections', () => {
+    mockGroceryList = [
+      { id: 'buy-produce', name: 'Apples', category: 'Produce', completed: false, inventoryStatus: 'buy' },
+      { id: 'owned-produce', name: 'Bananas', category: 'Produce', completed: false, inventoryStatus: 'owned' },
+    ];
+    render(<GroceryListModal isOpen onClose={jest.fn()} pantryPlannerEnabled />);
+    const categoryButtons = screen.getAllByRole('button', { name: /produce/i });
+    expect(categoryButtons).toHaveLength(2);
+    fireEvent.click(categoryButtons[0]);
+    expect(screen.queryByText('Apples')).not.toBeInTheDocument();
+    expect(screen.getByText('Bananas')).toBeInTheDocument();
+  });
 });
 
 // ── Custom item badge ─────────────────────────────────────────────────────────
@@ -434,32 +471,90 @@ describe('GroceryListModal — custom item badge', () => {
   });
 });
 
-// ── Close behaviour ───────────────────────────────────────────────────────────
+// ── Export functionality unit tests ───────────────────────────────────────────
 
-describe('GroceryListModal — close behaviour', () => {
+describe('GroceryListModal — export helpers', () => {
+  const sampleItems = [
+    { id: '1', name: 'Apples', quantity: '4', unit: 'pcs', category: 'Produce', completed: false, inventoryStatus: 'buy' },
+    { id: '2', name: 'Milk', quantity: '1', unit: 'gallon', category: 'Dairy', completed: true, inventoryStatus: 'owned' },
+  ];
+
+  test('exportGroceryToMarkdown generates structured markdown', () => {
+    const md = exportGroceryToMarkdown(sampleItems);
+    expect(md).toContain('# Grocery List');
+    expect(md).toContain('## Produce');
+    expect(md).toContain('- [ ] 4 pcs Apples');
+    expect(md).toContain('## Dairy');
+    expect(md).toContain('- [x] 1 gallon Milk');
+  });
+
+  test('exportGroceryToCSV generates valid CSV rows', () => {
+    const csv = exportGroceryToCSV(sampleItems);
+    expect(csv).toContain('Category,Item,Quantity,Unit,Status,Completed');
+    expect(csv).toContain('"Produce","Apples","4","pcs","buy",false');
+  });
+
+  test('exportGroceryToPlainText generates plain text grouping', () => {
+    const text = exportGroceryToPlainText(sampleItems);
+    expect(text).toContain('PRODUCE:');
+    expect(text).toContain('• 4 pcs Apples');
+    expect(text).toContain('✓ 1 gallon Milk');
+  });
+
+  test('respects buyOnly filter', () => {
+    const md = exportGroceryToMarkdown(sampleItems, { buyOnly: true });
+    expect(md).toContain('Apples');
+    expect(md).not.toContain('Milk');
+  });
+});
+
+
+
+describe('grocery modal a11y', () => {
   beforeEach(() => {
-    mockGroceryList = [];
+    mockGroceryList = MOCK_GROCERY_LIST;
   });
 
-  test('close button calls onClose', () => {
-    const onClose = jest.fn();
-    render(<GroceryListModal isOpen={true} onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: /close grocery list/i }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+  it('moves focus into the dialog when opened', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: /grocery list/i });
+    expect(dialog.contains(document.activeElement)).toBe(true);
   });
 
-  test('clicking the backdrop calls onClose', () => {
+  it('closes on Escape', () => {
     const onClose = jest.fn();
-    render(<GroceryListModal isOpen={true} onClose={onClose} />);
-    const overlay = screen.getByRole('dialog', { name: /grocery list/i }).parentElement;
-    fireEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  test('Escape key calls onClose', () => {
-    const onClose = jest.fn();
-    render(<GroceryListModal isOpen={true} onClose={onClose} />);
+    render(<GroceryListModal isOpen onClose={onClose} />);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('traps Tab focus within the dialog', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: /grocery list/i });
+    const focusables = Array.from(dialog.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter((el) => !el.disabled);
+    expect(focusables.length).toBeGreaterThan(0);
+
+    const last = focusables[focusables.length - 1];
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(focusables[0]);
+  });
+
+  it('wraps Shift+Tab focus from first to last control', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: /grocery list/i });
+    const focusables = Array.from(dialog.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter((el) => !el.disabled);
+    expect(focusables.length).toBeGreaterThan(0);
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    first.focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
   });
 });

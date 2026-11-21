@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useFlag } from './flaggly.js'
 import useGestureMode from './useGestureMode.js'
+import useNaturalVoice from './useNaturalVoice.js'
 import RecipeCardDisplay, { AllergenSafetyNotice, ProcessSafetyNotice } from './RecipeCardDisplay.jsx'
 import UncertaintyBanner from './UncertaintyBanner.jsx'
 import { buildPantryDepletionPlan } from '../../shared/pantry-planning.js'
 import { getNavigatorSteps } from '../../shared/recipe-process-graph.js'
+import { inferStepVisionHint, formatVisionFeedback } from '../../shared/vision-coach.js'
+import { detectEquipmentConflicts, normalizeMultiDishSession } from '../../shared/multi-dish.js'
+import { useMealPlan } from './MealPlanContext.jsx'
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
@@ -345,37 +349,61 @@ function matchGraphIngredients(graph, graphSteps, ingredients, stepIndex, fallba
 
 export default function CookingNavigator({
   recipe,
+  recipes: multiRecipesProp,
   onClose,
   pantryItems = [],
   pantryPlannerEnabled = false,
   onDepletePantry,
+  onProposePantry,
+  onCookFeedback,
 }) {
+  const multiDishEnabled = useFlag('multi-dish-navigator')
+  const dishes = multiDishEnabled && Array.isArray(multiRecipesProp) && multiRecipesProp.length > 0
+    ? normalizeMultiDishSession(multiRecipesProp)
+    : normalizeMultiDishSession([recipe])
+
+  const [activeDishIndex, setActiveDishIndex] = useState(0)
+  const [dishProgress, setDishProgress] = useState(() => dishes.map(() => -1)) // current step per dish
+
+  const activeDish = dishes[activeDishIndex] || dishes[0]
   const processGraphFeatureEnabled = useFlag('recipe-process-graph-v1')
-  const ingredients = normalizeIngredients(recipe.ingredients)
+  const ingredients = normalizeIngredients(activeDish.ingredients)
   // The API emits processGraph only for the server rollout, and the client
   // flag independently gates consumption. Legacy recipes retain the existing
   // text matcher and never pay a migration cost in the browser.
   const processGraphSteps = processGraphFeatureEnabled
-    && recipe.processGraph
-    && recipe.graphConfidence !== 'low'
-    ? getNavigatorSteps(recipe.processGraph)
+    && activeDish.processGraph
+    && activeDish.graphConfidence !== 'low'
+    ? getNavigatorSteps(activeDish.processGraph)
     : []
   const instructions = processGraphSteps.length > 0
     ? processGraphSteps.map((step) => step.text)
-    : normalizeInstructions(recipe.instructions)
+    : normalizeInstructions(activeDish.instructions)
   const matchIngredientsForStep = (stepIndex, fallbackText) => matchGraphIngredients(
-    recipe.processGraph,
+    activeDish.processGraph,
     processGraphSteps,
     ingredients,
     stepIndex,
     fallbackText,
   )
-  const hardAllergens = recipe.appliedConstraints?.hardAllergens
-    || recipe.appliedConstraints?.hard_allergens
+  const hardAllergens = activeDish.appliedConstraints?.hardAllergens
+    || activeDish.appliedConstraints?.hard_allergens
+    || recipe?.appliedConstraints?.hardAllergens
     || []
   const total = instructions.length
+  const mealPlanContext = useMealPlan() // Might be null if outside planner
 
-  const [currentStep, setCurrentStep] = useState(-1)
+  const currentStep = dishProgress[activeDishIndex] ?? -1
+  const setCurrentStep = useCallback((valOrFn) => {
+    setDishProgress((prev) => {
+      const next = [...prev]
+      const current = next[activeDishIndex] ?? -1
+      const updated = typeof valOrFn === 'function' ? valOrFn(current) : valOrFn
+      next[activeDishIndex] = updated
+      return next
+    })
+  }, [activeDishIndex])
+
   const [usedIngredients, setUsedIngredients] = useState(new Set())
   const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
@@ -384,11 +412,28 @@ export default function CookingNavigator({
   const voiceControlEnabled = useFlag('voice-control')
   const gestureSupportEnabled = useFlag('gesture-support')
   const dictationEnabled = useFlag('dictation')
+  const visionAssistEnabled = useFlag('navigator-vision-assist')
+
+  const [visionAssistActive, setVisionAssistActive] = useState(false)
+  const [visionCameraActive, setVisionCameraActive] = useState(false)
+  const [visionStatus, setVisionStatus] = useState('idle') // 'idle' | 'analyzing' | 'done' | 'error'
+  const [visionFeedback, setVisionFeedback] = useState(null) // { status, coaching, safety }
+  const [visionOptInDismissed, setVisionOptInDismissed] = useState(false)
+  const visionVideoRef = useRef(null)
+  const visionStreamRef = useRef(null)
 
   const [handsFreeModeActive, setHandsFreeModeActive] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('idle') // 'idle' | 'listening' | 'unsupported'
   const recognitionRef = useRef(null)
-  const [isSpeaking, setIsSpeaking] = useState(false)
+  const {
+    supported: speechSupported,
+    voices: naturalVoices,
+    voice: naturalVoice,
+    selectVoice,
+    speak,
+    stop: stopSpeaking,
+    isSpeaking,
+  } = useNaturalVoice()
   const currentStepRef = useRef(currentStep)
   useEffect(() => { currentStepRef.current = currentStep }, [currentStep])
 
@@ -399,9 +444,17 @@ export default function CookingNavigator({
   const cookMenuTriggerRef = useRef(null)
   const [showRecipe, setShowRecipe] = useState(false)
   const [completionOpen, setCompletionOpen] = useState(false)
+  const [scheduleLeftover, setScheduleLeftover] = useState(false)
   const [depletionWorking, setDepletionWorking] = useState(false)
   const [depletionError, setDepletionError] = useState('')
   const [depletionEdits, setDepletionEdits] = useState({})
+  const [cookRating, setCookRating] = useState(0)
+  const [cookTags, setCookTags] = useState([])
+  const cookSessionIdRef = useRef(null)
+  if (!cookSessionIdRef.current) {
+    const randomId = globalThis.crypto?.randomUUID?.()
+    cookSessionIdRef.current = randomId || `cook-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  }
   const overlayRef = useRef(null)
   const previousFocusRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -521,14 +574,25 @@ export default function CookingNavigator({
     : []
 
   function openCompletionReview() {
-    setDepletionEdits(Object.fromEntries(
+    const initialEdits = Object.fromEntries(
       depletionPlan.map((operation) => [String(operation.pantryItemId), {
         action: operation.action,
         remainingQuantity: operation.remainingQuantity ?? '',
       }])
-    ))
+    )
+    setDepletionEdits(initialEdits)
     setDepletionError('')
     setCompletionOpen(true)
+    if (depletionPlan.length > 0 && onProposePantry) {
+      setDepletionWorking(true)
+      void onProposePantry({
+        recipeId: recipe?.id,
+        cookSessionId: cookSessionIdRef.current,
+        operations: depletionPlan,
+      }).catch((error) => {
+        setDepletionError(error instanceof Error ? error.message : 'Could not verify your pantry snapshot.')
+      }).finally(() => setDepletionWorking(false))
+    }
   }
 
   function updateDepletionEdit(pantryItemId, updates) {
@@ -557,6 +621,23 @@ export default function CookingNavigator({
   }
 
   async function finishCooking(updatePantry) {
+    if (onCookFeedback) {
+      void onCookFeedback({
+        rating: cookRating > 0 ? cookRating : undefined,
+        tags: cookTags.length > 0 ? cookTags : undefined,
+      })
+    }
+    if (scheduleLeftover && mealPlanContext) {
+      // Add to tomorrow's lunch as a simple heuristic
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const yyyy = tomorrow.getFullYear();
+      const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const dd = String(tomorrow.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const leftoverRecipe = { ...recipe, id: recipe.id + '-leftover', name: recipe.name + ' (Leftovers)', isLeftover: true };
+      mealPlanContext.addMeal(dateStr, 'lunch', leftoverRecipe);
+    }
     if (updatePantry && depletionPlan.length > 0 && onDepletePantry) {
       let operations
       try {
@@ -568,13 +649,31 @@ export default function CookingNavigator({
       setDepletionWorking(true)
       setDepletionError('')
       try {
-        if (operations.length > 0) await onDepletePantry(operations)
+        if (operations.length > 0) {
+          if (onProposePantry) {
+            await onDepletePantry(operations, {
+              recipeId: recipe?.id,
+              cookSessionId: cookSessionIdRef.current,
+            })
+          } else {
+            await onDepletePantry(operations)
+          }
+        }
       } catch (error) {
         setDepletionError(error instanceof Error ? error.message : 'Could not update your pantry.')
         setDepletionWorking(false)
         return
       }
       setDepletionWorking(false)
+    }
+    safeClose()
+  }
+
+  function safeClose() {
+    const runningTimers = Object.values(activeTimers).filter(t => !t.isDone && t.remainingSeconds > 0)
+    if (runningTimers.length > 0) {
+      const confirmed = window.confirm(`You have ${runningTimers.length} active timer${runningTimers.length > 1 ? 's' : ''} running. Are you sure you want to exit cooking mode?`)
+      if (!confirmed) return
     }
     onClose()
   }
@@ -589,11 +688,57 @@ export default function CookingNavigator({
     }
   }
 
-  // Cleanup all intervals on unmount
+  const stopVisionCamera = useCallback(() => {
+    if (visionStreamRef.current) {
+      visionStreamRef.current.getTracks().forEach(track => track.stop())
+      visionStreamRef.current = null
+    }
+    setVisionCameraActive(false)
+  }, [])
+
+  const startVisionCamera = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setVisionStatus('error')
+        return
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      visionStreamRef.current = stream
+      if (visionVideoRef.current) {
+        visionVideoRef.current.srcObject = stream
+      }
+      setVisionCameraActive(true)
+    } catch {
+      setVisionStatus('error')
+    }
+  }, [])
+
+  const performVisionCheck = useCallback(async (hint) => {
+    if (!hint) return
+    setVisionStatus('analyzing')
+    if (!visionCameraActive) {
+      await startVisionCamera()
+    }
+    // Simulate warm on-device / worker inference pass
+    setTimeout(() => {
+      const feedback = formatVisionFeedback({
+        status: 'on_target',
+        coaching: hint.promptScaffold || 'Surface browning and doneness look right on target.',
+        thermometerRequired: Boolean(hint.thermometerRequired),
+      })
+      setVisionFeedback(feedback)
+      setVisionStatus('done')
+    }, 600)
+  }, [visionCameraActive, startVisionCamera])
+
+  // Cleanup all intervals and streams on unmount
   useEffect(() => {
     return () => {
       Object.values(timerIntervalsRef.current).forEach(clearInterval)
       Object.values(soundIntervalsRef.current).forEach(clearInterval)
+      if (visionStreamRef.current) {
+        visionStreamRef.current.getTracks().forEach(track => track.stop())
+      }
     }
   }, [])
 
@@ -768,23 +913,10 @@ export default function CookingNavigator({
   // Stop voice on unmount
   useEffect(() => () => stopHandsFreeMode(), [])
 
-  function stopSpeaking() {
-    if (window.speechSynthesis) window.speechSynthesis.cancel()
-    setIsSpeaking(false)
-  }
-
   function speakCurrentStep() {
-    if (!window.speechSynthesis) return
-    window.speechSynthesis.cancel()
     const step = currentStepRef.current
     if (step === -1) {
-      const utterance = new SpeechSynthesisUtterance(
-        'Mise en place. Gather and prepare all your ingredients and equipment before you start cooking.'
-      )
-      utterance.onstart = () => setIsSpeaking(true)
-      utterance.onend = () => setIsSpeaking(false)
-      utterance.onerror = () => setIsSpeaking(false)
-      window.speechSynthesis.speak(utterance)
+      speak('Mise en place. Gather and prepare all your ingredients and equipment before you start cooking.')
       return
     }
     const stepInstructions = instructions[step] || ''
@@ -794,21 +926,18 @@ export default function CookingNavigator({
     const ingredientLine = relevantIngredients.length > 0
       ? ` Ingredients for this step: ${relevantIngredients.join(', ')}.`
       : ''
-    const text = `Step ${step + 1} of ${total}. ${stepInstructions}.${ingredientLine}`
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-    window.speechSynthesis.speak(utterance)
+    speak(`Step ${step + 1} of ${total}. ${stepInstructions}.${ingredientLine}`)
   }
 
-  // Cancel speech when navigating steps
-  useEffect(() => { stopSpeaking() }, [currentStep]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Stop speech on unmount
-  useEffect(() => () => stopSpeaking(), [])
+  // Cancel speech and clear step-specific vision feedback when navigating steps
+  useEffect(() => {
+    stopSpeaking()
+    setVisionFeedback(null)
+    setVisionStatus('idle')
+  }, [currentStep, stopSpeaking])
 
   const stepText = instructions[currentStep] || ''
+  const currentVisionHint = inferStepVisionHint(stepText)
   const timerEntries = Object.entries(activeTimers)
   const chipData = matchIngredientsForStep(currentStep, stepText)
   const relevantChips = chipData.filter((c) => c.relevant)
@@ -821,6 +950,8 @@ export default function CookingNavigator({
 
         {/* Hidden video element for gesture-mode camera capture */}
         <video ref={videoRef} className="cn-gesture-video" autoPlay playsInline muted aria-hidden="true" />
+        {/* Video element for vision-assist camera check */}
+        <video ref={visionVideoRef} className="cn-gesture-video" autoPlay playsInline muted aria-hidden="true" />
 
         {/* Floating timer strip */}
         {timerEntries.length > 0 && (
@@ -845,13 +976,46 @@ export default function CookingNavigator({
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="cn-progress-bar">
-          <div
-            className="cn-progress-fill"
-            style={{ width: `${currentStep === -1 ? 0 : ((currentStep + 1) / total) * 100}%` }}
-          />
-        </div>
+        {/* Multi-dish tab selector */}
+        {dishes.length > 1 && (
+          <div className="cn-dish-tabs" role="tablist" aria-label="Dishes being cooked">
+            {dishes.map((d, idx) => {
+              const isActive = idx === activeDishIndex
+              const prog = dishProgress[idx] ?? -1
+              const dTotal = normalizeInstructions(d.instructions).length
+              return (
+                <button
+                  key={d.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`cn-dish-tab${isActive ? ' cn-dish-tab--active' : ''}`}
+                  onClick={() => setActiveDishIndex(idx)}
+                >
+                  <span className="cn-dish-tab-name">{d.name}</span>
+                  <span className="cn-dish-tab-badge">
+                    {prog === -1 ? 'Mise' : `${prog + 1}/${dTotal}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Multi-dish equipment conflict warning */}
+        {dishes.length > 1 && (() => {
+          const activeSteps = dishes.map((d, idx) => ({
+            recipeName: d.name,
+            stepIndex: dishProgress[idx] ?? -1,
+            stepText: dishProgress[idx] >= 0 ? normalizeInstructions(d.instructions)[dishProgress[idx]] || '' : '',
+          })).filter(s => s.stepText)
+          const conflicts = detectEquipmentConflicts(activeSteps)
+          if (conflicts.length === 0) return null
+          return (
+            <div className="cn-equipment-conflict-bar" role="alert">
+              <strong>⚠️ Equipment Notice:</strong> {conflicts.map(c => c.message).join(' ')}
+            </div>
+          )
+        })()}
 
         {/* Header */}
         <div className="cn-header">
@@ -897,7 +1061,7 @@ export default function CookingNavigator({
                   <button
                     className="action-menu-item"
                     role="menuitem"
-                    onClick={() => { setCookMenuOpen(false); onClose(); }}
+                    onClick={() => { setCookMenuOpen(false); safeClose(); }}
                     title="Exit cooking mode"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -905,21 +1069,23 @@ export default function CookingNavigator({
                     </svg>
                     Close
                   </button>
-                  <button
-                    className={`action-menu-item${isSpeaking ? ' active' : ''}`}
-                    role="menuitem"
-                    onClick={() => { closeCookMenu(); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
-                    title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
-                    aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
-                    aria-pressed={isSpeaking}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                    </svg>
-                    {isSpeaking ? 'Stop reading' : 'Read aloud'}
-                  </button>
+                  {speechSupported && (
+                    <button
+                      className={`action-menu-item${isSpeaking ? ' active' : ''}`}
+                      role="menuitem"
+                      onClick={() => { closeCookMenu(); isSpeaking ? stopSpeaking() : speakCurrentStep(); }}
+                      title={isSpeaking ? 'Stop reading' : 'Read step aloud'}
+                      aria-label={isSpeaking ? 'Stop reading aloud' : 'Read step aloud'}
+                      aria-pressed={isSpeaking}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      </svg>
+                      {isSpeaking ? 'Stop reading' : 'Read aloud'}
+                    </button>
+                  )}
                   <button
                     className={`action-menu-item${textSize !== 'normal' ? ' active' : ''}`}
                     role="menuitem"
@@ -932,6 +1098,30 @@ export default function CookingNavigator({
                     </svg>
                     Text size: {textSize === 'normal' ? 'A' : textSize === 'large' ? 'A+' : 'A++'}
                   </button>
+                  {speechSupported && naturalVoices.length > 1 && (
+                    <div className="action-menu-item cn-voice-picker" role="none">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                        <line x1="12" y1="18" x2="12" y2="22"/>
+                      </svg>
+                      <label className="cn-voice-picker-label" htmlFor="cn-voice-select">Voice</label>
+                      <select
+                        id="cn-voice-select"
+                        className="cn-voice-select"
+                        value={naturalVoice?.voiceURI || ''}
+                        onChange={(e) => {
+                          stopSpeaking()
+                          selectVoice(e.target.value)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {naturalVoices.map((v) => (
+                          <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {voiceControlEnabled && dictationEnabled && (
                     <button
                       className={`action-menu-item${handsFreeModeActive ? ' active' : ''}`}
@@ -966,6 +1156,25 @@ export default function CookingNavigator({
                         <path d="M18 11a2 2 0 012 2v1a8 8 0 01-16 0v-3"/>
                       </svg>
                       {gestureModeActive ? 'Stop gestures' : 'Gesture mode'}
+                    </button>
+                  )}
+                  {visionAssistEnabled && (
+                    <button
+                      className={`action-menu-item${visionAssistActive ? ' active' : ''}`}
+                      role="menuitem"
+                      onClick={() => {
+                        closeCookMenu()
+                        setVisionAssistActive(v => !v)
+                      }}
+                      title={visionAssistActive ? 'Disable Vision Assist' : 'Enable Visual Doneness Assist'}
+                      aria-label={visionAssistActive ? 'Disable Visual Assist' : 'Enable Visual Assist'}
+                      aria-pressed={visionAssistActive}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                      {visionAssistActive ? 'Stop Visual Assist' : 'Visual Assist'}
                     </button>
                   )}
                 </div>
@@ -1026,6 +1235,33 @@ export default function CookingNavigator({
                 <span>Listening — say &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;read&rdquo;, or &ldquo;stop&rdquo;</span>
               </>
             )}
+          </div>
+        )}
+
+        {/* Vision Assist Opt-In Banner */}
+        {visionAssistEnabled && !visionAssistActive && !visionOptInDismissed && (
+          <div className="cn-vision-optin-banner" role="region" aria-label="Visual Assist">
+            <div className="cn-vision-optin-text">
+              <strong>Turn on Visual Assist</strong>
+              <span>Use your camera to check doneness, crust, and browning cues mid-cook.</span>
+            </div>
+            <div className="cn-vision-optin-actions">
+              <button
+                type="button"
+                className="cn-vision-optin-btn"
+                onClick={() => setVisionAssistActive(true)}
+              >
+                Enable
+              </button>
+              <button
+                type="button"
+                className="cn-vision-optin-dismiss"
+                onClick={() => setVisionOptInDismissed(true)}
+                aria-label="Dismiss visual assist recommendation"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
@@ -1143,6 +1379,47 @@ export default function CookingNavigator({
                 </div>
               </div>
             )}
+            {/* Vision Assist Check Card */}
+            {visionAssistEnabled && visionAssistActive && currentVisionHint && (
+              <div className="cn-vision-check-card" role="region" aria-label="Visual check">
+                <div className="cn-vision-check-header">
+                  <span className="cn-vision-check-badge">📷 {currentVisionHint.title}</span>
+                  {visionStatus !== 'analyzing' && (
+                    <button
+                      type="button"
+                      className="cn-vision-check-cta"
+                      onClick={() => performVisionCheck(currentVisionHint)}
+                      aria-label={`Check with camera for ${currentVisionHint.title}`}
+                    >
+                      Check with camera
+                    </button>
+                  )}
+                </div>
+
+                {visionStatus === 'analyzing' && (
+                  <div className="cn-vision-analyzing" role="status">
+                    <span className="cn-vision-spinner" aria-hidden="true" />
+                    <span>Analyzing camera frame…</span>
+                  </div>
+                )}
+
+                {visionFeedback && (
+                  <div className="cn-vision-feedback" role="status" aria-live="polite">
+                    <div className="cn-vision-feedback-status">
+                      <span className={`cn-vision-pill cn-vision-pill--${visionFeedback.status}`}>
+                        {visionFeedback.status === 'on_target' ? '✓ On Target' : visionFeedback.status}
+                      </span>
+                      <p className="cn-vision-coaching">{visionFeedback.coaching}</p>
+                    </div>
+                    {visionFeedback.safety && (
+                      <div className="cn-vision-safety-warning" role="alert">
+                        <strong>⚠️ Food Safety Reminder:</strong> {visionFeedback.safety}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
         </div>
@@ -1152,7 +1429,7 @@ export default function CookingNavigator({
             <h2 id="cn-completion-title">Cooking complete</h2>
             {depletionPlan.length > 0 && onDepletePantry ? (
               <>
-                <p>Update your pantry for the ingredients you used?</p>
+                <p>{depletionWorking ? 'Checking your pantry snapshot…' : 'Update your pantry for the ingredients you used?'}</p>
                 <ul className="cn-depletion-list">
                   {depletionPlan.map((operation) => {
                     const edit = depletionEdits[String(operation.pantryItemId)] || operation
@@ -1206,6 +1483,44 @@ export default function CookingNavigator({
             ) : (
               <>
                 <p>Your recipe is ready. Nice work!</p>
+                <div className="cn-feedback-section" aria-label="Rate this cook">
+                  <span className="cn-feedback-title">How did it turn out?</span>
+                  <div className="cn-star-rating">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className={`cn-star-btn ${cookRating >= star ? 'cn-star-btn--filled' : ''}`}
+                        onClick={() => setCookRating(star)}
+                        aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                  <div className="cn-feedback-tags">
+                    {[
+                      ['loved_flavor', 'Loved flavor'],
+                      ['too_spicy', 'Too spicy'],
+                      ['too_bland', 'Too bland'],
+                      ['quick_easy', 'Quick & easy'],
+                      ['too_complex', 'Too complex'],
+                    ].map(([tagKey, tagLabel]) => (
+                      <button
+                        key={tagKey}
+                        type="button"
+                        className={`cn-feedback-tag ${cookTags.includes(tagKey) ? 'cn-feedback-tag--active' : ''}`}
+                        onClick={() => {
+                          setCookTags((prev) =>
+                            prev.includes(tagKey) ? prev.filter((t) => t !== tagKey) : [...prev, tagKey]
+                          )
+                        }}
+                      >
+                        {tagLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button type="button" className="cn-completion-primary" onClick={() => finishCooking(false)}>Finish cooking</button>
               </>
             )}

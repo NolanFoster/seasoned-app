@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { buildPantryDebitProposal, buildPantryWasteEvent } from '../../shared/pantry-ledger.js'
 
 const USER_MANAGEMENT_URL = import.meta.env.VITE_USER_MANAGEMENT_URL
 const CACHE_PREFIX = 'seasoned_pantry_'
@@ -52,6 +53,21 @@ function normalizeItem(item) {
 
 function errorMessage(error, fallback = 'Pantry sync is unavailable') {
   return error instanceof Error ? error.message : fallback
+}
+
+function applyLocalLedgerOperations(items, operations) {
+  const byId = new Map((Array.isArray(items) ? items : []).map((item) => [String(item.id), item]))
+  for (const operation of Array.isArray(operations) ? operations : []) {
+    const id = String(operation.pantryItemId)
+    const item = byId.get(id)
+    if (!item || operation.action === 'skip') continue
+    if (operation.action === 'remove' || operation.remainingQuantity === null || operation.remainingQuantity === undefined) {
+      byId.delete(id)
+    } else {
+      byId.set(id, { ...item, quantity: operation.remainingQuantity })
+    }
+  }
+  return [...byId.values()]
 }
 
 export function sortPantryItems(items) {
@@ -153,6 +169,67 @@ export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMEN
     }
   }, [apiUrl, persist, request, token])
 
+  const proposeDebit = useCallback(async ({ recipeId, cookSessionId, operations, source = 'navigator' } = {}) => {
+    const proposal = buildPantryDebitProposal({ recipeId, cookSessionId, operations, source })
+    if (!proposal.lines.length) return { proposal, items: itemsRef.current }
+    if (!token || !apiUrl) return { proposal, items: itemsRef.current }
+    const body = await request('/me/pantry-ledger/propose', {
+      method: 'POST',
+      body: JSON.stringify(proposal),
+    })
+    return body.data || { proposal, items: itemsRef.current }
+  }, [apiUrl, request, token])
+
+  const confirmDebit = useCallback(async ({ recipeId, cookSessionId, operations, source = 'navigator' } = {}) => {
+    const proposal = buildPantryDebitProposal({ recipeId, cookSessionId, operations, source })
+    if (!proposal.lines.length) return { items: itemsRef.current, event: null }
+    if (!token || !apiUrl) {
+      const nextItems = applyLocalLedgerOperations(itemsRef.current, operations)
+      persist(nextItems)
+      return { items: nextItems, event: null, offline: true }
+    }
+    try {
+      const body = await request('/me/pantry-ledger/confirm', {
+        method: 'POST',
+        body: JSON.stringify(proposal),
+      })
+      const nextItems = Array.isArray(body.data?.items)
+        ? body.data.items.map(normalizeItem)
+        : applyLocalLedgerOperations(itemsRef.current, operations)
+      persist(nextItems)
+      setSyncError('')
+      return { ...(body.data || {}), items: nextItems }
+    } catch (error) {
+      setSyncError(errorMessage(error))
+      throw error
+    }
+  }, [apiUrl, persist, request, token])
+
+  const recordWaste = useCallback(async ({ lines, cookSessionId = null, source = 'pantry' } = {}) => {
+    const event = buildPantryWasteEvent({ lines, cookSessionId, source })
+    if (!event.lines.length) return { items: itemsRef.current, event: null }
+    if (!token || !apiUrl) {
+      const nextItems = applyLocalLedgerOperations(itemsRef.current, lines)
+      persist(nextItems)
+      return { items: nextItems, event: null, offline: true }
+    }
+    try {
+      const body = await request('/me/pantry-ledger/waste', {
+        method: 'POST',
+        body: JSON.stringify(event),
+      })
+      const nextItems = Array.isArray(body.data?.items)
+        ? body.data.items.map(normalizeItem)
+        : applyLocalLedgerOperations(itemsRef.current, lines)
+      persist(nextItems)
+      setSyncError('')
+      return { ...(body.data || {}), items: nextItems }
+    } catch (error) {
+      setSyncError(errorMessage(error))
+      throw error
+    }
+  }, [apiUrl, persist, request, token])
+
   const scanPhoto = useCallback(async (file) => {
     if (!apiUrl || !token) throw new Error('Pantry photo scan is unavailable')
     if (typeof FormData === 'undefined') throw new Error('Pantry photo scan is unavailable in this browser')
@@ -184,7 +261,11 @@ export function usePantry(token, userId, enabled = true, apiUrl = USER_MANAGEMEN
     addItem,
     updateItem,
     removeItem,
+    proposeDebit,
+    confirmDebit,
+    recordWaste,
     scanPhoto,
+    ledgerAvailable: Boolean(enabled && (apiUrl || !token)),
     available: Boolean(enabled && (apiUrl || !token)),
   }
 }

@@ -46,6 +46,7 @@ export const EQUIPMENT = Object.freeze([
 
 export const SKILL_LEVELS = Object.freeze(['beginner', 'intermediate', 'advanced'])
 export const UNITS = Object.freeze(['us', 'metric'])
+export const BUDGET_BANDS = Object.freeze(['low', 'medium', 'flexible'])
 
 export const DEFAULT_CULINARY_PROFILE = Object.freeze({
   diet_tags: Object.freeze([]),
@@ -63,6 +64,22 @@ export const DEFAULT_CULINARY_PROFILE = Object.freeze({
   exclude_ingredients: Object.freeze([]),
   notes_freeform: '',
   consent_flags: Object.freeze({ learn_from_activity: false, share_anon_evals: false }),
+  lifestyle_modes: Object.freeze([]),
+  budget_band: 'flexible',
+  meal_budget_usd: null,
+  seasonality: Object.freeze({
+    enabled: false,
+    hemisphere: 'n',
+    climate_bias: 'off'
+  }),
+  appetite_gentle: Object.freeze({
+    protein_bias: 'high',
+    default_servings_delta: -1,
+    max_spice_cap: 2,
+    prefer_textures: Object.freeze(['soft', 'brothy', 'simple']),
+    avoid_patterns: Object.freeze(['deep_fried', 'very_spicy', 'heavy_cream_sauces']),
+    meal_size: 'smaller'
+  })
 })
 
 const ALLERGEN_ALIASES = Object.freeze({
@@ -148,6 +165,8 @@ export function normalizeCulinaryProfile(input = {}, base = DEFAULT_CULINARY_PRO
     source[snake] !== undefined ? source[snake] : source[camel] !== undefined ? source[camel] : defaultValue
   const skill = pick('skill_level', 'skillLevel', fallback.skill_level)
   const units = pick('units_pref', 'unitsPref', fallback.units_pref)
+  const budgetBand = pick('budget_band', 'budgetBand', fallback.budget_band)
+  const mealBudgetUsd = pick('meal_budget_usd', 'mealBudgetUsd', fallback.meal_budget_usd)
   return {
     diet_tags: normalizeList(pick('diet_tags', 'dietTags', fallback.diet_tags)),
     hard_allergens: normalizeList(pick('hard_allergens', 'hardAllergens', fallback.hard_allergens), ALLERGEN_ALIASES),
@@ -166,6 +185,11 @@ export function normalizeCulinaryProfile(input = {}, base = DEFAULT_CULINARY_PRO
       ? String(pick('notes_freeform', 'notesFreeform', fallback.notes_freeform)).trim().slice(0, 500)
       : '',
     consent_flags: normalizeConsentFlags(pick('consent_flags', 'consentFlags', fallback.consent_flags)),
+    lifestyle_modes: normalizeList(pick('lifestyle_modes', 'lifestyleModes', fallback.lifestyle_modes)),
+    budget_band: BUDGET_BANDS.includes(budgetBand) ? budgetBand : 'flexible',
+    meal_budget_usd: mealBudgetUsd !== null && mealBudgetUsd !== undefined && Number.isFinite(Number(mealBudgetUsd)) && Number(mealBudgetUsd) > 0 ? Math.round(Number(mealBudgetUsd) * 100) / 100 : null,
+    seasonality: pick('seasonality', 'seasonality', fallback.seasonality),
+    appetite_gentle: pick('appetite_gentle', 'appetiteGentle', fallback.appetite_gentle),
   }
 }
 
@@ -211,6 +235,9 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     request.exclude_ingredients,
     normalizedProfile.exclude_ingredients,
   )
+  const budgetBand = firstDefined(request.budgetBand, request.budget_band, normalizedProfile.budget_band)
+  const mealBudgetUsd = firstDefined(request.mealBudgetUsd, request.meal_budget_usd, normalizedProfile.meal_budget_usd)
+  const seasonality = firstDefined(request.seasonality, normalizedProfile.seasonality)
 
   return {
     dietary: constraintList(dietary),
@@ -226,7 +253,12 @@ export function buildGenerationConstraints(profile = {}, overrides = {}) {
     skillLevel: SKILL_LEVELS.includes(skillLevel) ? skillLevel : 'intermediate',
     excludeIngredients: constraintList(excludeIngredients),
     nutritionGoals: request.nutritionGoals ?? request.nutrition_goals ?? normalizedProfile.nutrition_goals,
+    inferredPreferences: request.inferredPreferences ?? request.inferred_preferences ?? null,
     units: request.units ?? request.units_pref ?? normalizedProfile.units_pref,
+    lifestyleModes: request.lifestyleModes ?? request.lifestyle_modes ?? normalizedProfile.lifestyle_modes,
+    budgetBand: BUDGET_BANDS.includes(budgetBand) ? budgetBand : 'flexible',
+    mealBudgetUsd: mealBudgetUsd !== null && mealBudgetUsd !== undefined && Number.isFinite(Number(mealBudgetUsd)) && Number(mealBudgetUsd) > 0 ? Math.round(Number(mealBudgetUsd) * 100) / 100 : null,
+    seasonality: seasonality || { enabled: false, hemisphere: 'n', climate_bias: 'off' },
   }
 }
 
@@ -239,7 +271,7 @@ export function validateCulinaryProfileInput(input) {
   const listFields = [
     'diet_tags', 'dietTags', 'hard_allergens', 'hardAllergens', 'soft_avoids', 'softAvoids',
     'cuisine_likes', 'cuisineLikes', 'cuisine_dislikes', 'cuisineDislikes', 'equipment',
-    'exclude_ingredients', 'excludeIngredients',
+    'exclude_ingredients', 'excludeIngredients', 'lifestyle_modes', 'lifestyleModes',
   ]
   for (const field of listFields) {
     if (input[field] !== undefined && (!Array.isArray(input[field]) || input[field].some((item) => typeof item !== 'string'))) {
@@ -259,6 +291,12 @@ export function validateCulinaryProfileInput(input) {
   if (skill !== undefined && !SKILL_LEVELS.includes(skill)) errors.push('skill_level must be beginner, intermediate, or advanced')
   const units = input.units_pref ?? input.unitsPref
   if (units !== undefined && !UNITS.includes(units)) errors.push('units_pref must be us or metric')
+  const budgetBand = input.budget_band ?? input.budgetBand
+  if (budgetBand !== undefined && !BUDGET_BANDS.includes(budgetBand)) errors.push('budget_band must be low, medium, or flexible')
+  const mealBudgetUsd = input.meal_budget_usd ?? input.mealBudgetUsd
+  if (mealBudgetUsd !== undefined && mealBudgetUsd !== null && (!Number.isFinite(Number(mealBudgetUsd)) || Number(mealBudgetUsd) < 0 || Number(mealBudgetUsd) > 500)) {
+    errors.push('meal_budget_usd must be a number between 0 and 500')
+  }
   if (input.notes_freeform !== undefined && typeof input.notes_freeform !== 'string') errors.push('notes_freeform must be a string')
   if (input.nutrition_goals !== undefined && (!input.nutrition_goals || typeof input.nutrition_goals !== 'object' || Array.isArray(input.nutrition_goals))) {
     errors.push('nutrition_goals must be an object')
@@ -268,3 +306,43 @@ export function validateCulinaryProfileInput(input) {
   }
   return errors
 }
+
+/**
+ * Merges an ephemeral/travel kitchen overlay onto a base culinary profile.
+ * - Replaces available equipment with the overlay's equipment
+ * - Unions host allergens with base hard allergens (fail-closed)
+ * - Restricts max cook time if specified
+ * @param {object} baseProfile
+ * @param {object} overlay
+ * @returns {object}
+ */
+export function mergeEphemeralKitchenOverlay(baseProfile, overlay) {
+  const normBase = normalizeCulinaryProfile(baseProfile)
+  if (!overlay || typeof overlay !== 'object' || overlay.active === false) {
+    return normBase
+  }
+
+  // Check if overlay is expired
+  if (overlay.endsAt && new Date(overlay.endsAt).getTime() < Date.now()) {
+    return normBase
+  }
+
+  const travelEquipment = Array.isArray(overlay.equipment) ? overlay.equipment : normBase.equipment
+  const hostAllergens = Array.isArray(overlay.hostAllergens) ? overlay.hostAllergens : []
+  const combinedHardAllergens = Array.from(new Set([...normBase.hard_allergens, ...hostAllergens]))
+
+  return {
+    ...normBase,
+    equipment: travelEquipment,
+    hard_allergens: combinedHardAllergens,
+    ephemeral_kitchen: {
+      active: true,
+      label: overlay.label || 'Travel Kitchen',
+      startsAt: overlay.startsAt || null,
+      endsAt: overlay.endsAt || null,
+      retailerHint: overlay.retailerHint || null,
+      pantryMode: overlay.pantryMode || 'empty',
+    },
+  }
+}
+

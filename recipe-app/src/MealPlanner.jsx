@@ -108,6 +108,13 @@ export default function MealPlanner({
   pantryItems = [],
   pantryPlannerEnabled = false,
   onOpenPantry,
+  autofillEnabled = false,
+  onOpenAutofill,
+  bulkScheduleEnabled = false,
+  onOpenBulkSchedule,
+  recentRecipes = [],
+  planMigrationEnabled = false,
+  hardAllergens = [],
 }) {
   return (
     <DragProvider>
@@ -118,6 +125,13 @@ export default function MealPlanner({
         pantryItems={pantryItems}
         pantryPlannerEnabled={pantryPlannerEnabled}
         onOpenPantry={onOpenPantry}
+        autofillEnabled={autofillEnabled}
+        onOpenAutofill={onOpenAutofill}
+        bulkScheduleEnabled={bulkScheduleEnabled}
+        onOpenBulkSchedule={onOpenBulkSchedule}
+        recentRecipes={recentRecipes}
+        planMigrationEnabled={planMigrationEnabled}
+        hardAllergens={hardAllergens}
       />
     </DragProvider>
   )
@@ -137,6 +151,13 @@ function MealPlannerContent({
   pantryItems,
   pantryPlannerEnabled,
   onOpenPantry,
+  autofillEnabled,
+  onOpenAutofill,
+  bulkScheduleEnabled,
+  onOpenBulkSchedule,
+  recentRecipes,
+  planMigrationEnabled,
+  hardAllergens,
 }) {
   const { setDragging, clearDrag } = useDragContext()
   const { mealPlan, removeMeal, moveMeal } = useMealPlan()
@@ -197,6 +218,13 @@ function MealPlannerContent({
         pantryItems={pantryItems}
         pantryPlannerEnabled={pantryPlannerEnabled}
         onOpenPantry={onOpenPantry}
+        autofillEnabled={autofillEnabled}
+        onOpenAutofill={onOpenAutofill}
+        bulkScheduleEnabled={bulkScheduleEnabled}
+        onOpenBulkSchedule={onOpenBulkSchedule}
+        recentRecipes={recentRecipes}
+        planMigrationEnabled={planMigrationEnabled}
+        hardAllergens={hardAllergens}
       >
         {/* Single DragDropContext covers both UpNextCard and DayCards so recipes
             can be dragged between the staging area and any date/meal slot. */}

@@ -5,6 +5,7 @@ import {
   mergeCulinaryProfile,
   normalizeCulinaryProfile,
   validateCulinaryProfileInput,
+  mergeEphemeralKitchenOverlay,
 } from '../culinary-profile.js'
 
 describe('culinary profile helpers', () => {
@@ -50,9 +51,43 @@ describe('culinary profile helpers', () => {
     expect(constraints.maxCookTime).toBe(60)
   })
 
+  it('normalizes budget band and budget constraints', () => {
+    const profile = normalizeCulinaryProfile({
+      budget_band: 'low',
+      meal_budget_usd: 12.5,
+    })
+    expect(profile.budget_band).toBe('low')
+    expect(profile.meal_budget_usd).toBe(12.5)
+
+    const constraints = buildGenerationConstraints(profile, { budgetBand: 'medium' })
+    expect(constraints.budgetBand).toBe('medium')
+    expect(constraints.mealBudgetUsd).toBe(12.5)
+  })
+
   it('rejects malformed profile input', () => {
     expect(validateCulinaryProfileInput({ hard_allergens: ['sesame', 4] })).toContain('hard_allergens must be an array of strings')
     expect(validateCulinaryProfileInput({ skill_level: 'expert' })).toContain('skill_level must be beginner, intermediate, or advanced')
+    expect(validateCulinaryProfileInput({ budget_band: 'unlimited' })).toContain('budget_band must be low, medium, or flexible')
     expect(validateCulinaryProfileInput(null)).toEqual(['Profile must be a JSON object'])
   })
+
+  it('merges ephemeral kitchen overlay restricting equipment and unioning host allergens', () => {
+    const base = {
+      equipment: ['oven', 'stovetop', 'air_fryer', 'microwave'],
+      hard_allergens: ['peanuts'],
+    }
+    const travelOverlay = {
+      active: true,
+      label: 'Cabin Airbnb',
+      equipment: ['stovetop', 'microwave'],
+      hostAllergens: ['tree_nuts'],
+    }
+
+    const merged = mergeEphemeralKitchenOverlay(base, travelOverlay)
+    expect(merged.equipment).toEqual(['stovetop', 'microwave'])
+    expect(merged.hard_allergens).toEqual(['peanuts', 'tree_nuts'])
+    expect(merged.ephemeral_kitchen.active).toBe(true)
+    expect(merged.ephemeral_kitchen.label).toBe('Cabin Airbnb')
+  })
 })
+

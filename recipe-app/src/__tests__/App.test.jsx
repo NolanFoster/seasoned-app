@@ -877,6 +877,87 @@ describe('Generate behaviour', () => {
 
 // ── Elevate ────────────────────────────────────────────────────────────────
 
+describe('Generation feedback on save', () => {
+  const FEEDBACK_URL = 'https://test-gen.example.com/feedback';
+  const SAVE_URL = 'https://test-api.example.com/recipe/save';
+
+  function findCall(url) {
+    return global.fetch.mock.calls.find(([calledUrl]) => calledUrl === url);
+  }
+
+  async function saveOpenRecipe(saveResponse = { id: 'saved-123' }) {
+    mockFetchOk(saveResponse);
+    fireEvent.click(screen.getByTitle('More options'));
+    fireEvent.click(screen.getByTitle('Save recipe'));
+    await waitFor(() => expect(findCall(SAVE_URL)).toBeDefined());
+  }
+
+  async function generateRecipe(generateResponse) {
+    mockFetchOk(generateResponse);
+    renderApp();
+    setInputValue('omelette');
+    fireEvent.click(screen.getByText('Generate'));
+    await waitFor(() => screen.getByRole('heading', { name: /AI Omelette/i }));
+  }
+
+  test('reports the save as positive feedback on the generation trace', async () => {
+    await generateRecipe({ ...GENERATE_RESPONSE, traceId: 'trace-abc' });
+    await saveOpenRecipe();
+
+    await waitFor(() => expect(findCall(FEEDBACK_URL)).toBeDefined());
+    const [, opts] = findCall(FEEDBACK_URL);
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body)).toEqual({
+      traceId: 'trace-abc',
+      event: 'recipe_saved',
+      recipeId: 'saved-123',
+    });
+  });
+
+  test('reads the trace id off the recipe when the response does not carry one', async () => {
+    await generateRecipe({
+      ...GENERATE_RESPONSE,
+      recipe: { ...GENERATE_RESPONSE.recipe, traceId: 'trace-from-recipe' },
+    });
+    await saveOpenRecipe();
+
+    await waitFor(() => expect(findCall(FEEDBACK_URL)).toBeDefined());
+    expect(JSON.parse(findCall(FEEDBACK_URL)[1].body).traceId).toBe('trace-from-recipe');
+  });
+
+  test('does not report feedback when the generation was not traced', async () => {
+    await generateRecipe(GENERATE_RESPONSE);
+    await saveOpenRecipe();
+
+    expect(findCall(FEEDBACK_URL)).toBeUndefined();
+  });
+
+  test('keeps the recipe saved when the feedback request fails', async () => {
+    await generateRecipe({ ...GENERATE_RESPONSE, traceId: 'trace-abc' });
+
+    mockFetchOk({ id: 'saved-123' });
+    global.fetch.mockRejectedValueOnce(new Error('feedback offline'));
+    fireEvent.click(screen.getByTitle('More options'));
+    fireEvent.click(screen.getByTitle('Save recipe'));
+
+    await waitFor(() => expect(findCall(FEEDBACK_URL)).toBeDefined());
+    fireEvent.click(screen.getByTitle('More options'));
+    expect(screen.getByTitle('Recipe saved')).toBeInTheDocument();
+  });
+
+  test('does not report feedback when a clipped recipe is saved', async () => {
+    mockFetchOk(CLIP_RESPONSE);
+    renderApp();
+    setInputValue('https://example.com/soup');
+    pressEnter();
+    await waitFor(() => screen.getByRole('heading', { name: /Clipped Soup/i }));
+
+    await saveOpenRecipe({ id: 'saved-456' });
+
+    expect(findCall(FEEDBACK_URL)).toBeUndefined();
+  });
+});
+
 describe('Elevate behaviour', () => {
   // Display a recipe card by searching and selecting a result
   async function loadRecipe() {

@@ -36,6 +36,11 @@ const ALIASES = new Map([
 
 const STOP_WORDS = new Set(['a', 'an', 'and', 'of', 'or', 'the', 'to', 'for', 'with', 'divided', 'as', 'needed'])
 
+// These ingredients are normally tracked as kitchen supplies rather than
+// consumed inventory. A caller can opt a name back in with `trackedStaples`
+// when a household keeps measured stock (for example, a baker tracking salt).
+export const PANTRY_LEDGER_STAPLES = Object.freeze(['salt', 'water', 'ice', 'pepper'])
+
 function asText(value) {
   if (value === null || value === undefined) return ''
   if (typeof value === 'object') return String(value.name || value.ingredient || value.text || '')
@@ -69,8 +74,40 @@ function aliasPhrase(value) {
   return result
 }
 
+/*
+ * Normalization is pure and runs O(items x lines) times during grocery
+ * grounding and pantry classification, so the same handful of strings is
+ * normalized over and over. Memoize it, bounded so a long-lived isolate cannot
+ * grow the cache without limit.
+ */
+const NORMALIZED_NAME_CACHE = new Map()
+const NORMALIZED_NAME_CACHE_LIMIT = 5000
+
 /** Return a stable, quantity-free ingredient name for fuzzy matching. */
+export function isPantryLedgerStaple(value, { trackedStaples = [] } = {}) {
+  const name = normalizeIngredientName(value)
+  if (!name) return false
+  const tracked = new Set((Array.isArray(trackedStaples) ? trackedStaples : [])
+    .map((item) => normalizeIngredientName(item))
+    .filter(Boolean))
+  return PANTRY_LEDGER_STAPLES.includes(name) && !tracked.has(name)
+}
+
 export function normalizeIngredientName(value) {
+  const cacheKey = typeof value === 'string' ? value : null
+  if (cacheKey !== null) {
+    const cached = NORMALIZED_NAME_CACHE.get(cacheKey)
+    if (cached !== undefined) return cached
+  }
+  const normalized = computeNormalizedIngredientName(value)
+  if (cacheKey !== null) {
+    if (NORMALIZED_NAME_CACHE.size >= NORMALIZED_NAME_CACHE_LIMIT) NORMALIZED_NAME_CACHE.clear()
+    NORMALIZED_NAME_CACHE.set(cacheKey, normalized)
+  }
+  return normalized
+}
+
+function computeNormalizedIngredientName(value) {
   let text = asText(value)
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -232,6 +269,107 @@ export function findPantryMatch(groceryItem, pantryItems, { now = new Date() } =
   })[0].item
 }
 
+/** Render a grocery line's amount the way the UI shows it ("3 tablespoons"). */
+function displayQuantity(item) {
+  return `${String(item?.quantity ?? '').trim()} ${String(item?.unit ?? '').trim()}`.trim()
+}
+
+/**
+ * Stable key for "the same amount written twice": canonical when the amount
+ * parses ("3 tablespoons" and "3 tbsp" are one key), literal text otherwise.
+ */
+function quantityKey(item) {
+  const parsed = parsePantryQuantity(item?.quantity, item?.unit)
+  if (parsed.amount === null) return displayQuantity(item).toLowerCase()
+  return `${parsed.amount}|${parsed.unit || ''}`
+}
+
+/**
+ * Fold `extra`'s amount into `target`, which is already in the merged list.
+ * Amounts are summed only when both sides parse to compatible units; anything
+ * else is kept side by side ("1 can + 2 cups") so no requested amount is lost.
+ */
+function mergeQuantityInto(target, extra) {
+  const targetText = displayQuantity(target)
+  const extraText = displayQuantity(extra)
+  if (!extraText) return
+  if (!targetText) {
+    target.quantity = extra.quantity ?? ''
+    target.unit = extra.unit ?? ''
+    return
+  }
+
+  const left = parsePantryQuantity(target.quantity, target.unit)
+  const right = parsePantryQuantity(extra.quantity, extra.unit)
+  if (left.amount !== null && right.amount !== null && compatibleUnits(left.unit, right.unit)) {
+    const converted = left.unit && right.unit
+      ? convertAmount(right.amount, right.unit, left.unit)
+      : right.amount
+    if (converted !== null) {
+      target.quantity = `${formatAmount(left.amount + converted)}${left.unit ? ` ${left.unit}` : ''}`
+      target.unit = ''
+      return
+    }
+  }
+
+  // Units that cannot be summed (a can plus a cup) stay visible as both parts.
+  const parts = targetText.split(' + ')
+  if (parts.includes(extraText)) return
+  target.quantity = [...parts, extraText].join(' + ')
+  target.unit = ''
+}
+
+/**
+ * Collapse grocery lines naming the same ingredient into a single line.
+ *
+ * The aggregator prompt asks the LLM for one line per ingredient, but a small
+ * instruct model still repeats an item inside a category and mirrors the same
+ * lines under a second aisle ("unsalted butter 3 tbsp" and "4 tbsp" listed in
+ * Dairy and again in Pantry Staples). Nothing downstream can tell those from
+ * genuine lines, so collapse them here, before pantry classification.
+ *
+ * Matching is exact on the normalized name: the lenient token-overlap matcher
+ * used for pantry lookups would fold "peanut butter" into "butter". The first
+ * occurrence keeps its name, category and staple flag, so aisle order and the
+ * buy/owned classification stay as the model intended.
+ *
+ * Amounts are summed, with one exception: an identical amount arriving from a
+ * different category is a mirrored copy of a line already counted, and summing
+ * it would double the quantity the cook has to buy. Repeats within one
+ * category are still summed — there they are separate recipe lines the model
+ * failed to combine.
+ */
+export function mergeDuplicateGroceryItems(items) {
+  const merged = []
+  const byName = new Map()
+  for (const item of Array.isArray(items) ? items : []) {
+    const key = item && typeof item === 'object' && item.name
+      ? normalizeIngredientName(item.name) || String(item.name).trim().toLowerCase()
+      : ''
+    if (!key) {
+      merged.push(item)
+      continue
+    }
+
+    const categoryKey = String(item.category ?? '').trim().toLowerCase()
+    const existing = byName.get(key)
+    if (!existing) {
+      const copy = { ...item }
+      byName.set(key, { item: copy, amountSources: new Map([[quantityKey(item), categoryKey]]) })
+      merged.push(copy)
+      continue
+    }
+
+    const amountKey = quantityKey(item)
+    const seenIn = existing.amountSources.get(amountKey)
+    if (seenIn !== undefined && seenIn !== categoryKey) continue
+
+    mergeQuantityInto(existing.item, item)
+    if (seenIn === undefined) existing.amountSources.set(amountKey, categoryKey)
+  }
+  return merged
+}
+
 /**
  * Mark generated grocery lines as buy, owned, or optional_staple. Quantities
  * are reduced only when both sides provide compatible numeric units. The
@@ -279,7 +417,10 @@ export function classifyGroceryItems(items, pantryItems, { now = new Date() } = 
       }
     } else if (matches.length && !hasIncompatibleUnit) {
       inventoryStatus = 'owned'
-    } else if (item.optionalStaple || item.isStaple || /pantry|staple/i.test(item.category || '')) {
+    } else if (item.optionalStaple || item.isStaple === true) {
+      // Category names are aisle labels, not proof that an item is already
+      // on hand. Trust the LLM's explicit staple marker so a specialty item
+      // placed in "Pantry Staples" still appears in Buy.
       inventoryStatus = 'optional_staple'
     }
 
@@ -320,12 +461,22 @@ export function getExpiringPantryItems(items, days = 7, { now = new Date() } = {
  * Unknown quantities are represented as remove operations because the user
  * has opted into consuming the item and cannot be given a safe numeric delta.
  */
-export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date() } = {}) {
+export function buildPantryDepletionPlan(recipe, pantryItems, {
+  now = new Date(),
+  servingsCooked = null,
+  trackedStaples = [],
+} = {}) {
   const requirements = new Map()
+  const recipeServings = Number(recipe?.servings || recipe?.recipe_yield || recipe?.yield || 0)
+  const requestedServings = Number(servingsCooked)
+  const scale = Number.isFinite(requestedServings) && requestedServings > 0 && recipeServings > 0
+    ? requestedServings / recipeServings
+    : 1
   const recipeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : []
   for (const ingredient of recipeIngredients) {
     const parsed = parsePantryIngredient(ingredient)
-    if (!parsed.name) continue
+    if (!parsed.name || isPantryLedgerStaple(parsed.name, { trackedStaples })) continue
+    if (parsed.amount !== null) parsed.amount *= scale
 
     const existing = requirements.get(parsed.name)
     if (!existing) {
@@ -376,6 +527,7 @@ export function buildPantryDepletionPlan(recipe, pantryItems, { now = new Date()
         action,
         amount,
         unit,
+        expectedQuantity: item.quantity ?? null,
       }
       if (remainingQuantity !== undefined) operation.remainingQuantity = remainingQuantity
       operationByItem.set(key, operation)

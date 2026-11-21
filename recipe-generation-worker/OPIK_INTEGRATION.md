@@ -20,6 +20,7 @@ The integration follows a **tracing wrapper pattern**:
 - **Embedding Generation Span**: Tracks vector embedding creation
 - **Similarity Search Span**: Observes recipe similarity search operations
 - **LLaMA Generation Span**: Monitors the actual AI recipe generation
+- **Save Feedback Score**: Records saving a generated recipe as positive feedback on its trace
 
 ### Health Checking
 - **Graceful Degradation**: If Opik is not healthy (no API key or SDK issues), tracing is skipped entirely
@@ -39,7 +40,11 @@ export class OpikClient {
   createSpan(trace, spanName, spanType, input)
   endSpan(span, output, error)
   endTrace(trace, output, error)
-  
+
+  // Feedback scores on an existing trace
+  getTraceId(trace)
+  logTraceFeedback(traceId, { name, value, reason, categoryName })
+
   // Health checking
   isHealthy()
 }
@@ -54,6 +59,31 @@ Tracing is integrated at key points in the recipe generation flow:
 3. **Embedding Span**: Around `generateQueryEmbedding` calls
 4. **Search Span**: Around `findSimilarRecipes` operations
 5. **LLaMA Span**: Around the actual AI generation in `generateRecipeWithLLaMA`
+6. **Feedback Score**: Written onto the generation trace when the user saves the generated recipe
+
+### User Feedback on Traces
+
+`POST /generate` returns the id of the trace it created (`traceId`, both at the
+top level of the response and on the recipe). The client keeps that id with the
+generated recipe and posts it back when the user saves the recipe:
+
+```bash
+curl -X POST https://recipe-generation-worker.nolanfoster.workers.dev/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"traceId": "<trace id from /generate>", "event": "recipe_saved", "recipeId": "<saved id>"}'
+```
+
+Saving is the strongest signal available that the user liked what the model
+produced, so the endpoint writes a positive feedback score
+(`user_saved_recipe = 1`, category `positive`) onto that trace, which makes
+saved-vs-generated visible per trace in the Opik dashboard.
+
+The event names the endpoint accepts are fixed server-side
+(`FEEDBACK_EVENTS` in `src/handlers/feedback-handler.js`), so a caller can only
+report that something happened - it can never choose the score name or value.
+When no `OPIK_API_KEY` is configured the endpoint still returns `200` with
+`recorded: false`, because there is no trace to attach the signal to and that is
+not a client error.
 
 ### Error Handling
 
@@ -130,6 +160,7 @@ The Opik client includes comprehensive tests that verify:
 - **Constructor and Configuration**: API key management and workspace setup
 - **Health Checking**: Proper detection of client readiness
 - **Tracing Operations**: Safe handling of trace/span creation and cleanup
+- **Feedback Scores**: Trace id resolution and scoring a trace after generation finished
 - **Error Handling**: Graceful degradation when tracing fails
 - **Factory Functions**: Client creation utilities
 

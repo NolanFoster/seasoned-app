@@ -88,9 +88,13 @@ export function extractServingsFromYield(yieldValue) {
  * USDA FoodData Central API client for nutrition data
  */
 class USDANutritionClient {
-  constructor(apiKey) {
+  constructor(apiKey, { fetchImpl = globalThis.fetch, baseUrl = 'https://api.nal.usda.gov/fdc/v1' } = {}) {
     this.apiKey = apiKey;
-    this.baseUrl = 'https://api.nal.usda.gov/fdc/v1';
+    this.baseUrl = baseUrl;
+    this.fetchImpl = fetchImpl;
+    if (typeof this.fetchImpl !== 'function') {
+      throw new TypeError('A fetch implementation is required');
+    }
   }
 
   /**
@@ -103,13 +107,16 @@ class USDANutritionClient {
     const searchUrl = `${this.baseUrl}/foods/search`;
     const params = new URLSearchParams({
       query: query.trim(),
-      pageSize: pageSize,
-      api_key: this.apiKey,
-      dataType: ['Foundation', 'SR Legacy'] // Focus on high-quality data
+      pageSize: String(pageSize),
+      api_key: this.apiKey
     });
+    // FoodData Central expects repeated dataType parameters, not a
+    // JavaScript array string. Restrict grounding to the most stable sources.
+    params.append('dataType', 'Foundation');
+    params.append('dataType', 'SR Legacy');
 
     try {
-      const response = await fetch(`${searchUrl}?${params}`);
+      const response = await this.fetchImpl(`${searchUrl}?${params}`);
       
       if (!response.ok) {
         throw new Error(`USDA API error: ${response.status} ${response.statusText}`);
@@ -135,7 +142,7 @@ class USDANutritionClient {
     });
 
     try {
-      const response = await fetch(`${detailUrl}?${params}`);
+      const response = await this.fetchImpl(`${detailUrl}?${params}`);
       
       if (!response.ok) {
         throw new Error(`USDA API error: ${response.status} ${response.statusText}`);

@@ -4,7 +4,9 @@ import { useMealPlan } from './MealPlanContext.jsx'
 import GroceryListModal from './GroceryListModal.jsx'
 import GeneratingGroceryCard from './GeneratingGroceryCard.jsx'
 import { flattenIngredients } from './GroceryListModal.jsx'
-import { classifyGroceryItems, getExpiringPantryItems } from '../../shared/pantry-planning.js'
+import { classifyGroceryItems, getExpiringPantryItems, mergeDuplicateGroceryItems } from '../../shared/pantry-planning.js'
+import PlannerSuggestions from './PlannerSuggestions.jsx'
+import PlanInterchangeModal from './PlanInterchangeModal.jsx'
 
 const RECIPE_GENERATION_URL = import.meta.env.VITE_RECIPE_GENERATION_URL
 
@@ -43,6 +45,44 @@ const ShoppingCartIcon = ({ size = 16 }) => (
   </svg>
 )
 
+const SparklesIcon = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+    <path d="M19 15l.9 2.4L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.6L19 15z" />
+  </svg>
+)
+
+const CalendarPlusIcon = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <line x1="12" y1="13" x2="12" y2="19" />
+    <line x1="9" y1="16" x2="15" y2="16" />
+  </svg>
+)
+
 /**
  * Converts the API grocery response (categories array) into a flat array
  * of GroceryListItem objects suitable for MealPlanContext storage.
@@ -63,7 +103,7 @@ export function normalizeApiResponse(categories, pantryItems = [], pantryPlanner
         id: now.toString(36) + Math.random().toString(36).substr(2),
         name: apiItem.name,
         quantity: apiItem.quantity || '',
-        unit: '',
+        unit: apiItem.unit || '',
         category,
         completed: false,
         isCustom: false,
@@ -72,10 +112,33 @@ export function normalizeApiResponse(categories, pantryItems = [], pantryPlanner
         source: 'ai-generated',
         isStaple,
         optionalStaple: isStaple,
+        // Preserve the worker's deterministic gap-fill metadata. The client
+        // rechecks it below against its current pantry snapshot, which keeps
+        // a list accurate if inventory changed while the request was running.
+        ...(apiItem.inventoryStatus ? { inventoryStatus: apiItem.inventoryStatus } : {}),
+        ...(Array.isArray(apiItem.pantryItemIds) ? { pantryItemIds: apiItem.pantryItemIds } : {}),
+        ...(apiItem.pantryQuantity != null ? { pantryQuantity: apiItem.pantryQuantity } : {}),
+        ...(apiItem.missingQuantity != null ? { missingQuantity: apiItem.missingQuantity } : {}),
+        ...(apiItem.requestedQuantity != null ? { requestedQuantity: apiItem.requestedQuantity } : {}),
       })
     })
   })
-  return pantryPlannerEnabled ? classifyGroceryItems(items, pantryItems) : items
+  // The worker runs the same pass, but the app and the worker deploy
+  // separately: a response from an older worker still reaches the shopper with
+  // the same ingredient repeated across aisles unless the client collapses it.
+  const deduped = mergeDuplicateGroceryItems(items)
+  if (!pantryPlannerEnabled) return deduped
+
+  // The worker already applies the pantry quantity and returns the remaining
+  // gap as `quantity`. Reclassify against the live client snapshot, but start
+  // from the original request quantity; otherwise a partial match is
+  // subtracted twice (for example, 2 requested - 1 on hand becomes a 1-item
+  // response that is then incorrectly marked owned by the browser).
+  const itemsForClassification = deduped.map((item) => ({
+    ...item,
+    quantity: item.requestedQuantity ?? item.quantity,
+  }))
+  return classifyGroceryItems(itemsForClassification, pantryItems)
 }
 
 /**
@@ -106,9 +169,17 @@ export default function MealPlannerDrawer({
   pantryItems = [],
   pantryPlannerEnabled = false,
   onOpenPantry,
+  autofillEnabled = false,
+  onOpenAutofill,
+  bulkScheduleEnabled = false,
+  onOpenBulkSchedule,
+  recentRecipes = [],
+  planMigrationEnabled = false,
+  hardAllergens = [],
 }) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
+  const [isPlanInterchangeOpen, setIsPlanInterchangeOpen] = useState(false)
   const drawerRef = useRef(null)
   const closeButtonRef = useRef(null)
   const previousFocusRef = useRef(null)
@@ -118,12 +189,12 @@ export default function MealPlannerDrawer({
   // Keep keyboard focus inside the drawer while it is modal, then restore the
   // calendar toggle (or whichever control opened it) when it closes.
   useEffect(() => {
+    if (isPlanInterchangeOpen) return undefined
     if (!isOpen) {
       const previous = previousFocusRef.current
       if (previous && document.contains(previous) && !drawerRef.current?.contains(previous)) previous.focus()
       return undefined
     }
-
     previousFocusRef.current = document.activeElement
     closeButtonRef.current?.focus()
     function getFocusable() {
@@ -152,7 +223,7 @@ export default function MealPlannerDrawer({
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, isPlanInterchangeOpen])
 
   const {
     mealPlan,
@@ -164,6 +235,7 @@ export default function MealPlannerDrawer({
     generateGroceryListError,
     setGroceryList,
     clearGroceryList,
+    replacePlan = () => {},
   } = useMealPlan()
 
   // True if the meal plan has at least one scheduled or staged recipe
@@ -212,11 +284,34 @@ export default function MealPlannerDrawer({
       const res = await fetch(`${RECIPE_GENERATION_URL}/grocery-list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients }),
+        body: JSON.stringify({
+          ingredients,
+          // The worker performs the same deterministic gap-fill pass as the
+          // client. Send only the fields it needs; the client still
+          // reclassifies with its live pantry snapshot for offline changes.
+          ...(pantryPlannerEnabled ? {
+            pantryItems: pantryItems.map(({ id, name, quantity, unit, expiresOn, expires_on }) => ({
+              id,
+              name,
+              quantity,
+              unit,
+              expiresOn: expiresOn || expires_on || null,
+            }))
+          } : {})
+        }),
         signal: controller.signal,
       })
       clearTimeout(tid)
-      if (!res.ok) throw new Error(`Server error: ${res.status}`)
+      if (!res.ok) {
+        // The worker returns { error, code } on failure; surface it instead of a
+        // bare status so users (and bug reports) say what actually went wrong.
+        const detail = await res.json().catch(() => null)
+        throw new Error(
+          detail?.error
+            ? `${detail.error}${detail.code ? ` (${detail.code})` : ''}`
+            : `Server error: ${res.status}`
+        )
+      }
       const data = await res.json()
       if (!data.success || !Array.isArray(data.categories))
         throw new Error('Invalid response from server. Please try again.')
@@ -235,7 +330,7 @@ export default function MealPlannerDrawer({
    * Transitions the footer back to the LOADING state.
    */
   function handleRegenerate() {
-    clearGroceryList()
+    // DO NOT clearGroceryList() here so the existing list is preserved during generation/save
     handleGenerate()
   }
 
@@ -323,6 +418,47 @@ export default function MealPlannerDrawer({
       >
         <div className="drawer-header">
           <span id="meal-planner-title" className="drawer-title">Meal Planner</span>
+          {autofillEnabled && typeof onOpenAutofill === 'function' && (
+            <button
+              type="button"
+              className="drawer-autofill-btn"
+              onClick={onOpenAutofill}
+              aria-label="Auto-fill my week"
+              title="Auto-fill empty slots with recipes"
+            >
+              <SparklesIcon size={16} />
+              <span>Auto-fill</span>
+            </button>
+          )}
+          {bulkScheduleEnabled && typeof onOpenBulkSchedule === 'function' && (
+            <button
+              type="button"
+              className="drawer-bulk-schedule-btn"
+              onClick={onOpenBulkSchedule}
+              disabled={upNext.length === 0}
+              aria-label="Schedule all staged recipes"
+              title={
+                upNext.length === 0
+                  ? 'Stage recipes in Up Next first'
+                  : 'Schedule every recipe staged in Up Next'
+              }
+            >
+              <CalendarPlusIcon size={16} />
+              <span>Schedule all</span>
+            </button>
+          )}
+          {planMigrationEnabled && (
+            <button
+              type="button"
+              className="drawer-plan-interchange-btn"
+              onClick={() => setIsPlanInterchangeOpen(true)}
+              aria-label="Import or export meal week"
+              title="Move a week between planners"
+            >
+              <span aria-hidden="true">↕</span>
+              <span>Move week</span>
+            </button>
+          )}
           <button
             type="button"
             ref={closeButtonRef}
@@ -345,6 +481,18 @@ export default function MealPlannerDrawer({
               )}
             </div>
           )}
+          {planMigrationEnabled && !hasMeals && (
+            <div className="plan-migration-callout" role="note">
+              <div>
+                <strong>Moving from another planner?</strong>
+                <span>Bring your week to Seasoned from a JSON, CSV, or pasted export.</span>
+              </div>
+              <button type="button" onClick={() => setIsPlanInterchangeOpen(true)}>Import a week</button>
+            </div>
+          )}
+          {/* Only while the drawer is open: the panel stays mounted when closed,
+              and a hidden copy of every recent recipe helps nobody. */}
+          {isOpen && bulkScheduleEnabled && <PlannerSuggestions recipes={recentRecipes} />}
           {children}
         </div>
         <div className="drawer-footer">
@@ -358,6 +506,17 @@ export default function MealPlannerDrawer({
         pantryItems={pantryPlannerEnabled ? pantryItems : []}
         pantryPlannerEnabled={pantryPlannerEnabled}
       />
+      {planMigrationEnabled && (
+        <PlanInterchangeModal
+          open={isPlanInterchangeOpen}
+          onClose={() => setIsPlanInterchangeOpen(false)}
+          mealPlan={mealPlan}
+          upNext={upNext}
+          groceryList={groceryList}
+          hardAllergens={hardAllergens}
+          onCommit={replacePlan}
+        />
+      )}
     </>
   )
 }

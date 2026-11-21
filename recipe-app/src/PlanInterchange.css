@@ -1,0 +1,173 @@
+.plan-interchange-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 200);
+  display: grid;
+  place-items: center;
+  padding: calc(16px + var(--safe-top, 0px)) calc(16px + var(--safe-right, 0px)) calc(16px + var(--safe-bottom, 0px)) calc(16px + var(--safe-left, 0px));
+  background: rgb(var(--color-shadow-rgb, 0 0 0) / 0.72);
+}
+
+.plan-interchange-modal {
+  width: min(560px, 100%);
+  max-height: min(760px, 100%);
+  overflow: auto;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 18px);
+  box-shadow: var(--elev-3);
+}
+
+.plan-interchange-header,
+.plan-interchange-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-interchange-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.plan-interchange-header p,
+.plan-interchange-export span,
+.plan-interchange-import > span {
+  display: block;
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.plan-interchange-content {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.plan-interchange-export,
+.plan-interchange-import,
+.plan-interchange-report {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+
+.plan-interchange-actions,
+.plan-interchange-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plan-interchange-import label,
+.plan-interchange-export strong {
+  font-size: 0.9rem;
+}
+
+.plan-interchange-import input[type='file'] {
+  width: 100%;
+  padding: 8px;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.plan-interchange-import textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 10px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.plan-interchange-actions button,
+.plan-interchange-import button,
+.plan-interchange-footer button {
+  min-height: 44px;
+  padding: 9px 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.plan-interchange-actions button:hover,
+.plan-interchange-import button:hover,
+.plan-interchange-footer button:hover {
+  border-color: var(--accent);
+}
+
+.plan-interchange-preview-btn,
+.plan-interchange-commit-btn {
+  color: var(--on-primary, #1a1408) !important;
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  font-weight: 700;
+}
+
+.plan-interchange-preview-btn:disabled,
+.plan-interchange-commit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.plan-interchange-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.plan-interchange-report {
+  color: var(--color-on-surface, var(--text));
+  background: rgb(var(--color-secondary-rgb, 91 184 122) / 0.08);
+}
+
+.plan-interchange-report.is-blocked,
+.plan-interchange-error {
+  color: var(--color-error, #f08a8a);
+  background: rgb(217 79 79 / 0.1);
+}
+
+.plan-interchange-report span,
+.plan-interchange-report ul,
+.plan-interchange-report details {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.plan-interchange-report ul {
+  padding-left: 18px;
+}
+
+.plan-interchange-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 560px) {
+  .plan-interchange-backdrop {
+    place-items: end center;
+  }
+
+  .plan-interchange-modal {
+    max-height: calc(100% - var(--safe-top, 0px));
+    border-radius: var(--radius-lg, 18px) var(--radius-lg, 18px) 0 0;
+  }
+}

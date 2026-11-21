@@ -44,6 +44,10 @@ function initialForm(profile) {
     cuisine: profile?.cuisine_likes?.[0] || "",
     mealType: "",
     cookingMethod: "",
+    nutritionFocus: profile?.nutrition_goals?.focus || "",
+    budgetBand: profile?.budget_band || "flexible",
+    mealBudgetUsd: profile?.meal_budget_usd ?? "",
+    seasonality: profile?.seasonality?.enabled ? "in_season" : "any",
     ingredients: "",
     excludeIngredients: listValue(profile?.exclude_ingredients).join(", "),
     usePantry: false,
@@ -112,6 +116,18 @@ export default function GenerationComposer({
       ingredients: commaSeparated(form.ingredients),
       excludeIngredients: commaSeparated(form.excludeIngredients),
     };
+    if (form.budgetBand && form.budgetBand !== "flexible") {
+      overrides.budgetBand = form.budgetBand;
+    }
+    if (form.mealBudgetUsd !== "" && !isNaN(Number(form.mealBudgetUsd))) {
+      overrides.mealBudgetUsd = Number(form.mealBudgetUsd);
+    }
+    if (form.seasonality === "in_season") {
+      overrides.seasonality = { enabled: true, hemisphere: profile?.seasonality?.hemisphere || "n", climate_bias: "prefer_lower_impact" };
+    }
+    if (form.nutritionFocus) {
+      overrides.nutritionGoals = { focus: form.nutritionFocus };
+    }
     if (pantryPlannerEnabled && form.usePantry) {
       overrides.usePantry = true;
       if (form.prioritizeExpiring && expiringPantryItems.length > 0) overrides.prioritizeExpiring = true;
@@ -162,6 +178,9 @@ export default function GenerationComposer({
               {profile.default_servings} servings
               {" · up to "}
               {profile.max_cook_time_min} min
+              {profile.nutrition_goals?.focus && (
+                <> · {profile.nutrition_goals.focus.replace(/_/g, " ")}</>
+              )}
             </span>
             {profile.hard_allergens?.length > 0 && (
               <span className="generation-composer-safety">
@@ -216,6 +235,19 @@ export default function GenerationComposer({
               </select>
             </label>
             <label>
+              Nutrition focus
+              <select
+                value={form.nutritionFocus}
+                onChange={(event) => setField("nutritionFocus", event.target.value)}
+              >
+                <option value="">Any / Balanced</option>
+                <option value="high_protein">High protein</option>
+                <option value="low_sodium">Low sodium</option>
+                <option value="lower_carb">Lower carb</option>
+                <option value="heart_healthy">Heart healthy</option>
+              </select>
+            </label>
+            <label>
               Servings
               <input
                 type="number"
@@ -251,6 +283,41 @@ export default function GenerationComposer({
                     {value[0].toUpperCase() + value.slice(1)}
                   </option>
                 ))}
+              </select>
+            </label>
+            <label>
+              Budget constraint
+              <select
+                value={form.budgetBand}
+                onChange={(event) => setField("budgetBand", event.target.value)}
+              >
+                <option value="flexible">Flexible ($$$)</option>
+                <option value="low">Budget / Pantry staples ($)</option>
+                <option value="medium">Moderate ($$)</option>
+              </select>
+            </label>
+            <label>
+              Target budget ($ USD)
+              <input
+                type="number"
+                min="1"
+                max="500"
+                step="0.5"
+                value={form.mealBudgetUsd}
+                onChange={(event) =>
+                  setField("mealBudgetUsd", event.target.value)
+                }
+                placeholder="e.g. 15"
+              />
+            </label>
+            <label>
+              Seasonality
+              <select
+                value={form.seasonality}
+                onChange={(event) => setField("seasonality", event.target.value)}
+              >
+                <option value="any">Year-round / Any</option>
+                <option value="in_season">Peak In-Season & Climate-smart</option>
               </select>
             </label>
           </div>

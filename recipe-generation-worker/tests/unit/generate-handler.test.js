@@ -167,6 +167,32 @@ describe('Generate Handler - Unit Tests', () => {
   });
 
   describe('Recipe Generation', () => {
+    it('returns ingredient entities only when the feature flag is on', async () => {
+      const onResponse = await handleGenerate(
+        createPostRequest('/generate', { ingredients: ['rice'], dietary: ['vegan'] }),
+        { INGREDIENT_ENTITY_V1: 'on' },
+        corsHeaders
+      );
+      const onData = await onResponse.json();
+
+      expect(onResponse.status).toBe(200);
+      expect(onData.recipe.ingredientEntities).toHaveLength(3);
+      expect(onData.recipe.ingredientEntities[0]).toMatchObject({
+        modelId: 'ingredient-entity-v1',
+        parseStatus: 'parsed'
+      });
+      expect(onData.recipe.dietaryComparison.requestedDietary).toEqual(['vegan']);
+      expect(onData.recipe.derivedDietaryStyles).toEqual(['undetermined']);
+
+      const offResponse = await handleGenerate(
+        createPostRequest('/generate', { ingredients: ['rice'] }),
+        {},
+        corsHeaders
+      );
+      const offData = await offResponse.json();
+      expect(offData.recipe).not.toHaveProperty('ingredientEntities');
+    });
+
     it('should generate recipe successfully with valid ingredients', async () => {
       const requestBody = {
         ingredients: ['chicken', 'rice'],
@@ -869,6 +895,31 @@ describe('Generate Handler - Unit Tests', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+
+    it('should return the generation trace id so a save can be scored as feedback', async () => {
+      const envWithOpik = {
+        ...enhancedMockEnv,
+        ...mockEnvWithOpik
+      };
+
+      const request = createPostRequest('/generate', { ingredients: ['chicken', 'rice'] });
+      const response = await handleGenerate(request, envWithOpik, corsHeaders);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.traceId).toBe('mock-trace-id');
+      expect(data.recipe.traceId).toBe('mock-trace-id');
+    });
+
+    it('should omit the trace id when tracing is disabled', async () => {
+      const request = createPostRequest('/generate', { ingredients: ['chicken', 'rice'] });
+      const response = await handleGenerate(request, enhancedMockEnv, corsHeaders);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.traceId).toBeUndefined();
+      expect(data.recipe.traceId).toBeUndefined();
     });
 
     it('should gracefully handle Opik tracing disabled when no API key', async () => {
@@ -2215,7 +2266,7 @@ describe('Allergen safety enforcement', () => {
     const response = await handleGenerate(createPostRequest('/generate', {
       recipeName: 'Satay',
       hardAllergens: ['peanut']
-    }), allergenEnv, allergenCorsHeaders);
+    }), { ...allergenEnv, INGREDIENT_ENTITY_V1: 'on' }, allergenCorsHeaders);
 
     expect(response.status).toBe(422);
     const data = await response.json();
@@ -2307,7 +2358,7 @@ describe('Food-process safety enforcement', () => {
 
     const response = await handleGenerate(createPostRequest('/generate', {
       recipeName: 'Canned green beans'
-    }), processEnv, processCorsHeaders);
+    }), { ...processEnv, INGREDIENT_ENTITY_V1: 'on' }, processCorsHeaders);
 
     expect(response.status).toBe(422);
     const data = await response.json();
@@ -2441,5 +2492,169 @@ describe('Food-process safety enforcement', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data.recipe.processSafetySummary).toBeUndefined();
+  });
+
+  it('incorporates nutrition goals into LLaMA generation prompt', async () => {
+    mockGeneratedRecipe({
+      name: 'High-Protein Chili',
+      ingredients: ['1 lb lean ground turkey', '1 can black beans', '1 can diced tomatoes', 'chili powder'],
+      instructions: ['Brown the turkey.', 'Add beans, tomatoes, and chili powder.', 'Simmer for 20 minutes.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Turkey Chili',
+      nutritionGoals: {
+        focus: 'high_protein',
+        targets: {
+          protein_g: 35,
+          sodium_mg: 600,
+          calories_min: 400,
+          calories_max: 600
+        }
+      }
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const lastCall = processMockAI.run.mock.calls.find((call) => call[0] === '@cf/meta/llama-4-scout-17b-16e-instruct');
+    expect(lastCall).toBeDefined();
+    const promptText = lastCall[1].messages[1].content;
+    expect(promptText).toContain('align with nutrition focus: high protein');
+    expect(promptText).toContain('target at least 35g protein per serving');
+    expect(promptText).toContain('keep sodium under 600mg per serving');
+    expect(promptText).toContain('between 400 and 600 calories per serving');
+  });
+
+  it('repairs an allergen-blocked generated draft without an extra model call when enabled', async () => {
+    mockGeneratedRecipe({
+      name: 'Rice Pilaf',
+      description: 'A simple rice pilaf.',
+      ingredients: ['1 tablespoon butter', '1 cup rice'],
+      instructions: ['Cook the rice until tender.'],
+      prepTime: '5 minutes',
+      cookTime: '15 minutes',
+      totalTime: '20 minutes',
+      servings: '2',
+      cuisine: 'Mediterranean'
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Rice Pilaf',
+      hardAllergens: ['milk']
+    }), {
+      ...processEnv,
+      RECIPE_REMEDIATION_V1: 'on'
+    }, processCorsHeaders);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.recipe.ingredients[0]).toBe('1 tablespoon olive oil');
+    expect(data.recipe.remediation).toMatchObject({ status: 'repaired', attempts: 1 });
+    expect(data.remediation.status).toBe('repaired');
+    expect(processMockAI.run).toHaveBeenCalledTimes(2); // one embedding and the initial draft only
+  });
+
+  it('keeps shadow remediation logs free of recipe and ingredient text', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    mockGeneratedRecipe({
+      name: 'Butter rice',
+      description: 'A test recipe with private line text.',
+      ingredients: ['1 tablespoon butter', '1 cup rice'],
+      instructions: ['Cook the rice until tender.'],
+      prepTime: '5 minutes',
+      cookTime: '15 minutes',
+      totalTime: '20 minutes',
+      servings: '2'
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Rice Pilaf',
+      hardAllergens: ['milk']
+    }), {
+      ...processEnv,
+      RECIPE_REMEDIATION_V1: 'shadow'
+    }, processCorsHeaders);
+    const data = await response.json();
+    const logs = info.mock.calls.map((call) => call.join(' ')).join(' ');
+
+    expect(response.status).toBe(422);
+    expect(data.code).toBe('ALLERGEN_SAFETY_BLOCK');
+    expect(data).not.toHaveProperty('remediation');
+    expect(logs).toContain('ALLERGEN_SAFETY_BLOCK');
+    expect(logs).not.toContain('butter');
+    expect(logs).not.toContain('Butter rice');
+  });
+
+  it('keeps generate rejection status and code unchanged when remediation is off', async () => {
+    mockGeneratedRecipe({
+      name: 'Rice Pilaf',
+      description: 'A simple rice pilaf.',
+      ingredients: ['1 tablespoon butter', '1 cup rice'],
+      instructions: ['Cook the rice until tender.'],
+      prepTime: '5 minutes',
+      cookTime: '15 minutes',
+      totalTime: '20 minutes',
+      servings: '2',
+      cuisine: 'Mediterranean'
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Rice Pilaf',
+      hardAllergens: ['milk']
+    }), processEnv, processCorsHeaders);
+    const data = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(data.code).toBe('ALLERGEN_SAFETY_BLOCK');
+    expect(data).not.toHaveProperty('remediation');
+    expect(processMockAI.run).toHaveBeenCalledTimes(2);
+  });
+
+  it('incorporates inferred taste preferences into LLaMA prompt as soft guidance', async () => {
+    mockGeneratedRecipe({
+      name: 'Thai Basil Chicken',
+      ingredients: ['1 lb chicken', 'thai basil', 'soy sauce', 'garlic'],
+      instructions: ['Stir fry chicken with garlic.', 'Toss in thai basil and sauce.']
+    });
+
+    const response = await handleGenerate(createPostRequest('/generate', {
+      recipeName: 'Basil Chicken',
+      inferredPreferences: {
+        top_cuisines: [{ name: 'thai', score: 8.5, count: 4 }],
+        top_ingredients: [{ name: 'garlic', score: 6.2, count: 5 }]
+      }
+    }), processEnv, processCorsHeaders);
+
+    expect(response.status).toBe(200);
+    const lastCall = processMockAI.run.mock.calls.find((call) => call[0] === '@cf/meta/llama-4-scout-17b-16e-instruct');
+    expect(lastCall).toBeDefined();
+    const promptText = lastCall[1].messages[1].content;
+    expect(promptText).toContain('inferred taste preferences (soft guidance');
+    expect(promptText).toContain('frequently enjoyed cuisines: thai');
+    expect(promptText).toContain('frequently enjoyed ingredients: garlic');
+  });
+});
+
+describe('Cook program generation rollout', () => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
+
+  it('attaches a cook program only when the generation flag is on', async () => {
+    const enabled = await handleGenerate(createPostRequest('/generate', { recipeName: 'Test dinner' }), {
+      ...mockEnv,
+      COOK_PROGRAM_V1: 'on'
+    }, corsHeaders);
+    const enabledData = await enabled.json();
+
+    expect(enabled.status).toBe(200);
+    expect(enabledData.recipe.cookProgram).toMatchObject({ modelId: 'cook-program-v1', status: 'partial' });
+    expect(enabledData.recipe.cookProgram.uncompiled.length).toBeGreaterThan(0);
+
+    const disabled = await handleGenerate(createPostRequest('/generate', { recipeName: 'Test dinner' }), mockEnv, corsHeaders);
+    const disabledData = await disabled.json();
+    expect(disabled.status).toBe(200);
+    expect(disabledData.recipe).not.toHaveProperty('cookProgram');
   });
 });

@@ -20,6 +20,7 @@ const QUICK_ADAPTATIONS = [
   { label: 'Dairy-free', dietary: 'dairy_free' },
   { label: 'Gluten-free', dietary: 'gluten_free' },
   { label: 'Higher protein', nutritionFocus: 'high_protein' },
+  { label: 'Gentler / Smaller plate', lifestyleModes: 'appetite_gentle' },
   { label: '30 minutes', maxCookTime: 30 },
   { label: 'Air fryer', equipment: 'air_fryer' },
   { label: 'Kid-mild', spiceLevel: 1 },
@@ -35,6 +36,7 @@ function initialForm(profile) {
     spiceLevel: profile?.spice_level ?? 2,
     excludeIngredients: '',
     preserveNote: '',
+    lifestyleModes: profile?.lifestyle_modes ?? [],
   }
 }
 
@@ -46,6 +48,16 @@ function toggleValue(values, value) {
 
 function commaSeparated(value) {
   return String(value || '').split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function isQuickAdaptationActive(form, adaptation) {
+  if (adaptation.dietary) return form.dietary.includes(adaptation.dietary)
+  if (adaptation.nutritionFocus) return form.nutritionFocus === adaptation.nutritionFocus
+  if (adaptation.maxCookTime) return Number(form.maxCookTime) === adaptation.maxCookTime
+  if (adaptation.equipment) return form.equipment.includes(adaptation.equipment)
+  if (adaptation.spiceLevel !== undefined) return Number(form.spiceLevel) === adaptation.spiceLevel
+  if (adaptation.lifestyleModes) return (form.lifestyleModes || []).includes(adaptation.lifestyleModes)
+  return false
 }
 
 export default function AdaptComposer({ open, recipe, profile, busy, onClose, onAdapt }) {
@@ -89,6 +101,7 @@ export default function AdaptComposer({ open, recipe, profile, busy, onClose, on
       if (adaptation.maxCookTime) next.maxCookTime = adaptation.maxCookTime
       if (adaptation.equipment) next.equipment = toggleValue(current.equipment, adaptation.equipment)
       if (adaptation.spiceLevel !== undefined) next.spiceLevel = adaptation.spiceLevel
+      if (adaptation.lifestyleModes) next.lifestyleModes = toggleValue(current.lifestyleModes || [], adaptation.lifestyleModes)
       return next
     })
   }
@@ -104,6 +117,7 @@ export default function AdaptComposer({ open, recipe, profile, busy, onClose, on
       nutritionGoals: form.nutritionFocus ? { focus: form.nutritionFocus } : undefined,
       excludeIngredients: commaSeparated(form.excludeIngredients),
       preserve: form.preserveNote.trim() ? [form.preserveNote.trim()] : [],
+      lifestyleModes: form.lifestyleModes,
     })
   }
 
@@ -133,6 +147,7 @@ export default function AdaptComposer({ open, recipe, profile, busy, onClose, on
                 key={adaptation.label}
                 type="button"
                 className="generation-composer-check"
+                aria-pressed={isQuickAdaptationActive(form, adaptation)}
                 onClick={() => applyQuickAdaptation(adaptation)}
               >
                 {adaptation.label}

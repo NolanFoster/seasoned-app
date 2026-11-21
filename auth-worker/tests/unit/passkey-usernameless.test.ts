@@ -265,7 +265,12 @@ describe('Email encryption', () => {
 
   it('returns null for a tampered value, a wrong key, or a short payload', async () => {
     const encrypted = await encryptEmail(email, encryptionKey);
-    const tampered = btoa(atob(encrypted).slice(0, -1) + ' ');
+    const encryptedBinary = atob(encrypted);
+    const tampered = btoa(
+      encryptedBinary.slice(0, -1)
+        + String.fromCharCode(encryptedBinary.charCodeAt(encryptedBinary.length - 1) ^ 1),
+    );
+    expect(tampered).not.toBe(encrypted);
     const otherKey = btoa(String.fromCharCode(...new Uint8Array(32).fill(9)));
 
     expect(await decryptEmail(tampered, encryptionKey)).toBeNull();

@@ -31,6 +31,9 @@ assert.equal(classified[0].missingQuantity, '1 cup')
 assert.equal(classified[0].pantryQuantity, '1 cup')
 assert.equal(classified[1].inventoryStatus, 'owned')
 assert.equal(classified[2].inventoryStatus, 'optional_staple')
+assert.equal(classifyGroceryItems([
+  { name: 'specialty chili crisp', quantity: '1 jar', category: 'Pantry Staples', isStaple: false },
+], [])[0].inventoryStatus, 'buy')
 assert.equal(classifyGroceryItems([{ name: 'milk', quantity: '1 cup' }], [{ name: 'milk', quantity: 1, unit: 'l' }])[0].inventoryStatus, 'owned')
 assert.equal(classifyGroceryItems([{ name: 'milk', quantity: '1 cup' }], [{ name: 'milk', quantity: 1 }])[0].inventoryStatus, 'buy')
 

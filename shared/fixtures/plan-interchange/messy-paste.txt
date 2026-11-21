@@ -1,0 +1,4 @@
+date,meal,title,ingredients
+2026-10-07,evening,Bean chili,"1 can beans; 1 tbsp tahini"
+2026-10-08,,Leftover soup,"2 cups vegetable broth"
+not-a-date,dinner,Missing date,"1 onion"
