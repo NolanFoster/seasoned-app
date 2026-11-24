@@ -378,3 +378,28 @@ describe('in-flight saves', () => {
     expect(true).toBe(true);
   });
 });
+
+describe('scaled recipe updates planned copies', () => {
+  it('rewrites matching plan and up-next quantities without changing the meal id', async () => {
+    mockWorker({ plan: null, grocery: null })
+    renderPlanner(null)
+    await settle()
+
+    const original = { id: 'stuffing', name: 'Stuffing', recipe_yield: '8', ingredients: ['2 cups broth'] }
+    await act(async () => {
+      controls.addUpNext(original)
+      controls.addMeal('2026-11-26', 'dinner', original)
+    })
+
+    const scaled = { ...original, recipe_yield: '12', ingredients: ['3 cups broth'], scaleNote: 'Scaled from 8 to 12 servings.' }
+    await act(async () => { controls.updateRecipeInPlan(original, scaled) })
+
+    expect(screen.getByTestId('upnext')).toHaveTextContent('Stuffing')
+    const planned = controls.mealPlan['2026-11-26'].dinner[0]
+    expect(planned.ingredients).toEqual(['3 cups broth'])
+    expect(planned.recipe_yield).toBe('12')
+    expect(planned.id).not.toBe('stuffing')
+    expect(controls.upNext[0].ingredients).toEqual(['3 cups broth'])
+    expect(controls.upNext[0].id).toBe('stuffing')
+  })
+})

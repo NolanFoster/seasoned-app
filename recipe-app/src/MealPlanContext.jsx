@@ -4,6 +4,7 @@ import {
   migrateFromLegacy,
   isValidMealType,
   createEmptyDay,
+  MEAL_TYPES,
 } from './utils/mealPlanMigration.js';
 import {
   StaleWriteError,
@@ -519,6 +520,45 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
   }, []);
 
   /**
+   * Rewrites quantities on plan copies of a recipe after a serving scale.
+   * Planned meals get a new id, so a name + ingredient match counts too.
+   * The meal id itself is preserved.
+   */
+  const updateRecipeInPlan = useCallback((recipe, nextRecipe) => {
+    if (!recipe || !nextRecipe) return
+    const matches = (meal) => {
+      if (!meal) return false
+      if (meal.id && recipe.id && meal.id === recipe.id) return true
+      if (meal.sourceRecipeId && recipe.id && meal.sourceRecipeId === recipe.id) return true
+      return meal.name === recipe.name
+        && JSON.stringify(meal.ingredients || []) === JSON.stringify(recipe.ingredients || [])
+    }
+    const apply = (meal) => (
+      matches(meal)
+        ? {
+          ...meal,
+          ingredients: nextRecipe.ingredients,
+          recipe_yield: nextRecipe.recipe_yield,
+          scaleNote: nextRecipe.scaleNote,
+          scaledFromServings: nextRecipe.scaledFromServings,
+          scaledToServings: nextRecipe.scaledToServings,
+        }
+        : meal
+    )
+    setMealPlan((prev) => {
+      const next = {}
+      Object.entries(prev || {}).forEach(([date, day]) => {
+        next[date] = { ...day }
+        MEAL_TYPES.forEach((type) => {
+          next[date][type] = (day?.[type] || []).map(apply)
+        })
+      })
+      return next
+    })
+    setUpNext((prev) => (prev || []).map(apply))
+  }, [])
+
+  /**
    * Removes the first recipe matching recipeId from the upNext staging area.
    * If the ID does not exist, the call is a no-op (no error thrown).
    * @param {string} recipeId - the id of the recipe to remove
@@ -870,6 +910,7 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       upNext,
       addMeal,
       addUpNext,
+      updateRecipeInPlan,
       removeUpNext,
       removeMeal,
       moveMeal,
@@ -899,7 +940,7 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       syncAvailable,
     }),
     [
-      mealPlan, upNext, addMeal, addUpNext, removeUpNext, removeMeal, moveMeal,
+      mealPlan, upNext, addMeal, addUpNext, updateRecipeInPlan, removeUpNext, removeMeal, moveMeal,
       activeRecipe, clearActiveRecipe, replacePlan,
       groceryList, isGeneratingList, listGenerationError, lastListGeneratedAt,
       setGroceryList, addCustomItem, toggleItemCompletion, editItem, deleteItem,

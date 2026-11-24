@@ -5,6 +5,7 @@ import RecipeCardDisplay, { parseDuration } from './RecipeCardDisplay.jsx'
 import DaySelector from './DaySelector.jsx'
 import { useMealPlan } from './MealPlanContext.jsx'
 import usePairedSides from './usePairedSides.js'
+import { parseServings, scaleRecipe } from '../../shared/recipe-scale.js'
 
 export { parseDuration }
 
@@ -57,6 +58,11 @@ export default function RecipeCard({
   const [showDaySelector, setShowDaySelector] = useState(false)
   // null | 'success' | 'error'
   const [plannerFeedback, setPlannerFeedback] = useState(null)
+  const recipeKey = recipe?.id || recipe?.name || ''
+  const recipeKeyRef = useRef(recipeKey)
+  const [displayRecipe, setDisplayRecipe] = useState(recipe)
+  const [servingTarget, setServingTarget] = useState(() => parseServings(recipe?.recipe_yield) || '')
+  const [scaleNotice, setScaleNotice] = useState('')
   const plannerFeedbackTimerRef = useRef(null)
   const cookBlockedTimerRef = useRef(null)
   const wakeLockRef = useRef(null)
@@ -158,6 +164,29 @@ export default function RecipeCard({
     if (!mealPlannerEnabled) setShowDaySelector(false)
   }, [mealPlannerEnabled])
 
+  useEffect(() => {
+    if (recipeKeyRef.current === recipeKey) return
+    recipeKeyRef.current = recipeKey
+    setDisplayRecipe(recipe)
+    setServingTarget(parseServings(recipe?.recipe_yield) || '')
+    setScaleNotice('')
+  }, [recipeKey, recipe])
+
+  function applyScale() {
+    const result = scaleRecipe(displayRecipe, servingTarget)
+    if (!result.ok) {
+      setScaleNotice('Enter a guest count from 1 to 48. Quantities scale only when the recipe already says how many it serves.')
+      return
+    }
+    setDisplayRecipe(result.recipe)
+    setServingTarget(result.recipe.scaledToServings)
+    mealPlanContext?.updateRecipeInPlan?.(displayRecipe, result.recipe)
+    const missed = result.unscaled.length
+      ? ` Left as written: ${result.unscaled.slice(0, 3).join('; ')}.`
+      : ''
+    setScaleNotice(`${result.recipe.scaleNote || 'Servings updated.'}${missed} Add it to the planner, then regenerate the grocery list.`)
+  }
+
   function handleCookClick() {
     if (hasBlockedProcessHazard) {
       setCookBlocked(true)
@@ -175,7 +204,7 @@ export default function RecipeCard({
       setPlannerFeedback(hasUnresolvedAllergenConflict ? 'blocked' : hasBlockedProcessHazard ? 'process-blocked' : 'uncertainty-blocked')
     } else {
       try {
-        mealPlanContext.addMeal(dateString, mealType, recipe)
+        mealPlanContext.addMeal(dateString, mealType, displayRecipe)
         setPlannerFeedback('success')
       } catch {
         setPlannerFeedback('error')
@@ -455,8 +484,34 @@ export default function RecipeCard({
         </div>
       </div>
 
+      {Array.isArray(displayRecipe?.ingredients) && displayRecipe.ingredients.length > 0 && (
+        <form
+          className="recipe-scale"
+          onSubmit={(event) => {
+            event.preventDefault()
+            applyScale()
+          }}
+        >
+          <label htmlFor={`${menuIdPrefix}-servings`}>
+            Servings
+            <input
+              id={`${menuIdPrefix}-servings`}
+              type="number"
+              min="1"
+              max="48"
+              inputMode="numeric"
+              aria-label="Guest count"
+              value={servingTarget}
+              onChange={(event) => setServingTarget(event.target.value)}
+            />
+          </label>
+          <button type="submit">Scale</button>
+          {scaleNotice && <p className="recipe-scale-note" role="status">{scaleNotice}</p>}
+        </form>
+      )}
+
       <RecipeCardDisplay
-        recipe={recipe}
+        recipe={displayRecipe}
         onCookClick={handleCookClick}
         onSelectSide={(sideRecipe) => setViewingSideRecipe(sideRecipe)}
         pairedSides={pairings.sides}
@@ -510,8 +565,8 @@ export default function RecipeCard({
 
       {isCooking && (
         <CookingNavigator
-          recipe={recipe}
-          recipes={multiCookRecipes || [recipe]}
+          recipe={displayRecipe}
+          recipes={multiCookRecipes || [displayRecipe]}
           onClose={() => {
             setIsCooking(false)
             setMultiCookRecipes(null)
@@ -525,7 +580,7 @@ export default function RecipeCard({
 
       {mealPlannerEnabled && showDaySelector && (
         <DaySelector
-          recipe={recipe}
+          recipe={displayRecipe}
           onDaySelected={handleDaySelected}
           onClose={() => setShowDaySelector(false)}
         />
