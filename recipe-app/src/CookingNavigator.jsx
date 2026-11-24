@@ -1387,8 +1387,9 @@ export default function CookingNavigator({
           <div className="cn-mise-en-place">
             <div className="cn-step-body">
               <p className="cn-step-text">
-                Before you start cooking, read through the full recipe, then gather and prepare all
-                ingredients and equipment below.
+                {total === 0
+                  ? 'This recipe has no method steps. Check off what you have, then finish the cook — you are not stuck.'
+                  : 'Before you start cooking, read through the full recipe, then gather and prepare all ingredients and equipment below.'}
               </p>
             </div>
             {ingredients.length > 0 && (() => {
@@ -1658,7 +1659,7 @@ export default function CookingNavigator({
             >
               {currentStep === -1 ? 'Start Cooking →' : 'Next →'}
             </button>
-            {currentStep === total - 1 && total > 0 && (
+            {((currentStep === total - 1 && total > 0) || total === 0) && (
               <button
                 className="cn-nav-btn cn-nav-btn--finish"
                 type="button"

@@ -1111,3 +1111,20 @@ describe('CookingNavigator — Live Ingredient State Tracking', () => {
 
 
 
+
+describe('recipe with no instructions', () => {
+  test('can be finished instead of trapping the cook on mise en place', () => {
+    const onClose = jest.fn()
+    render(
+      <CookingNavigator
+        recipe={{ id: 'no-method', name: 'Family stuffing', ingredients: ['1 loaf bread'], instructions: [] }}
+        onClose={onClose}
+      />
+    )
+    expect(screen.getByText(/no method steps/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start cooking' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish Cooking' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish cooking' }))
+    expect(onClose).toHaveBeenCalled()
+  })
+})
