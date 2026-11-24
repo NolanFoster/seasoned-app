@@ -355,3 +355,24 @@ describe('RecipeCard — Complete the Meal side pairing interactions', () => {
   });
 });
 
+
+describe('RecipeCard — scale to guest count', () => {
+  test('rewrites ingredient quantities before the recipe is planned', () => {
+    renderCard()
+    const servings = screen.getByRole('spinbutton', { name: 'Guest count' })
+    fireEvent.change(servings, { target: { value: '8' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Scale' }))
+    expect(screen.getByText('400g spaghetti')).toBeInTheDocument()
+    expect(screen.getByText('4 eggs')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/Scaled from 4 to 8/)
+    expect(screen.getByRole('status')).toHaveTextContent(/temperatures are unchanged/)
+  })
+
+  test('does not invent a factor when the recipe has no yield', () => {
+    renderCard({ recipe_yield: '' })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Guest count' }), { target: { value: '10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Scale' }))
+    expect(screen.getByRole('status')).toHaveTextContent(/already says how many it serves/)
+    expect(screen.getByText('2 eggs')).toBeInTheDocument()
+  })
+})
