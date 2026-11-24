@@ -378,3 +378,49 @@ describe('in-flight saves', () => {
     expect(true).toBe(true);
   });
 });
+
+describe('clear plan and grocery undo', () => {
+  it('empties the week and can restore it', async () => {
+    mockWorker({ plan: null, grocery: null })
+    renderPlanner(null)
+    await settle()
+
+    await act(async () => {
+      controls.addMeal('2026-11-26', 'dinner', { id: 'turkey', name: 'Roast turkey' })
+      controls.addUpNext({ id: 'pie', name: 'Pumpkin pie' })
+    })
+    expect(screen.getByTestId('scheduled')).toHaveTextContent('Roast turkey')
+    expect(screen.getByTestId('upnext')).toHaveTextContent('Pumpkin pie')
+
+    let snapshot
+    await act(async () => { snapshot = controls.clearMealPlan() })
+    expect(screen.getByTestId('scheduled')).toHaveTextContent('')
+    expect(screen.getByTestId('upnext')).toHaveTextContent('')
+
+    await act(async () => { controls.restoreMealPlan(snapshot) })
+    expect(screen.getByTestId('scheduled')).toHaveTextContent('Roast turkey')
+    expect(screen.getByTestId('upnext')).toHaveTextContent('Pumpkin pie')
+  })
+
+  it('puts cleared grocery items back without dropping the rest of the list', async () => {
+    mockWorker({ plan: null, grocery: null })
+    renderPlanner(null)
+    await settle()
+
+    await act(async () => {
+      controls.setGroceryList([
+        { id: 'g1', name: 'Celery', completed: true },
+        { id: 'g2', name: 'Onions', completed: false },
+      ])
+    })
+    await act(async () => { controls.clearCompletedItems() })
+    expect(screen.getByTestId('grocery')).toHaveTextContent('Onions')
+    expect(screen.getByTestId('grocery')).not.toHaveTextContent('Celery')
+
+    await act(async () => {
+      controls.restoreGroceryItems([{ id: 'g1', name: 'Celery', completed: true }])
+    })
+    expect(screen.getByTestId('grocery')).toHaveTextContent('Celery')
+    expect(screen.getByTestId('grocery')).toHaveTextContent('Onions')
+  })
+})

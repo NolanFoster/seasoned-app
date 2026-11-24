@@ -179,6 +179,8 @@ export default function MealPlannerDrawer({
 }) {
   const { isDragging } = useDragContext()
   const [isGroceryModalOpen, setIsGroceryModalOpen] = useState(false)
+  const [planUndo, setPlanUndo] = useState(null)
+  const planUndoTimerRef = useRef(null)
   const [isPlanInterchangeOpen, setIsPlanInterchangeOpen] = useState(false)
   const drawerRef = useRef(null)
   const closeButtonRef = useRef(null)
@@ -236,6 +238,8 @@ export default function MealPlannerDrawer({
     setGroceryList,
     clearGroceryList,
     replacePlan = () => {},
+    clearMealPlan = () => null,
+    restoreMealPlan = () => {},
   } = useMealPlan()
 
   // True if the meal plan has at least one scheduled or staged recipe
@@ -340,6 +344,22 @@ export default function MealPlannerDrawer({
    *   LOADED  → "View List" + "Regenerate" buttons
    *   IDLE    → "Generate Grocery List" button (disabled if no meals)
    */
+  function handleClearPlan() {
+    if (!hasMeals) return
+    const confirmed = window.confirm('Clear this week\'s meal plan? You can undo for a few seconds.')
+    if (!confirmed) return
+    const snapshot = clearMealPlan()
+    setPlanUndo(snapshot)
+    clearTimeout(planUndoTimerRef.current)
+    planUndoTimerRef.current = setTimeout(() => setPlanUndo(null), 8000)
+  }
+
+  function handleUndoClearPlan() {
+    if (planUndo) restoreMealPlan(planUndo)
+    setPlanUndo(null)
+    clearTimeout(planUndoTimerRef.current)
+  }
+
   function renderFooterContent() {
     if (isGeneratingList) {
       return <GeneratingGroceryCard />
@@ -461,6 +481,16 @@ export default function MealPlannerDrawer({
           )}
           <button
             type="button"
+            className="drawer-clear-plan-btn"
+            onClick={handleClearPlan}
+            disabled={!hasMeals}
+            aria-label="Clear meal plan"
+            title={hasMeals ? 'Empty the planner for a new week' : 'The planner is already empty'}
+          >
+            Clear plan
+          </button>
+          <button
+            type="button"
             ref={closeButtonRef}
             className="drawer-close-btn"
             onClick={onClose}
@@ -470,6 +500,12 @@ export default function MealPlannerDrawer({
           </button>
         </div>
         <div className="drawer-content">
+          {planUndo && (
+            <div className="drawer-undo-banner" role="status">
+              <span>Meal plan cleared.</span>
+              <button type="button" onClick={handleUndoClearPlan}>Undo</button>
+            </div>
+          )}
           {pantryPlannerEnabled && expiringPantryItems.length > 0 && (
             <div className="pantry-planner-use-soon" role="status">
               <div>

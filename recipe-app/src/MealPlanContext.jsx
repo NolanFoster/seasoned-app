@@ -846,6 +846,39 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
   }, []);
 
   /**
+   * Puts items removed by "clear checked" back on the list. Does not reset
+   * generation metadata — this is an undo, not a new shop.
+   */
+  const restoreGroceryItems = useCallback((items) => {
+    if (!Array.isArray(items) || items.length === 0) return
+    setGroceryListState((prev) => {
+      const ids = new Set(prev.map((item) => item.id))
+      const missing = items.filter((item) => item && !ids.has(item.id))
+      return missing.length ? [...missing, ...prev] : prev
+    })
+  }, [])
+
+  /**
+   * Empties the week so a feast plan can start clean. Returns the previous
+   * plan so the drawer can offer undo.
+   */
+  const clearMealPlan = useCallback(() => {
+    const snapshot = {
+      mealPlan: planStateRef.current.mealPlan,
+      upNext: planStateRef.current.upNext,
+    }
+    setMealPlan({})
+    setUpNext([])
+    return snapshot
+  }, [])
+
+  const restoreMealPlan = useCallback((snapshot) => {
+    if (!snapshot || typeof snapshot !== 'object') return
+    setMealPlan(snapshot.mealPlan && typeof snapshot.mealPlan === 'object' ? snapshot.mealPlan : {})
+    setUpNext(Array.isArray(snapshot.upNext) ? snapshot.upNext : [])
+  }, [])
+
+  /**
    * Signals that AI grocery list generation has started.
    * Sets isGeneratingList to true and clears any previous error.
    */
@@ -890,6 +923,9 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       deleteItem,
       clearCompletedItems,
       clearGroceryList,
+      restoreGroceryItems,
+      clearMealPlan,
+      restoreMealPlan,
       generateGroceryListStart,
       generateGroceryListError,
       // Cross-device sync
@@ -903,7 +939,8 @@ export function MealPlanProvider({ children, apiUrl = USER_MANAGEMENT_URL }) {
       activeRecipe, clearActiveRecipe, replacePlan,
       groceryList, isGeneratingList, listGenerationError, lastListGeneratedAt,
       setGroceryList, addCustomItem, toggleItemCompletion, editItem, deleteItem,
-      clearCompletedItems, clearGroceryList, generateGroceryListStart, generateGroceryListError,
+      clearCompletedItems, clearGroceryList, restoreGroceryItems, clearMealPlan, restoreMealPlan,
+      generateGroceryListStart, generateGroceryListError,
       setSyncIdentity, syncStatus, syncError, syncAvailable,
     ]
   );
