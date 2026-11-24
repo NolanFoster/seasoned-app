@@ -521,6 +521,18 @@ describe('Transformative Leftover Remix Cascades in RecipeCardDisplay', () => {
     expect(screen.getByText('Chicken Tinga Tacos')).toBeInTheDocument()
     expect(screen.getAllByText(/Fresh finishers needed:/i).length).toBeGreaterThanOrEqual(1)
   })
+
+  test('renders turkey remixes instead of a frittata for a roast turkey', () => {
+    render(<RecipeCardDisplay recipe={{
+      name: 'Herb Roast Turkey',
+      ingredients: ['1 whole turkey', 'sage'],
+      instructions: ['Roast until the thigh is done.'],
+    }} />)
+
+    expect(screen.getByText('Thanksgiving Turkey Stock')).toBeInTheDocument()
+    expect(screen.getByText('Cranberry Turkey Sandwich')).toBeInTheDocument()
+    expect(screen.queryByText(/Frittata/i)).not.toBeInTheDocument()
+  })
 })
 
 
