@@ -222,7 +222,7 @@ export default function GroceryListModal({
   pantryItems = [],
   pantryPlannerEnabled = false,
 }) {
-  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {}, clearCompletedItems = () => {} } = useMealPlan()
+  const { groceryList, toggleItemCompletion, deleteItem, addCustomItem, editItem = () => {}, clearCompletedItems = () => {}, restoreGroceryItems = () => {} } = useMealPlan()
   const safePantryItems = Array.isArray(pantryItems) ? pantryItems : []
   const flagExport = useFlag('grocery-export-plus')
 
@@ -231,6 +231,8 @@ export default function GroceryListModal({
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [buyOnlyExport, setBuyOnlyExport] = useState(false)
   const [exportNotice, setExportNotice] = useState('')
+  const [undoClear, setUndoClear] = useState(null)
+  const undoClearTimerRef = useRef(null)
   // Track expanded state per category; defaults to true for new categories
   const [expandedCategories, setExpandedCategories] = useState({})
   const inputRef = useRef(null)
@@ -407,8 +409,21 @@ export default function GroceryListModal({
 
 
   function clearCheckedItems() {
+    const removed = groceryList.filter((item) => item.completed)
+    if (removed.length === 0) return
     clearCompletedItems()
+    setUndoClear(removed)
+    clearTimeout(undoClearTimerRef.current)
+    undoClearTimerRef.current = setTimeout(() => setUndoClear(null), 8000)
   }
+
+  function undoClearChecked() {
+    restoreGroceryItems(undoClear)
+    setUndoClear(null)
+    clearTimeout(undoClearTimerRef.current)
+  }
+
+  useEffect(() => () => clearTimeout(undoClearTimerRef.current), [])
 
   if (!isOpen) return null
 
@@ -438,24 +453,8 @@ export default function GroceryListModal({
                   Export ↗
                 </button>
                 {showExportMenu && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: '100%',
-                      background: '#fff',
-                      border: '1px solid #ccc',
-                      borderRadius: '6px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      padding: '8px',
-                      zIndex: 100,
-                      width: '180px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
-                    }}
-                  >
-                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #eee', paddingBottom: '6px', cursor: 'pointer' }}>
+                  <div className="grocery-export-menu" role="menu" aria-label="Export grocery list">
+                    <label className="grocery-export-menu__option">
                       <input
                         type="checkbox"
                         checked={buyOnlyExport}
@@ -465,7 +464,8 @@ export default function GroceryListModal({
                     </label>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      className="grocery-export-menu__item"
+                      role="menuitem"
                       onClick={handleCopyList}
                     >
                       📋 Copy text
@@ -473,7 +473,8 @@ export default function GroceryListModal({
                     {typeof navigator !== 'undefined' && 'share' in navigator && (
                       <button
                         type="button"
-                        style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                        className="grocery-export-menu__item"
+                        role="menuitem"
                         onClick={handleShareList}
                       >
                         📤 Share…
@@ -481,14 +482,16 @@ export default function GroceryListModal({
                     )}
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      className="grocery-export-menu__item"
+                      role="menuitem"
                       onClick={() => downloadFile(exportGroceryToMarkdown(groceryList, { buyOnly: buyOnlyExport }), 'grocery-list.md', 'text/markdown')}
                     >
                       📄 Download .md
                     </button>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', textAlign: 'left', padding: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      className="grocery-export-menu__item"
+                      role="menuitem"
                       onClick={() => downloadFile(exportGroceryToCSV(groceryList, { buyOnly: buyOnlyExport }), 'grocery-list.csv', 'text/csv')}
                     >
                       📊 Download .csv
@@ -513,15 +516,26 @@ export default function GroceryListModal({
           </div>
         )}
 
-        {groceryList.some((item) => item.completed) && (
+        {(groceryList.some((item) => item.completed) || undoClear) && (
           <div className="grocery-modal-actions">
-            <button
-              type="button"
-              className="grocery-modal-clear-completed"
-              onClick={clearCheckedItems}
-            >
-              Clear checked items
-            </button>
+            {groceryList.some((item) => item.completed) && (
+              <button
+                type="button"
+                className="grocery-modal-clear-completed"
+                onClick={clearCheckedItems}
+              >
+                Clear checked items
+              </button>
+            )}
+            {undoClear && (
+              <button
+                type="button"
+                className="grocery-modal-undo"
+                onClick={undoClearChecked}
+              >
+                Undo clear ({undoClear.length})
+              </button>
+            )}
           </div>
         )}
 

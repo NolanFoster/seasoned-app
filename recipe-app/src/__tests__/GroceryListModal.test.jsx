@@ -19,6 +19,7 @@ let mockDeleteItem = jest.fn();
 let mockAddCustomItem = jest.fn();
 let mockEditItem = jest.fn();
 let mockClearCompletedItems = jest.fn();
+let mockRestoreGroceryItems = jest.fn();
 
 jest.mock('../MealPlanContext.jsx', () => ({
   useMealPlan: () => ({
@@ -30,6 +31,7 @@ jest.mock('../MealPlanContext.jsx', () => ({
     addCustomItem: mockAddCustomItem,
     editItem: mockEditItem,
     clearCompletedItems: mockClearCompletedItems,
+    restoreGroceryItems: mockRestoreGroceryItems,
   }),
 }));
 
@@ -558,3 +560,33 @@ describe('grocery modal a11y', () => {
     expect(document.activeElement).toBe(last);
   });
 });
+
+describe('GroceryListModal — undo and export theme', () => {
+  beforeEach(() => {
+    mockGroceryList = [
+      { ...MOCK_GROCERY_LIST[0], completed: true },
+      { ...MOCK_GROCERY_LIST[1], completed: false },
+    ]
+    mockClearCompletedItems = jest.fn()
+    mockRestoreGroceryItems = jest.fn()
+  })
+
+  test('clear checked offers undo and restores the removed items', () => {
+    renderModal()
+    fireEvent.click(screen.getByRole('button', { name: /clear checked items/i }))
+    expect(mockClearCompletedItems).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: /undo clear/i }))
+    expect(mockRestoreGroceryItems).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'item-1', name: 'All-purpose flour' }),
+    ])
+  })
+
+  test('export menu uses theme classes instead of a hardcoded white panel', () => {
+    mockGroceryList = MOCK_GROCERY_LIST
+    renderModal()
+    fireEvent.click(screen.getByRole('button', { name: /export grocery list/i }))
+    const menu = screen.getByRole('menu', { name: /export grocery list/i })
+    expect(menu).toHaveClass('grocery-export-menu')
+    expect(menu.getAttribute('style') || '').not.toMatch(/#fff/i)
+  })
+})
