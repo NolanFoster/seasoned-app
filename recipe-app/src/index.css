@@ -6558,3 +6558,58 @@ button.generation-composer-check[aria-pressed="true"] {
 
 
 
+
+/* ── Print: the method and ingredients, not the app chrome (#644) ── */
+@media print {
+  @page { margin: 0.6in; }
+
+  body * { visibility: hidden; }
+
+  .recipe-card,
+  .recipe-card * {
+    visibility: visible;
+    color: #111 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .recipe-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .recipe-card-header {
+    padding-right: 0 !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+
+  .recipe-card .card-menus,
+  .recipe-card .card-menus *,
+  .recipe-card .cook-btn,
+  .recipe-card button,
+  .recipe-card .recipe-checks,
+  .recipe-card .recipe-image,
+  .recipe-card .recipe-image *,
+  .recipe-card .recipe-source-badge {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  .recipe-section { break-inside: avoid; }
+
+  .recipe-section h3 {
+    margin-top: 1.2rem;
+    font-size: 1.1rem;
+  }
+
+  .source-link[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+}

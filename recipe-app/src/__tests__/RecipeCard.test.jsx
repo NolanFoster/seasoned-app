@@ -355,3 +355,22 @@ describe('RecipeCard — Complete the Meal side pairing interactions', () => {
   });
 });
 
+
+describe('RecipeCard — print', () => {
+  test('prints the open recipe from the options menu', () => {
+    const print = jest.spyOn(window, 'print').mockImplementation(() => {})
+    renderCard()
+    fireEvent.click(screen.getByRole('button', { name: 'More recipe options' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Print' }))
+    expect(print).toHaveBeenCalledTimes(1)
+    print.mockRestore()
+  })
+
+  test('ships a print stylesheet that keeps the method and drops the chrome', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../index.css'), 'utf8')
+    expect(css).toMatch(/@media print/)
+    expect(css).toMatch(/\.recipe-card/)
+    expect(css).toMatch(/\.card-menus/)
+    expect(css).toMatch(/\.cook-btn/)
+  })
+})
