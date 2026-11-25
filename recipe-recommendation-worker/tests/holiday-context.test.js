@@ -3,35 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-
-// Recreate the holiday detection function for testing
-function getUpcomingHoliday(date) {
-  const dateObj = new Date(date);
-  const month = dateObj.getMonth();
-  const day = dateObj.getDate();
-  
-  // Check if a holiday is within 7 days
-  const holidays = [
-    { month: 0, day: 1, name: "New Year's Day", range: 7 },
-    { month: 1, day: 14, name: "Valentine's Day", range: 7 },
-    { month: 3, day: 1, name: "Easter", range: 7 }, // Approximate
-    { month: 6, day: 4, name: "Independence Day", range: 7 },
-    { month: 9, day: 31, name: "Halloween", range: 7 },
-    { month: 10, day: 28, name: "Thanksgiving", range: 7 }, // 4th Thursday, approximate
-    { month: 11, day: 25, name: "Christmas", range: 7 }
-  ];
-  
-  for (const holiday of holidays) {
-    const holidayDate = new Date(dateObj.getFullYear(), holiday.month, holiday.day);
-    const daysDiff = Math.abs((dateObj - holidayDate) / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff <= holiday.range) {
-      return holiday.name;
-    }
-  }
-  
-  return null;
-}
+import { getUpcomingHoliday } from '../../shared/holiday-calendar.js';
+import { getUpcomingHoliday as serviceHoliday } from '../src/recommendation-service.js';
 
 function getContextualCategory(season, date, hasLocation) {
   const month = new Date(date).getMonth();
@@ -119,6 +92,13 @@ describe('Holiday Detection', () => {
     expect(getUpcomingHoliday('2024-10-31')).toBe('Halloween'); // Exact day
     expect(getUpcomingHoliday('2024-10-25')).toBe('Halloween'); // 6 days before
     expect(getUpcomingHoliday('2024-11-05')).toBe('Halloween'); // 5 days after
+  });
+
+  it('uses the same Thanksgiving calendar as the recommendation service', () => {
+    expect(serviceHoliday('2026-11-26')).toBe('Thanksgiving');
+    expect(serviceHoliday('2026-11-26')).toBe(getUpcomingHoliday('2026-11-26'));
+    expect(serviceHoliday('2025-11-27')).toBe('Thanksgiving');
+    expect(serviceHoliday('2026-11-18')).toBeNull();
   });
 
   it('should detect Thanksgiving within range', () => {
