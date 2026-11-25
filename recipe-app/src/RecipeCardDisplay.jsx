@@ -763,7 +763,7 @@ export default function RecipeCardDisplay({
         {recipe.source_url && recipe.source !== 'ai_generated' && (
           <a className="source-link" href={recipe.source_url} target="_blank" rel="noopener noreferrer">Source ↗</a>
         )}
-        {instructions.length > 0 && (
+        {(instructions.length > 0 || (recipe.ingredients?.length > 0 && onCookClick)) && (
           <button
             id={cookBtnId}
             className="cook-btn"
