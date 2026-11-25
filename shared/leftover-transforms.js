@@ -6,6 +6,40 @@
  */
 
 export const TRANSFORMATION_TEMPLATES = {
+  'roast_turkey': [
+    {
+      id: 'turkey_stock',
+      title: 'Thanksgiving Turkey Stock',
+      effortMin: 20,
+      requiresFresh: ['Onion', 'Carrot', 'Celery', 'Bay leaf', 'Peppercorns'],
+      yieldServings: 8,
+      instructions: ['Cover the carcass with cold water.', 'Simmer with onion, carrot, celery, and bay for 2–3 hours.', 'Strain and chill. Skim the fat before using.'],
+    },
+    {
+      id: 'turkey_sandwich',
+      title: 'Cranberry Turkey Sandwich',
+      effortMin: 10,
+      requiresFresh: ['Bread', 'Cranberry sauce', 'Mayo or mustard', 'Lettuce'],
+      yieldServings: 2,
+      instructions: ['Slice cold turkey.', 'Spread cranberry sauce and mayo on bread.', 'Layer turkey and lettuce. Serve the same day.'],
+    },
+    {
+      id: 'turkey_pot_pie',
+      title: 'Turkey Pot Pie',
+      effortMin: 35,
+      requiresFresh: ['Pie crust', 'Frozen peas and carrots', 'Onion', 'Butter', 'Flour', 'Stock or broth'],
+      yieldServings: 6,
+      instructions: ['Cook onion in butter, stir in flour, then stock.', 'Fold in diced turkey and peas.', 'Cover with crust and bake at 400°F until the crust is browned and the filling is bubbling, about 30 minutes.'],
+    },
+    {
+      id: 'turkey_hash',
+      title: 'Turkey Hash with Eggs',
+      effortMin: 20,
+      requiresFresh: ['Potatoes', 'Onion', 'Eggs', 'Leftover gravy (optional)'],
+      yieldServings: 4,
+      instructions: ['Dice potatoes and onion and pan-fry until browned.', 'Fold in chopped turkey and warm through.', 'Top with fried eggs. Heat leftovers until piping hot.'],
+    },
+  ],
   'roast_chicken': [
     {
       id: 'chicken_tinga_tacos',
@@ -71,6 +105,16 @@ export function suggestLeftoverTransforms(recipe) {
   if (!recipe) return []
   const name = String(recipe.name || '').toLowerCase()
   const ingredients = (recipe.ingredients || []).map(i => (typeof i === 'string' ? i : i.name || '').toLowerCase())
+
+  const mentions = (word) => name.includes(word) || ingredients.some(i => i.includes(word))
+
+  if (mentions('turkey')) {
+    return TRANSFORMATION_TEMPLATES.roast_turkey.map(t => ({
+      ...t,
+      sourceRecipeName: recipe.name || 'Roast Turkey',
+      lineageBadge: `Remix from ${recipe.name || 'Roast Turkey'}`,
+    }))
+  }
 
   if (name.includes('chicken') || ingredients.some(i => i.includes('chicken'))) {
     return TRANSFORMATION_TEMPLATES.roast_chicken.map(t => ({
