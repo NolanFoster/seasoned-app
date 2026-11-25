@@ -38,6 +38,14 @@ const baseRecipe = {
   instructions: ['Mix flour and eggs.', 'Add milk and stir.', 'Cook for 5 minutes.'],
 }
 
+beforeEach(() => {
+  const keys = []
+  for (let i = 0; i < localStorage.length; i += 1) keys.push(localStorage.key(i))
+  keys.forEach((key) => {
+    if (key && key.startsWith('cn-cook-session:')) localStorage.removeItem(key)
+  })
+})
+
 function renderNavigator(overrides = {}, props = {}) {
   const recipe = { ...baseRecipe, ...overrides }
   const onClose = jest.fn()
@@ -1111,3 +1119,48 @@ describe('CookingNavigator — Live Ingredient State Tracking', () => {
 
 
 
+
+describe('cook session persistence', () => {
+  const turkey = {
+    id: 'turkey-persist',
+    name: 'Roast turkey',
+    ingredients: ['1 turkey'],
+    instructions: ['Roast for 10 minutes.'],
+  }
+
+  test('restores the current step and a running timer after remount', () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-11-26T16:00:00Z'))
+    const first = render(<CookingNavigator recipe={turkey} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Start cooking' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start 10 minutes timer' }))
+    expect(screen.getByText('10:00')).toBeInTheDocument()
+    first.unmount()
+
+    jest.advanceTimersByTime(2000)
+    render(<CookingNavigator recipe={turkey} onClose={jest.fn()} />)
+    expect(screen.getByText('Step 1 of 1')).toBeInTheDocument()
+    expect(screen.getByText('09:58')).toBeInTheDocument()
+    jest.useRealTimers()
+  })
+
+  test('clears the saved session when the cook exits', () => {
+    const view = render(<CookingNavigator recipe={turkey} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Start cooking' }))
+    expect(screen.getByText('Step 1 of 1')).toBeInTheDocument()
+    view.unmount()
+
+    render(<CookingNavigator recipe={turkey} onClose={jest.fn()} />)
+    expect(screen.getByText('Step 1 of 1')).toBeInTheDocument()
+    cleanup()
+
+    const again = render(<CookingNavigator recipe={turkey} onClose={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open options menu' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Close' }))
+    again.unmount()
+
+    render(<CookingNavigator recipe={turkey} onClose={jest.fn()} />)
+    expect(screen.getByText(/Mise en Place/)).toBeInTheDocument()
+    expect(screen.queryByText('Step 1 of 1')).not.toBeInTheDocument()
+  })
+})

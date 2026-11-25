@@ -9,6 +9,7 @@ import { getNavigatorSteps } from '../../shared/recipe-process-graph.js'
 import { inferStepVisionHint, formatVisionFeedback } from '../../shared/vision-coach.js'
 import { detectEquipmentConflicts, normalizeMultiDishSession } from '../../shared/multi-dish.js'
 import { useMealPlan } from './MealPlanContext.jsx'
+import { loadCookSession, saveCookSession, clearCookSession } from './utils/cookSession.js'
 import IngredientStateBoard from './IngredientStateBoard.jsx'
 import {
   createIngredientStateTracker,
@@ -369,8 +370,22 @@ export default function CookingNavigator({
     ? normalizeMultiDishSession(multiRecipesProp)
     : normalizeMultiDishSession([recipe])
 
-  const [activeDishIndex, setActiveDishIndex] = useState(0)
-  const [dishProgress, setDishProgress] = useState(() => dishes.map(() => -1)) // current step per dish
+  const cookSessionStore = typeof window !== 'undefined' ? window.localStorage : null
+  const savedCookSessionRef = useRef(undefined)
+  if (savedCookSessionRef.current === undefined) {
+    savedCookSessionRef.current = loadCookSession(cookSessionStore, recipe, dishes.length)
+  }
+  const savedCookSession = savedCookSessionRef.current
+  const abandonCookSessionRef = useRef(false)
+  const exitCookingRef = useRef(() => {})
+
+  const [activeDishIndex, setActiveDishIndex] = useState(() => {
+    const idx = savedCookSession?.activeDishIndex ?? 0
+    return idx >= 0 && idx < dishes.length ? idx : 0
+  })
+  const [dishProgress, setDishProgress] = useState(() => (
+    savedCookSession?.dishProgress || dishes.map(() => -1)
+  )) // current step per dish
 
   const activeDish = dishes[activeDishIndex] || dishes[0]
   const processGraphFeatureEnabled = useFlag('recipe-process-graph-v1')
@@ -411,8 +426,8 @@ export default function CookingNavigator({
     })
   }, [activeDishIndex])
 
-  const [usedIngredients, setUsedIngredients] = useState(new Set())
-  const [activeTimers, setActiveTimers] = useState({}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
+  const [usedIngredients, setUsedIngredients] = useState(() => new Set(savedCookSession?.usedIngredients || []))
+  const [activeTimers, setActiveTimers] = useState(() => savedCookSession?.timers || {}) // { id: { label, totalSeconds, remainingSeconds, isPaused, isDone } }
   const timerIntervalsRef = useRef({}) // { id: countdownIntervalId }
   const soundIntervalsRef = useRef({})  // { id: soundRepeatIntervalId }
 
@@ -573,7 +588,7 @@ export default function CookingNavigator({
         if (cookMenuOpenRef.current) {
           closeCookMenu()
         }
-        else onCloseRef.current()
+        else exitCookingRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -768,8 +783,11 @@ export default function CookingNavigator({
       const confirmed = window.confirm(`You have ${runningTimers.length} active timer${runningTimers.length > 1 ? 's' : ''} running. Are you sure you want to exit cooking mode?`)
       if (!confirmed) return
     }
+    abandonCookSessionRef.current = true
+    clearCookSession(cookSessionStore, recipe)
     onClose()
   }
+  exitCookingRef.current = safeClose
 
   function toggleGestureMode() {
     if (gestureModeActive) {
@@ -884,6 +902,16 @@ export default function CookingNavigator({
     delete soundIntervalsRef.current[id]
   }
 
+  useEffect(() => {
+    if (abandonCookSessionRef.current) return
+    saveCookSession(cookSessionStore, recipe, {
+      dishProgress,
+      activeDishIndex,
+      usedIngredients,
+      timers: activeTimers,
+    })
+  }, [dishProgress, activeDishIndex, usedIngredients, activeTimers, recipe, cookSessionStore])
+
   function startInterval(id) {
     clearInterval(timerIntervalsRef.current[id])
     timerIntervalsRef.current[id] = setInterval(() => {
@@ -932,6 +960,19 @@ export default function CookingNavigator({
     })
   }
 
+  const resumedTimersRef = useRef(false)
+  useEffect(() => {
+    if (resumedTimersRef.current) return
+    resumedTimersRef.current = true
+    Object.entries(activeTimers).forEach(([id, timer]) => {
+      if (!timer.isPaused && !timer.isDone && timer.remainingSeconds > 0) {
+        startInterval(id)
+      } else if (timer.isDone) {
+        startRepeatingSound(id)
+      }
+    })
+  }, [])
+
   function handleVoiceResult(transcript) {
     const cmd = transcript.toLowerCase().trim()
     if (cmd.includes('next')) {
@@ -943,7 +984,7 @@ export default function CookingNavigator({
       speakCurrentStep()
     } else if (cmd.includes('stop') || cmd.includes('close') || cmd.includes('exit') || cmd.includes('done')) {
       stopHandsFreeMode()
-      onClose()
+      safeClose()
     }
   }
 
